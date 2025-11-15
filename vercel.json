@@ -1,4 +1,7 @@
 {
+  "buildCommand": "echo 'No build needed for serverless functions'",
+  "devCommand": "echo 'Development mode'",
+  "installCommand": "npm install",
   "rewrites": [
     { "source": "/auth", "destination": "/api/auth" },
     { "source": "/callback", "destination": "/api/callback" }
