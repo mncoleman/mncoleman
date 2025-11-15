@@ -1,9 +1,7 @@
 backend:
   name: github
   repo: slider003/matthew-coleman
-  branch: main # or your default branch
-  base_url: https://api.github.com
-  auth_endpoint: repos/slider003/matthew-coleman/dispatches
+  branch: claude/personal-website-blog-cms-01PeQo6GUb1HL1TtbpYQ2qBU
 
 # Uncomment below for local development
 # local_backend: true
