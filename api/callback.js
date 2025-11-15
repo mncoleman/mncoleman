@@ -49,16 +49,20 @@ module.exports = async (req, res) => {
 
   try {
     const result = await oauth2.getToken({ code });
-    const token = oauth2.createToken(result);
+
+    // In simple-oauth2 v5, the token is directly in result.token
+    const accessToken = result.token.access_token;
+
     const content = {
-      token: token.token.access_token,
+      token: accessToken,
       provider: provider
     };
 
+    console.log('Token obtained successfully');
     const script = generateScript(provider, 'success', content);
     res.send(script);
   } catch (error) {
-    console.error('Access Token Error', error.message);
+    console.error('Access Token Error', error);
     const script = generateScript(provider, 'error', JSON.stringify(error));
     res.send(script);
   }
