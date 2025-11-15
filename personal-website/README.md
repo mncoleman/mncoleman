@@ -1,6 +1,6 @@
 # Personal Website & Blog
 
-A modern, minimalist personal website and blog built with Next.js, TypeScript, and Tailwind CSS. Features a clean design with dark mode support and blog functionality powered by Pages CMS.
+A modern, minimalist personal website and blog built with Next.js, TypeScript, and Tailwind CSS. Features a clean design with dark mode support and blog functionality powered by Decap CMS.
 
 ## Features
 
@@ -20,7 +20,7 @@ A modern, minimalist personal website and blog built with Next.js, TypeScript, a
 - **Styling**: Tailwind CSS
 - **UI Components**: shadcn/ui + ReactBits
 - **Content**: Markdown with gray-matter
-- **CMS**: Pages CMS (Git-based)
+- **CMS**: Decap CMS (Git-based, browser-only)
 - **Deployment**: GitHub Pages
 - **Theme**: next-themes
 
@@ -58,96 +58,65 @@ npm run build
 
 This will generate a static export in the `out` directory.
 
-## Managing Content with Pages CMS
+## Managing Content with Decap CMS
 
-Pages CMS provides a user-friendly interface for managing your blog posts without touching code.
+Decap CMS provides a user-friendly web interface for managing your blog posts - **no backend server or database required!**
 
-### What is Pages CMS?
+### What is Decap CMS?
 
-Pages CMS is an open-source, Git-based content management system that integrates directly with your GitHub repository. It allows you to:
+Decap CMS (formerly Netlify CMS) is an open-source, Git-based content management system that runs entirely in your browser. It's perfect for static sites because:
 
-- Create and edit blog posts through a web interface
-- Upload and manage images
-- Preview changes before publishing
-- All changes are committed directly to your Git repository
+✅ **No backend needed** - Runs completely in the browser
+✅ **No database required** - Uses your GitHub repository as storage
+✅ **Works with GitHub Pages** - Perfect integration
+✅ **Free to use** - Zero ongoing costs
+✅ **Simple setup** - Just create a GitHub OAuth app (2 minutes)
 
-### Setting Up Pages CMS
+### Quick Setup (5 Minutes)
 
-To use Pages CMS with this website, you'll need to deploy a Pages CMS instance. Here's how:
+**See the detailed guide in [`DECAP_CMS_SETUP.md`](./DECAP_CMS_SETUP.md) for complete instructions.**
 
-#### Option 1: Deploy to Vercel (Recommended - Free)
+Quick version:
 
-1. **Create a GitHub App**:
-   - Go to GitHub Settings > Developer settings > GitHub Apps > New GitHub App
-   - **GitHub App name**: `My Pages CMS` (or any name you prefer)
-   - **Homepage URL**: `https://your-app-name.vercel.app` (you'll get this after deployment)
-   - **Callback URL**: `https://your-app-name.vercel.app/api/auth/callback`
-   - **Webhook URL**: `https://your-app-name.vercel.app/api/webhook`
-   - **Webhook secret**: Generate a random string (save this!)
-   - **Repository permissions**:
-     - Contents: Read & write
-     - Metadata: Read-only
-     - Pull requests: Read & write
-   - **Subscribe to events**: Push, Pull request
-   - Click "Create GitHub App"
-   - Generate a private key and download it
-   - Note your App ID and Client ID
+1. **Create a GitHub OAuth App**:
+   - Go to https://github.com/settings/developers
+   - Click "OAuth Apps" → "New OAuth App"
+   - Fill in:
+     - Name: `Matthew Coleman Blog CMS`
+     - Homepage: `https://slider003.github.io/matthew-coleman/`
+     - Callback: `https://api.netlify.com/auth/done`
+   - Save your Client ID and Client Secret
 
-2. **Set up Database** (Supabase - Free):
-   - Go to [supabase.com](https://supabase.com) and create a free account
-   - Create a new project
-   - Go to Project Settings > Database and copy the connection string
-   - Set the connection pooling mode to "Session"
+2. **Enable GitHub Pages**:
+   - Go to repository Settings → Pages
+   - Set source to "GitHub Actions"
 
-3. **Deploy to Vercel**:
-   ```bash
-   git clone https://github.com/pages-cms/pages-cms.git
-   cd pages-cms
-   ```
-   - Push to your GitHub account
-   - Go to [vercel.com](https://vercel.com) and import the repository
-   - Add environment variables:
-     ```
-     DATABASE_URL=your_supabase_connection_string
-     GITHUB_APP_ID=your_app_id
-     GITHUB_CLIENT_ID=your_client_id
-     GITHUB_CLIENT_SECRET=your_client_secret
-     GITHUB_PRIVATE_KEY=your_private_key_content
-     CRYPTO_KEY=your_random_32_char_string
-     NEXTAUTH_URL=https://your-app-name.vercel.app
-     NEXTAUTH_SECRET=your_random_string
-     ```
-   - Deploy!
+3. **Access Your CMS**:
+   - Visit: `https://slider003.github.io/matthew-coleman/admin/`
+   - Click "Login with GitHub"
+   - Start creating content!
 
-4. **Install the GitHub App**:
-   - Go to your GitHub App settings
-   - Click "Install App"
-   - Select your repository (`slider003/matthew-coleman`)
-   - Authorize the installation
+### Admin Access
 
-5. **Access Your CMS**:
-   - Visit `https://your-app-name.vercel.app`
-   - Sign in with GitHub
-   - Start creating and editing blog posts!
+**CMS URL**: `https://slider003.github.io/matthew-coleman/admin/`
 
-### Pages CMS Admin URL
+**Login**: Your GitHub account (must have write access to the repository)
 
-Once you've deployed Pages CMS, your admin interface will be available at:
-```
-https://your-app-name.vercel.app
-```
-
-**Login**: Use your GitHub account to authenticate.
+**Features**:
+- Rich markdown editor with live preview
+- Image upload and media library
+- Tag management
+- Publish directly to your site
 
 ### Creating Blog Posts
 
-#### Via Pages CMS (Recommended):
-1. Log in to your Pages CMS admin panel
-2. Navigate to "Blog Posts"
-3. Click "New Post"
-4. Fill in the title, date, excerpt, tags, and content
-5. Click "Save" - this will commit directly to your repository
-6. GitHub Actions will automatically rebuild and deploy your site
+#### Via Decap CMS (Recommended):
+1. Visit `https://slider003.github.io/matthew-coleman/admin/`
+2. Click "Blog Posts" → "New Blog Posts"
+3. Fill in the title, date, excerpt, tags, and content
+4. Click "Publish"
+5. Your changes commit automatically and trigger a rebuild
+6. Site updates in ~2 minutes!
 
 #### Via Git (Direct):
 Create a new markdown file in `content/posts/`:
@@ -186,7 +155,7 @@ personal-website/
 │   ├── blog.ts         # Blog utilities
 │   └── utils.ts        # General utilities
 ├── public/             # Static assets
-├── .pages.yml          # Pages CMS configuration
+│   └── admin/         # Decap CMS admin interface
 └── next.config.ts      # Next.js configuration
 ```
 
@@ -246,4 +215,4 @@ Matthew Coleman
 
 ---
 
-Built with ❤️ using Next.js, Tailwind CSS, and Pages CMS
+Built with ❤️ using Next.js, Tailwind CSS, and Decap CMS

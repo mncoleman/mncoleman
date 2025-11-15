@@ -1,0 +1,43 @@
+backend:
+  name: github
+  repo: slider003/matthew-coleman
+  branch: main # or your default branch
+  base_url: https://api.github.com
+  auth_endpoint: repos/slider003/matthew-coleman/dispatches
+
+# Uncomment below for local development
+# local_backend: true
+
+# Publish mode - editorial_workflow enables drafts
+publish_mode: simple
+
+# Media files
+media_folder: "personal-website/public/images/uploads"
+public_folder: "/images/uploads"
+
+# Collections define the structure of your content
+collections:
+  - name: "posts"
+    label: "Blog Posts"
+    folder: "personal-website/content/posts"
+    create: true
+    slug: "{{slug}}"
+    extension: "md"
+    format: "frontmatter"
+    fields:
+      - { label: "Title", name: "title", widget: "string" }
+      - { label: "Publish Date", name: "date", widget: "datetime", date_format: "YYYY-MM-DD", time_format: false }
+      - { label: "Excerpt", name: "excerpt", widget: "text" }
+      - { label: "Author", name: "author", widget: "string", default: "Matthew Coleman" }
+      - { label: "Tags", name: "tags", widget: "list", required: false }
+      - { label: "Body", name: "body", widget: "markdown" }
+
+  - name: "pages"
+    label: "Pages"
+    files:
+      - label: "About Page"
+        name: "about"
+        file: "personal-website/content/pages/about.md"
+        fields:
+          - { label: "Title", name: "title", widget: "string" }
+          - { label: "Body", name: "body", widget: "markdown" }
