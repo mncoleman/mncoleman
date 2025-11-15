@@ -2,7 +2,7 @@ backend:
   name: github
   repo: slider003/matthew-coleman
   branch: claude/personal-website-blog-cms-01PeQo6GUb1HL1TtbpYQ2qBU
-  base_url: https://matthew-coleman-62aaec93w-slider003s-projects.vercel.app
+  open_authoring: true
 
 # Uncomment below for local development
 # local_backend: true
