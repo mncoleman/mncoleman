@@ -1,12 +1,39 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { PWAInstall } from '@/components/pwa-install';
 import Link from 'next/link';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#18181b' },
+  ],
+};
+
+const basePath = process.env.NODE_ENV === 'production' ? '/matthew-coleman' : '';
 
 export const metadata: Metadata = {
   title: 'Matthew Coleman - Personal Website & Blog',
   description: 'Personal website and blog by Matthew Coleman',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'MC Blog',
+  },
+  icons: {
+    icon: [
+      { url: `${basePath}/icon-192.png`, sizes: '192x192', type: 'image/png' },
+      { url: `${basePath}/icon-512.png`, sizes: '512x512', type: 'image/png' },
+      { url: `${basePath}/icon.svg`, type: 'image/svg+xml' },
+    ],
+    apple: `${basePath}/apple-touch-icon.png`,
+  },
 };
 
 export default function RootLayout({
@@ -17,6 +44,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased">
+        <PWAInstall />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

@@ -2,12 +2,270 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/matthew-coleman/favicon.svg" />
+    <link rel="apple-touch-icon" href="/matthew-coleman/apple-touch-icon.png" />
     <title>Content Manager</title>
   </head>
   <body>
-    <!-- Include the script that builds the page and powers Decap CMS -->
+    <!-- Include Decap CMS -->
     <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+
+    <!-- Affine-style Markdown Shortcuts -->
+    <script>
+      console.log('🚀 Loading Affine-style editor...');
+
+      // Configuration
+      const SHORTCUTS_ENABLED = true;
+      const DEBUG = true;
+
+      function log(...args) {
+        if (DEBUG) console.log('[CMS Editor]', ...args);
+      }
+
+      // Wait for CMS initialization
+      function waitForCMS() {
+        return new Promise((resolve) => {
+          const check = () => {
+            if (window.CMS || document.querySelector('[data-slate-editor]') || document.querySelector('[contenteditable="true"]')) {
+              log('✓ CMS detected');
+              resolve();
+            } else {
+              setTimeout(check, 100);
+            }
+          };
+          check();
+        });
+      }
+
+      // Main initialization
+      async function init() {
+        await waitForCMS();
+
+        log('Starting editor enhancement...');
+
+        // Monitor for editor creation
+        const observer = new MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            if (mutation.addedNodes.length) {
+              attachToEditors();
+            }
+          }
+        });
+
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+
+        // Initial attachment
+        setTimeout(() => attachToEditors(), 500);
+        setInterval(() => attachToEditors(), 3000);
+      }
+
+      function attachToEditors() {
+        // Try to find the markdown textarea (raw mode)
+        const textareas = document.querySelectorAll('textarea');
+        textareas.forEach(textarea => {
+          if (!textarea.dataset.shortcutsAttached && textarea.value && textarea.value.includes('#')) {
+            textarea.dataset.shortcutsAttached = 'true';
+            textarea.addEventListener('input', handleTextareaInput);
+            textarea.addEventListener('keydown', handleTextareaKeydown);
+            log('✓ Attached to textarea (raw markdown mode)');
+          }
+        });
+
+        // Also try contenteditable for rich text mode
+        const editables = document.querySelectorAll('[contenteditable="true"]');
+        editables.forEach(editable => {
+          if (!editable.dataset.shortcutsAttached) {
+            editable.dataset.shortcutsAttached = 'true';
+            editable.addEventListener('beforeinput', handleBeforeInput);
+            editable.addEventListener('keydown', handleContenteditableKeydown);
+            log('✓ Attached to contenteditable');
+          }
+        });
+      }
+
+      // Handle textarea (raw markdown mode)
+      function handleTextareaInput(e) {
+        const textarea = e.target;
+        processMarkdownShortcuts(textarea);
+      }
+
+      function handleTextareaKeydown(e) {
+        const textarea = e.target;
+
+        // Space key
+        if (e.key === ' ') {
+          setTimeout(() => processMarkdownShortcuts(textarea), 0);
+        }
+
+        // Enter key - auto-continue lists
+        if (e.key === 'Enter') {
+          const cursorPos = textarea.selectionStart;
+          const textBefore = textarea.value.substring(0, cursorPos);
+          const lines = textBefore.split('\n');
+          const currentLine = lines[lines.length - 1];
+
+          // Continue bullet list
+          if (/^[\s]*[-*]\s/.test(currentLine) && currentLine.trim().length > 2) {
+            e.preventDefault();
+            insertAtCursor(textarea, '\n- ');
+            return;
+          }
+
+          // Continue checkbox
+          if (/^[\s]*-\s\[[\sx]\]\s/.test(currentLine)) {
+            e.preventDefault();
+            insertAtCursor(textarea, '\n- [ ] ');
+            return;
+          }
+
+          // Continue numbered list
+          const match = currentLine.match(/^[\s]*(\d+)\.\s/);
+          if (match && currentLine.trim().length > match[0].length) {
+            e.preventDefault();
+            const nextNum = parseInt(match[1]) + 1;
+            insertAtCursor(textarea, `\n${nextNum}. `);
+            return;
+          }
+        }
+
+        // Keyboard shortcuts
+        if (e.metaKey || e.ctrlKey) {
+          if (e.key === 'b') {
+            e.preventDefault();
+            wrapText(textarea, '**', '**');
+          } else if (e.key === 'i') {
+            e.preventDefault();
+            wrapText(textarea, '*', '*');
+          } else if (e.key === 'e') {
+            e.preventDefault();
+            wrapText(textarea, '`', '`');
+          } else if (e.key === 'k') {
+            e.preventDefault();
+            const url = prompt('Enter URL:');
+            if (url) {
+              const start = textarea.selectionStart;
+              const end = textarea.selectionEnd;
+              const selectedText = textarea.value.substring(start, end) || 'link';
+              const replacement = `[${selectedText}](${url})`;
+              textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+              textarea.selectionStart = textarea.selectionEnd = start + replacement.length;
+              textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+          }
+        }
+      }
+
+      function processMarkdownShortcuts(textarea) {
+        const cursorPos = textarea.selectionStart;
+        const textBefore = textarea.value.substring(0, cursorPos);
+        const lineStart = textBefore.lastIndexOf('\n') + 1;
+        const currentLine = textBefore.substring(lineStart);
+
+        // Check if line ends with space (just typed)
+        if (!currentLine.endsWith(' ')) return;
+
+        const lineContent = currentLine.trimEnd();
+        let shouldReplace = false;
+        let replacement = '';
+
+        // Headings
+        if (lineContent === '#') replacement = '# ';
+        else if (lineContent === '##') replacement = '## ';
+        else if (lineContent === '###') replacement = '### ';
+        else if (lineContent === '####') replacement = '#### ';
+        else if (lineContent === '#####') replacement = '##### ';
+        else if (lineContent === '######') replacement = '###### ';
+        // Lists
+        else if (lineContent === '-') replacement = '- ';
+        else if (lineContent === '*') replacement = '* ';
+        // Checkbox
+        else if (lineContent === '[]') replacement = '- [ ] ';
+        // Quote
+        else if (lineContent === '>') replacement = '> ';
+        // Code block
+        else if (lineContent === '```') {
+          replacement = '```\n\n```';
+          const before = textarea.value.substring(0, lineStart);
+          const after = textarea.value.substring(cursorPos);
+          textarea.value = before + replacement + after;
+          textarea.selectionStart = textarea.selectionEnd = lineStart + 4;
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          log('✓ Code block created');
+          return;
+        }
+        // Numbered list
+        else if (/^\d+\.$/.test(lineContent)) replacement = lineContent + ' ';
+
+        if (replacement) {
+          const before = textarea.value.substring(0, lineStart);
+          const after = textarea.value.substring(cursorPos);
+          textarea.value = before + replacement + after;
+          textarea.selectionStart = textarea.selectionEnd = lineStart + replacement.length;
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          log('✓ Shortcut applied:', lineContent, '→', replacement);
+        }
+      }
+
+      function insertAtCursor(textarea, text) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        textarea.value = textarea.value.substring(0, start) + text + textarea.value.substring(end);
+        textarea.selectionStart = textarea.selectionEnd = start + text.length;
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      function wrapText(textarea, before, after) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selectedText = textarea.value.substring(start, end) || 'text';
+        const replacement = before + selectedText + after;
+        textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+
+        if (start === end) {
+          // No selection, place cursor between markers
+          textarea.selectionStart = start + before.length;
+          textarea.selectionEnd = start + before.length + selectedText.length;
+        } else {
+          textarea.selectionStart = textarea.selectionEnd = start + replacement.length;
+        }
+
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      // Handle contenteditable (rich text mode)
+      function handleBeforeInput(e) {
+        // This is for future enhancement - Slate is complex
+        // For now, shortcuts work best in raw markdown mode
+      }
+
+      function handleContenteditableKeydown(e) {
+        // Basic keyboard shortcuts for contenteditable
+        if (e.metaKey || e.ctrlKey) {
+          // Let browser handle bold/italic in contenteditable
+          if (e.key === 'b' || e.key === 'i') {
+            // Default behavior is fine for contenteditable
+            return;
+          }
+        }
+      }
+
+      // Start
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+
+      log('✨ Editor enhancements loaded');
+    </script>
   </body>
 </html>
