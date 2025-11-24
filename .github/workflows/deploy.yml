@@ -5,7 +5,9 @@ on:
     branches:
       - main
       - claude/**
-  workflow_dispatch:
+  workflow_dispatch: # Manual trigger button in GitHub Actions UI
+  schedule:
+    - cron: '0 6 * * *' # Rebuild daily at 6 AM UTC to fetch new Notion posts
 
 permissions:
   contents: read
