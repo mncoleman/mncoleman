@@ -10,15 +10,15 @@ export default function AboutPage() {
 
         <h2 className="text-2xl font-semibold mb-4 mt-8">What I Do</h2>
         <p className="text-muted-foreground mb-4">
-          I'm passionate about technology and software development. This blog serves as a
-          platform where I share my thoughts, experiences, and knowledge with the community.
+          I'm passionate about technology, AI, and sometimesrandom information. This blog serves as a
+          platform where I share my thoughts, experiences, and knowledge with whoever stumbled upon this super cool blog site.
         </p>
 
         <h2 className="text-2xl font-semibold mb-4 mt-8">This Website</h2>
         <p className="text-muted-foreground mb-4">
           This site is built with modern web technologies including Next.js, React,
           TypeScript, and Tailwind CSS. It's hosted on GitHub Pages and features a
-          blog powered by Pages CMS for easy content management.
+          blog powered by Notion for easy content management.
         </p>
 
         <h2 className="text-2xl font-semibold mb-4 mt-8">Get in Touch</h2>

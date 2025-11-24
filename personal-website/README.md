@@ -1,6 +1,6 @@
 # Personal Website & Blog
 
-A modern, minimalist personal website and blog built with Next.js, TypeScript, and Tailwind CSS. Features a clean design with dark mode support and blog functionality powered by Decap CMS.
+A modern, minimalist personal website and blog built with Next.js, TypeScript, and Tailwind CSS. Features a clean design with dark mode support and blog functionality powered by Notion.
 
 ## Features
 
@@ -11,7 +11,7 @@ A modern, minimalist personal website and blog built with Next.js, TypeScript, a
 - 📱 **Responsive** - Works perfectly on all devices
 - 🎯 **SEO Ready** - Optimized for search engines
 - 🔧 **Type Safe** - Built with TypeScript
-- 📦 **No Database** - All content managed through markdown files
+- 📦 **Notion CMS** - Blog content managed through Notion database
 
 ## Tech Stack
 
@@ -19,8 +19,8 @@ A modern, minimalist personal website and blog built with Next.js, TypeScript, a
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **UI Components**: shadcn/ui + ReactBits
-- **Content**: Markdown with gray-matter
-- **CMS**: Decap CMS (Git-based, browser-only)
+- **Content**: Notion API for blog posts
+- **CMS**: Notion for blog management
 - **Deployment**: GitHub Pages
 - **Theme**: next-themes
 
@@ -58,82 +58,25 @@ npm run build
 
 This will generate a static export in the `out` directory.
 
-## Managing Content with Decap CMS
+## Managing Content
 
-Decap CMS provides a user-friendly web interface for managing your blog posts - **no backend server or database required!**
+### Blog Posts
 
-### What is Decap CMS?
+Blog posts are managed through **Notion**. See [`NOTION_SETUP.md`](./NOTION_SETUP.md) for detailed setup instructions.
 
-Decap CMS (formerly Netlify CMS) is an open-source, Git-based content management system that runs entirely in your browser. It's perfect for static sites because:
+**Quick overview:**
+1. Create a Notion integration and database with the required properties (Title, Slug, Date, Tags, Published, Excerpt, Author)
+2. Add your `NOTION_TOKEN` and `NOTION_DATABASE_ID` to GitHub repository secrets
+3. Create posts in Notion and mark them as Published
+4. The site rebuilds daily at 6 AM UTC, or you can trigger a manual rebuild via the admin panel
 
-✅ **No backend needed** - Runs completely in the browser
-✅ **No database required** - Uses your GitHub repository as storage
-✅ **Works with GitHub Pages** - Perfect integration
-✅ **Free to use** - Zero ongoing costs
-✅ **Simple setup** - Just create a GitHub OAuth app (2 minutes)
+### Static Pages
 
-### Quick Setup (5 Minutes)
+Static pages (like About, Home) are hardcoded React components in the `app/` directory:
+- **About page**: Edit `app/about/page.tsx`
+- **Home page**: Edit `app/page.tsx`
 
-**See the detailed guide in [`DECAP_CMS_SETUP.md`](./DECAP_CMS_SETUP.md) for complete instructions.**
-
-Quick version:
-
-1. **Create a GitHub OAuth App**:
-   - Go to https://github.com/settings/developers
-   - Click "OAuth Apps" → "New OAuth App"
-   - Fill in:
-     - Name: `Matthew Coleman Blog CMS`
-     - Homepage: `https://slider003.github.io/matthew-coleman/`
-     - Callback: `https://api.netlify.com/auth/done`
-   - Save your Client ID and Client Secret
-
-2. **Enable GitHub Pages**:
-   - Go to repository Settings → Pages
-   - Set source to "GitHub Actions"
-
-3. **Access Your CMS**:
-   - Visit: `https://slider003.github.io/matthew-coleman/admin/`
-   - Click "Login with GitHub"
-   - Start creating content!
-
-### Admin Access
-
-**CMS URL**: `https://slider003.github.io/matthew-coleman/admin/`
-
-**Login**: Your GitHub account (must have write access to the repository)
-
-**Features**:
-- Rich markdown editor with live preview
-- Image upload and media library
-- Tag management
-- Publish directly to your site
-
-### Creating Blog Posts
-
-#### Via Decap CMS (Recommended):
-1. Visit `https://slider003.github.io/matthew-coleman/admin/`
-2. Click "Blog Posts" → "New Blog Posts"
-3. Fill in the title, date, excerpt, tags, and content
-4. Click "Publish"
-5. Your changes commit automatically and trigger a rebuild
-6. Site updates in ~2 minutes!
-
-#### Via Git (Direct):
-Create a new markdown file in `content/posts/`:
-
-```markdown
----
-title: Your Post Title
-date: 2025-11-14
-excerpt: A brief description of your post
-author: Matthew Coleman
-tags:
-  - tag1
-  - tag2
----
-
-Your post content here in Markdown format.
-```
+After editing, commit and push to GitHub to trigger a rebuild and deployment.
 
 ## Project Structure
 
@@ -149,13 +92,13 @@ personal-website/
 │   ├── ui/               # shadcn/ui components
 │   ├── theme-provider.tsx
 │   └── theme-toggle.tsx
-├── content/              # Content files
-│   └── posts/           # Blog posts (Markdown)
+├── content/              # (Currently unused)
+│   └── posts/           # (Legacy - blog now uses Notion)
 ├── lib/                 # Utility functions
-│   ├── blog.ts         # Blog utilities
+│   ├── blog.ts         # Blog utilities (adapter)
+│   ├── notion.ts       # Notion API integration
 │   └── utils.ts        # General utilities
 ├── public/             # Static assets
-│   └── admin/         # Decap CMS admin interface
 └── next.config.ts      # Next.js configuration
 ```
 
@@ -186,7 +129,7 @@ For ReactBits components, they can be added via the same CLI with the custom reg
 
 - **Home page**: Edit `app/page.tsx`
 - **About page**: Edit `app/about/page.tsx`
-- **Blog posts**: Add/edit files in `content/posts/`
+- **Blog posts**: Edit in your Notion database (see `NOTION_SETUP.md`)
 
 ## Deployment
 
@@ -215,4 +158,4 @@ Matthew Coleman
 
 ---
 
-Built with ❤️ using Next.js, Tailwind CSS, and Decap CMS
+Built with ❤️ using Next.js, Tailwind CSS, and Notion
