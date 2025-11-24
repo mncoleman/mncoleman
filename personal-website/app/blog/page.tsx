@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { getAllPosts } from '@/lib/blog';
 
-export default function BlogPage() {
-  const posts = getAllPosts();
+export const revalidate = 3600; // Revalidate every hour if using ISR, though GitHub Pages is static export
+
+export default async function BlogPage() {
+  const posts = await getAllPosts();
 
   return (
     <div className="container mx-auto px-4 py-16 max-w-4xl">

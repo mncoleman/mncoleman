@@ -4,8 +4,9 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 
+
 export async function generateStaticParams() {
-  const posts = getAllPosts();
+  const posts = await getAllPosts();
   return posts.map((post) => ({
     slug: post.slug,
   }));
@@ -13,10 +14,9 @@ export async function generateStaticParams() {
 
 export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  let post;
-  try {
-    post = getPostBySlug(slug);
-  } catch (error) {
+  const post = await getPostBySlug(slug);
+
+  if (!post) {
     notFound();
   }
 
@@ -41,6 +41,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
             })}
           </time>
           {post.author && <span>by {post.author}</span>}
+          {post.readingTime && <span>• {post.readingTime} min read</span>}
         </div>
         {post.tags && post.tags.length > 0 && (
           <div className="flex gap-2 mt-4">
@@ -57,7 +58,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
       </header>
 
       <div className="prose prose-neutral dark:prose-invert max-w-none">
-        <ReactMarkdown>{post.content}</ReactMarkdown>
+        <ReactMarkdown>{post.content || ''}</ReactMarkdown>
       </div>
     </article>
   );

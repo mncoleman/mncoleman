@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { PWAInstall } from '@/components/pwa-install';
 import Link from 'next/link';
+import { GoogleAnalytics } from '@next/third-parties/google';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -78,6 +79,9 @@ export default function RootLayout({
             </footer>
           </div>
         </ThemeProvider>
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+        )}
       </body>
     </html>
   );
