@@ -1,13 +1,18 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { getAllPosts } from '@/lib/blog';
+import DarkVeil from '@/components/ui/dark-veil';
 
 export default async function Home() {
   const posts = await getAllPosts();
   const recentPosts = posts.slice(0, 3);
 
   return (
-    <div className="container mx-auto px-4 py-16 max-w-4xl">
+    <div className="relative min-h-screen">
+      <div className="fixed inset-0 -z-10">
+        <DarkVeil />
+      </div>
+      <div className="container mx-auto px-4 py-16 max-w-4xl relative z-10">
       <section className="mb-20">
         <h1 className="text-4xl font-bold mb-4 tracking-tight">
           Hi, I'm Matthew Coleman
@@ -66,6 +71,7 @@ export default async function Home() {
           </div>
         </section>
       )}
+      </div>
     </div>
   );
 }

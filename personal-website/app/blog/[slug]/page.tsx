@@ -3,6 +3,7 @@ import { getPostBySlug, getAllPosts } from '@/lib/blog';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 
 export async function generateStaticParams() {
@@ -58,7 +59,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
       </header>
 
       <div className="prose prose-neutral dark:prose-invert max-w-none">
-        <ReactMarkdown>{post.content || ''}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content || ''}</ReactMarkdown>
       </div>
     </article>
   );
