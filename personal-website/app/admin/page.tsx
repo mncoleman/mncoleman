@@ -1,6 +1,6 @@
 import { getBlogStats } from '@/lib/notion';
 import Link from 'next/link';
-import { RefreshButton } from '@/components/refresh-button';
+
 
 export const revalidate = 3600;
 
@@ -55,14 +55,7 @@ export default async function AdminPage() {
                     </Link>
                 </section>
 
-                <section className="p-6 border rounded-lg">
-                    <h2 className="text-2xl font-semibold mb-4">Refresh Posts</h2>
-                    <p className="text-muted-foreground mb-4">
-                        Trigger a rebuild to fetch the latest posts from Notion.
-                        Note: Automatic daily refreshes are enabled at 6 AM UTC.
-                    </p>
-                    <RefreshButton />
-                </section>
+
             </div>
         </div>
     );
