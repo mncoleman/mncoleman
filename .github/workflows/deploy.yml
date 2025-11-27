@@ -64,3 +64,10 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Notify n8n
+        if: ${{ always() && github.event.inputs.resumeUrl != '' }}
+        run: |
+          curl -X POST "${{ github.event.inputs.resumeUrl }}" \
+          -H "Content-Type: application/json" \
+          -d '{"status": "${{ job.status }}", "url": "${{ steps.deployment.outputs.page_url }}"}'
