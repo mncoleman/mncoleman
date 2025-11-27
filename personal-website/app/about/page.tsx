@@ -48,7 +48,7 @@ export default function AboutPage() {
         <div className="lg:col-span-1 flex items-start justify-center lg:justify-end">
           <ProfileCard
             name="Matthew Coleman"
-            avatarUrl="/profile.jpg"
+            avatarUrl={`${process.env.NODE_ENV === 'production' ? '/matthew-coleman' : ''}/profile.jpg`}
             showUserInfo={true}
             enableTilt={true}
             enableMobileTilt={true}
