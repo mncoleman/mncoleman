@@ -4,7 +4,11 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: # Manual trigger button in GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      resumeUrl:
+        description: 'Optional input from n8n (unused)'
+        required: false
   schedule:
     - cron: '0 6 * * *' # Rebuild daily at 6 AM UTC to fetch new Notion posts
 
