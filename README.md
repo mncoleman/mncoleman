@@ -52,10 +52,11 @@ npm install
 
 3. Set up environment variables:
 ```bash
-# Create .env.local file
 cp .env.example .env.local
-# Add your Notion credentials (see NOTION_SETUP.md)
 ```
+Then edit `.env.local` with your credentials:
+- **Notion**: See [`NOTION_SETUP.md`](./NOTION_SETUP.md)
+- **Google Analytics**: See [`GOOGLE_ANALYTICS_SETUP.md`](./GOOGLE_ANALYTICS_SETUP.md)
 
 4. Run the development server:
 ```bash
@@ -129,7 +130,8 @@ After editing, commit and push to GitHub to trigger a rebuild and deployment.
 ├── components.json       # shadcn/ui configuration
 ├── next.config.ts        # Next.js configuration
 ├── CLAUDE.md            # Claude Code project instructions
-└── NOTION_SETUP.md      # Notion CMS setup guide
+├── NOTION_SETUP.md      # Notion CMS setup guide
+└── GOOGLE_ANALYTICS_SETUP.md # Google Analytics setup guide
 ```
 
 ### Architecture Notes
@@ -197,9 +199,9 @@ This site deploys automatically to GitHub Pages using GitHub Actions.
 
 1. **Configure GitHub Secrets** (required for production builds):
    - Go to Settings → Secrets and variables → Actions
-   - Add `NOTION_TOKEN` - Your Notion integration token
+   - Add `NOTION_TOKEN` - Your Notion integration token ([setup guide](./NOTION_SETUP.md))
    - Add `NOTION_DATABASE_ID` - Your Notion database ID
-   - (Optional) Add `NEXT_PUBLIC_GA_ID` - Google Analytics measurement ID
+   - Add `NEXT_PUBLIC_GA_ID` - Google Analytics measurement ID ([setup guide](./GOOGLE_ANALYTICS_SETUP.md))
 
 2. **Enable GitHub Pages**:
    - Go to Settings → Pages
@@ -264,8 +266,8 @@ Tags are automatically extracted from published Notion posts. To add a new tag:
 3. Quick links to Google Analytics and Notion CMS
 
 **Google Analytics** (visitor tracking):
-1. Set `NEXT_PUBLIC_GA_ID` in `.env.local` (development)
-2. Add to GitHub Secrets (production)
+1. Set up GA4 following [`GOOGLE_ANALYTICS_SETUP.md`](./GOOGLE_ANALYTICS_SETUP.md)
+2. Add `NEXT_PUBLIC_GA_ID` to GitHub Secrets (production)
 3. Access via admin dashboard or directly at analytics.google.com
 
 ## Troubleshooting
