@@ -46,7 +46,7 @@ To use Notion as your CMS, you need to create an integration and a database in N
 
 You need to provide these credentials to your application.
 
-1. Create a file named `.env.local` in the `personal-website` folder (if I haven't created it for you).
+1. Create a file named `.env.local` in the root folder (if it doesn't exist already).
 2. Add the following lines:
 
 ```bash

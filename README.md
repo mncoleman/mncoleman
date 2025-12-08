@@ -35,7 +35,7 @@ A modern, minimalist personal website and blog built with Next.js, TypeScript, a
 1. Clone the repository:
 ```bash
 git clone https://github.com/slider003/matthew-coleman.git
-cd matthew-coleman/personal-website
+cd matthew-coleman
 ```
 
 2. Install dependencies:
@@ -81,7 +81,6 @@ After editing, commit and push to GitHub to trigger a rebuild and deployment.
 ## Project Structure
 
 ```
-personal-website/
 ├── app/                    # Next.js app directory
 │   ├── blog/              # Blog pages
 │   ├── about/             # About page
@@ -92,8 +91,6 @@ personal-website/
 │   ├── ui/               # shadcn/ui components
 │   ├── theme-provider.tsx
 │   └── theme-toggle.tsx
-├── content/              # (Currently unused)
-│   └── posts/           # (Legacy - blog now uses Notion)
 ├── lib/                 # Utility functions
 │   ├── blog.ts         # Blog utilities (adapter)
 │   ├── notion.ts       # Notion API integration
