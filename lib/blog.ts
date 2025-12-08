@@ -10,3 +10,14 @@ export async function getAllPosts(): Promise<Post[]> {
 export async function getPostBySlug(slug: string): Promise<Post | null> {
   return await getNotionPostBySlug(slug);
 }
+
+export async function getAllTags(): Promise<string[]> {
+  const posts = await getPublishedPosts();
+  const tagsSet = new Set<string>();
+
+  posts.forEach(post => {
+    post.tags?.forEach(tag => tagsSet.add(tag));
+  });
+
+  return Array.from(tagsSet).sort();
+}

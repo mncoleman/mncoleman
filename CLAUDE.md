@@ -47,7 +47,9 @@ The blog uses a **two-layer adapter pattern**:
 2. **lib/blog.ts** - Thin adapter layer
    - Provides stable public interface (`Post` type = `NotionPost`)
    - Future-proof: can switch backends without changing consuming code
-   - `getAllPosts()` and `getPostBySlug()` are the public API
+   - `getAllPosts()` - Get all posts (sorted by featured/date)
+   - `getPostBySlug(slug)` - Get single post by slug
+   - `getAllTags()` - Get all unique tags from published posts (sorted alphabetically)
 
 **Notion Database Schema** (required properties):
 - Title (title)
@@ -66,11 +68,12 @@ Content is converted from Notion blocks to Markdown using `notion-to-md`.
 ### Component Organization
 
 - **components/ui/** - shadcn/ui components (button, card, etc.)
-- **components/** - Custom components (theme-toggle, pwa-install, refresh-button)
+- **components/** - Custom components (theme-toggle, pwa-install, refresh-button, blog-list)
+  - `blog-list.tsx` - Client component for tag filtering and post display
 - **app/** - Next.js App Router pages and layouts
   - `app/page.tsx` - Home page
   - `app/about/page.tsx` - About page
-  - `app/blog/page.tsx` - Blog listing
+  - `app/blog/page.tsx` - Blog listing (server component that fetches data)
   - `app/blog/[slug]/page.tsx` - Dynamic blog post pages
   - `app/admin/page.tsx` - Admin dashboard (stats, manual refresh)
   - `app/api/refresh/route.ts` - API route for triggering GitHub rebuild
@@ -128,13 +131,22 @@ npx shadcn@latest add @react-bits/avatar  # ReactBits
 
 Read posts via the adapter:
 ```typescript
-import { getAllPosts, getPostBySlug } from '@/lib/blog';
+import { getAllPosts, getPostBySlug, getAllTags } from '@/lib/blog';
 
 const posts = await getAllPosts();
 const post = await getPostBySlug('my-post-slug');
+const tags = await getAllTags();
 ```
 
 Markdown content is in `post.content` and should be rendered with proper sanitization.
+
+### Tag Filtering
+
+The blog page (`app/blog/page.tsx`) implements client-side tag filtering:
+- Server component fetches all posts and tags at build time
+- `BlogList` client component (`components/blog-list.tsx`) handles filtering interactivity
+- Tags are automatically extracted from published posts - add/remove tags in Notion and rebuild to update
+- Filter buttons show "All Posts" plus individual tags (sorted alphabetically)
 
 ## Common Pitfalls
 
