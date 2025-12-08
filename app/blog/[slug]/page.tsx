@@ -41,7 +41,6 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
               day: 'numeric',
             })}
           </time>
-          {post.author && <span>by {post.author}</span>}
           {post.readingTime && <span>• {post.readingTime} min read</span>}
         </div>
         {post.tags && post.tags.length > 0 && (

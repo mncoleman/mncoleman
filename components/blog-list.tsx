@@ -74,7 +74,11 @@ export default function BlogList({ posts, tags }: BlogListProps) {
                 <p className="text-muted-foreground mb-3 text-lg">{post.excerpt}</p>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <time>
-                    {post.date.split('T')[0]}
+                    {new Date(post.date).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
                   </time>
                   {post.tags && post.tags.length > 0 && (
                     <div className="flex gap-2">

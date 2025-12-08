@@ -66,7 +66,11 @@ export default async function Home() {
                   </div>
                   <p className="text-muted-foreground mb-2">{post.excerpt}</p>
                   <time className="text-sm text-muted-foreground">
-                    {post.date.split('T')[0]}
+                    {new Date(post.date).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
                   </time>
                 </Link>
               </article>
