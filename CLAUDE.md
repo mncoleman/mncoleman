@@ -55,8 +55,11 @@ The blog uses a **two-layer adapter pattern**:
 - Date (date)
 - Tags (multi-select)
 - Published (checkbox)
+- Featured (checkbox) - Featured posts appear first in listings
 - Excerpt (text)
 - Author (text)
+
+**Post Sorting**: Posts are sorted with Featured posts first (newest to oldest by date), followed by regular posts (newest to oldest by date).
 
 Content is converted from Notion blocks to Markdown using `notion-to-md`.
 

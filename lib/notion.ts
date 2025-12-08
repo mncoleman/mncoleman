@@ -19,6 +19,7 @@ export interface NotionPost {
     author: string;
     tags: string[];
     published: boolean;
+    featured?: boolean;
     content?: string;
     readingTime?: number; // Estimated minutes
     wordCount?: number;
@@ -67,12 +68,6 @@ export async function getPublishedPosts(): Promise<NotionPost[]> {
                     equals: true,
                 },
             },
-            sorts: [
-                {
-                    property: 'Date',
-                    direction: 'descending',
-                },
-            ],
         });
 
         const posts = response.results.map((page: any) => {
@@ -85,10 +80,21 @@ export async function getPublishedPosts(): Promise<NotionPost[]> {
                 author: page.properties.Author?.rich_text?.[0]?.plain_text || 'Anonymous',
                 tags: page.properties.Tags?.multi_select?.map((tag: any) => tag.name) || [],
                 published: page.properties.Published?.checkbox || false,
+                featured: page.properties.Featured?.checkbox || false,
             };
         });
 
-        return posts;
+        // Sort: Featured posts first (newest to oldest), then regular posts (newest to oldest)
+        const sortedPosts = posts.sort((a, b) => {
+            // If one is featured and the other is not, featured comes first
+            if (a.featured && !b.featured) return -1;
+            if (!a.featured && b.featured) return 1;
+
+            // If both have the same featured status, sort by date (newest first)
+            return new Date(b.date).getTime() - new Date(a.date).getTime();
+        });
+
+        return sortedPosts;
     } catch (error) {
         console.error('Error fetching posts from Notion:', error);
         return [];
@@ -170,6 +176,7 @@ Check \`NOTION_SETUP.md\` for detailed instructions.
             author: page.properties.Author?.rich_text?.[0]?.plain_text || 'Anonymous',
             tags: page.properties.Tags?.multi_select?.map((tag: any) => tag.name) || [],
             published: page.properties.Published?.checkbox || false,
+            featured: page.properties.Featured?.checkbox || false,
             content: mdString.parent,
             wordCount,
             readingTime,

@@ -22,6 +22,7 @@ To use Notion as your CMS, you need to create an integration and a database in N
    - **Date** (Date): The publication date.
    - **Tags** (Multi-select): For categories.
    - **Published** (Checkbox): To control visibility.
+   - **Featured** (Checkbox): Featured posts appear first on the blog.
    - **Excerpt** (Text): A short summary.
    - **Author** (Text): Your name.
 5. **Add a sample post**: Fill in a row with dummy data. Open the page (click "Open" on the row) and add some content in the body.

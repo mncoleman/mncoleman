@@ -65,9 +65,9 @@ This will generate a static export in the `out` directory.
 Blog posts are managed through **Notion**. See [`NOTION_SETUP.md`](./NOTION_SETUP.md) for detailed setup instructions.
 
 **Quick overview:**
-1. Create a Notion integration and database with the required properties (Title, Slug, Date, Tags, Published, Excerpt, Author)
+1. Create a Notion integration and database with the required properties (Title, Slug, Date, Tags, Published, Featured, Excerpt, Author)
 2. Add your `NOTION_TOKEN` and `NOTION_DATABASE_ID` to GitHub repository secrets
-3. Create posts in Notion and mark them as Published
+3. Create posts in Notion and mark them as Published (optionally mark as Featured to pin them to the top)
 4. The site rebuilds daily at 6 AM UTC, or you can trigger a manual rebuild via the admin panel
 
 ### Static Pages
