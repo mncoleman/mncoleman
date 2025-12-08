@@ -54,16 +54,19 @@ export default async function Home() {
             {recentPosts.map((post) => (
               <article key={post.slug} className="border-b pb-6 last:border-0">
                 <Link href={`/blog/${post.slug}`} className="group">
-                  <h3 className="text-xl font-semibold mb-2 group-hover:text-muted-foreground transition-colors">
-                    {post.title}
-                  </h3>
+                  <div className="flex items-start gap-3 mb-2">
+                    <h3 className="text-xl font-semibold group-hover:text-muted-foreground transition-colors flex-1">
+                      {post.title}
+                    </h3>
+                    {post.featured && (
+                      <span className="px-2 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded text-xs font-medium whitespace-nowrap">
+                        Featured
+                      </span>
+                    )}
+                  </div>
                   <p className="text-muted-foreground mb-2">{post.excerpt}</p>
                   <time className="text-sm text-muted-foreground">
-                    {new Date(post.date).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
+                    {post.date.split('T')[0]}
                   </time>
                 </Link>
               </article>

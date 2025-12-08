@@ -61,17 +61,20 @@ export default function BlogList({ posts, tags }: BlogListProps) {
           {filteredPosts.map((post) => (
             <article key={post.slug} className="border-b pb-8 last:border-0">
               <Link href={`/blog/${post.slug}`} className="group">
-                <h2 className="text-2xl font-semibold mb-3 group-hover:text-muted-foreground transition-colors">
-                  {post.title}
-                </h2>
+                <div className="flex items-start gap-3 mb-3">
+                  <h2 className="text-2xl font-semibold group-hover:text-muted-foreground transition-colors flex-1">
+                    {post.title}
+                  </h2>
+                  {post.featured && (
+                    <span className="px-2 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded text-xs font-medium whitespace-nowrap">
+                      Featured
+                    </span>
+                  )}
+                </div>
                 <p className="text-muted-foreground mb-3 text-lg">{post.excerpt}</p>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <time>
-                    {new Date(post.date).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
+                    {post.date.split('T')[0]}
                   </time>
                   {post.tags && post.tags.length > 0 && (
                     <div className="flex gap-2">
