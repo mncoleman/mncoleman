@@ -37,7 +37,7 @@ export default function AboutPage() {
             </h2>
             <p className="text-muted-foreground mb-4">
               <BlurText
-                text="This site is built with modern web technologies including Next.js, React, TypeScript, and Tailwind CSS. It's hosted on GitHub Pages and features a blog powered by Notion for easy content management."
+                text="This site is built using AI, primarily Claude code (mostly Sonnet 4.5). It's hosted on GitHub Pages and features a blog powered by Notion for easy content management."
                 duration={1200}
               />
             </p>
