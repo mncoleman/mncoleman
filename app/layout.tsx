@@ -19,8 +19,8 @@ export const viewport: Viewport = {
 const basePath = process.env.NODE_ENV === 'production' ? '/matthew-coleman' : '';
 
 export const metadata: Metadata = {
-  title: 'Matthew Coleman - Personal Website & Blog',
-  description: 'Personal website and blog by Matthew Coleman',
+  title: 'Matthew Coleman - Information Hub',
+  description: 'Personal information hub with blog, resources, and resume by Matthew Coleman',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -53,13 +53,19 @@ export default function RootLayout({
         >
           <div className="min-h-screen flex flex-col">
             <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
-              <div className="container mx-auto px-4 py-4 flex justify-between items-center max-w-4xl">
+              <div className="container mx-auto px-4 py-4 flex justify-center items-center max-w-4xl">
                 <nav className="flex gap-6 items-center">
                   <Link href="/" className="font-semibold text-lg hover:text-muted-foreground transition-colors">
                     Matthew Coleman
                   </Link>
                   <Link href="/blog" className="text-sm hover:text-muted-foreground transition-colors">
                     Blog
+                  </Link>
+                  <Link href="/resources" className="text-sm hover:text-muted-foreground transition-colors">
+                    Resources
+                  </Link>
+                  <Link href="/resume" className="text-sm hover:text-muted-foreground transition-colors">
+                    Resume
                   </Link>
                   <Link href="/about" className="text-sm hover:text-muted-foreground transition-colors">
                     About

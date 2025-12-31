@@ -4,7 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a personal website and blog project built with Next.js 16 (App Router) as a static site with a Notion-powered blog. The site is deployed to GitHub Pages at `https://slider003.github.io/matthew-coleman/`.
+This is Matthew Coleman's personal information hub built with Next.js 16 (App Router) as a static site. It features:
+- **Blog** - Notion-powered blog with markdown rendering
+- **Resume** - Professional resume/CV from Notion
+- **Resource Library** - Curated links to websites and resources from Notion
+
+The site is deployed to GitHub Pages at `https://slider003.github.io/matthew-coleman/`.
 
 ## Development Commands
 
@@ -20,10 +25,10 @@ npm run lint     # Run ESLint
 Create `.env.local` in the root directory with:
 ```
 NOTION_TOKEN=secret_your_integration_token
-NOTION_DATABASE_ID=your_database_id
+NOTION_DATABASE_ID=your_blog_database_id
+NOTION_RESOURCES_DATABASE_ID=your_resources_database_id
+NOTION_RESUME_PAGE_ID=your_resume_page_id
 ```
-
-See `NOTION_SETUP.md` for detailed Notion CMS configuration.
 
 ## Architecture
 
@@ -36,117 +41,515 @@ See `NOTION_SETUP.md` for detailed Notion CMS configuration.
 
 ### Content Management Architecture
 
-The blog uses a **two-layer adapter pattern**:
+Uses a **two-layer adapter pattern** for all Notion content:
 
-1. **lib/notion.ts** - Direct Notion API integration
-   - `getPublishedPosts()` - Fetch all published posts
-   - `getPostBySlug(slug)` - Fetch single post with markdown content
-   - `getBlogStats()` - Calculate aggregate statistics
-   - Returns `NotionPost` interface with metadata and markdown content
+1. **lib/notion.ts** - Direct Notion API integration for blog posts
+2. **lib/blog.ts** - Thin adapter for blog data
+3. **lib/resources.ts** - Adapter for Public Resources Database (TO BE CREATED)
+4. **lib/resume.ts** - Adapter for Public Resume page (TO BE CREATED)
 
-2. **lib/blog.ts** - Thin adapter layer
-   - Provides stable public interface (`Post` type = `NotionPost`)
-   - Future-proof: can switch backends without changing consuming code
-   - `getAllPosts()` - Get all posts (sorted by featured/date)
-   - `getPostBySlug(slug)` - Get single post by slug
-   - `getAllTags()` - Get all unique tags from published posts (sorted alphabetically)
+### Notion Data Sources
 
-**Notion Database Schema** (required properties):
-- Title (title)
-- Slug (text) - URL-friendly identifier
-- Date (date)
-- Tags (multi-select)
-- Published (checkbox)
-- Featured (checkbox) - Featured posts appear first in listings
-- Excerpt (text)
-- Author (text)
+**Blog Database** (existing):
+- Database ID: `2b5c6cc793dc805db5b6fc611ecc05cf`
+- View: `2b5c6cc793dc80db9cee000c49d30303`
+- Properties: Title, Slug, Date, Tags, Published, Featured, Excerpt, Author
 
-**Post Sorting**: Posts are sorted with Featured posts first (newest to oldest by date), followed by regular posts (newest to oldest by date).
+**Public Resources Database** (new):
+- Database ID: `2b5c6cc793dc805db5b6fc611ecc05cf` (same DB, different view)
+- View: `2dac6cc793dc8031abc1000c318a618b`
+- Expected Properties: Name, URL, Category, Description, Published
 
-Content is converted from Notion blocks to Markdown using `notion-to-md`.
+**Public Resume Page** (new):
+- Page ID: `2dac6cc793dc80c2ac99d075065c739f`
+- Content: Markdown blocks to be converted
 
 ### Component Organization
 
-- **components/ui/** - shadcn/ui components (button, card, etc.)
-- **components/** - Custom components (theme-toggle, pwa-install, refresh-button, blog-list)
-  - `blog-list.tsx` - Client component for tag filtering and post display
-- **app/** - Next.js App Router pages and layouts
-  - `app/page.tsx` - Home page
-  - `app/about/page.tsx` - About page
-  - `app/blog/page.tsx` - Blog listing (server component that fetches data)
-  - `app/blog/[slug]/page.tsx` - Dynamic blog post pages
-  - `app/admin/page.tsx` - Admin dashboard (stats, manual refresh)
-  - `app/api/refresh/route.ts` - API route for triggering GitHub rebuild
+- **components/ui/** - shadcn/ui + ReactBits components
+- **components/** - Custom components
+- **app/** - Next.js App Router pages
 
 ### Styling System
 
 - **Tailwind CSS** with CSS variables for theming
 - **Dark mode**: `next-themes` with class-based toggle
-- **Typography**: `@tailwindcss/typography` for blog content
 - **Component library**: shadcn/ui (New York style) + ReactBits registry
-- **Path aliases**: `@/components`, `@/lib`, etc.
 
-Theme colors defined in `app/globals.css` using HSL CSS variables.
+---
 
-### Deployment Pipeline
+# IMPLEMENTATION PLANS
 
-**GitHub Actions** (`.github/workflows/deploy.yml`):
-- Triggered on: push to `main`, manual dispatch, daily cron (6 AM UTC)
-- Build process:
-  1. Install dependencies with `npm ci`
-  2. Inject `NOTION_TOKEN`, `NOTION_DATABASE_ID` from GitHub Secrets
-  3. Run `npm run build` (Next.js static export)
-  4. Upload `out/` artifact
-  5. Deploy to GitHub Pages
-- Optional: n8n callback support via `resumeUrl` workflow input
+The following plans should be executed by an AI model (Claude Sonnet or similar) to update this site.
 
-**GitHub Secrets Required**:
-- `NOTION_TOKEN` - Notion integration token
-- `NOTION_DATABASE_ID` - Blog database ID
-- `NEXT_PUBLIC_GA_ID` - Google Analytics (optional)
+---
 
-## Key Implementation Patterns
+## PLAN 1: Health Check & Optimization
 
-### Static Generation with Notion
+### Findings
 
-All Notion data is fetched at **build time** (ISR/SSG):
-- Blog listing pre-rendered from Notion database query
-- Individual posts pre-rendered using `generateStaticParams()`
-- No runtime Notion API calls in production (fully static)
+**Current State Assessment:**
+- File structure is clean and minimal
+- Dependencies are appropriate for the project
+- No major bloat or unnecessary files
 
-To refresh content:
-1. Trigger manual rebuild via GitHub Actions
-2. Wait for daily cron rebuild (6 AM UTC)
-3. Use admin refresh button (requires serverless platform, not GitHub Pages)
+**Issues Identified:**
 
-### Adding shadcn/ui Components
+1. **Unused Dependency**: `gray-matter` package in dependencies may be unused (was for markdown frontmatter before Notion migration)
 
-Two registries configured in `components.json`:
+2. **Script Not Runnable**: `scripts/generate-icons.js` requires `sharp` but it's not in dependencies (icons already generated, script can be removed)
+
+3. **Documentation Redundancy**: Multiple setup docs (GOOGLE_ANALYTICS_SETUP.md, NOTION_SETUP.md, REFRESH_SETUP.md) could be consolidated into README.md
+
+4. **Dead API Route**: `app/api/refresh-posts/route.ts` doesn't work on GitHub Pages (static export)
+
+5. **Theme Toggle Missing**: No theme toggle button in the layout header
+
+### Cleanup Actions
+
+Execute these steps in order:
+
+**Step 1: Remove Unused Dependencies**
 ```bash
-npx shadcn@latest add button              # shadcn/ui
-npx shadcn@latest add @react-bits/avatar  # ReactBits
+npm uninstall gray-matter
 ```
 
-### Working with Blog Posts
+**Step 2: Remove Unused Files**
+- Delete `scripts/generate-icons.js`
+- Delete `scripts/` directory (empty after removal)
+- Delete `app/api/refresh-posts/route.ts`
+- Delete `app/api/` directory (empty after removal)
 
-Read posts via the adapter:
+**Step 3: Consolidate Documentation**
+- Move essential content from GOOGLE_ANALYTICS_SETUP.md, NOTION_SETUP.md, REFRESH_SETUP.md into README.md under appropriate sections
+- Delete the individual setup files
+
+**Step 4: Verify Build**
+```bash
+npm run build
+npm run lint
+```
+
+---
+
+## PLAN 2: Magic Bento Home Page Implementation
+
+### Overview
+
+Transform the home page into an interactive Magic Bento grid layout that serves as an information hub with tiles for:
+1. **Hero/Introduction** - Name, tagline, brief intro
+2. **Blog** - Latest posts preview
+3. **Resume** - Professional summary with link
+4. **Resources** - Featured resources preview
+
+### Prerequisites
+
+**Install GSAP** (required by MagicBento):
+```bash
+npm install gsap
+```
+
+**Install MagicBento Component**:
+```bash
+npx shadcn@latest add @react-bits/MagicBento-TS-TW
+```
+
+### Implementation Steps
+
+#### Step 1: Create Resources Data Layer
+
+Create `lib/resources.ts`:
+
 ```typescript
-import { getAllPosts, getPostBySlug, getAllTags } from '@/lib/blog';
+import { Client } from '@notionhq/client';
 
-const posts = await getAllPosts();
-const post = await getPostBySlug('my-post-slug');
-const tags = await getAllTags();
+const getNotionClient = () => {
+    if (!process.env.NOTION_TOKEN) {
+        throw new Error('NOTION_TOKEN is not defined');
+    }
+    return new Client({ auth: process.env.NOTION_TOKEN });
+};
+
+export interface Resource {
+    id: string;
+    name: string;
+    url: string;
+    category: string;
+    description: string;
+    published: boolean;
+}
+
+export async function getPublishedResources(): Promise<Resource[]> {
+    const databaseId = process.env.NOTION_RESOURCES_DATABASE_ID;
+    if (!databaseId) {
+        console.warn('NOTION_RESOURCES_DATABASE_ID not set, returning sample data');
+        return [
+            {
+                id: 'sample-1',
+                name: 'Sample Resource',
+                url: 'https://example.com',
+                category: 'Sample',
+                description: 'This is a sample resource.',
+                published: true
+            }
+        ];
+    }
+
+    try {
+        const notion = getNotionClient();
+        const response = await notion.databases.query({
+            database_id: databaseId,
+            filter: {
+                property: 'Published',
+                checkbox: { equals: true }
+            }
+        });
+
+        return response.results.map((page: any) => ({
+            id: page.id,
+            name: page.properties.Name?.title?.[0]?.plain_text || 'Untitled',
+            url: page.properties.URL?.url || '',
+            category: page.properties.Category?.select?.name || 'Uncategorized',
+            description: page.properties.Description?.rich_text?.[0]?.plain_text || '',
+            published: page.properties.Published?.checkbox || false
+        }));
+    } catch (error) {
+        console.error('Error fetching resources:', error);
+        return [];
+    }
+}
+
+export async function getResourcesByCategory(): Promise<Record<string, Resource[]>> {
+    const resources = await getPublishedResources();
+    return resources.reduce((acc, resource) => {
+        const category = resource.category;
+        if (!acc[category]) acc[category] = [];
+        acc[category].push(resource);
+        return acc;
+    }, {} as Record<string, Resource[]>);
+}
 ```
 
-Markdown content is in `post.content` and should be rendered with proper sanitization.
+#### Step 2: Create Resume Data Layer
 
-### Tag Filtering
+Create `lib/resume.ts`:
 
-The blog page (`app/blog/page.tsx`) implements client-side tag filtering:
-- Server component fetches all posts and tags at build time
-- `BlogList` client component (`components/blog-list.tsx`) handles filtering interactivity
-- Tags are automatically extracted from published posts - add/remove tags in Notion and rebuild to update
-- Filter buttons show "All Posts" plus individual tags (sorted alphabetically)
+```typescript
+import { Client } from '@notionhq/client';
+import { NotionToMarkdown } from 'notion-to-md';
+
+const getNotionClient = () => {
+    if (!process.env.NOTION_TOKEN) {
+        throw new Error('NOTION_TOKEN is not defined');
+    }
+    return new Client({ auth: process.env.NOTION_TOKEN });
+};
+
+export interface Resume {
+    title: string;
+    content: string;
+    lastUpdated: string;
+}
+
+export async function getResume(): Promise<Resume | null> {
+    const pageId = process.env.NOTION_RESUME_PAGE_ID;
+    if (!pageId) {
+        console.warn('NOTION_RESUME_PAGE_ID not set');
+        return {
+            title: 'Resume',
+            content: '# Resume\n\nResume content will appear here once configured.',
+            lastUpdated: new Date().toISOString()
+        };
+    }
+
+    try {
+        const notion = getNotionClient();
+        const n2m = new NotionToMarkdown({ notionClient: notion });
+
+        const page = await notion.pages.retrieve({ page_id: pageId }) as any;
+        const mdblocks = await n2m.pageToMarkdown(pageId);
+        const mdString = n2m.toMarkdownString(mdblocks);
+
+        return {
+            title: page.properties?.title?.title?.[0]?.plain_text || 'Resume',
+            content: mdString.parent,
+            lastUpdated: page.last_edited_time
+        };
+    } catch (error) {
+        console.error('Error fetching resume:', error);
+        return null;
+    }
+}
+```
+
+#### Step 3: Create New Pages
+
+**Create `app/resources/page.tsx`**:
+```typescript
+import { getResourcesByCategory } from '@/lib/resources';
+import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
+
+export default async function ResourcesPage() {
+    const resourcesByCategory = await getResourcesByCategory();
+    const categories = Object.keys(resourcesByCategory).sort();
+
+    return (
+        <div className="container mx-auto px-4 py-16 max-w-4xl">
+            <h1 className="text-4xl font-bold mb-8 tracking-tight">Resources</h1>
+            <p className="text-lg text-muted-foreground mb-12">
+                A curated collection of useful websites, tools, and resources.
+            </p>
+
+            {categories.map(category => (
+                <section key={category} className="mb-12">
+                    <h2 className="text-2xl font-semibold mb-6">{category}</h2>
+                    <div className="grid gap-4">
+                        {resourcesByCategory[category].map(resource => (
+                            <Link
+                                key={resource.id}
+                                href={resource.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-4 border rounded-lg hover:bg-accent transition-colors group"
+                            >
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <h3 className="font-medium group-hover:text-primary transition-colors">
+                                            {resource.name}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            {resource.description}
+                                        </p>
+                                    </div>
+                                    <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+            ))}
+        </div>
+    );
+}
+```
+
+**Create `app/resume/page.tsx`**:
+```typescript
+import { getResume } from '@/lib/resume';
+import ReactMarkdown from 'react-markdown';
+
+export default async function ResumePage() {
+    const resume = await getResume();
+
+    if (!resume) {
+        return (
+            <div className="container mx-auto px-4 py-16 max-w-4xl">
+                <h1 className="text-4xl font-bold mb-8">Resume</h1>
+                <p className="text-muted-foreground">Resume not available.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="container mx-auto px-4 py-16 max-w-4xl">
+            <article className="prose prose-neutral dark:prose-invert max-w-none">
+                <ReactMarkdown>{resume.content}</ReactMarkdown>
+            </article>
+        </div>
+    );
+}
+```
+
+#### Step 4: Update Layout Navigation
+
+In `app/layout.tsx`, update the navigation to include new pages:
+
+```typescript
+<nav className="flex gap-6 items-center">
+    <Link href="/" className="font-semibold text-lg hover:text-muted-foreground transition-colors">
+        Matthew Coleman
+    </Link>
+    <Link href="/blog" className="text-sm hover:text-muted-foreground transition-colors">
+        Blog
+    </Link>
+    <Link href="/resources" className="text-sm hover:text-muted-foreground transition-colors">
+        Resources
+    </Link>
+    <Link href="/resume" className="text-sm hover:text-muted-foreground transition-colors">
+        Resume
+    </Link>
+    <Link href="/about" className="text-sm hover:text-muted-foreground transition-colors">
+        About
+    </Link>
+</nav>
+```
+
+#### Step 5: Create Magic Bento Home Page
+
+Replace `app/page.tsx` with a new Magic Bento layout:
+
+```typescript
+'use client';
+
+import { useRef } from 'react';
+import Link from 'next/link';
+import { ArrowRight, FileText, BookOpen, Link2 } from 'lucide-react';
+import MagicBento from '@/components/ui/magic-bento';
+
+// Bento card data for the information hub
+const bentoCards = [
+    {
+        id: 'hero',
+        title: 'Matthew Coleman',
+        description: 'Welcome to my personal information hub. I write about technology, share resources, and document my professional journey.',
+        label: 'Introduction',
+        color: '#060010',
+        span: 'col-span-2 row-span-2', // Large hero tile
+        link: '/about'
+    },
+    {
+        id: 'blog',
+        title: 'Blog',
+        description: 'Thoughts on technology, AI, and software development.',
+        label: 'Articles',
+        color: '#060010',
+        icon: BookOpen,
+        span: 'col-span-1 row-span-1',
+        link: '/blog'
+    },
+    {
+        id: 'resources',
+        title: 'Resources',
+        description: 'Curated collection of useful websites and tools.',
+        label: 'Library',
+        color: '#060010',
+        icon: Link2,
+        span: 'col-span-1 row-span-1',
+        link: '/resources'
+    },
+    {
+        id: 'resume',
+        title: 'Resume',
+        description: 'Professional experience and qualifications.',
+        label: 'Career',
+        color: '#060010',
+        icon: FileText,
+        span: 'col-span-2 row-span-1',
+        link: '/resume'
+    }
+];
+
+export default function Home() {
+    const gridRef = useRef<HTMLDivElement>(null);
+
+    return (
+        <div className="min-h-screen flex items-center justify-center py-16">
+            <MagicBento
+                enableSpotlight={true}
+                enableBorderGlow={true}
+                enableTilt={false}
+                clickEffect={true}
+                enableMagnetism={true}
+                glowColor="132, 0, 255"
+            >
+                <div
+                    ref={gridRef}
+                    className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 max-w-5xl"
+                >
+                    {bentoCards.map((card) => (
+                        <Link
+                            key={card.id}
+                            href={card.link}
+                            className={`${card.span} card relative overflow-hidden rounded-2xl border border-border/50 bg-card p-6 transition-all hover:border-primary/50`}
+                            style={{
+                                '--glow-x': '50%',
+                                '--glow-y': '50%',
+                                '--glow-intensity': '0',
+                                '--glow-radius': '200px'
+                            } as React.CSSProperties}
+                        >
+                            <div className="flex flex-col h-full justify-between">
+                                <div>
+                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">
+                                        {card.label}
+                                    </span>
+                                    <h2 className="text-2xl font-bold mb-2">{card.title}</h2>
+                                    <p className="text-muted-foreground">{card.description}</p>
+                                </div>
+                                <div className="flex items-center gap-2 mt-4 text-sm font-medium text-primary">
+                                    Explore
+                                    <ArrowRight className="h-4 w-4" />
+                                </div>
+                            </div>
+                            {card.icon && (
+                                <card.icon className="absolute bottom-6 right-6 h-12 w-12 text-muted-foreground/20" />
+                            )}
+                        </Link>
+                    ))}
+                </div>
+            </MagicBento>
+        </div>
+    );
+}
+```
+
+**Note**: The exact MagicBento implementation may need adjustment based on the actual component API after installation. Review the installed component in `components/ui/magic-bento.tsx` and adapt the usage accordingly.
+
+#### Step 6: Update Environment Variables
+
+Add to `.env.local`:
+```
+NOTION_RESOURCES_DATABASE_ID=2b5c6cc793dc805db5b6fc611ecc05cf
+NOTION_RESUME_PAGE_ID=2dac6cc793dc80c2ac99d075065c739f
+```
+
+Add to GitHub Secrets:
+- `NOTION_RESOURCES_DATABASE_ID`
+- `NOTION_RESUME_PAGE_ID`
+
+#### Step 7: Test and Verify
+
+```bash
+npm run dev     # Test locally
+npm run build   # Verify static build works
+npm run lint    # Check for issues
+```
+
+### Alternative: Simpler Bento Grid (No Animation)
+
+If MagicBento proves too complex or has issues, create a simpler CSS Grid-based bento layout without GSAP animations. The visual structure remains the same but uses Tailwind's built-in transitions instead.
+
+---
+
+## PLAN 3: Database Schema Reference
+
+### Blog Database Properties
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| Title | title | Yes | Post title |
+| Slug | text | Yes | URL-friendly identifier |
+| Date | date | Yes | Publication date |
+| Tags | multi-select | No | Categories |
+| Published | checkbox | Yes | Visibility control |
+| Featured | checkbox | No | Pin to top |
+| Excerpt | text | No | Short summary |
+| Author | text | No | Author name |
+
+### Resources Database Properties
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| Name | title | Yes | Resource name |
+| URL | url | Yes | Link to resource |
+| Category | select | Yes | Resource category |
+| Description | text | No | Brief description |
+| Published | checkbox | Yes | Visibility control |
+
+### Resume Page
+- Single Notion page with markdown content
+- Fetched and converted to markdown at build time
+
+---
 
 ## Common Pitfalls
 
@@ -154,8 +557,34 @@ The blog page (`app/blog/page.tsx`) implements client-side tag filtering:
 
 2. **Image Optimization**: Disabled for static export. Use `<img>` tags or unoptimized Next.js `<Image>` component.
 
-3. **API Routes**: Not available in static export. The `app/api/refresh/route.ts` only works when deployed to serverless platforms (Vercel/Netlify), not GitHub Pages.
+3. **GSAP in SSR**: MagicBento uses GSAP which requires client-side rendering. Always use `'use client'` directive for pages/components using it.
 
-4. **Environment Variables**: Build-time only. Client-side variables must use `NEXT_PUBLIC_` prefix.
+4. **Environment Variables**: Build-time only. All Notion IDs must be in GitHub Secrets for production builds.
 
 5. **Notion Content Updates**: Require rebuild to appear on site. Not real-time.
+
+---
+
+## Execution Order for Implementation
+
+When implementing these plans, follow this order:
+
+1. **Run Health Check Cleanup** (Plan 1)
+2. **Install Dependencies** (gsap, MagicBento)
+3. **Create Data Layers** (lib/resources.ts, lib/resume.ts)
+4. **Create New Pages** (resources, resume)
+5. **Update Layout Navigation**
+6. **Implement Magic Bento Home Page**
+7. **Update Environment Variables**
+8. **Test and Deploy**
+
+---
+
+## Adding shadcn/ui Components
+
+Two registries configured in `components.json`:
+```bash
+npx shadcn@latest add button              # shadcn/ui
+npx shadcn@latest add @react-bits/avatar  # ReactBits
+npx shadcn@latest add @react-bits/MagicBento-TS-TW  # Magic Bento
+```

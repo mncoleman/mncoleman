@@ -124,9 +124,10 @@ export default function DarkVeil({
     const mesh = new Mesh(gl, { geometry, program });
 
     const resize = () => {
-      const w = parent.clientWidth,
-        h = parent.clientHeight;
-      renderer.setSize(w * resolutionScale, h * resolutionScale);
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      // Set internal rendering resolution
+      renderer.setSize(w, h);
       program.uniforms.uResolution.value.set(w, h);
     };
 
@@ -154,5 +155,18 @@ export default function DarkVeil({
       window.removeEventListener('resize', resize);
     };
   }, [hueShift, noiseIntensity, scanlineIntensity, speed, scanlineFrequency, warpAmount, resolutionScale]);
-  return <canvas ref={ref} className="w-full h-full block" />;
+  return (
+    <canvas
+      ref={ref}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        display: 'block',
+        zIndex: -1
+      }}
+    />
+  );
 }

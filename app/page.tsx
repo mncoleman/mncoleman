@@ -1,84 +1,89 @@
+'use client';
+
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
-import { getAllPosts } from '@/lib/blog';
+import { ArrowRight, FileText, BookOpen, Link2, User } from 'lucide-react';
 import DarkVeil from '@/components/ui/dark-veil';
 
-export default async function Home() {
-  const posts = await getAllPosts();
-  const recentPosts = posts.slice(0, 3);
+const bentoCards = [
+  {
+    id: 'hero',
+    title: 'Matthew Coleman',
+    description: 'Welcome to my personal information hub. I write about technology, share resources, and document my professional journey.',
+    label: 'Introduction',
+    span: 'md:col-span-2 md:row-span-1',
+    link: '/about',
+    icon: User
+  },
+  {
+    id: 'blog',
+    title: 'Blog',
+    description: 'Thoughts on technology, AI, and software development.',
+    label: 'Articles',
+    icon: BookOpen,
+    span: 'md:col-span-1 md:row-span-1',
+    link: '/blog'
+  },
+  {
+    id: 'resources',
+    title: 'Resources',
+    description: 'Curated collection of useful websites and tools.',
+    label: 'Library',
+    icon: Link2,
+    span: 'md:col-span-1 md:row-span-1',
+    link: '/resources'
+  },
+  {
+    id: 'resume',
+    title: 'Resume',
+    description: 'Professional experience and qualifications.',
+    label: 'Career',
+    icon: FileText,
+    span: 'md:col-span-2 md:row-span-1',
+    link: '/resume'
+  }
+];
 
+export default function Home() {
   return (
-    <div className="relative min-h-screen">
-      <div className="fixed inset-0 -z-10">
-        <DarkVeil />
-      </div>
-      <div className="container mx-auto px-4 py-16 max-w-4xl relative z-10">
-      <section className="mb-20">
-        <h1 className="text-4xl font-bold mb-4 tracking-tight">
-          Hi, I'm Matthew Coleman
-        </h1>
-        <p className="text-xl text-muted-foreground mb-8 max-w-2xl">
-          Welcome to my personal website. I write about technology, software development,
-          and other topics that interest me.
-        </p>
-        <div className="flex gap-4">
-          <Link
-            href="/blog"
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background bg-primary text-primary-foreground hover:bg-primary/90 h-10 py-2 px-4"
-          >
-            Read the blog
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-          <Link
-            href="/about"
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border border-input hover:bg-accent hover:text-accent-foreground h-10 py-2 px-4"
-          >
-            About me
-          </Link>
-        </div>
-      </section>
+    <>
+      {/* Dark Veil Background - Rendered directly with no wrapper */}
+      <DarkVeil hueShift={40} speed={0.5} resolutionScale={0.8} />
 
-      {recentPosts.length > 0 && (
-        <section>
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-bold tracking-tight">Recent Posts</h2>
+      <div className="min-h-screen flex items-center justify-center py-16 px-4 relative">
+        <div className="w-full max-w-5xl relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-fr">
+          {bentoCards.map((card) => (
             <Link
-              href="/blog"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center"
+              key={card.id}
+              href={card.link}
+              className={`${card.span} group relative overflow-hidden rounded-2xl border border-border/30 bg-background/40 backdrop-blur-xl p-8 transition-all hover:border-primary/50 hover:bg-background/50 hover:shadow-lg hover:shadow-primary/10`}
             >
-              View all posts
-              <ArrowRight className="ml-1 h-4 w-4" />
+              <div className="flex flex-col h-full justify-between min-h-[200px]">
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 block">
+                    {card.label}
+                  </span>
+                  <h2 className="text-3xl font-bold mb-3 group-hover:text-primary transition-colors">
+                    {card.title}
+                  </h2>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {card.description}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 mt-6 text-sm font-medium text-primary">
+                  Explore
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+              <card.icon className="absolute bottom-8 right-8 h-16 w-16 text-muted-foreground/10 group-hover:text-primary/20 transition-colors" />
+
+              {/* Subtle gradient overlay on hover */}
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
             </Link>
-          </div>
-          <div className="space-y-6">
-            {recentPosts.map((post) => (
-              <article key={post.slug} className="border-b pb-6 last:border-0">
-                <Link href={`/blog/${post.slug}`} className="group">
-                  <div className="flex items-start gap-3 mb-2">
-                    <h3 className="text-xl font-semibold group-hover:text-muted-foreground transition-colors flex-1">
-                      {post.title}
-                    </h3>
-                    {post.featured && (
-                      <span className="px-2 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded text-xs font-medium whitespace-nowrap">
-                        Featured
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-muted-foreground mb-2">{post.excerpt}</p>
-                  <time className="text-sm text-muted-foreground">
-                    {new Date(post.date).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </time>
-                </Link>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
+          ))}
+        </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

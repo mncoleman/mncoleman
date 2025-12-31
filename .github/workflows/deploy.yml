@@ -41,6 +41,8 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          NOTION_RESOURCES_DATABASE_ID: ${{ secrets.NOTION_RESOURCES_DATABASE_ID }}
+          NOTION_RESUME_PAGE_ID: ${{ secrets.NOTION_RESUME_PAGE_ID }}
           NEXT_PUBLIC_GA_ID: ${{ secrets.NEXT_PUBLIC_GA_ID }}
         run: npm run build
 

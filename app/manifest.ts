@@ -6,9 +6,9 @@ const basePath = process.env.NODE_ENV === 'production' ? '/matthew-coleman' : ''
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Matthew Coleman - Personal Website & Blog',
-    short_name: 'MC Blog',
-    description: 'Personal website and blog by Matthew Coleman',
+    name: 'Matthew Coleman - Information Hub',
+    short_name: 'MC Hub',
+    description: 'Personal information hub with blog, resources, and resume by Matthew Coleman',
     start_url: basePath || '/',
     display: 'standalone',
     background_color: '#09090b',

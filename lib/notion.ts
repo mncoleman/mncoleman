@@ -2,8 +2,8 @@ import { Client } from '@notionhq/client';
 import { NotionToMarkdown } from 'notion-to-md';
 
 const getNotionClient = () => {
-    if (!process.env.NOTION_TOKEN) {
-        throw new Error('NOTION_TOKEN is not defined');
+    if (!process.env.NOTION_TOKEN || process.env.NOTION_TOKEN === 'ntn_your_integration_token_here') {
+        throw new Error('NOTION_TOKEN is not defined or is a placeholder');
     }
     return new Client({
         auth: process.env.NOTION_TOKEN,
@@ -33,8 +33,8 @@ export interface BlogStats {
 
 export const getDatabaseId = () => {
     const dbId = process.env.NOTION_DATABASE_ID;
-    if (!dbId) {
-        console.warn('NOTION_DATABASE_ID is not defined in environment variables');
+    if (!dbId || dbId.includes('your_database_id')) {
+        console.warn('NOTION_DATABASE_ID is not defined or is a placeholder in environment variables');
         return '';
     }
     return dbId;
@@ -42,8 +42,11 @@ export const getDatabaseId = () => {
 
 export async function getPublishedPosts(): Promise<NotionPost[]> {
     const databaseId = getDatabaseId();
-    if (!databaseId) {
-        console.warn('Returning sample data because NOTION_DATABASE_ID is missing');
+    const token = process.env.NOTION_TOKEN;
+
+    // Check for valid credentials before attempting to connect
+    if (!databaseId || !token || token === 'ntn_your_integration_token_here') {
+        console.warn('Returning sample data because Notion credentials are not configured');
         return [
             {
                 id: 'sample-post',
@@ -107,13 +110,28 @@ export async function getPublishedPosts(): Promise<NotionPost[]> {
         return sortedPosts;
     } catch (error) {
         console.error('Error fetching posts from Notion:', error);
-        return [];
+        // Return sample data on error
+        return [
+            {
+                id: 'sample-post',
+                slug: 'welcome-to-notion-cms',
+                title: 'Welcome to Notion CMS',
+                date: new Date().toISOString(),
+                excerpt: 'This is a sample post because Notion credentials are not configured.',
+                author: 'Admin',
+                tags: ['Sample', 'Setup'],
+                published: true,
+            }
+        ];
     }
 }
 
 export async function getPostBySlug(slug: string): Promise<NotionPost | null> {
     const databaseId = getDatabaseId();
-    if (!databaseId) {
+    const token = process.env.NOTION_TOKEN;
+
+    // Check for valid credentials before attempting to connect
+    if (!databaseId || !token || token === 'ntn_your_integration_token_here') {
         if (slug === 'welcome-to-notion-cms') {
             return {
                 id: 'sample-post',
@@ -133,7 +151,7 @@ This is a sample post. To see your own posts here:
 2. Add your \`NOTION_TOKEN\` and \`NOTION_DATABASE_ID\` to \`.env.local\`.
 3. Restart the server.
 
-Check \`NOTION_SETUP.md\` for detailed instructions.
+Check \`CLAUDE.md\` for detailed instructions.
         `,
                 wordCount: 50,
                 readingTime: 1,
@@ -198,6 +216,17 @@ Check \`NOTION_SETUP.md\` for detailed instructions.
 }
 
 export async function getBlogStats(): Promise<BlogStats> {
+    const token = process.env.NOTION_TOKEN;
+
+    // Return default stats if credentials not configured
+    if (!token || token === 'ntn_your_integration_token_here') {
+        return {
+            totalPosts: 1,
+            totalWords: 50,
+            avgReadingTime: 1
+        };
+    }
+
     const posts = await getPublishedPosts();
 
     // We need to fetch content for all posts to get accurate word counts, 
