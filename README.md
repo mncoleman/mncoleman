@@ -1,311 +1,462 @@
-# Personal Website & Blog
+<div align="center">
 
-A modern, minimalist personal website and blog built with Next.js, TypeScript, and Tailwind CSS. Features a clean design with animated backgrounds and blog functionality powered by Notion.
+# Matthew Coleman
 
-## Features
+### Personal Information Hub
 
-- 🎨 **Modern Design** - Clean, minimalist interface with professional typography and animated WebGL background
-- 📝 **Blog** - Notion-powered blog with markdown rendering and tag filtering
-- ⭐ **Featured Posts** - Pin important posts to the top of your blog
-- 🏷️ **Tag Filtering** - Client-side tag filtering for easy content discovery
-- 🚀 **Fast** - Static site generation for optimal performance (100% static)
-- 📱 **Responsive** - Works perfectly on all devices
-- 🎯 **SEO Ready** - Optimized for search engines
-- 🔧 **Type Safe** - Built with TypeScript
-- 📦 **Notion CMS** - Blog content managed through Notion database
-- 📊 **Admin Dashboard** - View blog statistics (total posts, word count, reading time)
-- ♻️ **Auto-Refresh** - Daily automated content updates via GitHub Actions
-- 📈 **Analytics** - Google Analytics 4 integration support
-- ✨ **Animations** - Smooth text animations and interactive profile card
-- 📲 **PWA Support** - Progressive Web App capabilities with service worker
+A modern, minimalist information hub featuring blog, resources, and professional resume—all powered by Notion CMS and Next.js.
 
-## Tech Stack
+[![Deploy to GitHub Pages](https://github.com/slider003/matthew-coleman/actions/workflows/deploy.yml/badge.svg)](https://github.com/slider003/matthew-coleman/actions/workflows/deploy.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Notion](https://img.shields.io/badge/CMS-Notion-black?logo=notion)](https://www.notion.so/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38bdf8?logo=tailwind-css)](https://tailwindcss.com/)
 
-- **Framework**: Next.js 16 with App Router
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **UI Components**: shadcn/ui + ReactBits
-- **Content**: Notion API for blog posts
-- **CMS**: Notion for blog management
-- **Deployment**: GitHub Pages
-- **Graphics**: OGL (WebGL library) for animated backgrounds
-- **Analytics**: Google Analytics 4 (via @next/third-parties)
+[Live Demo](https://slider003.github.io/matthew-coleman/) · [Report Bug](https://github.com/slider003/matthew-coleman/issues) · [Request Feature](https://github.com/slider003/matthew-coleman/issues)
 
-## Getting Started
+</div>
+
+---
+
+## ✨ Features
+
+<table>
+<tr>
+<td width="50%">
+
+### 🎨 Design & UX
+- **WebGL Background** - Animated Dark Veil effect
+- **Frosted Glass UI** - Modern glassmorphism design
+- **Bento Grid Layout** - Clean, responsive information hub
+- **Dark Mode** - System-aware theme switching
+- **PWA Ready** - Installable progressive web app
+- **100% Responsive** - Perfect on all devices
+
+</td>
+<td width="50%">
+
+### ⚡ Performance & Tech
+- **Static Generation** - Lightning-fast pre-rendered pages
+- **Type Safety** - Full TypeScript coverage
+- **Zero Runtime** - 100% static export
+- **Auto Refresh** - Daily content updates
+- **SEO Optimized** - Meta tags & structured data
+- **Analytics Ready** - Google Analytics 4 integration
+
+</td>
+</tr>
+</table>
+
+### 📦 Content Management
+
+| Feature | Description |
+|---------|-------------|
+| 📝 **Blog** | Notion-powered blog with markdown rendering & tag filtering |
+| 🔗 **Resources** | Curated link library organized by category |
+| 📄 **Resume** | Professional CV rendered from Notion pages |
+| ⭐ **Featured Posts** | Pin important content to the top |
+| 🏷️ **Smart Tags** | Auto-extracted tag filtering system |
+| 📊 **Admin Dashboard** | Blog statistics & quick CMS access |
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
 - Node.js 18+ and npm
+- Notion account (for content management)
 
 ### Installation
 
-1. Clone the repository:
 ```bash
+# Clone the repository
 git clone https://github.com/slider003/matthew-coleman.git
 cd matthew-coleman
-```
 
-2. Install dependencies:
-```bash
+# Install dependencies
 npm install
-```
 
-3. Set up environment variables:
-```bash
+# Set up environment variables
 cp .env.example .env.local
-```
-Then edit `.env.local` with your credentials:
-- **Notion**: See [`NOTION_SETUP.md`](./NOTION_SETUP.md)
-- **Google Analytics**: See [`GOOGLE_ANALYTICS_SETUP.md`](./GOOGLE_ANALYTICS_SETUP.md)
+# Edit .env.local with your Notion credentials
 
-4. Run the development server:
-```bash
+# Start development server
 npm run dev
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
-
-## Building for Production
-
-```bash
-npm run build
-```
-
-This will generate a static export in the `out` directory.
-
-## Managing Content
-
-### Blog Posts
-
-Blog posts are managed through **Notion**. See [`NOTION_SETUP.md`](./NOTION_SETUP.md) for detailed setup instructions.
-
-**Quick overview:**
-1. Create a Notion integration and database with the required properties (Title, Slug, Date, Tags, Published, Featured, Excerpt, Author)
-2. Add your `NOTION_TOKEN` and `NOTION_DATABASE_ID` to `.env.local` for development
-3. Add the same credentials to GitHub repository secrets for production builds
-4. Create posts in Notion and mark them as Published (optionally mark as Featured to pin them to the top)
-5. Content updates appear after a rebuild (automatic daily at 6 AM UTC, or manual trigger)
-
-**Content Refresh Options:**
-- **Automatic**: Daily rebuild at 6 AM UTC via GitHub Actions cron job
-- **Manual**: Trigger GitHub Actions workflow from the repository's "Actions" tab → "Deploy to GitHub Pages" → "Run workflow"
-- **Admin Dashboard**: Visit `/admin` to view blog statistics and access Google Analytics
-
-### Static Pages
-
-Static pages (like About, Home) are hardcoded React components in the `app/` directory:
-- **About page**: Edit `app/about/page.tsx`
-- **Home page**: Edit `app/page.tsx`
-
-After editing, commit and push to GitHub to trigger a rebuild and deployment.
-
-## Project Structure
-
-```
-├── app/                      # Next.js app directory (App Router)
-│   ├── blog/                # Blog pages
-│   │   ├── [slug]/         # Dynamic blog post pages
-│   │   └── page.tsx        # Blog listing page
-│   ├── about/              # About page
-│   ├── admin/              # Admin dashboard (stats & refresh)
-│   ├── api/                # API routes (refresh endpoint)
-│   ├── layout.tsx          # Root layout
-│   ├── page.tsx            # Home page
-│   └── globals.css         # Global styles & theme variables
-├── components/             # React components
-│   ├── ui/                # UI components (shadcn/ui + custom)
-│   │   ├── dark-veil.tsx  # Animated WebGL background
-│   │   ├── profile-card.tsx # Interactive profile card with tilt
-│   │   ├── text-type.tsx  # Typewriter animation effect
-│   │   └── blur-text.tsx  # Text blur animation effect
-│   ├── blog-list.tsx      # Client-side tag filtering component
-│   ├── pwa-install.tsx    # PWA service worker registration
-│   └── theme-provider.tsx # Theme context provider
-├── lib/                   # Utility functions & data layer
-│   ├── blog.ts           # Blog adapter (public interface)
-│   ├── notion.ts         # Notion API integration
-│   └── utils.ts          # General utilities
-├── public/               # Static assets (images, icons, etc.)
-├── .github/workflows/    # GitHub Actions (deployment)
-├── components.json       # shadcn/ui configuration
-├── next.config.ts        # Next.js configuration
-├── CLAUDE.md            # Claude Code project instructions
-├── NOTION_SETUP.md      # Notion CMS setup guide
-└── GOOGLE_ANALYTICS_SETUP.md # Google Analytics setup guide
-```
-
-### Architecture Notes
-
-- **Static Export**: Entire site is pre-rendered at build time (no server required)
-- **Content Layer**: Two-tier adapter pattern (`lib/notion.ts` → `lib/blog.ts`)
-- **Client Components**: Tag filtering, PWA registration, and animations
-- **Build-time Data**: All Notion content fetched during `npm run build`
-- **WebGL Rendering**: OGL library for performant animated backgrounds
-
-## Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
-
-## Customization
-
-### Changing Colors
-
-Edit `app/globals.css` to modify the color scheme. The site uses CSS variables for easy theming. You can also customize the animated background by modifying parameters in the `DarkVeil` component.
-
-### Adding Components
-
-Install shadcn/ui components:
-```bash
-npx shadcn@latest add button
-npx shadcn@latest add card
-```
-
-For ReactBits components, they can be added via the same CLI with the custom registry configured in `components.json`.
-
-### Modifying Content
-
-- **Home page**: Edit `app/page.tsx` (includes animated background)
-- **About page**: Edit `app/about/page.tsx` (includes profile card and text animations)
-- **Blog posts**: Edit in your Notion database (see `NOTION_SETUP.md`)
-
-### Customizing Animations
-
-The site includes several animation components:
-
-- **DarkVeil** (`components/ui/dark-veil.tsx`): WebGL-powered animated background
-  - Adjust `hueShift`, `speed`, `warpAmount` props in `app/page.tsx`
-- **TextType** (`components/ui/text-type.tsx`): Typewriter animation effect
-  - Customize `speed` and `text` props
-- **BlurText** (`components/ui/blur-text.tsx`): Text blur reveal animation
-  - Adjust `duration` prop
-- **ProfileCard** (`components/ui/profile-card.tsx`): 3D tilt effect card
-  - Configure `enableTilt`, `enableMobileTilt`, and social links
-
-### PWA Configuration
-
-The site is configured as a Progressive Web App:
-- Service worker registered in production (`public/sw.js`)
-- App icons configured in `app/layout.tsx` (icon-192.png, icon-512.png, apple-touch-icon.png)
-- Installable on mobile devices and desktop browsers
-
-## Deployment
-
-This site deploys automatically to GitHub Pages using GitHub Actions.
-
-### GitHub Pages Setup
-
-1. **Configure GitHub Secrets** (required for production builds):
-   - Go to Settings → Secrets and variables → Actions
-   - Add `NOTION_TOKEN` - Your Notion integration token ([setup guide](./NOTION_SETUP.md))
-   - Add `NOTION_DATABASE_ID` - Your Notion database ID
-   - Add `NEXT_PUBLIC_GA_ID` - Google Analytics measurement ID ([setup guide](./GOOGLE_ANALYTICS_SETUP.md))
-
-2. **Enable GitHub Pages**:
-   - Go to Settings → Pages
-   - Set source to "GitHub Actions"
-   - The site will be available at: `https://slider003.github.io/matthew-coleman/`
-
-3. **Deployment Triggers**:
-   - **Push to main**: Automatic deployment on every commit to `main`
-   - **Daily rebuild**: Automatic at 6:00 AM UTC (keeps content fresh)
-   - **Manual dispatch**: Trigger from Actions tab → "Deploy to GitHub Pages" → Run workflow
-
-### Deployment Workflow
-
-The GitHub Actions workflow (`.github/workflows/deploy.yml`):
-1. Checks out code
-2. Installs dependencies with `npm ci`
-3. Injects Notion credentials from secrets
-4. Builds static site with `npm run build`
-5. Deploys `out/` directory to GitHub Pages
-
-**Note**: API routes (`app/api/*`) only work on serverless platforms (Vercel/Netlify), not on GitHub Pages static hosting. The refresh endpoint will return 404 in production.
-
-## Common Workflows
-
-### Adding a New Blog Post
-
-1. Open your Notion database
-2. Create a new page with all required properties:
-   - **Title**: Post title
-   - **Slug**: URL-friendly identifier (e.g., `my-awesome-post`)
-   - **Date**: Publication date
-   - **Tags**: One or more category tags
-   - **Published**: ✓ Check to make visible
-   - **Featured**: ✓ Check to pin to top (optional)
-   - **Excerpt**: Short description for listing pages
-   - **Author**: Your name
-3. Write your content in the Notion page
-4. Wait for daily rebuild (6 AM UTC) or trigger manual deployment
-5. Your post will appear at `/blog/your-slug`
-
-### Updating Site Content
-
-**For blog posts**: Edit in Notion, then wait for/trigger a rebuild
-
-**For static pages**:
-1. Edit the React component (e.g., `app/about/page.tsx`)
-2. Commit and push to GitHub
-3. Deployment happens automatically
-
-### Adding New Tags
-
-Tags are automatically extracted from published Notion posts. To add a new tag:
-1. Add it to a post's Tags property in Notion
-2. Rebuild the site
-3. The tag will appear in the filter buttons on `/blog`
-
-### Viewing Analytics and Statistics
-
-**Blog Statistics** (word count, reading time, total posts):
-1. Visit `/admin` on your deployed site
-2. View total posts, total words, and average reading time
-3. Quick links to Google Analytics and Notion CMS
-
-**Google Analytics** (visitor tracking):
-1. Set up GA4 following [`GOOGLE_ANALYTICS_SETUP.md`](./GOOGLE_ANALYTICS_SETUP.md)
-2. Add `NEXT_PUBLIC_GA_ID` to GitHub Secrets (production)
-3. Access via admin dashboard or directly at analytics.google.com
-
-## Troubleshooting
-
-### Posts Not Appearing
-
-- Verify "Published" checkbox is enabled in Notion
-- Check that all required properties are filled
-- Trigger a manual rebuild via GitHub Actions
-- Check build logs for Notion API errors
-
-### Images Not Loading
-
-- Notion images have expiring URLs (refresh needed)
-- For permanent images, upload to `/public` and reference with `/matthew-coleman/image.jpg`
-- Remember the `/matthew-coleman` base path in production
-
-### Build Failures
-
-- Verify GitHub Secrets are set correctly
-- Check that Notion integration has access to the database
-- Review GitHub Actions logs for specific errors
-- Ensure all required Notion properties exist
-
-### Animations Not Working
-
-- **WebGL background not showing**: Check browser console for WebGL errors, ensure browser supports WebGL
-- **Service worker errors**: Clear browser cache and re-register service worker
-- **Profile card tilt not working**: Ensure JavaScript is enabled, check mobile device gyroscope permissions
-
-## License
-
-MIT
-
-## Author
-
-Matthew Coleman
+Visit [http://localhost:3000](http://localhost:3000) to see your site.
 
 ---
 
-Built with ❤️ using Next.js, Tailwind CSS, and Notion
+## 🔧 Configuration
+
+### Environment Variables
+
+Create a `.env.local` file with the following:
+
+```env
+# Notion Integration (required)
+NOTION_TOKEN=ntn_your_integration_token_here
+NOTION_DATABASE_ID=your_blog_database_id
+NOTION_RESOURCES_DATABASE_ID=your_resources_database_id
+NOTION_RESUME_PAGE_ID=your_resume_page_id
+
+# Google Analytics (optional)
+NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+```
+
+### Notion Setup
+
+1. **Create a Notion Integration**
+   - Go to [notion.so/my-integrations](https://www.notion.so/my-integrations)
+   - Create new integration and copy the token (starts with `ntn_`)
+
+2. **Set Up Databases**
+   - **Blog**: Title, Slug, Date, Tags, Published, Featured, Excerpt, Author
+   - **Resources**: Name, URL, Category, Description, Published
+   - **Resume**: Single page with markdown content
+
+3. **Share Databases**
+   - Share each database/page with your integration
+   - Copy the database/page IDs to `.env.local`
+
+📚 **Detailed guides**: See [`NOTION_SETUP.md`](./NOTION_SETUP.md) and [`GOOGLE_ANALYTICS_SETUP.md`](./GOOGLE_ANALYTICS_SETUP.md)
+
+---
+
+## 🏗️ Tech Stack
+
+<table>
+<tr>
+<td align="center" width="96">
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nextjs/nextjs-original.svg" width="48" height="48" alt="Next.js" />
+<br>Next.js 16
+</td>
+<td align="center" width="96">
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="48" height="48" alt="TypeScript" />
+<br>TypeScript
+</td>
+<td align="center" width="96">
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/tailwindcss/tailwindcss-plain.svg" width="48" height="48" alt="Tailwind" />
+<br>Tailwind CSS
+</td>
+<td align="center" width="96">
+<img src="https://www.notion.so/cdn-cgi/image/format=auto,width=96,quality=100/front-static/shared/icons/notion-app-icon-3d.png" width="48" height="48" alt="Notion" />
+<br>Notion API
+</td>
+<td align="center" width="96">
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" width="48" height="48" alt="GitHub" />
+<br>GitHub Pages
+</td>
+</tr>
+</table>
+
+**Core Technologies:**
+- **Framework**: Next.js 16 (App Router) with static export
+- **Language**: TypeScript 5.0
+- **Styling**: Tailwind CSS + shadcn/ui components
+- **CMS**: Notion API (`@notionhq/client`, `notion-to-md`)
+- **Graphics**: OGL (WebGL library) for animated backgrounds
+- **Deployment**: GitHub Pages with GitHub Actions
+- **Analytics**: Google Analytics 4 via `@next/third-parties`
+- **PWA**: Service worker with app manifest
+
+---
+
+## 📁 Project Structure
+
+```
+matthew-coleman/
+├── app/                           # Next.js App Router
+│   ├── blog/                      # Blog pages
+│   │   ├── [slug]/page.tsx       # Dynamic post pages
+│   │   └── page.tsx              # Blog listing with tags
+│   ├── resources/page.tsx        # Resource library
+│   ├── resume/page.tsx           # Professional resume
+│   ├── about/page.tsx            # About page
+│   ├── admin/page.tsx            # Admin dashboard
+│   ├── layout.tsx                # Root layout & navigation
+│   ├── page.tsx                  # Bento grid home page
+│   └── globals.css               # Theme variables & styles
+│
+├── components/
+│   ├── ui/                        # UI components
+│   │   ├── dark-veil.tsx         # WebGL animated background
+│   │   └── ...                   # shadcn/ui components
+│   ├── blog-list.tsx             # Tag filtering component
+│   ├── pwa-install.tsx           # PWA service worker
+│   └── theme-provider.tsx        # Dark mode provider
+│
+├── lib/                           # Data layer & utilities
+│   ├── notion.ts                 # Notion API integration
+│   ├── blog.ts                   # Blog adapter
+│   ├── resources.ts              # Resources adapter
+│   ├── resume.ts                 # Resume adapter
+│   └── utils.ts                  # Helper functions
+│
+├── .github/workflows/
+│   └── deploy.yml                # GitHub Actions deployment
+│
+└── public/                        # Static assets & icons
+```
+
+---
+
+## 🎨 Customization
+
+### Bento Grid Layout
+
+The home page uses a responsive CSS Grid bento layout. Edit `app/page.tsx`:
+
+```typescript
+const bentoCards = [
+  {
+    id: 'hero',
+    title: 'Matthew Coleman',
+    description: 'Welcome to my personal information hub...',
+    span: 'md:col-span-2 md:row-span-1',
+    link: '/about',
+    icon: User
+  },
+  // Add or modify cards...
+];
+```
+
+### Dark Veil Background
+
+Customize the animated WebGL background in `app/page.tsx`:
+
+```typescript
+<DarkVeil
+  hueShift={40}           // Color hue (0-360)
+  speed={0.5}             // Animation speed
+  resolutionScale={0.8}   // Render quality (0.5-1.0)
+/>
+```
+
+### Theme Colors
+
+Edit CSS variables in `app/globals.css`:
+
+```css
+:root {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 3.9%;
+  --primary: 0 0% 9%;
+  /* ... more variables */
+}
+```
+
+### Adding UI Components
+
+```bash
+# shadcn/ui components
+npx shadcn@latest add button
+npx shadcn@latest add card
+
+# ReactBits components (configured in components.json)
+npx shadcn@latest add @react-bits/avatar
+```
+
+---
+
+## 📝 Content Management
+
+### Writing Blog Posts
+
+1. Open your Notion blog database
+2. Create a new page with required properties:
+   - **Title**: Your post title
+   - **Slug**: URL-friendly identifier (`my-awesome-post`)
+   - **Date**: Publication date
+   - **Tags**: Category tags (comma-separated)
+   - **Published**: ✓ Check to make visible
+   - **Featured**: ✓ Check to pin to top (optional)
+   - **Excerpt**: Short description for previews
+   - **Author**: Your name
+3. Write content using Notion blocks (converts to markdown)
+4. Rebuild site (automatic daily or manual trigger)
+
+### Adding Resources
+
+1. Open your Notion resources database
+2. Add entries with:
+   - **Name**: Resource title
+   - **URL**: External link
+   - **Category**: Resource category
+   - **Description**: Brief description
+   - **Published**: ✓ Check to make visible
+3. Resources automatically group by category
+
+### Updating Resume
+
+Edit your Notion resume page directly. Content converts to markdown automatically.
+
+### Content Refresh
+
+**Automatic**: Daily at 6:00 AM UTC via GitHub Actions
+
+**Manual**:
+- GitHub Actions: Actions tab → "Deploy to GitHub Pages" → Run workflow
+- Admin Dashboard: Visit `/admin` (links to GitHub Actions)
+
+---
+
+## 🚢 Deployment
+
+### GitHub Pages Deployment
+
+**1. Configure GitHub Secrets**
+
+Go to Settings → Secrets and variables → Actions:
+
+| Secret Name | Description | Example |
+|-------------|-------------|---------|
+| `NOTION_TOKEN` | Notion integration token | `ntn_abc123...` |
+| `NOTION_DATABASE_ID` | Blog database ID | `2b5c6cc793dc...` |
+| `NOTION_RESOURCES_DATABASE_ID` | Resources database ID | `2dac6cc793dc...` |
+| `NOTION_RESUME_PAGE_ID` | Resume page ID | `2dac6cc793dc...` |
+| `NEXT_PUBLIC_GA_ID` | Google Analytics ID (optional) | `G-XXXXXXXXXX` |
+
+**2. Enable GitHub Pages**
+
+Settings → Pages → Source: "GitHub Actions"
+
+**3. Deploy**
+
+Push to `main` branch or trigger manually from Actions tab.
+
+### Deployment Triggers
+
+- ✅ **Push to main** - Automatic on every commit
+- ⏰ **Daily rebuild** - 6:00 AM UTC (keeps content fresh)
+- 🔘 **Manual dispatch** - Trigger from GitHub Actions
+
+### Build Process
+
+```bash
+npm ci              # Install dependencies
+npm run build       # Generate static site (out/)
+# Deploy to GitHub Pages
+```
+
+The site will be available at: `https://slider003.github.io/matthew-coleman/`
+
+---
+
+## 📊 Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server at localhost:3000 |
+| `npm run build` | Build static site for production (outputs to `out/`) |
+| `npm run start` | Start production server (for testing build) |
+| `npm run lint` | Run ESLint for code quality checks |
+
+---
+
+## 🐛 Troubleshooting
+
+<details>
+<summary><strong>Posts not appearing on the site</strong></summary>
+
+- Verify "Published" checkbox is enabled in Notion
+- Check all required properties are filled
+- Trigger manual rebuild via GitHub Actions
+- Review build logs for Notion API errors
+- Ensure Notion integration has database access
+</details>
+
+<details>
+<summary><strong>Dark Veil background not covering viewport</strong></summary>
+
+- Clear browser cache and hard reload
+- Check browser console for WebGL errors
+- Ensure browser supports WebGL 2.0
+- Verify `overflow-x: hidden` in globals.css
+</details>
+
+<details>
+<summary><strong>Build failures in GitHub Actions</strong></summary>
+
+- Verify all GitHub Secrets are set correctly
+- Check Notion token starts with `ntn_` (not `secret_`)
+- Ensure Notion databases are shared with integration
+- Review Actions logs for specific error messages
+</details>
+
+<details>
+<summary><strong>Images not loading</strong></summary>
+
+- Notion images have expiring URLs (require rebuild)
+- For permanent images, upload to `/public`
+- Reference with base path: `/matthew-coleman/image.jpg`
+- Use Next.js `Image` component with `unoptimized` prop
+</details>
+
+<details>
+<summary><strong>Environment variables not working</strong></summary>
+
+- Client-side vars must use `NEXT_PUBLIC_` prefix
+- Rebuild required after changing `.env.local`
+- GitHub Secrets are only available in Actions builds
+- Verify no typos in variable names
+</details>
+
+---
+
+## 📚 Documentation
+
+- **[CLAUDE.md](./CLAUDE.md)** - AI assistant project guide & architecture
+- **[NOTION_SETUP.md](./NOTION_SETUP.md)** - Detailed Notion CMS configuration
+- **[GOOGLE_ANALYTICS_SETUP.md](./GOOGLE_ANALYTICS_SETUP.md)** - Google Analytics integration
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 👤 Author
+
+**Matthew Coleman**
+
+- Website: [slider003.github.io/matthew-coleman](https://slider003.github.io/matthew-coleman/)
+- GitHub: [@slider003](https://github.com/slider003)
+
+---
+
+## 🙏 Acknowledgments
+
+- [Next.js](https://nextjs.org/) - React framework
+- [Notion](https://notion.so/) - Content management system
+- [shadcn/ui](https://ui.shadcn.com/) - UI component library
+- [ReactBits](https://www.reactbits.dev/) - Dark Veil component
+- [OGL](https://github.com/oframe/ogl) - WebGL library
+- [Tailwind CSS](https://tailwindcss.com/) - Styling framework
+
+---
+
+<div align="center">
+
+**Built with ❤️ using Next.js, TypeScript, Tailwind CSS, and Notion**
+
+⭐ Star this repo if you find it helpful!
+
+</div>

@@ -24,11 +24,20 @@ npm run lint     # Run ESLint
 
 Create `.env.local` in the root directory with:
 ```
-NOTION_TOKEN=secret_your_integration_token
-NOTION_DATABASE_ID=your_blog_database_id
-NOTION_RESOURCES_DATABASE_ID=your_resources_database_id
-NOTION_RESUME_PAGE_ID=your_resume_page_id
+# Notion integration token (starts with "ntn_")
+NOTION_TOKEN=ntn_your_integration_token_here
+
+# Blog database ID
+NOTION_DATABASE_ID=2b5c6cc793dc805db5b6fc611ecc05cf
+
+# Resources database ID (separate database)
+NOTION_RESOURCES_DATABASE_ID=2dac6cc793dc80f89e33e26804116c82
+
+# Resume page ID
+NOTION_RESUME_PAGE_ID=2dac6cc793dc80c2ac99d075065c739f
 ```
+
+**Important**: Notion tokens start with `ntn_`, not `secret_`. The code validates for placeholder values to gracefully fall back to sample data during development.
 
 ## Architecture
 
@@ -45,28 +54,53 @@ Uses a **two-layer adapter pattern** for all Notion content:
 
 1. **lib/notion.ts** - Direct Notion API integration for blog posts
 2. **lib/blog.ts** - Thin adapter for blog data
-3. **lib/resources.ts** - Adapter for Public Resources Database (TO BE CREATED)
-4. **lib/resume.ts** - Adapter for Public Resume page (TO BE CREATED)
+3. **lib/resources.ts** - Adapter for Resources database
+4. **lib/resume.ts** - Adapter for Resume page
+
+**Credential Validation Pattern**:
+All Notion data-fetching functions validate credentials BEFORE calling `getNotionClient()`:
+```typescript
+export async function getPublishedPosts(): Promise<NotionPost[]> {
+    const databaseId = getDatabaseId();
+    const token = process.env.NOTION_TOKEN;
+
+    // Validate credentials before attempting connection
+    if (!databaseId || !token || token === 'ntn_your_integration_token_here') {
+        console.warn('Returning sample data because Notion credentials are not configured');
+        return [/* sample data */];
+    }
+
+    try {
+        const notion = getNotionClient();
+        // ... API call
+    } catch (error) {
+        console.error('Error fetching posts:', error);
+        return [/* sample data */];
+    }
+}
+```
+This pattern enables graceful degradation with sample data during development.
 
 ### Notion Data Sources
 
-**Blog Database** (existing):
+**Blog Database**:
 - Database ID: `2b5c6cc793dc805db5b6fc611ecc05cf`
-- View: `2b5c6cc793dc80db9cee000c49d30303`
 - Properties: Title, Slug, Date, Tags, Published, Featured, Excerpt, Author
 
-**Public Resources Database** (new):
-- Database ID: `2b5c6cc793dc805db5b6fc611ecc05cf` (same DB, different view)
-- View: `2dac6cc793dc8031abc1000c318a618b`
-- Expected Properties: Name, URL, Category, Description, Published
+**Resources Database** (separate database):
+- Database ID: `2dac6cc793dc80f89e33e26804116c82`
+- Properties: Name, URL, Category, Description, Published
 
-**Public Resume Page** (new):
+**Resume Page**:
 - Page ID: `2dac6cc793dc80c2ac99d075065c739f`
 - Content: Markdown blocks to be converted
+
+**Important**: These are three separate Notion data sources. Blog and Resources are separate databases (not the same database with different views).
 
 ### Component Organization
 
 - **components/ui/** - shadcn/ui + ReactBits components
+  - `dark-veil.tsx` - WebGL background animation using OGL library
 - **components/** - Custom components
 - **app/** - Next.js App Router pages
 
@@ -75,6 +109,30 @@ Uses a **two-layer adapter pattern** for all Notion content:
 - **Tailwind CSS** with CSS variables for theming
 - **Dark mode**: `next-themes` with class-based toggle
 - **Component library**: shadcn/ui (New York style) + ReactBits registry
+- **Frosted Glass Effect**: `bg-background/40 backdrop-blur-xl` for semi-transparent cards over Dark Veil
+
+### Dark Veil Background Component
+
+The home page uses a WebGL-based animated background (Dark Veil from ReactBits):
+
+**Key Implementation Details**:
+- Canvas must use `position: fixed` with explicit `100vw/100vh` sizing
+- Set `zIndex: -1` to keep background behind content
+- Use `window.innerWidth` and `window.innerHeight` for resize calculations (not parent dimensions)
+- Add `overflow-x: hidden` to html/body in globals.css to prevent cutoff
+- Render directly without wrapper divs to avoid positioning conflicts
+- The `resolutionScale` prop only affects render quality, not visual size
+
+**Example Usage**:
+```typescript
+<DarkVeil hueShift={40} speed={0.5} resolutionScale={0.8} />
+```
+
+**Bento Cards Over Dark Veil**:
+Use frosted glass transparency to show background colors:
+```typescript
+className="bg-background/40 backdrop-blur-xl border border-border/30"
+```
 
 ---
 
@@ -516,9 +574,63 @@ npm run build   # Verify static build works
 npm run lint    # Check for issues
 ```
 
-### Alternative: Simpler Bento Grid (No Animation)
+### Alternative: Simpler Bento Grid (No Animation) - IMPLEMENTED
 
-If MagicBento proves too complex or has issues, create a simpler CSS Grid-based bento layout without GSAP animations. The visual structure remains the same but uses Tailwind's built-in transitions instead.
+The site uses a simpler CSS Grid-based bento layout without GSAP animations. This approach provides better performance and simpler maintenance.
+
+**Implementation** (`app/page.tsx`):
+```typescript
+'use client';
+
+import Link from 'next/link';
+import { ArrowRight, FileText, BookOpen, Link2, User } from 'lucide-react';
+import DarkVeil from '@/components/ui/dark-veil';
+
+const bentoCards = [
+  {
+    id: 'hero',
+    title: 'Matthew Coleman',
+    description: 'Welcome to my personal information hub...',
+    label: 'Introduction',
+    span: 'md:col-span-2 md:row-span-1',
+    link: '/about',
+    icon: User
+  },
+  // ... other cards
+];
+
+export default function Home() {
+  return (
+    <>
+      <DarkVeil hueShift={40} speed={0.5} resolutionScale={0.8} />
+
+      <div className="min-h-screen flex items-center justify-center py-16 px-4 relative">
+        <div className="w-full max-w-5xl relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-fr">
+            {bentoCards.map((card) => (
+              <Link
+                key={card.id}
+                href={card.link}
+                className={`${card.span} group relative overflow-hidden rounded-2xl
+                  border border-border/30 bg-background/40 backdrop-blur-xl p-8
+                  transition-all hover:border-primary/50 hover:bg-background/50`}
+              >
+                {/* Card content */}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+```
+
+Key features:
+- Simple CSS Grid layout with responsive spans
+- Frosted glass cards (`bg-background/40 backdrop-blur-xl`)
+- Dark Veil animated background
+- Hover effects with Tailwind transitions
 
 ---
 
@@ -562,6 +674,19 @@ If MagicBento proves too complex or has issues, create a simpler CSS Grid-based 
 4. **Environment Variables**: Build-time only. All Notion IDs must be in GitHub Secrets for production builds.
 
 5. **Notion Content Updates**: Require rebuild to appear on site. Not real-time.
+
+6. **Notion Token Format**: Tokens start with `ntn_` NOT `secret_`. Update any validation or documentation accordingly.
+
+7. **Notion Credential Validation**: Always validate credentials BEFORE calling `getNotionClient()` to enable graceful fallback to sample data. Check for both undefined values and placeholder strings (e.g., `ntn_your_integration_token_here`).
+
+8. **Dark Veil Canvas Coverage**:
+   - Do NOT wrap the canvas in positioned containers
+   - Use `position: fixed` with explicit `100vw/100vh` sizing
+   - Use `window.innerWidth/innerHeight` for resize calculations, not parent element dimensions
+   - Add `overflow-x: hidden` to html/body to prevent scrollbar issues
+   - The `resolutionScale` prop affects render resolution only, not visual size
+
+9. **Separate Notion Databases**: Blog, Resources, and Resume use separate database IDs. Ensure each has the correct ID configured. The error "Databases with multiple data sources are not supported" indicates you're trying to use a database with synced blocks or linked databases.
 
 ---
 
