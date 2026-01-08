@@ -163,8 +163,10 @@
     background: none !important;
     border: none !important;
     border-radius: 0 !important;
-    padding: 4px;
+    padding: 12px;
     position: relative;
+    margin: -8px;
+    /* Offset the extra padding to keep visual positioning similar */
 }
 
 .pc-social-icon:hover svg {
@@ -200,7 +202,7 @@
 .pc-details {
     width: 100%;
     position: absolute;
-    top: 3em;
+    bottom: 90px;
     display: flex;
     flex-direction: column;
 }
@@ -249,7 +251,7 @@
     }
 
     .pc-details {
-        top: 2em;
+        bottom: 80px;
     }
 
     .pc-details h3 {
@@ -282,7 +284,7 @@
     }
 
     .pc-details {
-        top: 1.5em;
+        bottom: 70px;
     }
 
     .pc-details h3 {

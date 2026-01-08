@@ -1,51 +1,42 @@
 'use client';
 
+import { FallInText } from '@/components/ui/fall-in-text';
 import { TextType } from '@/components/ui/text-type';
 import { BlurText } from '@/components/ui/blur-text';
 import { ProfileCard } from '@/components/ui/profile-card';
+import { User, Cpu, Code2, Sparkles } from 'lucide-react';
 
 export default function AboutPage() {
   return (
     <div className="container mx-auto px-4 py-16 max-w-6xl">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
-        {/* Left Column - Text Content */}
-        <div className="lg:col-span-2">
-          <h1 className="text-4xl font-bold mb-8 tracking-tight">
-            <TextType text="About Me" speed={80} />
-          </h1>
+      <header className="mb-12 text-center text-balance">
+        <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight leading-tight">
+          <FallInText text="About Me" duration={800} className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60" />
+        </h1>
+        <div className="h-1 w-20 bg-primary/20 mx-auto rounded-full" />
+      </header>
 
-          <div className="prose prose-neutral dark:prose-invert max-w-none">
-            <p className="text-lg text-muted-foreground mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+        {/* Intro Card - Wide */}
+        <div className="md:col-span-2 p-8 rounded-3xl border border-border/50 bg-background/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 relative overflow-hidden group">
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-6">
+              <h2 className="text-2xl font-bold tracking-tight">
+                <TextType text="Introduction" speed={80} />
+              </h2>
+            </div>
+            <p className="text-xl text-muted-foreground leading-relaxed max-w-2xl">
               <BlurText
-                text="Welcome! I'm Matthew Coleman, and this is my personal space on the web."
-                duration={1200}
-              />
-            </p>
-
-            <h2 className="text-2xl font-semibold mb-4 mt-8">
-              <TextType text="What I Do" speed={80} />
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              <BlurText
-                text="I'm passionate about technology, AI, and sometimes random information. This blog serves as a platform where I share my thoughts, experiences, and knowledge with whoever stumbles upon this super cool blog site."
-                duration={1200}
-              />
-            </p>
-
-            <h2 className="text-2xl font-semibold mb-4 mt-8">
-              <TextType text="This Website" speed={80} />
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              <BlurText
-                text="This site is built using AI, primarily Claude code (mostly Sonnet 4.5). It's hosted on GitHub Pages and features a blog powered by Notion for easy content management."
+                text="Welcome! I'm Matthew Coleman, and this is my small corner of the internet. You'll find a collection of my thoughts, projects, and experiences here. I hope you enjoy your stay!"
                 duration={1200}
               />
             </p>
           </div>
+          <div className="absolute bottom-0 left-0 h-1 w-0 bg-primary group-hover:w-full transition-all duration-500 rounded-b-3xl" />
         </div>
 
-        {/* Right Column - Profile Card */}
-        <div className="lg:col-span-1 flex items-start justify-center lg:justify-end">
+        {/* Profile Card - Tall on LG */}
+        <div className="lg:row-span-2 flex items-start justify-center">
           <ProfileCard
             name="Matthew Coleman"
             avatarUrl={`${process.env.NODE_ENV === 'production' ? '/matthew-coleman' : ''}/profile.jpg`}
@@ -55,7 +46,46 @@ export default function AboutPage() {
             linkedinUrl="https://www.linkedin.com/in/matthew-coleman-15a66b233/"
             instagramUrl="https://www.instagram.com/mncoleman_/"
             xUrl="https://x.com/mtthwc003"
+            className="w-full"
           />
+        </div>
+
+        {/* What I Do Card */}
+        <div className="p-8 rounded-3xl border border-border/50 bg-background/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 relative group">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <Cpu size={24} />
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight">
+              <TextType text="What I Do" speed={80} />
+            </h2>
+          </div>
+          <div className="text-muted-foreground leading-relaxed">
+            <BlurText
+              text="I'm deeply passionate about technology, AI, and exploring the vast world of digital possibilities. This site serves as my platform to share thoughts, experiences, and technical knowledge."
+              duration={1200}
+            />
+          </div>
+          <div className="absolute bottom-0 left-0 h-1 w-0 bg-primary group-hover:w-full transition-all duration-500 rounded-b-3xl" />
+        </div>
+
+        {/* This Website Card */}
+        <div className="p-8 rounded-3xl border border-border/50 bg-background/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 relative group">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <Code2 size={24} />
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight">
+              <TextType text="This Website" speed={80} />
+            </h2>
+          </div>
+          <div className="text-muted-foreground leading-relaxed">
+            <BlurText
+              text="Built primarily with AI (Claude Sonnet 4.5), this site reflects my interest in rapid development. It's hosted on GitHub Pages and powered by a custom Notion integration for content management."
+              duration={1200}
+            />
+          </div>
+          <div className="absolute bottom-0 left-0 h-1 w-0 bg-primary group-hover:w-full transition-all duration-500 rounded-b-3xl" />
         </div>
       </div>
     </div>
