@@ -43,6 +43,7 @@ jobs:
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           NOTION_RESOURCES_DATABASE_ID: ${{ secrets.NOTION_RESOURCES_DATABASE_ID }}
           NOTION_RESUME_PAGE_ID: ${{ secrets.NOTION_RESUME_PAGE_ID }}
+          NOTION_PROJECTS_DATABASE_ID: ${{ secrets.NOTION_PROJECTS_DATABASE_ID }}
           NEXT_PUBLIC_GA_ID: ${{ secrets.NEXT_PUBLIC_GA_ID }}
         run: npm run build
 
