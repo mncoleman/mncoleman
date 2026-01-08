@@ -61,6 +61,9 @@ export default function RootLayout({
                   <Link href="/blog" className="text-sm hover:text-muted-foreground transition-colors">
                     Blog
                   </Link>
+                  <Link href="/projects" className="text-sm hover:text-muted-foreground transition-colors">
+                    Projects
+                  </Link>
                   <Link href="/resources" className="text-sm hover:text-muted-foreground transition-colors">
                     Resources
                   </Link>

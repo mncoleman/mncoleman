@@ -7,29 +7,31 @@ const getNotionClient = () => {
     return new Client({ auth: process.env.NOTION_TOKEN });
 };
 
-export interface Resource {
+export interface Project {
     id: string;
     name: string;
-    url: string;
-    categories: string[];
     description: string;
+    url: string;
+    tech: string[];
+    date: string;
     published: boolean;
 }
 
-export async function getPublishedResources(): Promise<Resource[]> {
-    const databaseId = process.env.NOTION_RESOURCES_DATABASE_ID;
+export async function getPublishedProjects(): Promise<Project[]> {
+    const databaseId = process.env.NOTION_PROJECTS_DATABASE_ID;
     const token = process.env.NOTION_TOKEN;
 
     // Check for valid credentials before attempting to connect
-    if (!databaseId || databaseId.includes('your_resources_database_id') || !token || token === 'ntn_your_integration_token_here') {
-        console.warn('NOTION_RESOURCES_DATABASE_ID not set or is a placeholder, returning sample data');
+    if (!databaseId || databaseId.includes('your_projects_database_id') || !token || token === 'ntn_your_integration_token_here') {
+        console.warn('NOTION_PROJECTS_DATABASE_ID not set or is a placeholder, returning sample data');
         return [
             {
                 id: 'sample-1',
-                name: 'Sample Resource',
+                name: 'Sample Project',
+                description: 'This is a sample project built with AI.',
                 url: 'https://example.com',
-                categories: ['Sample'],
-                description: 'This is a sample resource.',
+                tech: ['React', 'Next.js', 'Tailwind'],
+                date: new Date().toISOString(),
                 published: true
             }
         ];
@@ -42,20 +44,20 @@ export async function getPublishedResources(): Promise<Resource[]> {
             filter: {
                 property: 'Published',
                 checkbox: { equals: true }
-            }
+            },
         });
 
         return response.results.map((page: any) => ({
             id: page.id,
             name: page.properties.Name?.title?.[0]?.plain_text || 'Untitled',
-            url: page.properties.URL?.url || '',
-            categories: page.properties.Category?.multi_select?.map((item: any) => item.name) || [],
             description: page.properties.Description?.rich_text?.[0]?.plain_text || '',
+            url: page.properties.URL?.url || '',
+            tech: page.properties.Category?.select ? [page.properties.Category.select.name] : [],
+            date: '',
             published: page.properties.Published?.checkbox || false
         }));
     } catch (error) {
-        console.error('Error fetching resources:', error);
+        console.error('Error fetching projects:', error);
         return [];
     }
 }
-
