@@ -4,6 +4,8 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { PWAInstall } from '@/components/pwa-install';
 import Link from 'next/link';
 import { GoogleAnalytics } from '@next/third-parties/google';
+import { MobileNav } from '@/components/mobile-nav';
+import { HamburgerButton } from '@/components/hamburger-button';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -52,12 +54,18 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <div className="min-h-screen flex flex-col">
+            {/* Mobile Navigation - Rendered at root for proper overlay */}
+            <MobileNav />
+
             <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
-              <div className="container mx-auto px-4 py-4 flex justify-center items-center max-w-4xl">
-                <nav className="flex gap-6 items-center">
-                  <Link href="/" className="font-semibold text-lg hover:text-muted-foreground transition-colors">
-                    Matthew Coleman
-                  </Link>
+              <div className="container mx-auto px-4 py-4 flex justify-between items-center max-w-4xl">
+                {/* Logo / Brand */}
+                <Link href="/" className="font-semibold text-lg hover:text-muted-foreground transition-colors">
+                  Matthew Coleman
+                </Link>
+
+                {/* Desktop Navigation - Hidden on mobile */}
+                <nav className="hidden md:flex gap-6 items-center">
                   <Link href="/blog" className="text-sm hover:text-muted-foreground transition-colors">
                     Blog
                   </Link>
@@ -74,6 +82,9 @@ export default function RootLayout({
                     About
                   </Link>
                 </nav>
+
+                {/* Mobile Hamburger Button */}
+                <HamburgerButton />
               </div>
             </header>
             <main className="flex-1">
