@@ -26,7 +26,7 @@ const bentoCards = [
   {
     id: 'blog',
     title: 'Blog',
-    description: 'Thoughts on technology, AI, and software development.',
+    description: 'Thoughts on technology, life, and sometimes just random things.',
     label: 'Articles',
     icon: BookOpen,
     span: 'md:col-span-1 md:row-span-1',

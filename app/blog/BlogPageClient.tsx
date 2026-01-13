@@ -25,7 +25,7 @@ export default function BlogPageClient({ initialPosts, allTags }: BlogPageClient
                 <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60 leading-tight">
                     Blog
                     <span className="block text-xl md:text-2xl font-medium text-muted-foreground mt-2">
-                        Thoughts & Lessons
+                        Thoughts on technology, life, and sometimes just random things.
                     </span>
                 </h1>
             </header>

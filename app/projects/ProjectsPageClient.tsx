@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
 import { ExternalLink, Code2, Calendar, Filter, X } from 'lucide-react';
 import { format } from 'date-fns';
+import { CardActions } from '@/components/ui/card-actions';
+import { useToast } from '@/hooks/use-toast';
 
 interface Project {
     id: string;
@@ -21,6 +22,7 @@ interface ProjectsPageClientProps {
 
 export default function ProjectsPageClient({ projects }: ProjectsPageClientProps) {
     const [selectedTech, setSelectedTech] = useState<string | null>(null);
+    const { showToast, ToastComponent } = useToast();
 
     const allTech = useMemo(() => {
         const techSet = new Set<string>();
@@ -56,8 +58,8 @@ export default function ProjectsPageClient({ projects }: ProjectsPageClientProps
                 <button
                     onClick={() => setSelectedTech(null)}
                     className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedTech === null
-                            ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
-                            : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
+                        ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
+                        : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
                         }`}
                 >
                     All
@@ -67,8 +69,8 @@ export default function ProjectsPageClient({ projects }: ProjectsPageClientProps
                         key={tech}
                         onClick={() => setSelectedTech(tech)}
                         className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedTech === tech
-                                ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
-                                : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
+                            ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
+                            : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
                             }`}
                     >
                         {tech}
@@ -87,22 +89,14 @@ export default function ProjectsPageClient({ projects }: ProjectsPageClientProps
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {filteredProjects.map((project) => (
-                    <Link
+                    <article
                         key={project.id}
-                        href={project.url || '#'}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="group relative flex flex-col h-full p-6 rounded-2xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/50 hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both"
                     >
                         <div className="flex justify-between items-start mb-4">
                             <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
                                 <Code2 className="h-5 w-5" />
                             </div>
-                            {project.url && (
-                                <div className="p-2 rounded-lg text-muted-foreground group-hover:text-primary transition-colors">
-                                    <ExternalLink className="h-5 w-5" />
-                                </div>
-                            )}
                         </div>
 
                         <div className="flex-1">
@@ -121,8 +115,8 @@ export default function ProjectsPageClient({ projects }: ProjectsPageClientProps
                                         <span
                                             key={tag}
                                             className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-all ${selectedTech === tag
-                                                    ? 'bg-primary/10 border-primary/20 text-primary'
-                                                    : 'bg-accent text-accent-foreground border-border'
+                                                ? 'bg-primary/10 border-primary/20 text-primary'
+                                                : 'bg-accent text-accent-foreground border-border'
                                                 }`}
                                         >
                                             {tag}
@@ -131,7 +125,7 @@ export default function ProjectsPageClient({ projects }: ProjectsPageClientProps
                                 </div>
                             )}
 
-                            <div className="flex items-center text-sm text-muted-foreground pt-4 border-t border-border/30">
+                            <div className="flex items-center text-sm text-muted-foreground py-4 border-t border-border/30">
                                 <Calendar className="h-4 w-4 mr-2" />
                                 <span>
                                     {project.date ? format(new Date(project.date), 'MMMM yyyy') : 'Recently'}
@@ -139,11 +133,19 @@ export default function ProjectsPageClient({ projects }: ProjectsPageClientProps
                             </div>
                         </div>
 
+                        <CardActions
+                            url={project.url}
+                            title={project.name}
+                            onToast={showToast}
+                        />
+
                         {/* Interactive hover indicator */}
                         <div className="absolute bottom-0 left-0 h-1 w-0 bg-primary group-hover:w-full transition-all duration-500 rounded-b-2xl" />
-                    </Link>
+                    </article>
                 ))}
             </div>
+
+            {ToastComponent}
 
             {filteredProjects.length === 0 && (
                 <div className="text-center py-24 bg-accent/10 rounded-3xl border border-dashed border-border/50 animate-in zoom-in-95 duration-500">

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
-import { ExternalLink, Bookmark, Filter, X } from 'lucide-react';
+import { Bookmark, Filter, X } from 'lucide-react';
+import { CardActions } from '@/components/ui/card-actions';
+import { useToast } from '@/hooks/use-toast';
 
 interface Resource {
     id: string;
@@ -19,6 +20,7 @@ interface ResourcesPageClientProps {
 
 export default function ResourcesPageClient({ initialResources }: ResourcesPageClientProps) {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const { showToast, ToastComponent } = useToast();
 
     const allCategories = useMemo(() => {
         const cats = new Set<string>();
@@ -54,8 +56,8 @@ export default function ResourcesPageClient({ initialResources }: ResourcesPageC
                 <button
                     onClick={() => setSelectedCategory(null)}
                     className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedCategory === null
-                            ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
-                            : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
+                        ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
+                        : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
                         }`}
                 >
                     All
@@ -65,8 +67,8 @@ export default function ResourcesPageClient({ initialResources }: ResourcesPageC
                         key={category}
                         onClick={() => setSelectedCategory(category)}
                         className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedCategory === category
-                                ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
-                                : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
+                            ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
+                            : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
                             }`}
                     >
                         {category}
@@ -85,19 +87,13 @@ export default function ResourcesPageClient({ initialResources }: ResourcesPageC
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredResources.map((resource) => (
-                    <Link
+                    <article
                         key={resource.id}
-                        href={resource.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="group relative flex flex-col h-full p-6 rounded-2xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/50 hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both"
                     >
                         <div className="flex justify-between items-start mb-4">
                             <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
                                 <Bookmark className="h-5 w-5" />
-                            </div>
-                            <div className="p-2 rounded-lg text-muted-foreground group-hover:text-primary transition-colors">
-                                <ExternalLink className="h-5 w-5" />
                             </div>
                         </div>
 
@@ -110,13 +106,13 @@ export default function ResourcesPageClient({ initialResources }: ResourcesPageC
                             </p>
                         </div>
 
-                        <div className="flex flex-wrap gap-1.5 mt-2">
+                        <div className="flex flex-wrap gap-1.5 mt-2 mb-4">
                             {resource.categories.map(cat => (
                                 <span
                                     key={cat}
                                     className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${selectedCategory === cat
-                                            ? 'bg-primary/10 border-primary/20 text-primary'
-                                            : 'bg-muted/50 border-border text-muted-foreground'
+                                        ? 'bg-primary/10 border-primary/20 text-primary'
+                                        : 'bg-muted/50 border-border text-muted-foreground'
                                         }`}
                                 >
                                     {cat}
@@ -124,10 +120,18 @@ export default function ResourcesPageClient({ initialResources }: ResourcesPageC
                             ))}
                         </div>
 
+                        <CardActions
+                            url={resource.url}
+                            title={resource.name}
+                            onToast={showToast}
+                        />
+
                         <div className="absolute bottom-0 left-0 h-1 w-0 bg-primary group-hover:w-full transition-all duration-500 rounded-b-2xl" />
-                    </Link>
+                    </article>
                 ))}
             </div>
+
+            {ToastComponent}
 
             {filteredResources.length === 0 && (
                 <div className="text-center py-24 bg-accent/10 rounded-3xl border border-dashed border-border/50 animate-in zoom-in-95 duration-500">

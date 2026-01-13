@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Repository Overview
 
 This is Matthew Coleman's personal information hub built with Next.js 16 (App Router) as a static site. It features:
+
 - **Blog** - Notion-powered blog with markdown rendering
 - **Resume** - Professional resume/CV from Notion
 - **Resource Library** - Curated links to websites and resources from Notion
@@ -23,6 +24,7 @@ npm run lint     # Run ESLint
 ### Environment Setup
 
 Create `.env.local` in the root directory with:
+
 ```
 # Notion integration token (starts with "ntn_")
 NOTION_TOKEN=ntn_your_integration_token_here
@@ -59,6 +61,7 @@ Uses a **two-layer adapter pattern** for all Notion content:
 
 **Credential Validation Pattern**:
 All Notion data-fetching functions validate credentials BEFORE calling `getNotionClient()`:
+
 ```typescript
 export async function getPublishedPosts(): Promise<NotionPost[]> {
     const databaseId = getDatabaseId();
@@ -79,19 +82,23 @@ export async function getPublishedPosts(): Promise<NotionPost[]> {
     }
 }
 ```
+
 This pattern enables graceful degradation with sample data during development.
 
 ### Notion Data Sources
 
 **Blog Database**:
+
 - Database ID: `2b5c6cc793dc805db5b6fc611ecc05cf`
 - Properties: Title, Slug, Date, Tags, Published, Featured, Excerpt, Author
 
 **Resources Database** (separate database):
+
 - Database ID: `2dac6cc793dc80f89e33e26804116c82`
 - Properties: Name, URL, Category, Description, Published
 
 **Resume Page**:
+
 - Page ID: `2dac6cc793dc80c2ac99d075065c739f`
 - Content: Markdown blocks to be converted
 
@@ -116,6 +123,7 @@ This pattern enables graceful degradation with sample data during development.
 The home page uses a WebGL-based animated background (Dark Veil from ReactBits):
 
 **Key Implementation Details**:
+
 - Canvas must use `position: fixed` with explicit `100vw/100vh` sizing
 - Set `zIndex: -1` to keep background behind content
 - Use `window.innerWidth` and `window.innerHeight` for resize calculations (not parent dimensions)
@@ -124,12 +132,14 @@ The home page uses a WebGL-based animated background (Dark Veil from ReactBits):
 - The `resolutionScale` prop only affects render quality, not visual size
 
 **Example Usage**:
+
 ```typescript
 <DarkVeil hueShift={40} speed={0.5} resolutionScale={0.8} />
 ```
 
 **Bento Cards Over Dark Veil**:
 Use frosted glass transparency to show background colors:
+
 ```typescript
 className="bg-background/40 backdrop-blur-xl border border-border/30"
 ```
@@ -147,6 +157,7 @@ The following plans should be executed by an AI model (Claude Sonnet or similar)
 ### Findings
 
 **Current State Assessment:**
+
 - File structure is clean and minimal
 - Dependencies are appropriate for the project
 - No major bloat or unnecessary files
@@ -168,21 +179,25 @@ The following plans should be executed by an AI model (Claude Sonnet or similar)
 Execute these steps in order:
 
 **Step 1: Remove Unused Dependencies**
+
 ```bash
 npm uninstall gray-matter
 ```
 
 **Step 2: Remove Unused Files**
+
 - Delete `scripts/generate-icons.js`
 - Delete `scripts/` directory (empty after removal)
 - Delete `app/api/refresh-posts/route.ts`
 - Delete `app/api/` directory (empty after removal)
 
 **Step 3: Consolidate Documentation**
+
 - Move essential content from GOOGLE_ANALYTICS_SETUP.md, NOTION_SETUP.md, REFRESH_SETUP.md into README.md under appropriate sections
 - Delete the individual setup files
 
 **Step 4: Verify Build**
+
 ```bash
 npm run build
 npm run lint
@@ -195,6 +210,7 @@ npm run lint
 ### Overview
 
 Transform the home page into an interactive Magic Bento grid layout that serves as an information hub with tiles for:
+
 1. **Hero/Introduction** - Name, tagline, brief intro
 2. **Blog** - Latest posts preview
 3. **Resume** - Professional summary with link
@@ -203,11 +219,13 @@ Transform the home page into an interactive Magic Bento grid layout that serves 
 ### Prerequisites
 
 **Install GSAP** (required by MagicBento):
+
 ```bash
 npm install gsap
 ```
 
 **Install MagicBento Component**:
+
 ```bash
 npx shadcn@latest add @react-bits/MagicBento-TS-TW
 ```
@@ -343,6 +361,7 @@ export async function getResume(): Promise<Resume | null> {
 #### Step 3: Create New Pages
 
 **Create `app/resources/page.tsx`**:
+
 ```typescript
 import { getResourcesByCategory } from '@/lib/resources';
 import Link from 'next/link';
@@ -393,6 +412,7 @@ export default async function ResourcesPage() {
 ```
 
 **Create `app/resume/page.tsx`**:
+
 ```typescript
 import { getResume } from '@/lib/resume';
 import ReactMarkdown from 'react-markdown';
@@ -469,7 +489,7 @@ const bentoCards = [
     {
         id: 'blog',
         title: 'Blog',
-        description: 'Thoughts on technology, AI, and software development.',
+        description: 'Thoughts on technology, life, and sometimes just random things.',
         label: 'Articles',
         color: '#060010',
         icon: BookOpen,
@@ -557,12 +577,14 @@ export default function Home() {
 #### Step 6: Update Environment Variables
 
 Add to `.env.local`:
+
 ```
 NOTION_RESOURCES_DATABASE_ID=2b5c6cc793dc805db5b6fc611ecc05cf
 NOTION_RESUME_PAGE_ID=2dac6cc793dc80c2ac99d075065c739f
 ```
 
 Add to GitHub Secrets:
+
 - `NOTION_RESOURCES_DATABASE_ID`
 - `NOTION_RESUME_PAGE_ID`
 
@@ -579,6 +601,7 @@ npm run lint    # Check for issues
 The site uses a simpler CSS Grid-based bento layout without GSAP animations. This approach provides better performance and simpler maintenance.
 
 **Implementation** (`app/page.tsx`):
+
 ```typescript
 'use client';
 
@@ -627,6 +650,7 @@ export default function Home() {
 ```
 
 Key features:
+
 - Simple CSS Grid layout with responsive spans
 - Frosted glass cards (`bg-background/40 backdrop-blur-xl`)
 - Dark Veil animated background
@@ -637,6 +661,7 @@ Key features:
 ## PLAN 3: Database Schema Reference
 
 ### Blog Database Properties
+
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
 | Title | title | Yes | Post title |
@@ -649,6 +674,7 @@ Key features:
 | Author | text | No | Author name |
 
 ### Resources Database Properties
+
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
 | Name | title | Yes | Resource name |
@@ -658,6 +684,7 @@ Key features:
 | Published | checkbox | Yes | Visibility control |
 
 ### Resume Page
+
 - Single Notion page with markdown content
 - Fetched and converted to markdown at build time
 
@@ -708,6 +735,7 @@ When implementing these plans, follow this order:
 ## Adding shadcn/ui Components
 
 Two registries configured in `components.json`:
+
 ```bash
 npx shadcn@latest add button              # shadcn/ui
 npx shadcn@latest add @react-bits/avatar  # ReactBits

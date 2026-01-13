@@ -1,5 +1,5 @@
 import { Client } from '@notionhq/client';
-import { NotionToMarkdown } from 'notion-to-md';
+// Import NotionToMarkdown only when needed to avoid top-level triggers
 
 const getNotionClient = () => {
     if (!process.env.NOTION_TOKEN || process.env.NOTION_TOKEN === 'ntn_your_integration_token_here') {
@@ -162,6 +162,7 @@ Check \`CLAUDE.md\` for detailed instructions.
 
     try {
         const notion = getNotionClient();
+        const { NotionToMarkdown } = await import('notion-to-md');
         const n2m = new NotionToMarkdown({ notionClient: notion });
         const response = await notion.databases.query({
             database_id: databaseId,
@@ -248,6 +249,7 @@ export async function getBlogStats(): Promise<BlogStats> {
             // We need to fetch the page content to count words
             // Optimization: In a real app, you might store this in the database properties to avoid fetching blocks
             const notion = getNotionClient();
+            const { NotionToMarkdown } = await import('notion-to-md');
             const n2m = new NotionToMarkdown({ notionClient: notion });
             const mdblocks = await n2m.pageToMarkdown(post.id);
             const mdString = n2m.toMarkdownString(mdblocks);
