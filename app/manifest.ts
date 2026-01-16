@@ -2,7 +2,8 @@ import { MetadataRoute } from 'next';
 
 export const dynamic = 'force-static';
 
-const basePath = process.env.NODE_ENV === 'production' ? '/matthew-coleman' : '';
+// No basePath needed for custom domain
+const basePath = '';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
