@@ -41,13 +41,14 @@ export default function AboutPage() {
           <div className="hidden lg:flex lg:row-span-2 items-start justify-center">
             <ProfileCard
               name="Matthew Coleman"
-              avatarUrl={`${process.env.NODE_ENV === 'production' ? '/matthew-coleman' : ''}/profile.jpg`}
+              avatarUrl="/profile.jpg"
               showUserInfo={true}
               enableTilt={true}
               enableMobileTilt={true}
               linkedinUrl="https://www.linkedin.com/in/matthew-coleman-15a66b233/"
               instagramUrl="https://www.instagram.com/mncoleman_/"
               xUrl="https://x.com/mtthwc003"
+              githubUrl="https://github.com/slider003"
               className="w-full"
             />
           </div>
@@ -95,13 +96,14 @@ export default function AboutPage() {
         <div className="flex justify-center pt-8 lg:hidden">
           <ProfileCard
             name="Matthew Coleman"
-            avatarUrl={`${process.env.NODE_ENV === 'production' ? '/matthew-coleman' : ''}/profile.jpg`}
+            avatarUrl="/profile.jpg"
             showUserInfo={true}
             enableTilt={true}
             enableMobileTilt={true}
             linkedinUrl="https://www.linkedin.com/in/matthew-coleman-15a66b233/"
             instagramUrl="https://www.instagram.com/mncoleman_/"
             xUrl="https://x.com/mtthwc003"
+            githubUrl="https://github.com/slider003"
           />
         </div>
       </div>

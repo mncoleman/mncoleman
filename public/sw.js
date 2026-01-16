@@ -1,6 +1,6 @@
 // Service Worker for PWA functionality
 const CACHE_NAME = 'mc-blog-v1';
-const BASE_PATH = '/matthew-coleman';
+const BASE_PATH = '';
 const urlsToCache = [
   `${BASE_PATH}/`,
   `${BASE_PATH}/blog/`,
