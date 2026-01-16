@@ -18,7 +18,8 @@ export const viewport: Viewport = {
   ],
 };
 
-const basePath = process.env.NODE_ENV === 'production' ? '/matthew-coleman' : '';
+// No basePath needed for custom domain
+const basePath = '';
 
 export const metadata: Metadata = {
   title: 'Matthew Coleman - Information Hub',
