@@ -5,7 +5,8 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  basePath: process.env.NODE_ENV === 'production' ? '/matthew-coleman' : '',
+  // basePath removed for custom domain (mncoleman.com)
+  // Previously: '/matthew-coleman' for GitHub Pages subpath
   trailingSlash: true,
 };
 
