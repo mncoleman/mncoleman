@@ -8,7 +8,7 @@ const bentoCards = [
   {
     id: 'hero',
     title: 'Matthew Coleman',
-    description: 'Welcome to my personal information hub. I write about technology, share resources, and document my professional journey.',
+    description: 'Welcome to my personal information hub. I write about technology, share resources, and document my life journey.',
     label: 'Introduction',
     span: 'md:col-span-2 md:row-span-1',
     link: '/about',
