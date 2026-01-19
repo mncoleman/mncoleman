@@ -93,7 +93,7 @@ export default function RootLayout({
             </main>
             <footer className="border-t">
               <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground max-w-4xl">
-                © {new Date().getFullYear()} Matthew Coleman. All rights reserved.
+                © 2003-{new Date().getFullYear()} Matthew Coleman (aka Teo: pronounced 'Tay-oh'). All rights reserved - and I mean all of them.
               </div>
             </footer>
           </div>
