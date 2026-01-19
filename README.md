@@ -186,6 +186,119 @@ If you prefer to set up manually:
 
 ---
 
+## 🔧 How It Works: Notion CMS + Static Site Architecture
+
+This site uses a unique architecture that combines **Notion's powerful CMS** with **100% static hosting** on GitHub Pages. Here's how it works:
+
+### The Build-Time CMS Approach
+
+Unlike traditional CMS platforms that require a server to fetch content on every page load, this site fetches all content from Notion **once during the build process** and generates static HTML files.
+
+```
+┌─────────────┐      Build Time        ┌──────────────┐      Deploy        ┌─────────────┐
+│   Notion    │ ──────────────────────>│  Next.js     │ ────────────────> │   GitHub    │
+│  Databases  │   Fetch via API        │  Static      │   Upload HTML     │   Pages     │
+│             │   Convert to Markdown  │  Generation  │   (out/ folder)   │  (Hosting)  │
+└─────────────┘                        └──────────────┘                    └─────────────┘
+     ↓                                         ↓                                  ↓
+  Content                                  Pre-render                         Fast Delivery
+  Management                               All Pages                          No Server Needed
+```
+
+### Benefits of This Approach
+
+| Benefit | Description |
+|---------|-------------|
+| 🚀 **Lightning Fast** | No API calls at runtime - all content is pre-rendered as HTML |
+| 💰 **Zero Cost Hosting** | Static files hosted free on GitHub Pages |
+| 🔒 **Secure** | No server to hack, no databases to breach |
+| 📝 **Easy Content Management** | Write in Notion's beautiful editor with rich formatting |
+| 🌍 **Global CDN** | GitHub Pages automatically distributes your site globally |
+| 📱 **Works Offline** | PWA-ready static files can be cached for offline use |
+
+### How Content Updates Work
+
+**1. Edit Content in Notion**
+- Open your Notion workspace
+- Update blog posts, resources, or resume
+- Changes are saved in Notion immediately
+
+**2. Trigger a Rebuild**
+- **Automatic**: GitHub Actions rebuilds daily at 6:00 AM UTC
+- **Manual**: Trigger deployment from GitHub Actions tab
+- **On Push**: Any commit to `main` branch triggers rebuild
+
+**3. Build Process**
+```bash
+npm run build
+```
+- Next.js fetches latest content from Notion API
+- Converts Notion blocks to Markdown using `notion-to-md`
+- Generates static HTML files for all pages
+- Outputs to `out/` directory
+
+**4. Deploy to GitHub Pages**
+- GitHub Actions uploads `out/` folder to `gh-pages` branch
+- Site updates at your custom domain
+- **No downtime** - atomic deployment
+
+### Why This Architecture?
+
+**Traditional CMS (WordPress, etc.)**
+```
+User Request → Server → Database Query → Render HTML → Send to User
+❌ Slow (database queries on every request)
+❌ Expensive (requires hosting server)
+❌ Security risks (server + database vulnerabilities)
+```
+
+**This Site (Notion + Static)**
+```
+User Request → CDN → Serve Pre-rendered HTML → Done
+✅ Fast (no server processing)
+✅ Free (static file hosting)
+✅ Secure (no server to attack)
+```
+
+### Key Technical Details
+
+**Data Fetching** (`lib/notion.ts`)
+- Uses `@notionhq/client` to query Notion databases
+- Fetches only published content (filtered by "Published" checkbox)
+- Gracefully falls back to sample data if Notion credentials are missing
+
+**Markdown Conversion** (`notion-to-md`)
+- Converts Notion's block structure to Markdown
+- Preserves formatting (bold, italic, links, code blocks)
+- Handles images, lists, headings, and more
+
+**Static Generation** (Next.js `output: 'export'`)
+- Pre-renders all pages at build time
+- No server-side rendering (SSR) or API routes
+- Pure HTML/CSS/JS files
+
+**Content Refresh**
+- Daily automatic rebuilds keep content fresh
+- Notion webhook support could enable real-time updates (future enhancement)
+- For now, content updates require rebuild (15-30 seconds)
+
+### Trade-offs
+
+**Advantages:**
+- ✅ Blazing fast performance
+- ✅ Free hosting
+- ✅ No server maintenance
+- ✅ Easy content editing in Notion
+
+**Limitations:**
+- ⏱️ Content updates require rebuild (~1-2 minutes)
+- 🔄 Not real-time (scheduled or manual deploys)
+- 📊 Build-time only (can't fetch data from browsers)
+
+For most blogs and portfolios, these trade-offs are worth it for the **speed, cost savings, and security benefits**.
+
+---
+
 ## 📁 Project Structure
 
 ```
