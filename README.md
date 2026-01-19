@@ -107,7 +107,28 @@ NOTION_RESUME_PAGE_ID=your_resume_page_id
 NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
 ```
 
-### Notion Setup
+### Notion CMS Template (Quick Start)
+
+**🎯 Use the pre-configured template to get started instantly:**
+
+[![Duplicate Notion Template](https://img.shields.io/badge/Duplicate-Notion%20Template-black?logo=notion)](https://matthewcoleman.notion.site/Personal-Site-CMS-Template-2eac6cc793dc80789468f171f49604f3)
+
+**What's Included:**
+- ✅ **Blog Database** - Pre-configured with all required properties (Title, Slug, Date, Tags, Published, Featured, Excerpt, Author)
+- ✅ **Resources Database** - Ready-to-use link library (Name, URL, Category, Description, Published)
+- ✅ **Resume Page** - Formatted resume template with markdown blocks
+- ✅ **Sample Content** - Example posts and resources to demonstrate the structure
+
+**How to Use:**
+1. Click the template link above and select "Duplicate" in the top-right corner
+2. Create a Notion integration at [notion.so/my-integrations](https://www.notion.so/my-integrations)
+3. Share all three databases/pages with your integration
+4. Copy the database/page IDs from the URLs and add to `.env.local`
+5. Copy your integration token (starts with `ntn_`) to `.env.local`
+
+### Manual Notion Setup (Without Template)
+
+If you prefer to set up manually:
 
 1. **Create a Notion Integration**
    - Go to [notion.so/my-integrations](https://www.notion.so/my-integrations)

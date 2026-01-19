@@ -30,13 +30,13 @@ Create `.env.local` in the root directory with:
 NOTION_TOKEN=ntn_your_integration_token_here
 
 # Blog database ID
-NOTION_DATABASE_ID=2b5c6cc793dc805db5b6fc611ecc05cf
+NOTION_DATABASE_ID=your_blog_database_id_32_characters
 
 # Resources database ID (separate database)
-NOTION_RESOURCES_DATABASE_ID=2dac6cc793dc80f89e33e26804116c82
+NOTION_RESOURCES_DATABASE_ID=your_resources_database_id_32_chars
 
 # Resume page ID
-NOTION_RESUME_PAGE_ID=2dac6cc793dc80c2ac99d075065c739f
+NOTION_RESUME_PAGE_ID=your_resume_page_id_32_characters
 ```
 
 **Important**: Notion tokens start with `ntn_`, not `secret_`. The code validates for placeholder values to gracefully fall back to sample data during development.
@@ -89,17 +89,17 @@ This pattern enables graceful degradation with sample data during development.
 
 **Blog Database**:
 
-- Database ID: `2b5c6cc793dc805db5b6fc611ecc05cf`
+- Database ID: `your_blog_database_id_32_characters`
 - Properties: Title, Slug, Date, Tags, Published, Featured, Excerpt, Author
 
 **Resources Database** (separate database):
 
-- Database ID: `2dac6cc793dc80f89e33e26804116c82`
+- Database ID: `your_resources_database_id_32_chars`
 - Properties: Name, URL, Category, Description, Published
 
 **Resume Page**:
 
-- Page ID: `2dac6cc793dc80c2ac99d075065c739f`
+- Page ID: `your_resume_page_id_32_characters`
 - Content: Markdown blocks to be converted
 
 **Important**: These are three separate Notion data sources. Blog and Resources are separate databases (not the same database with different views).
@@ -579,8 +579,8 @@ export default function Home() {
 Add to `.env.local`:
 
 ```
-NOTION_RESOURCES_DATABASE_ID=2b5c6cc793dc805db5b6fc611ecc05cf
-NOTION_RESUME_PAGE_ID=2dac6cc793dc80c2ac99d075065c739f
+NOTION_RESOURCES_DATABASE_ID=your_resources_database_id_32_chars
+NOTION_RESUME_PAGE_ID=your_resume_page_id_32_characters
 ```
 
 Add to GitHub Secrets:
