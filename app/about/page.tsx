@@ -34,7 +34,9 @@ export default function AboutPage() {
                 />
               </p>
             </div>
-            <div className="absolute bottom-0 left-0 h-1 w-0 bg-primary group-hover:w-full transition-all duration-500 rounded-b-3xl" />
+            <div className="absolute bottom-0 left-0 right-0 h-1">
+              <div className="h-full w-0 bg-primary group-hover:w-full transition-all duration-500 mx-auto" />
+            </div>
           </div>
 
           {/* Profile Card - Hidden on mobile, shown on desktop in bento grid */}
@@ -54,7 +56,7 @@ export default function AboutPage() {
           </div>
 
           {/* What I Do Card */}
-          <div className="p-8 rounded-3xl border border-border/50 bg-background/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 relative group">
+          <div className="p-8 rounded-3xl border border-border/50 bg-background/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 relative overflow-hidden group">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl bg-primary/10 text-primary">
                 <Cpu size={24} />
@@ -69,11 +71,13 @@ export default function AboutPage() {
                 duration={1200}
               />
             </div>
-            <div className="absolute bottom-0 left-0 h-1 w-0 bg-primary group-hover:w-full transition-all duration-500 rounded-b-3xl" />
+            <div className="absolute bottom-0 left-0 right-0 h-1">
+              <div className="h-full w-0 bg-primary group-hover:w-full transition-all duration-500 mx-auto" />
+            </div>
           </div>
 
           {/* This Website Card */}
-          <div className="p-8 rounded-3xl border border-border/50 bg-background/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 relative group">
+          <div className="p-8 rounded-3xl border border-border/50 bg-background/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 relative overflow-hidden group">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl bg-primary/10 text-primary">
                 <Code2 size={24} />
@@ -88,7 +92,9 @@ export default function AboutPage() {
                 duration={1200}
               />
             </div>
-            <div className="absolute bottom-0 left-0 h-1 w-0 bg-primary group-hover:w-full transition-all duration-500 rounded-b-3xl" />
+            <div className="absolute bottom-0 left-0 right-0 h-1">
+              <div className="h-full w-0 bg-primary group-hover:w-full transition-all duration-500 mx-auto" />
+            </div>
           </div>
         </div>
 

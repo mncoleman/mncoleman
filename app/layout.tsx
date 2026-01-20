@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { GoogleAnalytics } from '@next/third-parties/google';
 import { MobileNav } from '@/components/mobile-nav';
 import { HamburgerButton } from '@/components/hamburger-button';
+import CustomCursor from '@/components/ui/CustomCursor';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -98,6 +99,7 @@ export default function RootLayout({
             </footer>
           </div>
         </ThemeProvider>
+        <CustomCursor />
         {process.env.NEXT_PUBLIC_GA_ID && (
           <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
         )}

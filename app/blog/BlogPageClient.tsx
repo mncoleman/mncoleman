@@ -76,7 +76,7 @@ export default function BlogPageClient({ initialPosts, allTags }: BlogPageClient
                     <Link
                         key={post.id}
                         href={`/blog/${post.slug}`}
-                        className="group relative flex flex-col h-full p-6 rounded-2xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/50 hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both"
+                        className="group relative flex flex-col h-full p-6 rounded-2xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/50 hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both overflow-hidden"
                     >
                         <div className="flex justify-between items-start mb-4">
                             <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
@@ -127,7 +127,9 @@ export default function BlogPageClient({ initialPosts, allTags }: BlogPageClient
                         </div>
 
                         {/* Interactive hover indicator */}
-                        <div className="absolute bottom-0 left-0 h-1 w-0 bg-primary group-hover:w-full transition-all duration-500 rounded-b-2xl" />
+                        <div className="absolute bottom-0 left-0 right-0 h-1">
+                            <div className="h-full w-0 bg-primary group-hover:w-full transition-all duration-500 mx-auto" />
+                        </div>
                     </Link>
                 ))}
             </div>
