@@ -50,7 +50,7 @@ export default function AboutPage() {
               linkedinUrl="https://www.linkedin.com/in/matthew-coleman-15a66b233/"
               instagramUrl="https://www.instagram.com/mncoleman_/"
               xUrl="https://x.com/mtthwc003"
-              githubUrl="https://github.com/slider003"
+              githubUrl="https://github.com/mncoleman"
               className="w-full"
             />
           </div>
@@ -109,7 +109,7 @@ export default function AboutPage() {
             linkedinUrl="https://www.linkedin.com/in/matthew-coleman-15a66b233/"
             instagramUrl="https://www.instagram.com/mncoleman_/"
             xUrl="https://x.com/mtthwc003"
-            githubUrl="https://github.com/slider003"
+            githubUrl="https://github.com/mncoleman"
           />
         </div>
       </div>

@@ -10,7 +10,7 @@ This is Matthew Coleman's personal information hub built with Next.js 16 (App Ro
 - **Resume** - Professional resume/CV from Notion
 - **Resource Library** - Curated links to websites and resources from Notion
 
-The site is deployed to GitHub Pages at `https://slider003.github.io/matthew-coleman/`.
+The site is deployed to GitHub Pages at `https://mncoleman.github.io/matthew-coleman/`.
 
 ## Development Commands
 
