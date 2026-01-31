@@ -93,8 +93,15 @@ export default function RootLayout({
               {children}
             </main>
             <footer className="border-t">
-              <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground max-w-4xl">
-                © 2003-{new Date().getFullYear()} Matthew Coleman (aka Teo: pronounced 'Tay-oh'). All rights reserved - and I mean all of them.
+              <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground max-w-4xl space-y-2">
+                <div>
+                  © 2003-{new Date().getFullYear()} Matthew Coleman (aka Teo: pronounced 'Tay-oh'). All rights reserved - and I mean all of them.
+                </div>
+                <div>
+                  <Link href="/brand-kit" className="hover:text-primary transition-colors hover:underline underline-offset-4">
+                    Brand Kit
+                  </Link>
+                </div>
               </div>
             </footer>
           </div>
