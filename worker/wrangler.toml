@@ -4,7 +4,7 @@ compatibility_date = "2024-04-01"
 
 # Environment variables (secrets should be set via `wrangler secret put`)
 [vars]
-ALLOWED_USER_ID = "" # The Telegram ID of the admin (you)
+ALLOWED_USER_ID = "2008660091" # The Telegram ID of the admin (you)
 GITHUB_REPO_OWNER = "mncoleman"
 GITHUB_REPO_NAME = "mncoleman"
 N8N_WEBHOOK_URL = "" # Optional webhook URL for n8n workflows
