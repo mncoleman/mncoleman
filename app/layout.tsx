@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'MC Blog',
+    title: 'mncoleman',
   },
   icons: {
     icon: [
