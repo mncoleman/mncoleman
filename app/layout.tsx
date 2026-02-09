@@ -7,6 +7,8 @@ import { GoogleAnalytics } from '@next/third-parties/google';
 import { MobileNav } from '@/components/mobile-nav';
 import { HamburgerButton } from '@/components/hamburger-button';
 import CustomCursor from '@/components/ui/CustomCursor';
+import { ThemeWrapper } from '@/components/theme-wrapper';
+
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -55,62 +57,64 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="min-h-screen flex flex-col">
-            {/* Mobile Navigation - Rendered at root for proper overlay */}
-            <MobileNav />
+          <ThemeWrapper>
+            <div className="min-h-screen flex flex-col">
+              {/* Mobile Navigation - Rendered at root for proper overlay */}
+              <MobileNav />
 
-            <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
-              <div className="container mx-auto px-4 py-4 flex justify-between items-center max-w-4xl">
-                {/* Logo / Brand */}
-                <Link href="/" className="font-semibold text-lg hover:text-muted-foreground transition-colors">
-                  Matthew Coleman
-                </Link>
+              <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
+                <div className="container mx-auto px-4 py-4 flex justify-between items-center max-w-4xl">
+                  {/* Logo / Brand */}
+                  <Link href="/" className="font-semibold text-lg hover:text-muted-foreground transition-colors">
+                    Matthew Coleman
+                  </Link>
 
-                {/* Desktop Navigation - Hidden on mobile */}
-                <nav className="hidden md:flex gap-6 items-center">
-                  <Link href="/blog" className="text-sm hover:text-muted-foreground transition-colors">
-                    Blog
-                  </Link>
-                  <Link href="/projects" className="text-sm hover:text-muted-foreground transition-colors">
-                    Projects
-                  </Link>
-                  <Link href="/resources" className="text-sm hover:text-muted-foreground transition-colors">
-                    Resources
-                  </Link>
-                  <Link href="/resume" className="text-sm hover:text-muted-foreground transition-colors">
-                    Resume
-                  </Link>
-                  <Link href="/about" className="text-sm hover:text-muted-foreground transition-colors">
-                    About
-                  </Link>
-                </nav>
+                  {/* Desktop Navigation - Hidden on mobile */}
+                  <nav className="hidden md:flex gap-6 items-center">
+                    <Link href="/blog" className="text-sm hover:text-muted-foreground transition-colors">
+                      Blog
+                    </Link>
+                    <Link href="/projects" className="text-sm hover:text-muted-foreground transition-colors">
+                      Projects
+                    </Link>
+                    <Link href="/resources" className="text-sm hover:text-muted-foreground transition-colors">
+                      Resources
+                    </Link>
+                    <Link href="/resume" className="text-sm hover:text-muted-foreground transition-colors">
+                      Resume
+                    </Link>
+                    <Link href="/about" className="text-sm hover:text-muted-foreground transition-colors">
+                      About
+                    </Link>
+                  </nav>
 
-                {/* Mobile Hamburger Button */}
-                <HamburgerButton />
-              </div>
-            </header>
-            <main className="flex-1">
-              {children}
-            </main>
-            <footer className="border-t">
-              <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground max-w-4xl space-y-2">
-                <div>
-                  © 2003-{new Date().getFullYear()} Matthew Coleman (aka Teo: pronounced 'Tay-oh'). All rights reserved - and I mean all of them.
+                  {/* Mobile Hamburger Button */}
+                  <HamburgerButton />
                 </div>
-                <div>
-                  <Link href="/brand-kit" className="hover:text-primary transition-colors hover:underline underline-offset-4">
-                    Brand Kit
-                  </Link>
-                  <span className="mx-2">•</span>
-                  <Link href="/admin" className="hover:text-primary transition-colors hover:underline underline-offset-4 opacity-50 text-xs">
-                    Admin
-                  </Link>
+              </header>
+              <main className="flex-1">
+                {children}
+              </main>
+              <footer className="border-t">
+                <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground max-w-4xl space-y-2">
+                  <div>
+                    © 2003-{new Date().getFullYear()} Matthew Coleman (aka Teo: pronounced 'Tay-oh'). All rights reserved - and I mean all of them.
+                  </div>
+                  <div>
+                    <Link href="/brand-kit" className="hover:text-primary transition-colors hover:underline underline-offset-4">
+                      Brand Kit
+                    </Link>
+                    <span className="mx-2">•</span>
+                    <Link href="/admin" className="hover:text-primary transition-colors hover:underline underline-offset-4 opacity-50 text-xs">
+                      Admin
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            </footer>
-          </div>
+              </footer>
+            </div>
+            <CustomCursor />
+          </ThemeWrapper>
         </ThemeProvider>
-        <CustomCursor />
         {process.env.NEXT_PUBLIC_GA_ID && (
           <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
         )}
