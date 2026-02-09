@@ -101,6 +101,10 @@ export default function RootLayout({
                   <Link href="/brand-kit" className="hover:text-primary transition-colors hover:underline underline-offset-4">
                     Brand Kit
                   </Link>
+                  <span className="mx-2">•</span>
+                  <Link href="/admin" className="hover:text-primary transition-colors hover:underline underline-offset-4 opacity-50 text-xs">
+                    Admin
+                  </Link>
                 </div>
               </div>
             </footer>
