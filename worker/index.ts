@@ -13,7 +13,7 @@ export default {
     async fetch(request: Request, env: Env): Promise<Response> {
         const corsHeaders = {
             'Access-Control-Allow-Origin': '*', // Update with your domain in production for strict security
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         };
 
@@ -38,8 +38,9 @@ export default {
                     return new Response('Invalid authentication', { status: 401, headers: corsHeaders });
                 }
 
-                if (String(body.id) !== env.ALLOWED_USER_ID) {
-                    return new Response('Unauthorized user', { status: 403, headers: corsHeaders });
+                // Handle string vs number comparison safely
+                if (String(body.id) !== String(env.ALLOWED_USER_ID)) {
+                    return new Response(`Unauthorized user ID: ${body.id}`, { status: 403, headers: corsHeaders });
                 }
 
                 // Issue JWT
@@ -52,25 +53,33 @@ export default {
             }
         }
 
-        // Trigger Action endpoint
-        if (url.pathname === '/api/trigger' && request.method === 'POST') {
-            const authHeader = request.headers.get('Authorization');
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        // Authenticated Endpoints
+        const authHeader = request.headers.get('Authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            // Only required for protected routes below
+            if (url.pathname.startsWith('/api/')) {
                 return new Response('Missing token', { status: 401, headers: corsHeaders });
             }
-
+        } else {
             const token = authHeader.split(' ')[1];
             const payload = await verifyJwt(token, env.JWT_SECRET);
-
             if (!payload) {
-                return new Response('Invalid token', { status: 401, headers: corsHeaders });
+                if (url.pathname.startsWith('/api/')) {
+                    return new Response('Invalid token', { status: 401, headers: corsHeaders });
+                }
             }
+        }
 
+        // Trigger Action endpoint
+        if (url.pathname === '/api/trigger' && request.method === 'POST') {
             const body = await request.json() as { action: string, data?: any };
 
             // Handle actions
             if (body.action === 'github_dispatch') {
                 const resp = await triggerGitHubDispatch(env, body.data?.event_type || 'admin_trigger');
+                if (!resp.ok) {
+                    return new Response(JSON.stringify(resp), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
                 return new Response(JSON.stringify(resp), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
             }
 
@@ -87,6 +96,56 @@ export default {
             }
 
             return new Response('Unknown action', { status: 400, headers: corsHeaders });
+        }
+
+        // Content Management Endpoints
+        if (url.pathname === '/api/content') {
+            if (request.method === 'GET') {
+                const path = 'data/about.json'; // Hardcoded for now, could be query param
+                const localUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/${path}`;
+
+                const resp = await fetch(localUrl, {
+                    headers: {
+                        'Authorization': `token ${env.GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'User-Agent': 'Cloudflare-Worker'
+                    }
+                });
+
+                if (!resp.ok) return new Response('Failed to fetch content', { status: resp.status, headers: corsHeaders });
+                const data = await resp.json() as any;
+                const content = atob(data.content); // Decode Base64
+                return new Response(JSON.stringify({ content, sha: data.sha }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            }
+
+            if (request.method === 'POST') {
+                const body = await request.json() as { content: string, sha: string, message?: string };
+                const path = 'data/about.json';
+                const localUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/${path}`;
+
+                const updateBody = {
+                    message: body.message || 'Update content via Admin Dashboard',
+                    content: btoa(body.content), // Encode Base64
+                    sha: body.sha
+                };
+
+                const resp = await fetch(localUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${env.GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'User-Agent': 'Cloudflare-Worker'
+                    },
+                    body: JSON.stringify(updateBody)
+                });
+
+                if (!resp.ok) {
+                    const errText = await resp.text();
+                    return new Response(`Failed to update content: ${errText}`, { status: resp.status, headers: corsHeaders });
+                }
+
+                return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            }
         }
 
         return new Response('Not Found', { status: 404, headers: corsHeaders });
@@ -193,7 +252,7 @@ function atobUrl(str: string): string {
 
 async function triggerGitHubDispatch(env: Env, eventType: string) {
     if (!env.GITHUB_TOKEN || !env.GITHUB_REPO_OWNER || !env.GITHUB_REPO_NAME) {
-        return { error: 'GitHub vars missing' };
+        return { error: 'GitHub vars missing', ok: false };
     }
 
     const url = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/dispatches`;
@@ -206,6 +265,11 @@ async function triggerGitHubDispatch(env: Env, eventType: string) {
         },
         body: JSON.stringify({ event_type: eventType })
     });
+
+    if (!response.ok) {
+        const text = await response.text();
+        return { ok: false, status: response.status, error: text };
+    }
 
     return { status: response.status, ok: response.ok };
 }

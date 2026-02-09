@@ -5,6 +5,7 @@ import { TextType } from '@/components/ui/text-type';
 import { BlurText } from '@/components/ui/blur-text';
 import { ProfileCard } from '@/components/ui/profile-card';
 import { User, Cpu, Code2, Sparkles } from 'lucide-react';
+import aboutData from '@/data/about.json';
 
 export default function AboutPage() {
   return (
@@ -29,7 +30,7 @@ export default function AboutPage() {
               </div>
               <p className="text-xl text-muted-foreground leading-relaxed max-w-2xl">
                 <BlurText
-                  text="Welcome! I'm Matthew Coleman, and this is my small corner of the internet. You'll find a collection of my thoughts, projects, and experiences here. I hope you enjoy your stay!"
+                  text={aboutData.introduction}
                   duration={1200}
                 />
               </p>
@@ -67,7 +68,7 @@ export default function AboutPage() {
             </div>
             <div className="text-muted-foreground leading-relaxed">
               <BlurText
-                text="I'm deeply passionate about technology, AI, and exploring the vast world of digital possibilities. This site serves as my platform to share thoughts, experiences, and technical knowledge."
+                text={aboutData.whatIDo}
                 duration={1200}
               />
             </div>
@@ -88,7 +89,7 @@ export default function AboutPage() {
             </div>
             <div className="text-muted-foreground leading-relaxed">
               <BlurText
-                text="Built primarily with AI (Claude Sonnet 4.5), this site reflects my interest in rapid development. It's hosted on GitHub Pages and powered by a custom Notion integration for content management."
+                text={aboutData.thisWebsite}
                 duration={1200}
               />
             </div>
