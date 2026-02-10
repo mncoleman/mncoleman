@@ -34,12 +34,20 @@ export function ContentEditor({ token, workerUrl }: ContentEditorProps) {
                 credentials: 'include'
             });
 
-            if (!res.ok) throw new Error('Failed to fetch content');
+            if (!res.ok) {
+                try {
+                    const errData = await res.json();
+                    throw new Error(errData.error || 'Failed to fetch content');
+                } catch (parseError) {
+                    throw new Error('Failed to fetch content (Status: ' + res.status + ')');
+                }
+            }
 
             const data = await res.json();
             setContent(JSON.parse(data.content));
             setSha(data.sha);
         } catch (e: any) {
+            console.error('Content fetch error:', e);
             setMessage({ type: 'error', text: e.message });
         } finally {
             setLoading(false);
@@ -86,8 +94,24 @@ export function ContentEditor({ token, workerUrl }: ContentEditorProps) {
     };
 
 
-    if (loading) return <div className="p-4"><Loader2 className="animate-spin" /> Loading content...</div>;
-    if (!content) return null;
+    if (loading) return <Card className="mt-8"><CardContent className="pt-6 flex items-center justify-center gap-2 text-muted-foreground"><Loader2 className="animate-spin h-4 w-4" /> Loading content...</CardContent></Card>;
+
+    if (!content) {
+        if (message) {
+            return (
+                <Card className="mt-8 border-destructive/20 bg-destructive/5">
+                    <CardHeader>
+                        <CardTitle className="text-destructive">Error Loading Content</CardTitle>
+                        <CardDescription>{message.text}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button onClick={fetchContent} variant="outline" size="sm">Retry</Button>
+                    </CardContent>
+                </Card>
+            );
+        }
+        return null;
+    }
 
     return (
         <Card className="mt-8">
