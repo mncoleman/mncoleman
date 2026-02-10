@@ -28,7 +28,10 @@ export function ContentEditor({ token, workerUrl }: ContentEditorProps) {
         setLoading(true);
         try {
             const res = await fetch(`${workerUrl}/api/content`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'X-Requested-With': 'mncoleman-admin'
+                }
             });
             if (!res.ok) throw new Error('Failed to fetch content');
 
@@ -52,7 +55,8 @@ export function ContentEditor({ token, workerUrl }: ContentEditorProps) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'X-Requested-With': 'mncoleman-admin'
                 },
                 body: JSON.stringify({
                     content: JSON.stringify(content, null, 2),

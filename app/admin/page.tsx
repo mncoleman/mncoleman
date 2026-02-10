@@ -40,7 +40,10 @@ export default function AdminPage() {
         try {
             const res = await fetch(`${WORKER_URL}/auth/login`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'mncoleman-admin'
+                },
                 body: JSON.stringify(user),
             });
 

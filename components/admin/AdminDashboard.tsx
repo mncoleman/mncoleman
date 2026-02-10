@@ -25,7 +25,8 @@ export function AdminDashboard({ token, user, workerUrl, onLogout }: AdminDashbo
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'X-Requested-With': 'mncoleman-admin'
                 },
                 body: JSON.stringify({ action, data })
             });

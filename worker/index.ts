@@ -11,14 +11,26 @@ export interface Env {
 
 export default {
     async fetch(request: Request, env: Env): Promise<Response> {
+        const allowedOrigins = ['https://mncoleman.com', 'https://www.mncoleman.com', 'http://localhost:3000'];
+        const origin = request.headers.get('Origin');
+        const activeOrigin = allowedOrigins.includes(origin || '') ? origin! : allowedOrigins[0];
+
         const corsHeaders = {
-            'Access-Control-Allow-Origin': '*', // Update with your domain in production for strict security
+            'Access-Control-Allow-Origin': activeOrigin,
             'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
         };
 
         if (request.method === 'OPTIONS') {
             return new Response(null, { headers: corsHeaders });
+        }
+
+        // CSRF Protection: Check for custom header on all state-changing requests
+        if (request.method !== 'GET' && request.method !== 'OPTIONS') {
+            const csrfHeader = request.headers.get('X-Requested-With');
+            if (csrfHeader !== 'mncoleman-admin') {
+                return new Response('Security Error: Potential CSRF attempt blocked', { status: 403, headers: corsHeaders });
+            }
         }
 
         const url = new URL(request.url);
