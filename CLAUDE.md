@@ -10,7 +10,7 @@ This is Matthew Coleman's personal information hub built with Next.js 16 (App Ro
 - **Resume** - Professional resume/CV from Notion
 - **Resource Library** - Curated links to websites and resources from Notion
 
-The site is deployed to GitHub Pages at `https://mncoleman.github.io/matthew-coleman/`.
+The site is deployed to GitHub Pages at `https://mncoleman.github.io/mncoleman/`.
 
 ## Development Commands
 
@@ -25,7 +25,7 @@ npm run lint     # Run ESLint
 
 Create `.env.local` in the root directory with:
 
-```
+```env
 # Notion integration token (starts with "ntn_")
 NOTION_TOKEN=ntn_your_integration_token_here
 
@@ -46,7 +46,7 @@ NOTION_RESUME_PAGE_ID=your_resume_page_id_32_characters
 ### Next.js Configuration
 
 - **Output**: Static export (`output: 'export'`)
-- **Base Path**: `/matthew-coleman` in production (GitHub Pages subpath)
+- **Base Path**: `/mncoleman` in production (GitHub Pages subpath)
 - **Images**: Unoptimized (required for static export)
 - **Trailing Slash**: Enabled for better compatibility
 
@@ -59,7 +59,8 @@ Uses a **two-layer adapter pattern** for all Notion content:
 3. **lib/resources.ts** - Adapter for Resources database
 4. **lib/resume.ts** - Adapter for Resume page
 
-**Credential Validation Pattern**:
+#### Credential Validation Pattern
+
 All Notion data-fetching functions validate credentials BEFORE calling `getNotionClient()`:
 
 ```typescript
@@ -87,22 +88,22 @@ This pattern enables graceful degradation with sample data during development.
 
 ### Notion Data Sources
 
-**Blog Database**:
+#### Blog Database
 
 - Database ID: `your_blog_database_id_32_characters`
 - Properties: Title, Slug, Date, Tags, Published, Featured, Excerpt, Author
 
-**Resources Database** (separate database):
+#### Resources Database (separate database)
 
 - Database ID: `your_resources_database_id_32_chars`
 - Properties: Name, URL, Category, Description, Published
 
-**Resume Page**:
+#### Resume Page
 
 - Page ID: `your_resume_page_id_32_characters`
 - Content: Markdown blocks to be converted
 
-**Important**: These are three separate Notion data sources. Blog and Resources are separate databases (not the same database with different views).
+> **Important**: These are three separate Notion data sources. Blog and Resources are separate databases (not the same database with different views).
 
 ### Component Organization
 
@@ -110,6 +111,7 @@ This pattern enables graceful degradation with sample data during development.
   - `dark-veil.tsx` - WebGL background animation using OGL library
 - **components/** - Custom components
 - **app/** - Next.js App Router pages
+- **worker/** - Cloudflare Worker for Admin Authentication & API
 
 ### Styling System
 
@@ -122,7 +124,7 @@ This pattern enables graceful degradation with sample data during development.
 
 The home page uses a WebGL-based animated background (Dark Veil from ReactBits):
 
-**Key Implementation Details**:
+#### Key Implementation Details
 
 - Canvas must use `position: fixed` with explicit `100vw/100vh` sizing
 - Set `zIndex: -1` to keep background behind content
@@ -131,13 +133,14 @@ The home page uses a WebGL-based animated background (Dark Veil from ReactBits):
 - Render directly without wrapper divs to avoid positioning conflicts
 - The `resolutionScale` prop only affects render quality, not visual size
 
-**Example Usage**:
+#### Example Usage
 
 ```typescript
 <DarkVeil hueShift={40} speed={0.5} resolutionScale={0.8} />
 ```
 
-**Bento Cards Over Dark Veil**:
+#### Bento Cards Over Dark Veil
+
 Use frosted glass transparency to show background colors:
 
 ```typescript
@@ -146,7 +149,7 @@ className="bg-background/40 backdrop-blur-xl border border-border/30"
 
 ---
 
-# IMPLEMENTATION PLANS
+## IMPLEMENTATION PLANS
 
 The following plans should be executed by an AI model (Claude Sonnet or similar) to update this site.
 
@@ -156,13 +159,13 @@ The following plans should be executed by an AI model (Claude Sonnet or similar)
 
 ### Findings
 
-**Current State Assessment:**
+#### Current State Assessment
 
 - File structure is clean and minimal
 - Dependencies are appropriate for the project
 - No major bloat or unnecessary files
 
-**Issues Identified:**
+#### Issues Identified
 
 1. **Unused Dependency**: `gray-matter` package in dependencies may be unused (was for markdown frontmatter before Notion migration)
 
@@ -178,25 +181,25 @@ The following plans should be executed by an AI model (Claude Sonnet or similar)
 
 Execute these steps in order:
 
-**Step 1: Remove Unused Dependencies**
+#### Step 1: Remove Unused Dependencies
 
 ```bash
 npm uninstall gray-matter
 ```
 
-**Step 2: Remove Unused Files**
+#### Step 2: Remove Unused Files
 
 - Delete `scripts/generate-icons.js`
 - Delete `scripts/` directory (empty after removal)
 - Delete `app/api/refresh-posts/route.ts`
 - Delete `app/api/` directory (empty after removal)
 
-**Step 3: Consolidate Documentation**
+#### Step 3: Consolidate Documentation
 
 - Move essential content from GOOGLE_ANALYTICS_SETUP.md, NOTION_SETUP.md, REFRESH_SETUP.md into README.md under appropriate sections
 - Delete the individual setup files
 
-**Step 4: Verify Build**
+#### Step 4: Verify Build
 
 ```bash
 npm run build
@@ -578,7 +581,7 @@ export default function Home() {
 
 Add to `.env.local`:
 
-```
+```env
 NOTION_RESOURCES_DATABASE_ID=your_resources_database_id_32_chars
 NOTION_RESUME_PAGE_ID=your_resume_page_id_32_characters
 ```
@@ -663,7 +666,7 @@ Key features:
 ### Blog Database Properties
 
 | Property | Type | Required | Description |
-|----------|------|----------|-------------|
+| --- | --- | --- | --- |
 | Title | title | Yes | Post title |
 | Slug | text | Yes | URL-friendly identifier |
 | Date | date | Yes | Publication date |
@@ -676,14 +679,14 @@ Key features:
 ### Resources Database Properties
 
 | Property | Type | Required | Description |
-|----------|------|----------|-------------|
+| --- | --- | --- | --- |
 | Name | title | Yes | Resource name |
 | URL | url | Yes | Link to resource |
 | Category | select | Yes | Resource category |
 | Description | text | No | Brief description |
 | Published | checkbox | Yes | Visibility control |
 
-### Resume Page
+### Resume Page Schema
 
 - Single Notion page with markdown content
 - Fetched and converted to markdown at build time
@@ -692,7 +695,7 @@ Key features:
 
 ## Common Pitfalls
 
-1. **Base Path**: Always account for `/matthew-coleman` prefix in production. Use Next.js `<Link>` component for navigation.
+1. **Base Path**: Always account for `/mncoleman` prefix in production. Use Next.js `<Link>` component for navigation.
 
 2. **Image Optimization**: Disabled for static export. Use `<img>` tags or unoptimized Next.js `<Image>` component.
 

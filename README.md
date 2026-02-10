@@ -6,14 +6,14 @@
 
 A modern, minimalist information hub featuring blog, resources, and professional resume—all powered by Notion CMS and Next.js.
 
-[![Deploy to GitHub Pages](https://github.com/mncoleman/matthew-coleman/actions/workflows/deploy.yml/badge.svg)](https://github.com/mncoleman/matthew-coleman/actions/workflows/deploy.yml)
+[![Deploy to GitHub Pages](https://github.com/mncoleman/mncoleman/actions/workflows/deploy.yml/badge.svg)](https://github.com/mncoleman/mncoleman/actions/workflows/deploy.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Notion](https://img.shields.io/badge/CMS-Notion-black?logo=notion)](https://www.notion.so/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38bdf8?logo=tailwind-css)](https://tailwindcss.com/)
 
-[Live Demo](https://mncoleman.github.io/matthew-coleman/) · [Report Bug](https://github.com/mncoleman/matthew-coleman/issues) · [Request Feature](https://github.com/mncoleman/matthew-coleman/issues)
+[Live Demo](https://mncoleman.github.io/mncoleman/) · [Report Bug](https://github.com/mncoleman/mncoleman/issues) · [Request Feature](https://github.com/mncoleman/mncoleman/issues)
 
 </div>
 
@@ -50,7 +50,7 @@ A modern, minimalist information hub featuring blog, resources, and professional
 </tr>
 </table>
 
-### 📦 Content Management
+### 📦 Content Management & Admin
 
 | Feature | Description |
 |---------|-------------|
@@ -59,7 +59,19 @@ A modern, minimalist information hub featuring blog, resources, and professional
 | 📄 **Resume** | Professional CV rendered from Notion pages |
 | ⭐ **Featured Posts** | Pin important content to the top |
 | 🏷️ **Smart Tags** | Auto-extracted tag filtering system |
-| 📊 **Admin Dashboard** | Blog statistics & quick CMS access |
+| 🔐 **Secure Admin** | Telegram-authenticated dashboard for site management |
+| 🔄 **Content Sync** | Trigger rebuilds & edit "About Me" content directly |
+
+## 🔐 Admin Dashboard
+
+The site features a secure, hidden admin dashboard for managing content and deployments:
+
+- **Telegram Authentication**: Secure login via Telegram widget (no passwords to manage).
+- **One-Click Rebuilds**: Trigger GitHub Actions deployments directly from the dashboard.
+- **Content Editing**: Edit the "About Me" section with a live preview editor.
+- **Status Monitoring**: View current deployment status and system health.
+
+> Access the dashboard at `/admin` (requires configuration).
 
 ---
 
@@ -74,8 +86,8 @@ A modern, minimalist information hub featuring blog, resources, and professional
 
 ```bash
 # Clone the repository
-git clone https://github.com/mncoleman/matthew-coleman.git
-cd matthew-coleman
+git clone https://github.com/mncoleman/mncoleman.git
+cd mncoleman
 
 # Install dependencies
 npm install
@@ -156,23 +168,23 @@ If you prefer to set up manually:
 <table>
 <tr>
 <td align="center" width="96">
-<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nextjs/nextjs-original.svg" width="48" height="48" alt="Next.js" />
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nextjs/nextjs-original.svg" width="48" height="48" alt="Next.js" />
 <br>Next.js 16
 </td>
 <td align="center" width="96">
-<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="48" height="48" alt="TypeScript" />
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/typescript/typescript-original.svg" width="48" height="48" alt="TypeScript" />
 <br>TypeScript
 </td>
 <td align="center" width="96">
-<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/tailwindcss/tailwindcss-plain.svg" width="48" height="48" alt="Tailwind" />
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/tailwindcss/tailwindcss-original.svg" width="48" height="48" alt="Tailwind" />
 <br>Tailwind CSS
 </td>
 <td align="center" width="96">
-<img src="https://www.notion.so/cdn-cgi/image/format=auto,width=96,quality=100/front-static/shared/icons/notion-app-icon-3d.png" width="48" height="48" alt="Notion" />
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/notion/notion-original.svg" width="48" height="48" alt="Notion" />
 <br>Notion API
 </td>
 <td align="center" width="96">
-<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" width="48" height="48" alt="GitHub" />
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/github/github-original.svg" width="48" height="48" alt="GitHub" />
 <br>GitHub Pages
 </td>
 </tr>
@@ -184,6 +196,7 @@ If you prefer to set up manually:
 - **Language**: TypeScript 5.0
 - **Styling**: Tailwind CSS + shadcn/ui components
 - **CMS**: Notion API (`@notionhq/client`, `notion-to-md`)
+- **Backend**: Cloudflare Workers (Auth & API)
 - **Graphics**: OGL (WebGL library) for animated backgrounds
 - **Deployment**: GitHub Pages with GitHub Actions
 - **Analytics**: Google Analytics 4 via `@next/third-parties`
@@ -320,7 +333,7 @@ For most blogs and portfolios, these trade-offs are worth it for the **speed, co
 ## 📁 Project Structure
 
 ```
-matthew-coleman/
+mncoleman/
 ├── app/                           # Next.js App Router
 │   ├── blog/                      # Blog pages
 │   │   ├── [slug]/page.tsx       # Dynamic post pages
@@ -495,7 +508,7 @@ npm run build       # Generate static site (out/)
 # Deploy to GitHub Pages
 ```
 
-The site will be available at: `https://mncoleman.github.io/matthew-coleman/`
+The site will be available at: `https://mncoleman.github.io/mncoleman/`
 
 ---
 
@@ -548,7 +561,7 @@ The site will be available at: `https://mncoleman.github.io/matthew-coleman/`
 
 - Notion images have expiring URLs (require rebuild)
 - For permanent images, upload to `/public`
-- Reference with base path: `/matthew-coleman/image.jpg`
+- Reference with base path: `/mncoleman/image.jpg`
 - Use Next.js `Image` component with `unoptimized` prop
 
 </details>
@@ -569,6 +582,7 @@ The site will be available at: `https://mncoleman.github.io/matthew-coleman/`
 
 - **[CLAUDE.md](./CLAUDE.md)** - AI assistant project guide & architecture
 - **[NOTION_SETUP.md](./NOTION_SETUP.md)** - Detailed Notion CMS configuration
+- **[ADMIN_SETUP.md](./ADMIN_SETUP.md)** - Admin Dashboard & Telegram Auth setup
 - **[GOOGLE_ANALYTICS_SETUP.md](./GOOGLE_ANALYTICS_SETUP.md)** - Google Analytics integration
 
 ---
@@ -595,7 +609,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 **Matthew Coleman**
 
-- Website: [mncoleman.github.io/matthew-coleman/](https://mncoleman.github.io/matthew-coleman/)
+- Website: [mncoleman.github.io/mncoleman/](https://mncoleman.github.io/mncoleman/)
 - GitHub: [@mncoleman](https://github.com/mncoleman)
 
 ---
