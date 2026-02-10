@@ -9,9 +9,10 @@ export function ThemeWrapper({ children }: { children: ReactNode }) {
 
     return (
         <div className={isAlwaysDark ? 'dark' : ''}>
-            <div className="bg-background text-foreground transition-colors duration-300">
+            <div className={`${isAlwaysDark ? 'bg-transparent' : 'bg-background'} text-foreground transition-colors duration-300`}>
                 {children}
             </div>
         </div>
     );
+
 }

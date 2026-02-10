@@ -165,7 +165,8 @@ export default function DarkVeil({
         width: '100vw',
         height: '100vh',
         display: 'block',
-        zIndex: -1
+        zIndex: 0
+
       }}
     />
   );
