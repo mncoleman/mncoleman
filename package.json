@@ -35,7 +35,7 @@
     "eslint-config-next": "^16.0.3",
     "gsap": "^3.14.2",
     "lucide-react": "^0.553.0",
-    "next": "^16.0.3",
+    "next": "^16.1.5",
     "next-themes": "^0.4.6",
     "notion-to-md": "^3.1.9",
     "ogl": "^1.0.11",
