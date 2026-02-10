@@ -399,7 +399,7 @@ export default function BrandKitClient() {
                                 </Button>
                             </CardContent>
                         </Card>
-                        <Card className="border-border/40 bg-background/60 backdrop-blur-xl overflow-hidden">
+                        <Card className={`border-border/40 overflow-hidden ${selectedComponent === 'Dark Veil' ? 'bg-transparent shadow-none border-none' : 'bg-background/60 backdrop-blur-xl'}`}>
                             <CardHeader>
                                 <CardTitle>
                                     {selectedComponent || 'Component Preview'}
