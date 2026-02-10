@@ -95,7 +95,8 @@ export default function RootLayout({
               <main className="flex-1">
                 {children}
               </main>
-              <footer className="border-t">
+              <footer className="border-t relative z-10">
+
                 <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground max-w-4xl space-y-2">
                   <div>
                     © 2003-{new Date().getFullYear()} Matthew Coleman (aka Teo: pronounced 'Tay-oh'). All rights reserved - and I mean all of them.

@@ -17,20 +17,35 @@ export default function AdminPage() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Check for existing session
-        const stored = localStorage.getItem('admin_session');
-        if (stored) {
+        // Check for existing session via /auth/me check
+        const checkSession = async () => {
             try {
-                const parsed = JSON.parse(stored);
-                // Basic expiry check (jwt usually has exp, but we can check existence)
-                if (parsed.token) {
-                    setSession(parsed);
+                const res = await fetch(`${WORKER_URL}/auth/me`, {
+                    credentials: 'include',
+                    headers: { 'X-Requested-With': 'mncoleman-admin' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setSession({ user: data.user, token: 'cookie-managed' });
+                } else {
+                    // Fallback to localStorage for user profile meta if any (optional)
+                    const stored = localStorage.getItem('admin_user');
+                    if (stored) {
+                        try {
+                            const user = JSON.parse(stored);
+                            setSession({ user, token: 'cookie-managed' });
+                        } catch (e) {
+                            localStorage.removeItem('admin_user');
+                        }
+                    }
                 }
             } catch (e) {
-                localStorage.removeItem('admin_session');
+                console.error('Session check failed', e);
+            } finally {
+                setLoading(false);
             }
-        }
-        setLoading(false);
+        };
+        checkSession();
     }, []);
 
     const handleLogin = async (user: any) => {
@@ -45,6 +60,7 @@ export default function AdminPage() {
                     'X-Requested-With': 'mncoleman-admin'
                 },
                 body: JSON.stringify(user),
+                credentials: 'include', // Important for Set-Cookie
             });
 
             if (!res.ok) {
@@ -52,10 +68,9 @@ export default function AdminPage() {
             }
 
             const data = await res.json();
-            const newSession = { token: data.token, user: { name: user.first_name, id: user.id } };
-
-            localStorage.setItem('admin_session', JSON.stringify(newSession));
-            setSession(newSession);
+            // Store only non-sensitive user profile in localStorage for speed
+            localStorage.setItem('admin_user', JSON.stringify(data.user));
+            setSession({ user: data.user, token: 'cookie-managed' });
         } catch (err) {
             setError('Failed to log in. You may not be authorized.');
             console.error(err);
@@ -64,8 +79,17 @@ export default function AdminPage() {
         }
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('admin_session');
+    const handleLogout = async () => {
+        try {
+            await fetch(`${WORKER_URL}/auth/logout`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'X-Requested-With': 'mncoleman-admin' }
+            });
+        } catch (e) {
+            console.error('Logout failed', e);
+        }
+        localStorage.removeItem('admin_user');
         setSession(null);
     };
 

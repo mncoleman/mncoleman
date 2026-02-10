@@ -58,7 +58,8 @@ export default function Home() {
       {/* Dark Veil Background - Rendered directly with no wrapper */}
       <DarkVeil hueShift={40} speed={0.5} resolutionScale={0.8} />
 
-      <div className="min-h-screen flex items-center justify-center py-16 px-4 relative">
+      <div className="flex-1 flex items-center justify-center py-16 px-4 relative">
+
         <div className="w-full max-w-5xl relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-fr">
             {bentoCards.map((card) => (

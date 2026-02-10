@@ -19,6 +19,7 @@ export default {
             'Access-Control-Allow-Origin': activeOrigin,
             'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+            'Access-Control-Allow-Credentials': 'true',
         };
 
         if (request.method === 'OPTIONS') {
@@ -57,23 +58,54 @@ export default {
 
                 // Issue JWT
                 const token = await signJwt({ id: body.id, name: body.first_name }, env.JWT_SECRET);
-                return new Response(JSON.stringify({ token }), {
-                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+
+                // Set Secure, httpOnly Cookie
+                const cookie = `admin_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60 * 24 * 7}`;
+
+                return new Response(JSON.stringify({ user: { name: body.first_name, id: body.id } }), {
+                    headers: {
+                        ...corsHeaders,
+                        'Content-Type': 'application/json',
+                        'Set-Cookie': cookie
+                    }
                 });
             } catch (e) {
                 return new Response('Server Error: ' + (e as Error).message, { status: 500, headers: corsHeaders });
             }
         }
 
+        // Session check endpoint
+        if (url.pathname === '/auth/me' && request.method === 'GET') {
+            const token = getAuthToken(request);
+            if (!token) return new Response('Not authenticated', { status: 401, headers: corsHeaders });
+
+            const payload = await verifyJwt(token, env.JWT_SECRET);
+            if (!payload) return new Response('Invalid session', { status: 401, headers: corsHeaders });
+
+            return new Response(JSON.stringify({ user: { name: payload.name, id: payload.id } }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Logout endpoint
+        if (url.pathname === '/auth/logout' && request.method === 'POST') {
+            const cookie = `admin_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`;
+            return new Response(JSON.stringify({ success: true }), {
+                headers: {
+                    ...corsHeaders,
+                    'Content-Type': 'application/json',
+                    'Set-Cookie': cookie
+                }
+            });
+        }
+
         // Authenticated Endpoints
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            // Only required for protected routes below
+        const token = getAuthToken(request);
+        if (!token) {
             if (url.pathname.startsWith('/api/')) {
                 return new Response('Missing token', { status: 401, headers: corsHeaders });
             }
         } else {
-            const token = authHeader.split(' ')[1];
             const payload = await verifyJwt(token, env.JWT_SECRET);
             if (!payload) {
                 if (url.pathname.startsWith('/api/')) {
@@ -165,6 +197,26 @@ export default {
 };
 
 // --- Helpers ---
+
+// Extract token from Authorization header or Cookie
+function getAuthToken(request: Request): string | null {
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        return authHeader.split(' ')[1];
+    }
+
+    const cookieHeader = request.headers.get('Cookie');
+    if (cookieHeader) {
+        const cookies = cookieHeader.split(';').reduce((acc: any, cookie) => {
+            const [key, value] = cookie.trim().split('=');
+            acc[key] = value;
+            return acc;
+        }, {});
+        return cookies.admin_token || null;
+    }
+
+    return null;
+}
 
 // Verify Telegram Auth Data
 // See: https://core.telegram.org/widgets/login#checking-authorization
