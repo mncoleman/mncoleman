@@ -35,25 +35,15 @@ export default function AdminPage() {
                     const data = await res.json();
                     setSession({ user: data.user, token: storedToken || 'cookie-managed' });
                 } else {
-                    // If 401 and we had a token, it might be expired
-                    if (res.status === 401 && storedToken) {
-                        localStorage.removeItem('admin_token');
-                        localStorage.removeItem('admin_user');
-                    }
-
-                    // Fallback to localStorage for user profile meta if any (optional)
-                    const storedUser = localStorage.getItem('admin_user');
-                    if (storedUser) {
-                        try {
-                            const user = JSON.parse(storedUser);
-                            setSession({ user, token: storedToken || 'cookie-managed' });
-                        } catch (e) {
-                            localStorage.removeItem('admin_user');
-                        }
-                    }
+                    // If /auth/me fails, the session is invalid or expired.
+                    // We MUST clear the stored user/token to force a clean re-login.
+                    localStorage.removeItem('admin_token');
+                    localStorage.removeItem('admin_user');
+                    setSession(null);
                 }
             } catch (e) {
                 console.error('Session check failed', e);
+                setSession(null);
             } finally {
                 setLoading(false);
             }
