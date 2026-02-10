@@ -31,8 +31,8 @@ export const viewport: Viewport = {
 const basePath = '';
 
 export const metadata: Metadata = {
-  title: 'Matthew Coleman - Information Hub',
-  description: 'Personal information hub with blog, resources, and resume by Matthew Coleman',
+  title: 'Matthew Coleman',
+  description: 'Personal website with blog, resources, and resume by Matthew Coleman',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

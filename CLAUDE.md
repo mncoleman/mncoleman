@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is Matthew Coleman's personal information hub built with Next.js 16 (App Router) as a static site. It features:
+This is Matthew Coleman's personal website built with Next.js 16 (App Router) as a static site. It features:
 
 - **Blog** - Notion-powered blog with markdown rendering
 - **Resume** - Professional resume/CV from Notion
@@ -212,7 +212,7 @@ npm run lint
 
 ### Overview
 
-Transform the home page into an interactive Magic Bento grid layout that serves as an information hub with tiles for:
+Transform the home page into an interactive Magic Bento grid layout that serves as an information hub for Matthew Coleman's personal website with tiles for:
 
 1. **Hero/Introduction** - Name, tagline, brief intro
 2. **Blog** - Latest posts preview
@@ -478,12 +478,12 @@ import Link from 'next/link';
 import { ArrowRight, FileText, BookOpen, Link2 } from 'lucide-react';
 import MagicBento from '@/components/ui/magic-bento';
 
-// Bento card data for the information hub
+// Bento card data for the personal website
 const bentoCards = [
     {
         id: 'hero',
         title: 'Matthew Coleman',
-        description: 'Welcome to my personal information hub. I write about technology, share resources, and document my professional journey.',
+        description: 'Welcome to my personal website. I write about technology, share resources, and document my professional journey.',
         label: 'Introduction',
         color: '#060010',
         span: 'col-span-2 row-span-2', // Large hero tile
@@ -616,7 +616,7 @@ const bentoCards = [
   {
     id: 'hero',
     title: 'Matthew Coleman',
-    description: 'Welcome to my personal information hub...',
+    description: 'Welcome to my personal website...',
     label: 'Introduction',
     span: 'md:col-span-2 md:row-span-1',
     link: '/about',

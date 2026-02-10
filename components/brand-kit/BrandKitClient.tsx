@@ -129,7 +129,7 @@ export default function BrandKitClient() {
 
     const typography = [
         { level: 'H1', class: 'text-4xl md:text-6xl font-black mb-4', sample: 'Matthew Coleman' },
-        { level: 'H2', class: 'text-3xl md:text-4xl font-bold mb-3', sample: 'Personal Information Hub' },
+        { level: 'H2', class: 'text-3xl md:text-4xl font-bold mb-3', sample: 'Personal Website' },
         { level: 'H3', class: 'text-2xl md:text-3xl font-semibold mb-2', sample: 'Brand Guidelines' },
         { level: 'Body', class: 'text-base text-muted-foreground', sample: 'Transparent, minimalist, and functional.' },
     ];

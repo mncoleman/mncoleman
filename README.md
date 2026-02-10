@@ -2,9 +2,9 @@
 
 # Matthew Coleman
 
-### Personal Information Hub
+### Personal Website
 
-A modern, minimalist information hub featuring blog, resources, and professional resume—all powered by Notion CMS and Next.js.
+A modern, minimalist personal website featuring blog, resources, and professional resume—all powered by Notion CMS and Next.js.
 
 [![Deploy to GitHub Pages](https://github.com/mncoleman/mncoleman/actions/workflows/deploy.yml/badge.svg)](https://github.com/mncoleman/mncoleman/actions/workflows/deploy.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -29,7 +29,7 @@ A modern, minimalist information hub featuring blog, resources, and professional
 
 - **WebGL Background** - Animated Dark Veil effect
 - **Frosted Glass UI** - Modern glassmorphism design
-- **Bento Grid Layout** - Clean, responsive information hub
+- **Bento Grid Layout** - Clean, responsive personal website
 - **Dark Mode** - System-aware theme switching
 - **PWA Ready** - Installable progressive web app
 - **100% Responsive** - Perfect on all devices
@@ -380,7 +380,7 @@ const bentoCards = [
   {
     id: 'hero',
     title: 'Matthew Coleman',
-    description: 'Welcome to my personal information hub...',
+    description: 'Welcome to my personal website...',
     span: 'md:col-span-2 md:row-span-1',
     link: '/about',
     icon: User
