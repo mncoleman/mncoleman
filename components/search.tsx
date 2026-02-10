@@ -133,7 +133,7 @@ export function Search({ items }: SearchProps) {
                 <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4">
                     {/* Backdrop */}
                     <div
-                        className="fixed inset-0 bg-background/5 backdrop-blur-md transition-opacity"
+                        className="fixed inset-0 bg-black/60 transition-opacity"
                         onClick={() => setIsOpen(false)}
                     />
 
