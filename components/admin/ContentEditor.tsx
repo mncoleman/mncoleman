@@ -27,10 +27,15 @@ export function ContentEditor({ token, workerUrl }: ContentEditorProps) {
     const fetchContent = async () => {
         setLoading(true);
         try {
+            const headers: Record<string, string> = {
+                'X-Requested-With': 'mncoleman-admin'
+            };
+            if (token && token !== 'cookie-managed') {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const res = await fetch(`${workerUrl}/api/content`, {
-                headers: {
-                    'X-Requested-With': 'mncoleman-admin'
-                },
+                headers,
                 credentials: 'include'
             });
 
@@ -60,12 +65,17 @@ export function ContentEditor({ token, workerUrl }: ContentEditorProps) {
         setMessage(null);
 
         try {
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'mncoleman-admin'
+            };
+            if (token && token !== 'cookie-managed') {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const res = await fetch(`${workerUrl}/api/content`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'mncoleman-admin'
-                },
+                headers,
                 credentials: 'include',
                 body: JSON.stringify({
                     content: JSON.stringify(content, null, 2),

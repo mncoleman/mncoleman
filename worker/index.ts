@@ -85,7 +85,10 @@ export default {
                     // Set Secure, httpOnly Cookie
                     const cookie = `admin_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60 * 24 * 7}`;
 
-                    return new Response(JSON.stringify({ user: { name: body.first_name, id: body.id } }), {
+                    return new Response(JSON.stringify({
+                        user: { name: body.first_name, id: body.id },
+                        token: token
+                    }), {
                         headers: {
                             ...corsHeaders,
                             'Content-Type': 'application/json',

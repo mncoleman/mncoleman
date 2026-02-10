@@ -21,12 +21,17 @@ export function AdminDashboard({ token, user, workerUrl, onLogout }: AdminDashbo
         setLoading(action);
         setResult(null);
         try {
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'mncoleman-admin'
+            };
+            if (token && token !== 'cookie-managed') {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const res = await fetch(`${workerUrl}/api/trigger`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'mncoleman-admin'
-                },
+                headers,
                 credentials: 'include',
                 body: JSON.stringify({ action, data })
             });

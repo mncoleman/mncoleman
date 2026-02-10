@@ -19,21 +19,34 @@ export default function AdminPage() {
     useEffect(() => {
         // Check for existing session via /auth/me check
         const checkSession = async () => {
+            const storedToken = localStorage.getItem('admin_token');
             try {
+                const headers: Record<string, string> = { 'X-Requested-With': 'mncoleman-admin' };
+                if (storedToken) {
+                    headers['Authorization'] = `Bearer ${storedToken}`;
+                }
+
                 const res = await fetch(`${WORKER_URL}/auth/me`, {
                     credentials: 'include',
-                    headers: { 'X-Requested-With': 'mncoleman-admin' }
+                    headers
                 });
+
                 if (res.ok) {
                     const data = await res.json();
-                    setSession({ user: data.user, token: 'cookie-managed' });
+                    setSession({ user: data.user, token: storedToken || 'cookie-managed' });
                 } else {
+                    // If 401 and we had a token, it might be expired
+                    if (res.status === 401 && storedToken) {
+                        localStorage.removeItem('admin_token');
+                        localStorage.removeItem('admin_user');
+                    }
+
                     // Fallback to localStorage for user profile meta if any (optional)
-                    const stored = localStorage.getItem('admin_user');
-                    if (stored) {
+                    const storedUser = localStorage.getItem('admin_user');
+                    if (storedUser) {
                         try {
-                            const user = JSON.parse(stored);
-                            setSession({ user, token: 'cookie-managed' });
+                            const user = JSON.parse(storedUser);
+                            setSession({ user, token: storedToken || 'cookie-managed' });
                         } catch (e) {
                             localStorage.removeItem('admin_user');
                         }
@@ -60,7 +73,7 @@ export default function AdminPage() {
                     'X-Requested-With': 'mncoleman-admin'
                 },
                 body: JSON.stringify(user),
-                credentials: 'include', // Important for Set-Cookie
+                credentials: 'include', // Important for Set-Cookie (fallback)
             });
 
             if (!res.ok) {
@@ -68,9 +81,12 @@ export default function AdminPage() {
             }
 
             const data = await res.json();
-            // Store only non-sensitive user profile in localStorage for speed
+            // Store token and user profile in localStorage
+            if (data.token) {
+                localStorage.setItem('admin_token', data.token);
+            }
             localStorage.setItem('admin_user', JSON.stringify(data.user));
-            setSession({ user: data.user, token: 'cookie-managed' });
+            setSession({ user: data.user, token: data.token || 'cookie-managed' });
         } catch (err) {
             setError('Failed to log in. You may not be authorized.');
             console.error(err);
@@ -80,15 +96,22 @@ export default function AdminPage() {
     };
 
     const handleLogout = async () => {
+        const storedToken = localStorage.getItem('admin_token');
         try {
+            const headers: Record<string, string> = { 'X-Requested-With': 'mncoleman-admin' };
+            if (storedToken) {
+                headers['Authorization'] = `Bearer ${storedToken}`;
+            }
+
             await fetch(`${WORKER_URL}/auth/logout`, {
                 method: 'POST',
                 credentials: 'include',
-                headers: { 'X-Requested-With': 'mncoleman-admin' }
+                headers
             });
         } catch (e) {
             console.error('Logout failed', e);
         }
+        localStorage.removeItem('admin_token');
         localStorage.removeItem('admin_user');
         setSession(null);
     };
