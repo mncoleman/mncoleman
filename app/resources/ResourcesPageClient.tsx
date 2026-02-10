@@ -43,7 +43,7 @@ export default function ResourcesPageClient({ initialResources }: ResourcesPageC
                     </span>
                 </h1>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                    A curated collection of useful websites, tools, and resources I've gathered over time.
+                    A curated collection of useful websites, tools, and resources I use frequently or find useful.
                 </p>
             </header>
 
