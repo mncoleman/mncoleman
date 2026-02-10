@@ -216,6 +216,30 @@ Check \`CLAUDE.md\` for detailed instructions.
     }
 }
 
+export async function getPublishedPostsWithContent(): Promise<NotionPost[]> {
+    const posts = await getPublishedPosts();
+    const postsWithContent: NotionPost[] = [];
+
+    for (const post of posts) {
+        if (post.id === 'sample-post') {
+            postsWithContent.push({
+                ...post,
+                content: 'This is a sample post because Notion credentials are not set up yet. Learn more about Setup and Notion integrations.'
+            });
+            continue;
+        }
+
+        const fullPost = await getPostBySlug(post.slug);
+        if (fullPost) {
+            postsWithContent.push(fullPost);
+        } else {
+            postsWithContent.push(post);
+        }
+    }
+
+    return postsWithContent;
+}
+
 export async function getBlogStats(): Promise<BlogStats> {
     const token = process.env.NOTION_TOKEN;
 
