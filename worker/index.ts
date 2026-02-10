@@ -13,186 +13,218 @@ export default {
     async fetch(request: Request, env: Env): Promise<Response> {
         const allowedOrigins = ['https://mncoleman.com', 'https://www.mncoleman.com', 'http://localhost:3000'];
         const origin = request.headers.get('Origin');
-        const activeOrigin = allowedOrigins.includes(origin || '') ? origin! : allowedOrigins[0];
 
-        const corsHeaders = {
-            'Access-Control-Allow-Origin': activeOrigin,
+        // Handle CORS preflight and standard headers
+        const isAllowedOrigin = allowedOrigins.includes(origin || '');
+        const activeOrigin = isAllowedOrigin ? origin! : '';
+
+        const corsHeaders: Record<string, string> = {
             'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
             'Access-Control-Allow-Credentials': 'true',
+            'Vary': 'Origin',
         };
 
+        if (activeOrigin) {
+            corsHeaders['Access-Control-Allow-Origin'] = activeOrigin;
+        }
+
+        // Handle preflight
         if (request.method === 'OPTIONS') {
-            return new Response(null, { headers: corsHeaders });
+            return new Response(null, {
+                status: 204,
+                headers: {
+                    ...corsHeaders,
+                    'Access-Control-Max-Age': '86400',
+                }
+            });
         }
 
-        // CSRF Protection: Check for custom header on all state-changing requests
-        if (request.method !== 'GET' && request.method !== 'OPTIONS') {
-            const csrfHeader = request.headers.get('X-Requested-With');
-            if (csrfHeader !== 'mncoleman-admin') {
-                return new Response('Security Error: Potential CSRF attempt blocked', { status: 403, headers: corsHeaders });
+        try {
+            // Block disallowed origins early for non-GET requests if origin exists
+            if (origin && !isAllowedOrigin && request.method !== 'GET') {
+                return new Response('CORS Origin Not Allowed', {
+                    status: 403,
+                    headers: corsHeaders
+                });
             }
-        }
 
-        const url = new URL(request.url);
-
-        // Health check
-        if (url.pathname === '/') {
-            return new Response('Admin Auth Worker Running', { status: 200, headers: corsHeaders });
-        }
-
-        // Login endpoint
-        if (url.pathname === '/auth/login' && request.method === 'POST') {
-            try {
-                const body = await request.json() as any;
-                const isValid = await verifyTelegramAuth(body, env.BOT_TOKEN);
-
-                if (!isValid) {
-                    return new Response('Invalid authentication', { status: 401, headers: corsHeaders });
+            // CSRF Protection: Check for custom header on all state-changing requests
+            if (request.method !== 'GET' && request.method !== 'OPTIONS') {
+                const csrfHeader = request.headers.get('X-Requested-With');
+                if (csrfHeader !== 'mncoleman-admin') {
+                    return new Response('Security Error: Potential CSRF attempt blocked', { status: 403, headers: corsHeaders });
                 }
+            }
 
-                // Handle string vs number comparison safely
-                if (String(body.id) !== String(env.ALLOWED_USER_ID)) {
-                    return new Response(`Unauthorized user ID: ${body.id}`, { status: 403, headers: corsHeaders });
+            const url = new URL(request.url);
+
+            // Health check
+            if (url.pathname === '/') {
+                return new Response('Admin Auth Worker Running', { status: 200, headers: corsHeaders });
+            }
+
+            // Login endpoint
+            if (url.pathname === '/auth/login' && request.method === 'POST') {
+                try {
+                    const body = await request.json() as any;
+                    const isValid = await verifyTelegramAuth(body, env.BOT_TOKEN);
+
+                    if (!isValid) {
+                        return new Response('Invalid authentication', { status: 401, headers: corsHeaders });
+                    }
+
+                    // Handle string vs number comparison safely
+                    if (String(body.id) !== String(env.ALLOWED_USER_ID)) {
+                        return new Response(`Unauthorized user ID: ${body.id}`, { status: 403, headers: corsHeaders });
+                    }
+
+                    // Issue JWT
+                    const token = await signJwt({ id: body.id, name: body.first_name }, env.JWT_SECRET);
+
+                    // Set Secure, httpOnly Cookie
+                    const cookie = `admin_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60 * 24 * 7}`;
+
+                    return new Response(JSON.stringify({ user: { name: body.first_name, id: body.id } }), {
+                        headers: {
+                            ...corsHeaders,
+                            'Content-Type': 'application/json',
+                            'Set-Cookie': cookie
+                        }
+                    });
+                } catch (e) {
+                    return new Response('Server Error: ' + (e as Error).message, { status: 500, headers: corsHeaders });
                 }
+            }
 
-                // Issue JWT
-                const token = await signJwt({ id: body.id, name: body.first_name }, env.JWT_SECRET);
+            // Session check endpoint
+            if (url.pathname === '/auth/me' && request.method === 'GET') {
+                const token = getAuthToken(request);
+                if (!token) return new Response('Not authenticated', { status: 401, headers: corsHeaders });
 
-                // Set Secure, httpOnly Cookie
-                const cookie = `admin_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60 * 24 * 7}`;
+                const payload = await verifyJwt(token, env.JWT_SECRET);
+                if (!payload) return new Response('Invalid session', { status: 401, headers: corsHeaders });
 
-                return new Response(JSON.stringify({ user: { name: body.first_name, id: body.id } }), {
+                return new Response(JSON.stringify({ user: { name: payload.name, id: payload.id } }), {
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
+            }
+
+            // Logout endpoint
+            if (url.pathname === '/auth/logout' && request.method === 'POST') {
+                const cookie = `admin_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`;
+                return new Response(JSON.stringify({ success: true }), {
                     headers: {
                         ...corsHeaders,
                         'Content-Type': 'application/json',
                         'Set-Cookie': cookie
                     }
                 });
-            } catch (e) {
-                return new Response('Server Error: ' + (e as Error).message, { status: 500, headers: corsHeaders });
             }
-        }
 
-        // Session check endpoint
-        if (url.pathname === '/auth/me' && request.method === 'GET') {
+            // Authenticated Endpoints
             const token = getAuthToken(request);
-            if (!token) return new Response('Not authenticated', { status: 401, headers: corsHeaders });
+            if (!token) {
+                if (url.pathname.startsWith('/api/')) {
+                    return new Response('Missing token', { status: 401, headers: corsHeaders });
+                }
+            } else {
+                const payload = await verifyJwt(token, env.JWT_SECRET);
+                if (!payload) {
+                    if (url.pathname.startsWith('/api/')) {
+                        return new Response('Invalid token', { status: 401, headers: corsHeaders });
+                    }
+                }
+            }
 
-            const payload = await verifyJwt(token, env.JWT_SECRET);
-            if (!payload) return new Response('Invalid session', { status: 401, headers: corsHeaders });
+            // Trigger Action endpoint
+            if (url.pathname === '/api/trigger' && request.method === 'POST') {
+                const body = await request.json() as { action: string, data?: any };
 
-            return new Response(JSON.stringify({ user: { name: payload.name, id: payload.id } }), {
+                // Handle actions
+                if (body.action === 'github_dispatch') {
+                    const resp = await triggerGitHubDispatch(env, body.data?.event_type || 'admin_trigger');
+                    if (!resp.ok) {
+                        return new Response(JSON.stringify(resp), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                    }
+                    return new Response(JSON.stringify(resp), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+
+                if (body.action === 'n8n_webhook') {
+                    // Example n8n call
+                    if (!env.N8N_WEBHOOK_URL) return new Response('N8N URL not configured', { status: 500, headers: corsHeaders });
+                    const resp = await fetch(env.N8N_WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body.data)
+                    });
+                    const result = await resp.text();
+                    return new Response(JSON.stringify({ success: resp.ok, result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+
+                return new Response('Unknown action', { status: 400, headers: corsHeaders });
+            }
+
+            // Content Management Endpoints
+            if (url.pathname === '/api/content') {
+                if (request.method === 'GET') {
+                    const path = 'data/about.json'; // Hardcoded for now, could be query param
+                    const localUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/${path}`;
+
+                    const resp = await fetch(localUrl, {
+                        headers: {
+                            'Authorization': `token ${env.GITHUB_TOKEN}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Cloudflare-Worker'
+                        }
+                    });
+
+                    if (!resp.ok) return new Response('Failed to fetch content', { status: resp.status, headers: corsHeaders });
+                    const data = await resp.json() as any;
+                    const content = atob(data.content); // Decode Base64
+                    return new Response(JSON.stringify({ content, sha: data.sha }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+
+                if (request.method === 'POST') {
+                    const body = await request.json() as { content: string, sha: string, message?: string };
+                    const path = 'data/about.json';
+                    const localUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/${path}`;
+
+                    const updateBody = {
+                        message: body.message || 'Update content via Admin Dashboard',
+                        content: btoa(body.content), // Encode Base64
+                        sha: body.sha
+                    };
+
+                    const resp = await fetch(localUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${env.GITHUB_TOKEN}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Cloudflare-Worker'
+                        },
+                        body: JSON.stringify(updateBody)
+                    });
+
+                    if (!resp.ok) {
+                        const errText = await resp.text();
+                        return new Response(`Failed to update content: ${errText}`, { status: resp.status, headers: corsHeaders });
+                    }
+
+                    return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+            }
+
+            return new Response('Not Found', { status: 404, headers: corsHeaders });
+        } catch (e) {
+            return new Response(JSON.stringify({
+                error: (e as Error).message,
+                stack: (e as Error).stack
+            }), {
+                status: 500,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
         }
-
-        // Logout endpoint
-        if (url.pathname === '/auth/logout' && request.method === 'POST') {
-            const cookie = `admin_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`;
-            return new Response(JSON.stringify({ success: true }), {
-                headers: {
-                    ...corsHeaders,
-                    'Content-Type': 'application/json',
-                    'Set-Cookie': cookie
-                }
-            });
-        }
-
-        // Authenticated Endpoints
-        const token = getAuthToken(request);
-        if (!token) {
-            if (url.pathname.startsWith('/api/')) {
-                return new Response('Missing token', { status: 401, headers: corsHeaders });
-            }
-        } else {
-            const payload = await verifyJwt(token, env.JWT_SECRET);
-            if (!payload) {
-                if (url.pathname.startsWith('/api/')) {
-                    return new Response('Invalid token', { status: 401, headers: corsHeaders });
-                }
-            }
-        }
-
-        // Trigger Action endpoint
-        if (url.pathname === '/api/trigger' && request.method === 'POST') {
-            const body = await request.json() as { action: string, data?: any };
-
-            // Handle actions
-            if (body.action === 'github_dispatch') {
-                const resp = await triggerGitHubDispatch(env, body.data?.event_type || 'admin_trigger');
-                if (!resp.ok) {
-                    return new Response(JSON.stringify(resp), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-                }
-                return new Response(JSON.stringify(resp), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-            }
-
-            if (body.action === 'n8n_webhook') {
-                // Example n8n call
-                if (!env.N8N_WEBHOOK_URL) return new Response('N8N URL not configured', { status: 500, headers: corsHeaders });
-                const resp = await fetch(env.N8N_WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body.data)
-                });
-                const result = await resp.text();
-                return new Response(JSON.stringify({ success: resp.ok, result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-            }
-
-            return new Response('Unknown action', { status: 400, headers: corsHeaders });
-        }
-
-        // Content Management Endpoints
-        if (url.pathname === '/api/content') {
-            if (request.method === 'GET') {
-                const path = 'data/about.json'; // Hardcoded for now, could be query param
-                const localUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/${path}`;
-
-                const resp = await fetch(localUrl, {
-                    headers: {
-                        'Authorization': `token ${env.GITHUB_TOKEN}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'User-Agent': 'Cloudflare-Worker'
-                    }
-                });
-
-                if (!resp.ok) return new Response('Failed to fetch content', { status: resp.status, headers: corsHeaders });
-                const data = await resp.json() as any;
-                const content = atob(data.content); // Decode Base64
-                return new Response(JSON.stringify({ content, sha: data.sha }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-            }
-
-            if (request.method === 'POST') {
-                const body = await request.json() as { content: string, sha: string, message?: string };
-                const path = 'data/about.json';
-                const localUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/${path}`;
-
-                const updateBody = {
-                    message: body.message || 'Update content via Admin Dashboard',
-                    content: btoa(body.content), // Encode Base64
-                    sha: body.sha
-                };
-
-                const resp = await fetch(localUrl, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${env.GITHUB_TOKEN}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'User-Agent': 'Cloudflare-Worker'
-                    },
-                    body: JSON.stringify(updateBody)
-                });
-
-                if (!resp.ok) {
-                    const errText = await resp.text();
-                    return new Response(`Failed to update content: ${errText}`, { status: resp.status, headers: corsHeaders });
-                }
-
-                return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-            }
-        }
-
-        return new Response('Not Found', { status: 404, headers: corsHeaders });
     },
 };
 
