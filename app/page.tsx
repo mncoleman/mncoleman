@@ -221,7 +221,7 @@ function MobileStack() {
             <ScrollFloat
               containerClassName="text-center"
               textClassName="text-4xl md:text-5xl font-bold tracking-tight text-primary leading-tight"
-              scrollStart="top bottom-=20%"
+              scrollStart="top-=20% bottom"
             >
               That&apos;s all for now.
             </ScrollFloat>
