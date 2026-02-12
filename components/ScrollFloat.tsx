@@ -1,35 +1,30 @@
 import React, { useEffect, useMemo, useRef, ReactNode, RefObject } from 'react';
 import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
 
 interface ScrollFloatProps {
   children: ReactNode;
-  scrollContainerRef?: RefObject<HTMLElement>;
   triggerRef?: RefObject<HTMLElement>;
   containerClassName?: string;
   textClassName?: string;
   animationDuration?: number;
   ease?: string;
-  scrollStart?: string;
-  scrollEnd?: string;
   stagger?: number;
+  threshold?: number;
 }
 
 const ScrollFloat: React.FC<ScrollFloatProps> = ({
   children,
-  scrollContainerRef,
   triggerRef,
   containerClassName = '',
   textClassName = '',
   animationDuration = 1,
   ease = 'back.inOut(2)',
-  scrollStart = 'top-=20% bottom',
-  scrollEnd = 'bottom bottom-=40%',
-  stagger = 0.03
+  stagger = 0.03,
+  threshold = 0.01,
 }) => {
   const containerRef = useRef<HTMLHeadingElement>(null);
+  const tweenRef = useRef<gsap.core.Tween | null>(null);
+  const hasPlayedRef = useRef(false);
 
   const splitText = useMemo(() => {
     const text = typeof children === 'string' ? children : '';
@@ -44,42 +39,67 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
     const el = containerRef.current;
     if (!el) return;
 
-    const scroller = scrollContainerRef && scrollContainerRef.current ? scrollContainerRef.current : window;
-
     const charElements = el.querySelectorAll('.inline-block');
 
-    const tween = gsap.fromTo(
-      charElements,
-      {
-        willChange: 'opacity, transform',
-        opacity: 0,
-        yPercent: 120,
-        scaleY: 2.3,
-        scaleX: 0.7,
-        transformOrigin: '50% 0%'
-      },
-      {
+    // Set initial hidden state
+    gsap.set(charElements, {
+      opacity: 0,
+      yPercent: 120,
+      scaleY: 2.3,
+      scaleX: 0.7,
+      transformOrigin: '50% 0%',
+    });
+
+    const animateIn = () => {
+      tweenRef.current?.kill();
+      hasPlayedRef.current = true;
+      tweenRef.current = gsap.to(charElements, {
         duration: animationDuration,
-        ease: ease,
+        ease,
         opacity: 1,
         yPercent: 0,
         scaleY: 1,
         scaleX: 1,
-        stagger: stagger,
-        scrollTrigger: {
-          trigger: triggerRef?.current || el,
-          scroller,
-          start: scrollStart,
-          toggleActions: 'play none none reverse'
-        }
-      }
+        stagger,
+      });
+    };
+
+    const animateOut = () => {
+      tweenRef.current?.kill();
+      hasPlayedRef.current = false;
+      tweenRef.current = gsap.to(charElements, {
+        duration: animationDuration,
+        ease,
+        opacity: 0,
+        yPercent: 120,
+        scaleY: 2.3,
+        scaleX: 0.7,
+        stagger,
+      });
+    };
+
+    const observeTarget = triggerRef?.current || el;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            animateIn();
+          } else if (hasPlayedRef.current) {
+            animateOut();
+          }
+        });
+      },
+      { threshold }
     );
 
+    observer.observe(observeTarget);
+
     return () => {
-      tween.scrollTrigger?.kill();
-      tween.kill();
+      observer.disconnect();
+      tweenRef.current?.kill();
     };
-  }, [scrollContainerRef, triggerRef, animationDuration, ease, scrollStart, scrollEnd, stagger]);
+  }, [triggerRef, animationDuration, ease, stagger, threshold]);
 
   return (
     <h2 ref={containerRef} className={`my-5 overflow-hidden ${containerClassName}`}>

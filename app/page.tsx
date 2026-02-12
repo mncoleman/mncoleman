@@ -204,7 +204,7 @@ function MobileStack() {
       ))}
 
       {/* Scroll area for the ending text */}
-      <div ref={scrollTriggerRef} className="h-[80vh]">
+      <div ref={scrollTriggerRef} className="h-[50vh]">
         {/* Sticky container: pins text in the center of the gap between cards and footer */}
         <div
           className="sticky flex items-center justify-center"
@@ -223,7 +223,6 @@ function MobileStack() {
               triggerRef={scrollTriggerRef as React.RefObject<HTMLElement>}
               containerClassName="text-center"
               textClassName="text-4xl md:text-5xl font-bold tracking-tight text-primary leading-tight"
-              scrollStart="top bottom"
             >
               That&apos;s all for now.
             </ScrollFloat>
