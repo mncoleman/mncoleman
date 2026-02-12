@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowRight, FileText, BookOpen, Link2, User, Code2 } from 'lucide-react';
 import DarkVeil from '@/components/ui/dark-veil';
 import GlassCube from '@/components/ui/glass-cube';
+import ScrollFloat from '@/components/ScrollFloat';
 
 const bentoCards = [
   {
@@ -201,7 +202,32 @@ function MobileStack() {
         </div>
       ))}
 
-      <div className="h-[50vh]" />
+      {/* Scroll area for the ending text */}
+      <div className="h-[80vh]">
+        {/* Sticky container: pins text in the center of the gap between cards and footer */}
+        <div
+          className="sticky flex items-center justify-center"
+          style={{
+            zIndex: bentoCards.length + 1,
+            top: `calc(${baseTop + bentoCards.length * cardStep}px + (100vh - ${baseTop + bentoCards.length * cardStep}px) / 2 - 1.5rem)`,
+          }}
+        >
+          <div
+            style={{
+              WebkitMaskImage: 'linear-gradient(to right, black 0%, rgba(0,0,0,0.5) 100%)',
+              maskImage: 'linear-gradient(to right, black 0%, rgba(0,0,0,0.5) 100%)',
+            }}
+          >
+            <ScrollFloat
+              containerClassName="text-center"
+              textClassName="text-4xl md:text-5xl font-bold tracking-tight text-primary leading-tight"
+              scrollStart="top bottom-=20%"
+            >
+              That&apos;s all for now.
+            </ScrollFloat>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
