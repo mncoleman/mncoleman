@@ -146,6 +146,7 @@ function DesktopGrid() {
 // ── Mobile: sticky cards that stack on top of each other as you scroll ──
 function MobileStack() {
   const [headerH, setHeaderH] = useState(64);
+  const scrollTriggerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const header = document.querySelector('header');
@@ -203,7 +204,7 @@ function MobileStack() {
       ))}
 
       {/* Scroll area for the ending text */}
-      <div className="h-[80vh]">
+      <div ref={scrollTriggerRef} className="h-[80vh]">
         {/* Sticky container: pins text in the center of the gap between cards and footer */}
         <div
           className="sticky flex items-center justify-center"
@@ -219,9 +220,10 @@ function MobileStack() {
             }}
           >
             <ScrollFloat
+              triggerRef={scrollTriggerRef as React.RefObject<HTMLElement>}
               containerClassName="text-center"
               textClassName="text-4xl md:text-5xl font-bold tracking-tight text-primary leading-tight"
-              scrollStart="top-=20% bottom"
+              scrollStart="top bottom"
             >
               That&apos;s all for now.
             </ScrollFloat>

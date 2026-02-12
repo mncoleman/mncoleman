@@ -7,6 +7,7 @@ gsap.registerPlugin(ScrollTrigger);
 interface ScrollFloatProps {
   children: ReactNode;
   scrollContainerRef?: RefObject<HTMLElement>;
+  triggerRef?: RefObject<HTMLElement>;
   containerClassName?: string;
   textClassName?: string;
   animationDuration?: number;
@@ -19,6 +20,7 @@ interface ScrollFloatProps {
 const ScrollFloat: React.FC<ScrollFloatProps> = ({
   children,
   scrollContainerRef,
+  triggerRef,
   containerClassName = '',
   textClassName = '',
   animationDuration = 1,
@@ -46,7 +48,7 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
 
     const charElements = el.querySelectorAll('.inline-block');
 
-    gsap.fromTo(
+    const tween = gsap.fromTo(
       charElements,
       {
         willChange: 'opacity, transform',
@@ -65,14 +67,19 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
         scaleX: 1,
         stagger: stagger,
         scrollTrigger: {
-          trigger: el,
+          trigger: triggerRef?.current || el,
           scroller,
           start: scrollStart,
           toggleActions: 'play none none reverse'
         }
       }
     );
-  }, [scrollContainerRef, animationDuration, ease, scrollStart, scrollEnd, stagger]);
+
+    return () => {
+      tween.scrollTrigger?.kill();
+      tween.kill();
+    };
+  }, [scrollContainerRef, triggerRef, animationDuration, ease, scrollStart, scrollEnd, stagger]);
 
   return (
     <h2 ref={containerRef} className={`my-5 overflow-hidden ${containerClassName}`}>
