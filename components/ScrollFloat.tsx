@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 interface ScrollFloatProps {
   children: ReactNode;
   triggerRef?: RefObject<HTMLElement>;
+  rootRef?: RefObject<HTMLElement>;
   containerClassName?: string;
   textClassName?: string;
   animationDuration?: number;
@@ -15,6 +16,7 @@ interface ScrollFloatProps {
 const ScrollFloat: React.FC<ScrollFloatProps> = ({
   children,
   triggerRef,
+  rootRef,
   containerClassName = '',
   textClassName = '',
   animationDuration = 1,
@@ -90,7 +92,7 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
           }
         });
       },
-      { threshold }
+      { threshold, root: rootRef?.current || null }
     );
 
     observer.observe(observeTarget);
@@ -99,7 +101,7 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
       observer.disconnect();
       tweenRef.current?.kill();
     };
-  }, [triggerRef, animationDuration, ease, stagger, threshold]);
+  }, [triggerRef, rootRef, animationDuration, ease, stagger, threshold]);
 
   return (
     <h2 ref={containerRef} className={`my-5 overflow-hidden ${containerClassName}`}>

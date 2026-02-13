@@ -13,16 +13,176 @@ import {
     Shield,
     Heart
 } from 'lucide-react';
+import { gsap } from 'gsap';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import DarkVeil from '@/components/ui/dark-veil';
+import GlassCube from '@/components/ui/glass-cube';
 import { BlurText } from '@/components/ui/blur-text';
 import { FallInText } from '@/components/ui/fall-in-text';
 import { TextType } from '@/components/ui/text-type';
 
+
+const noScrollbarStyle: React.CSSProperties = {
+    overflow: 'auto',
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
+    WebkitOverflowScrolling: 'touch',
+};
+
+const STACK_CARDS = ['Hero', 'Blog', 'Resources', 'Resume'];
+
+function ScrollStackPreview() {
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [scrollProgress, setScrollProgress] = useState(0);
+
+    useEffect(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        const onScroll = () => {
+            const max = el.scrollHeight - el.clientHeight;
+            setScrollProgress(max > 0 ? el.scrollTop / max : 0);
+        };
+        el.addEventListener('scroll', onScroll, { passive: true });
+        return () => el.removeEventListener('scroll', onScroll);
+    }, []);
+
+    return (
+        <div className="relative h-full">
+            <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+            <div
+                ref={scrollRef}
+                className="h-full no-scrollbar"
+                style={noScrollbarStyle}
+            >
+                <div className="h-[400px] relative px-3 pt-2">
+                    {STACK_CARDS.map((label, i) => {
+                        const cardStart = i / STACK_CARDS.length;
+                        const cardProgress = Math.max(0, Math.min(1, (scrollProgress - cardStart) * STACK_CARDS.length));
+                        const scale = 1 - cardProgress * 0.06 * (STACK_CARDS.length - 1 - i);
+                        const yOffset = cardProgress * i * 4;
+
+                        return (
+                            <div
+                                key={label}
+                                className="sticky top-0 mb-8"
+                                style={{
+                                    top: `${8 + i * 6}px`,
+                                    zIndex: i + 1,
+                                    transform: `scale(${Math.max(0.85, scale)}) translateY(${yOffset}px)`,
+                                    transformOrigin: 'top center',
+                                    transition: 'transform 0.1s ease-out',
+                                }}
+                            >
+                                <div className="rounded-lg border border-border/30 bg-muted/30 backdrop-blur-sm p-3 shadow-lg">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
+                                    <div className="mt-1 h-2 w-2/3 rounded bg-foreground/10" />
+                                    <div className="mt-1 h-2 w-1/2 rounded bg-foreground/5" />
+                                </div>
+                            </div>
+                        );
+                    })}
+                    <div className="h-32" />
+                </div>
+            </div>
+            <div className="absolute bottom-1 inset-x-0 text-center">
+                <span className="text-[9px] text-muted-foreground/60 uppercase tracking-widest">Scroll to interact</span>
+            </div>
+        </div>
+    );
+}
+
+function ScrollFloatPreview() {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const textRef = useRef<HTMLDivElement>(null);
+    const tweenRef = useRef<gsap.core.Tween | null>(null);
+    const hasPlayedRef = useRef(false);
+
+    useEffect(() => {
+        const container = containerRef.current;
+        const textEl = textRef.current;
+        if (!container || !textEl) return;
+
+        const chars = textEl.querySelectorAll('.char');
+        gsap.set(chars, {
+            opacity: 0,
+            yPercent: 120,
+            scaleY: 2.3,
+            scaleX: 0.7,
+            transformOrigin: '50% 0%',
+        });
+
+        const onScroll = () => {
+            const { scrollTop, scrollHeight, clientHeight } = container;
+            const progress = scrollTop / (scrollHeight - clientHeight);
+
+            if (progress > 0.3 && !hasPlayedRef.current) {
+                hasPlayedRef.current = true;
+                tweenRef.current?.kill();
+                tweenRef.current = gsap.to(chars, {
+                    duration: 0.8,
+                    ease: 'back.inOut(2)',
+                    opacity: 1,
+                    yPercent: 0,
+                    scaleY: 1,
+                    scaleX: 1,
+                    stagger: 0.03,
+                });
+            } else if (progress <= 0.15 && hasPlayedRef.current) {
+                hasPlayedRef.current = false;
+                tweenRef.current?.kill();
+                tweenRef.current = gsap.to(chars, {
+                    duration: 0.8,
+                    ease: 'back.inOut(2)',
+                    opacity: 0,
+                    yPercent: 120,
+                    scaleY: 2.3,
+                    scaleX: 0.7,
+                    stagger: 0.03,
+                });
+            }
+        };
+
+        container.addEventListener('scroll', onScroll, { passive: true });
+        return () => {
+            container.removeEventListener('scroll', onScroll);
+            tweenRef.current?.kill();
+        };
+    }, []);
+
+    const text = 'Scroll Float';
+    const chars = text.split('').map((char, i) => (
+        <span key={i} className="char inline-block">
+            {char === ' ' ? '\u00A0' : char}
+        </span>
+    ));
+
+    return (
+        <div
+            ref={containerRef}
+            className="h-full no-scrollbar"
+            style={{
+                overflowY: 'scroll',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+            }}
+        >
+            <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+            <div className="h-[60px] flex items-end justify-center pb-2">
+                <span className="text-[9px] text-muted-foreground/40 uppercase tracking-widest">Scroll down</span>
+            </div>
+            <div className="sticky top-0 h-[128px] flex items-center justify-center">
+                <div ref={textRef} className="overflow-hidden">
+                    <span className="inline-block text-lg font-bold leading-[1.5]">{chars}</span>
+                </div>
+            </div>
+            <div className="h-[40px]" />
+        </div>
+    );
+}
 
 export default function BrandKitClient() {
     const [copiedColor, setCopiedColor] = useState<string | null>(null);
@@ -89,6 +249,24 @@ export default function BrandKitClient() {
             description: 'Dynamic animated background system.',
             file: '/components/ui/dark-veil.tsx',
             preview: 'bg-gradient-to-br from-primary/10 via-primary/5 to-transparent animate-pulse'
+        },
+        {
+            name: 'Glass Cube',
+            description: '3D CSS cube with frosted glass faces for bento grid cards.',
+            file: '/components/ui/glass-cube.tsx',
+            preview: 'bg-primary/5'
+        },
+        {
+            name: 'Scroll Float',
+            description: 'Per-character scroll-triggered entrance animation using IntersectionObserver.',
+            file: '/components/ScrollFloat.tsx',
+            preview: 'font-bold'
+        },
+        {
+            name: 'Scroll Stack',
+            description: 'Mobile sticky-card stacking layout for the homepage.',
+            file: '/components/ScrollStack.tsx',
+            preview: 'animate-bounce'
         },
         {
             name: 'Custom Cursor',
@@ -416,6 +594,21 @@ export default function BrandKitClient() {
                                         <div className="relative h-32 rounded-xl overflow-hidden border border-border/40 bg-transparent">
                                             {selectedComponent === 'Dark Veil' && (
                                                 <div className="relative w-full h-full" />
+                                            )}
+                                            {selectedComponent === 'Glass Cube' && (
+                                                <div className="flex items-center justify-center h-full bg-muted/10">
+                                                    <GlassCube className="w-24 h-24" pulse={false} wobbleAngle={0}>
+                                                        <div className="flex items-center justify-center h-full text-xs font-bold text-muted-foreground">
+                                                            3D Cube
+                                                        </div>
+                                                    </GlassCube>
+                                                </div>
+                                            )}
+                                            {selectedComponent === 'Scroll Float' && (
+                                                <ScrollFloatPreview key={Date.now()} />
+                                            )}
+                                            {selectedComponent === 'Scroll Stack' && (
+                                                <ScrollStackPreview />
                                             )}
                                             {selectedComponent === 'Custom Cursor' && (
                                                 <div
