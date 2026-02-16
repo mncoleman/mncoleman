@@ -11,7 +11,11 @@ import {
     Check,
     Zap,
     Shield,
-    Heart
+    Heart,
+    MessageSquareCode,
+    ClipboardCheck,
+    Github,
+    ExternalLink
 } from 'lucide-react';
 import { gsap } from 'gsap';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -180,6 +184,395 @@ function ScrollFloatPreview() {
                 </div>
             </div>
             <div className="h-[40px]" />
+        </div>
+    );
+}
+
+const MASTER_PROMPT = `You are a web developer AI assistant. I want you to build me a personal website inspired by mncoleman.com. This site was built entirely with AI prompting and uses a modern, minimalist design system. Below is everything you need to recreate or remix this design.
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router) with static export (\`output: 'export'\`)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS 3 with CSS variables for theming
+- **Component Library**: shadcn/ui (New York style) — https://ui.shadcn.com
+- **Animation Library**: React Bits — https://www.reactbits.dev
+- **Icons**: Lucide React — https://lucide.dev
+- **Animation Engine**: GSAP 3 — https://gsap.com
+- **WebGL**: OGL — https://github.com/oframe/ogl
+- **3D (optional)**: Three.js with React Three Fiber + Drei
+- **CMS**: Notion API (@notionhq/client + notion-to-md)
+- **Theme**: next-themes (class-based dark mode)
+- **Hosting**: GitHub Pages (static)
+- **Smooth Scrolling**: Lenis — https://github.com/darkroomengineering/lenis
+
+## shadcn/ui Setup
+
+Initialize shadcn with the "new-york" style and "neutral" base color:
+\`\`\`bash
+npx shadcn@latest init
+\`\`\`
+
+Add React Bits as a second registry. In your \`components.json\`, add:
+\`\`\`json
+{
+  "registries": {
+    "react-bits": {
+      "url": "https://www.reactbits.dev/r"
+    }
+  }
+}
+\`\`\`
+
+You can also configure the shadcn MCP server for AI-assisted component installation. Create \`.mcp.json\`:
+\`\`\`json
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
+    }
+  }
+}
+\`\`\`
+
+Install components as needed:
+\`\`\`bash
+npx shadcn@latest add button card badge tabs separator  # shadcn/ui
+npx shadcn@latest add @react-bits/dark-veil             # WebGL background
+npx shadcn@latest add @react-bits/scroll-float          # Scroll text animation
+\`\`\`
+
+## Design System
+
+### Color Palette (Monochromatic / Zero Saturation)
+
+All colors are pure grayscale. Define them as CSS custom properties in HSL format.
+
+**Light Mode:**
+- Background: \`hsl(0 0% 100%)\` — #FFFFFF
+- Foreground: \`hsl(0 0% 3.9%)\` — #0A0A0A
+- Primary: \`hsl(0 0% 9%)\` — #171717
+- Muted: \`hsl(0 0% 96.1%)\` — #F5F5F5
+- Border: \`hsl(0 0% 89.8%)\` — #E5E5E5
+
+**Dark Mode:**
+- Background: \`hsl(0 0% 3.9%)\` — #0A0A0A
+- Foreground: \`hsl(0 0% 98%)\` — #FAFAFA
+- Primary: \`hsl(0 0% 98%)\` — #FAFAFA
+- Secondary: \`hsl(0 0% 14.9%)\` — #262626
+- Border: \`hsl(0 0% 14.9%)\` — #262626
+
+### Typography
+
+Use a system font stack (no custom fonts to load):
+\`\`\`css
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+\`\`\`
+
+Scale: H1 = text-4xl/text-5xl font-black, H2 = text-3xl/text-4xl font-bold, H3 = text-2xl/text-3xl font-semibold, Body = text-base.
+
+### Glassmorphism (Core Visual Language)
+
+Apply this pattern to all cards and surfaces:
+\`\`\`
+bg-background/40 backdrop-blur-xl border border-border/30
+\`\`\`
+
+On hover: \`hover:border-primary/50 hover:bg-background/50\`
+
+### Corner Radii
+- Cards/Bento tiles: \`rounded-2xl\` (1rem)
+- Buttons/Badges: \`rounded-full\` (pill shape)
+- Default: \`rounded-lg\` (0.5rem)
+
+## Page Architecture
+
+### Home Page — Bento Grid Layout
+- CSS Grid: \`grid-cols-1 md:grid-cols-3\` with responsive spans
+- Desktop: Interactive 3D glass cube cards with tilt on hover, idle pulse animation sweeping columns
+- Mobile: Scroll Stack layout where cards use \`position: sticky\` and overlap as user scrolls
+- Detect hover capability with \`window.matchMedia('(hover: hover)')\` to switch between desktop/mobile layouts
+- Dark Veil WebGL animated background behind everything
+
+### Dark Veil Background
+- WebGL animated background using OGL (from React Bits)
+- Must use \`position: fixed\` with \`100vw/100vh\` sizing
+- Set \`z-index: 0\` to keep behind content
+- Add \`overflow-x: hidden\` to html/body to prevent scrollbar issues
+- Props: \`hueShift={40} speed={0.5} resolutionScale={0.8}\`
+
+### Glass Cube Cards (Desktop)
+- 3D CSS transforms with \`transform-style: preserve-3d\`
+- Mouse-tracking tilt effect
+- Glassmorphism front face: \`rgba(255, 255, 255, 0.03)\` background with \`backdrop-filter: blur(12px) saturate(1.4)\`
+- Depth slices (translucent borders) for 3D depth illusion
+- Wobble animation on load, idle pulse animation when not interacting
+
+### Custom Cursor
+- Hide OS cursor with \`cursor: none\` on all elements
+- Render a small dot (8px) that follows cursor immediately
+- Render a larger ring (32px) that lerps toward cursor position (factor: 0.15)
+- Scale down on click, hide on touch devices
+- z-index: 9999
+
+### Text Animations
+- **Fall In Text**: Drop from above with overshoot easing \`cubic-bezier(0.34, 1.56, 0.64, 1)\`
+- **Blur Text**: Fade in from \`blur-md opacity-0\` to \`blur-0 opacity-100\`
+- **Text Type**: Character-by-character typewriter reveal with blinking cursor
+- **Scroll Float**: GSAP-powered per-character animation on scroll (opacity, scale, yPercent)
+
+### Navigation
+- Sticky header with \`bg-background/80 backdrop-blur-md\`
+- Desktop: horizontal nav links with keyboard shortcuts
+- Mobile: hamburger menu with slide-in overlay
+- Pages: Home, Blog, Projects, Resources, Resume, About, Brand Kit
+
+### Content Management
+- All content (Blog, Resources, Resume, Projects) fetched from Notion API at build time
+- Graceful fallback to sample data when Notion credentials aren't configured
+- Validate credentials BEFORE making API calls
+
+## Key Dependencies (package.json)
+
+\`\`\`json
+{
+  "next": "^16.1.5",
+  "react": "^19.2.0",
+  "tailwindcss": "^3.4.18",
+  "gsap": "^3.14.2",
+  "ogl": "^1.0.11",
+  "lucide-react": "^0.553.0",
+  "next-themes": "^0.4.6",
+  "@notionhq/client": "^2.3.0",
+  "notion-to-md": "^3.1.9",
+  "react-markdown": "^10.1.0",
+  "lenis": "^1.3.17",
+  "class-variance-authority": "^0.7.1",
+  "clsx": "^2.1.1",
+  "tailwind-merge": "^3.4.0",
+  "tailwindcss-animate": "^1.0.7",
+  "@tailwindcss/typography": "^0.5.19"
+}
+\`\`\`
+
+## Source Code Reference
+
+The full source code is available at: https://github.com/mncoleman/mncoleman
+
+## Instructions
+
+Build me a personal website using this design system. Adapt the content to be about me — I'll provide my name and details. Keep the same monochromatic, glassmorphism-heavy aesthetic with the animated WebGL background, 3D bento grid layout, and interactive text animations. Use shadcn/ui and React Bits components. Deploy as a static site.
+
+If I want to connect Notion as a CMS, help me set up the Notion integration with graceful fallback to sample data. Otherwise, use local markdown or JSON files for content.
+
+Start by scaffolding the Next.js project, installing dependencies, and setting up the design system (CSS variables, Tailwind config, shadcn/ui). Then build the pages one at a time.`;
+
+const QUICK_START_PROMPT = `Create a Next.js 16 personal website with static export. Use Tailwind CSS with a monochromatic color scheme (pure grayscale, zero saturation). Install shadcn/ui with the "new-york" style and "neutral" base color. Add a Dark Veil WebGL animated background from React Bits (reactbits.dev). Build a bento grid home page with glassmorphism cards (bg-background/40 backdrop-blur-xl border border-border/30). Include pages for Blog, Projects, Resources, Resume, and About. Use system fonts, Lucide icons, and GSAP for animations. Reference https://github.com/mncoleman/mncoleman for the full source code.`;
+
+const DESIGN_ONLY_PROMPT = `I want to recreate the visual design system from mncoleman.com. Here are the specs:
+
+**Colors** (all zero-saturation grayscale):
+- Light: Background #FFFFFF, Foreground #0A0A0A, Primary #171717, Muted #F5F5F5, Border #E5E5E5
+- Dark: Background #0A0A0A, Foreground #FAFAFA, Primary #FAFAFA, Secondary #262626, Border #262626
+
+**Typography**: System font stack (-apple-system, BlinkMacSystemFont, Segoe UI, Roboto...). H1: text-4xl font-black. H2: text-3xl font-bold. Body: text-base.
+
+**Core Visual Pattern — Glassmorphism**:
+- Cards: bg-background/40 backdrop-blur-xl border border-border/30
+- Hover: hover:border-primary/50 hover:bg-background/50
+- Corners: rounded-2xl for cards, rounded-full for buttons
+
+**Background**: Dark Veil — a full-screen fixed WebGL animated background using OGL (position: fixed, 100vw/100vh, z-index: 0). Content sits on top with relative z-index.
+
+**Layout**: Bento grid (CSS Grid, 3 columns on desktop, single column on mobile) with frosted glass cards overlaying the animated background.
+
+Apply this design system to my project using Tailwind CSS custom properties and shadcn/ui components.`;
+
+function PromptingSection({ copyToClipboard, copiedColor }: { copyToClipboard: (text: string, label: string) => void; copiedColor: string | null }) {
+    const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null);
+
+    const prompts = [
+        {
+            id: 'master',
+            title: 'Master Prompt',
+            description: 'The complete prompt with full tech stack, design system, and architecture details. Give this to any AI coding assistant to recreate or remix the entire site.',
+            content: MASTER_PROMPT,
+            badge: 'Complete',
+            badgeVariant: 'default' as const,
+        },
+        {
+            id: 'quickstart',
+            title: 'Quick Start Prompt',
+            description: 'A concise prompt that captures the essentials. Good for getting a project scaffolded quickly.',
+            content: QUICK_START_PROMPT,
+            badge: 'Concise',
+            badgeVariant: 'secondary' as const,
+        },
+        {
+            id: 'design',
+            title: 'Design System Only',
+            description: 'Just the visual design specs — colors, typography, glassmorphism, and layout. Use this to apply the aesthetic to an existing project.',
+            content: DESIGN_ONLY_PROMPT,
+            badge: 'Visual',
+            badgeVariant: 'outline' as const,
+        },
+    ];
+
+    return (
+        <div className="space-y-8">
+            {/* Explanation Card */}
+            <Card className="border-border/40 bg-background/60 backdrop-blur-xl overflow-hidden">
+                <CardHeader>
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                            <MessageSquareCode className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-2xl">Build a Site Like This with AI</CardTitle>
+                            <CardDescription>No coding experience required — just copy, paste, and prompt.</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                        This entire website was built using AI prompting — no hand-written code. The prompts below
+                        capture everything an AI coding assistant needs to know to recreate this design from scratch
+                        or adapt it for your own personal site.
+                    </p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                        Copy any of these prompts into an AI tool like{' '}
+                        <strong>Claude</strong>,{' '}
+                        <strong>ChatGPT</strong>,{' '}
+                        <strong>Cursor</strong>, or{' '}
+                        <strong>Claude Code</strong>{' '}
+                        and it will guide the AI to build a site using the same tech stack, design system, and
+                        architecture. You can also{' '}
+                        <a
+                            href="https://github.com/mncoleman/mncoleman"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline underline-offset-4 hover:text-primary transition-colors"
+                        >
+                            clone the repository
+                        </a>{' '}
+                        directly if you prefer.
+                    </p>
+                    <Separator className="my-2" />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/10">
+                            <span className="text-lg font-bold text-primary mt-0.5">1</span>
+                            <div>
+                                <p className="text-sm font-medium">Copy a prompt</p>
+                                <p className="text-xs text-muted-foreground">Pick the one that fits your needs</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/10">
+                            <span className="text-lg font-bold text-primary mt-0.5">2</span>
+                            <div>
+                                <p className="text-sm font-medium">Paste into your AI</p>
+                                <p className="text-xs text-muted-foreground">Claude, ChatGPT, Cursor, etc.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/10">
+                            <span className="text-lg font-bold text-primary mt-0.5">3</span>
+                            <div>
+                                <p className="text-sm font-medium">Customize it</p>
+                                <p className="text-xs text-muted-foreground">Add your name, content, and style</p>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Prompt Cards */}
+            <div className="space-y-4">
+                {prompts.map((prompt) => (
+                    <Card key={prompt.id} className="border-border/40 bg-background/60 backdrop-blur-xl overflow-hidden group">
+                        <CardHeader className="cursor-pointer" onClick={() => setExpandedPrompt(expandedPrompt === prompt.id ? null : prompt.id)}>
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <CardTitle className="text-lg">{prompt.title}</CardTitle>
+                                        <Badge variant={prompt.badgeVariant}>{prompt.badge}</Badge>
+                                    </div>
+                                    <CardDescription>{prompt.description}</CardDescription>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="shrink-0"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyToClipboard(prompt.content, prompt.id);
+                                    }}
+                                >
+                                    {copiedColor === prompt.id ? (
+                                        <>
+                                            <ClipboardCheck className="h-4 w-4 mr-2" />
+                                            Copied
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Copy className="h-4 w-4 mr-2" />
+                                            Copy
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        {expandedPrompt === prompt.id && (
+                            <CardContent>
+                                <div className="relative">
+                                    <pre className="p-4 rounded-xl bg-muted/50 border border-border/40 text-xs leading-relaxed whitespace-pre-wrap break-words max-h-[500px] overflow-y-auto font-mono">
+                                        {prompt.content}
+                                    </pre>
+                                </div>
+                            </CardContent>
+                        )}
+                    </Card>
+                ))}
+            </div>
+
+            {/* Tools & Resources */}
+            <Card className="border-border/40 bg-background/60 backdrop-blur-xl">
+                <CardHeader>
+                    <CardTitle>Tools & Resources Referenced</CardTitle>
+                    <CardDescription>Everything used to build this site, with links.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {[
+                            { name: 'Next.js', url: 'https://nextjs.org', desc: 'React framework' },
+                            { name: 'Tailwind CSS', url: 'https://tailwindcss.com', desc: 'Utility-first CSS' },
+                            { name: 'shadcn/ui', url: 'https://ui.shadcn.com', desc: 'Component library' },
+                            { name: 'React Bits', url: 'https://www.reactbits.dev', desc: 'Animation components' },
+                            { name: 'GSAP', url: 'https://gsap.com', desc: 'Animation engine' },
+                            { name: 'OGL', url: 'https://github.com/oframe/ogl', desc: 'WebGL library' },
+                            { name: 'Lucide', url: 'https://lucide.dev', desc: 'Icon library' },
+                            { name: 'Notion API', url: 'https://developers.notion.com', desc: 'Content management' },
+                            { name: 'Radix UI', url: 'https://www.radix-ui.com', desc: 'UI primitives' },
+                            { name: 'Lenis', url: 'https://github.com/darkroomengineering/lenis', desc: 'Smooth scrolling' },
+                            { name: 'next-themes', url: 'https://github.com/pacocoursey/next-themes', desc: 'Theme management' },
+                            { name: 'Source Code', url: 'https://github.com/mncoleman/mncoleman', desc: 'GitHub repository' },
+                        ].map((tool) => (
+                            <a
+                                key={tool.name}
+                                href={tool.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-3 p-3 rounded-xl border border-border/40 bg-primary/5 hover:bg-primary/10 hover:border-primary/20 transition-all group/tool"
+                            >
+                                <ExternalLink className="h-4 w-4 text-muted-foreground group-hover/tool:text-primary transition-colors shrink-0" />
+                                <div>
+                                    <p className="text-sm font-medium">{tool.name}</p>
+                                    <p className="text-xs text-muted-foreground">{tool.desc}</p>
+                                </div>
+                            </a>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }
@@ -372,7 +765,7 @@ export default function BrandKitClient() {
             </Card>
 
             <Tabs defaultValue="colors" className="w-full">
-                <TabsList className="grid w-full h-auto grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 bg-muted/50 p-1 rounded-2xl xl:rounded-full border border-border/40">
+                <TabsList className="grid w-full h-auto grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 bg-muted/50 p-1 rounded-2xl xl:rounded-full border border-border/40">
                     <TabsTrigger value="colors" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                         <Palette className="h-4 w-4 mr-2" />
                         Colors
@@ -396,6 +789,10 @@ export default function BrandKitClient() {
                     <TabsTrigger value="values" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                         <Heart className="h-4 w-4 mr-2" />
                         Values
+                    </TabsTrigger>
+                    <TabsTrigger value="prompting" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                        <MessageSquareCode className="h-4 w-4 mr-2" />
+                        Prompting
                     </TabsTrigger>
                 </TabsList>
 
@@ -745,6 +1142,10 @@ export default function BrandKitClient() {
                             <p className="text-sm text-muted-foreground">Pushing boundaries with AI-assisted development and modern web tech.</p>
                         </div>
                     </div>
+                </TabsContent>
+
+                <TabsContent value="prompting" className="mt-8">
+                    <PromptingSection copyToClipboard={copyToClipboard} copiedColor={copiedColor} />
                 </TabsContent>
             </Tabs>
         </div>
