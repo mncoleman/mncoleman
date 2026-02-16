@@ -10,8 +10,6 @@ import {
     Copy,
     Check,
     Zap,
-    Shield,
-    Heart,
     MessageSquareCode,
     ClipboardCheck,
     Github,
@@ -765,7 +763,7 @@ export default function BrandKitClient() {
             </Card>
 
             <Tabs defaultValue="colors" className="w-full">
-                <TabsList className="grid w-full h-auto grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 bg-muted/50 p-1 rounded-2xl xl:rounded-full border border-border/40">
+                <TabsList className="grid w-full h-auto grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 bg-muted/50 p-1 rounded-2xl xl:rounded-full border border-border/40">
                     <TabsTrigger value="colors" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                         <Palette className="h-4 w-4 mr-2" />
                         Colors
@@ -785,10 +783,6 @@ export default function BrandKitClient() {
                     <TabsTrigger value="react-bits" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                         <Zap className="h-4 w-4 mr-2" />
                         Effects
-                    </TabsTrigger>
-                    <TabsTrigger value="values" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                        <Heart className="h-4 w-4 mr-2" />
-                        Values
                     </TabsTrigger>
                     <TabsTrigger value="prompting" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                         <MessageSquareCode className="h-4 w-4 mr-2" />
@@ -1121,26 +1115,6 @@ export default function BrandKitClient() {
                                 )}
                             </CardContent>
                         </Card>
-                    </div>
-                </TabsContent>
-
-                <TabsContent value="values" className="mt-8">
-                    <div className="grid md:grid-cols-3 gap-6">
-                        <div className="p-8 rounded-3xl bg-primary/5 border border-primary/10 space-y-4 hover:bg-primary/10 transition-colors">
-                            <Zap className="h-8 w-8 text-primary" />
-                            <h3 className="text-xl font-bold">Performance</h3>
-                            <p className="text-sm text-muted-foreground">Every interaction should be instant. No unnecessary bloat, minimal dependencies.</p>
-                        </div>
-                        <div className="p-8 rounded-3xl bg-primary/5 border border-primary/10 space-y-4 hover:bg-primary/10 transition-colors">
-                            <Shield className="h-8 w-8 text-primary" />
-                            <h3 className="text-xl font-bold">Consistency</h3>
-                            <p className="text-sm text-muted-foreground">Predictable layouts and components that follow a strict design system.</p>
-                        </div>
-                        <div className="p-8 rounded-3xl bg-primary/5 border border-primary/10 space-y-4 hover:bg-primary/10 transition-colors">
-                            <Heart className="h-8 w-8 text-primary" />
-                            <h3 className="text-xl font-bold">Innovation</h3>
-                            <p className="text-sm text-muted-foreground">Pushing boundaries with AI-assisted development and modern web tech.</p>
-                        </div>
                     </div>
                 </TabsContent>
 
