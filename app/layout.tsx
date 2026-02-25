@@ -133,40 +133,42 @@ export default async function RootLayout({
               {/* Mobile Navigation - Rendered at root for proper overlay */}
               <MobileNav />
 
-              <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
+              <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md pwa-safe-top">
                 <div className="container mx-auto px-4 py-4 flex justify-between items-center max-w-5xl">
                   {/* Logo / Brand */}
                   <NavLogo />
 
                   {/* Desktop Navigation - Hidden on mobile */}
-                  <nav className="hidden md:flex gap-6 items-center">
-                    <Link href="/blog" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
-                      Blog <Kbd>B</Kbd>
-                    </Link>
-                    <Link href="/projects" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
-                      Projects <Kbd>P</Kbd>
-                    </Link>
-                    <Link href="/resources" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
-                      Resources <Kbd>R</Kbd>
-                    </Link>
-                    <Link href="/resume" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
-                      Resume <Kbd>M</Kbd>
-                    </Link>
-                    <Link href="/about" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
-                      About <Kbd>A</Kbd>
-                    </Link>
-                    <div className="h-4 w-[1px] bg-border mx-2" />
+                  <div className="flex items-center gap-2">
+                    <nav className="hidden md:flex gap-6 items-center">
+                      <Link href="/blog" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
+                        Blog <Kbd>B</Kbd>
+                      </Link>
+                      <Link href="/projects" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
+                        Projects <Kbd>P</Kbd>
+                      </Link>
+                      <Link href="/resources" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
+                        Resources <Kbd>R</Kbd>
+                      </Link>
+                      <Link href="/resume" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
+                        Resume <Kbd>M</Kbd>
+                      </Link>
+                      <Link href="/about" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
+                        About <Kbd>A</Kbd>
+                      </Link>
+                      <div className="h-4 w-[1px] bg-border mx-2" />
+                    </nav>
+                    {/* Search - visible on both mobile and desktop */}
                     <Search items={searchItems} />
-                  </nav>
-
-                  {/* Mobile Hamburger Button */}
-                  <HamburgerButton />
+                    {/* Mobile Hamburger Button */}
+                    <HamburgerButton />
+                  </div>
                 </div>
               </header>
               <main className="flex-1">
                 {children}
               </main>
-              <footer className="border-t relative z-10">
+              <footer className="border-t relative z-10 pwa-safe-bottom">
 
                 <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground max-w-4xl space-y-2">
                   <div>

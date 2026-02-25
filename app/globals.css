@@ -87,3 +87,13 @@
     }
   }
 }
+
+/* PWA safe area support for notch/status bar */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .pwa-safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pwa-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
