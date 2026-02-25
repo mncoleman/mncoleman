@@ -10,6 +10,7 @@ import CustomCursor from '@/components/ui/CustomCursor';
 import { ThemeWrapper } from '@/components/theme-wrapper';
 import { KeyBindings } from '@/components/key-bindings';
 import { Search, SearchItem } from '@/components/search';
+import { NavLogo } from '@/components/nav-logo';
 import { getPublishedPostsWithContent } from '@/lib/notion';
 import { getPublishedProjects } from '@/lib/projects';
 import { getPublishedResources } from '@/lib/resources';
@@ -124,9 +125,7 @@ export default async function RootLayout({
               <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
                 <div className="container mx-auto px-4 py-4 flex justify-between items-center max-w-5xl">
                   {/* Logo / Brand */}
-                  <Link href="/" className="font-semibold text-lg hover:text-muted-foreground transition-colors group flex items-center">
-                    Matthew Coleman
-                  </Link>
+                  <NavLogo />
 
                   {/* Desktop Navigation - Hidden on mobile */}
                   <nav className="hidden md:flex gap-6 items-center">
