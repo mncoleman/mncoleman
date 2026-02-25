@@ -7,10 +7,18 @@ export function NavLogo() {
   return (
     <Link
       href="/"
-      className="font-bold text-lg hover:opacity-80 transition-opacity group flex items-center"
+      className="text-lg hover:opacity-80 transition-opacity group flex items-center"
     >
       <ShinyText
-        text="Matthew Coleman"
+        text="Matthew"
+        className="font-extralight"
+        speed={3}
+        spread={120}
+        pauseOnHover
+      />
+      <ShinyText
+        text="Coleman"
+        className="font-bold"
         speed={3}
         spread={120}
         pauseOnHover
