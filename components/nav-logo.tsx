@@ -10,19 +10,13 @@ export function NavLogo() {
       className="text-lg hover:opacity-80 transition-opacity group flex items-center"
     >
       <ShinyText
-        text="Matthew"
-        className="font-extralight"
         speed={3}
         spread={120}
         pauseOnHover
-      />
-      <ShinyText
-        text="Coleman"
-        className="font-bold"
-        speed={3}
-        spread={120}
-        pauseOnHover
-      />
+      >
+        <span className="font-extralight">Matthew</span>
+        <span className="font-bold">Coleman</span>
+      </ShinyText>
     </Link>
   );
 }
