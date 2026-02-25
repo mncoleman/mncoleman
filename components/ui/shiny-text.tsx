@@ -4,7 +4,8 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, useMotionValue, useAnimationFrame, useTransform } from 'motion/react';
 
 interface ShinyTextProps {
-  text: string;
+  text?: string;
+  children?: React.ReactNode;
   disabled?: boolean;
   speed?: number;
   className?: string;
@@ -19,6 +20,7 @@ interface ShinyTextProps {
 
 const ShinyText: React.FC<ShinyTextProps> = ({
   text,
+  children,
   disabled = false,
   speed = 2,
   className = '',
@@ -117,7 +119,7 @@ const ShinyText: React.FC<ShinyTextProps> = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {text}
+      {children ?? text}
     </motion.span>
   );
 };
