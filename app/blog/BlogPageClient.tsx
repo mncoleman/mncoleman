@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { BookOpen, Calendar, Filter, X, ArrowRight } from 'lucide-react';
 import { Post } from '@/lib/blog';
 import { format } from 'date-fns';
+import { PageEntrance } from '@/components/page-entrance';
 
 interface BlogPageClientProps {
     initialPosts: Post[];
@@ -20,6 +21,7 @@ export default function BlogPageClient({ initialPosts, allTags }: BlogPageClient
     }, [initialPosts, selectedTag]);
 
     return (
+        <PageEntrance>
         <div className="container mx-auto px-4 py-16 max-w-5xl">
             <header className="mb-12 text-center text-balance">
                 <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60 leading-tight">
@@ -152,5 +154,6 @@ export default function BlogPageClient({ initialPosts, allTags }: BlogPageClient
                 </div>
             )}
         </div>
+        </PageEntrance>
     );
 }

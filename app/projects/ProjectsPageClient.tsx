@@ -5,6 +5,7 @@ import { ExternalLink, Code2, Calendar, Filter, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { CardActions } from '@/components/ui/card-actions';
 import { useToast } from '@/hooks/use-toast';
+import { PageEntrance } from '@/components/page-entrance';
 
 interface Project {
     id: string;
@@ -36,6 +37,7 @@ export default function ProjectsPageClient({ projects }: ProjectsPageClientProps
     }, [projects, selectedTech]);
 
     return (
+        <PageEntrance>
         <div className="container mx-auto px-4 py-16 max-w-5xl">
             <header className="mb-12 text-center text-balance">
                 <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60 leading-tight">
@@ -167,5 +169,6 @@ export default function ProjectsPageClient({ projects }: ProjectsPageClientProps
                 </div>
             )}
         </div>
+        </PageEntrance>
     );
 }

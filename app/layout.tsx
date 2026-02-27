@@ -12,6 +12,7 @@ import { ThemeWrapper } from '@/components/theme-wrapper';
 import { KeyBindings } from '@/components/key-bindings';
 import { Search, SearchItem } from '@/components/search';
 import { NavLogo } from '@/components/nav-logo';
+import { TransitionProvider } from '@/components/transition-provider';
 import { getPublishedPostsWithContent } from '@/lib/notion';
 import { getPublishedProjects } from '@/lib/projects';
 import { getPublishedResources } from '@/lib/resources';
@@ -128,6 +129,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <ThemeWrapper>
+            <TransitionProvider>
             <div className="min-h-screen flex flex-col">
               <KeyBindings />
               {/* Mobile Navigation - Rendered at root for proper overlay */}
@@ -187,6 +189,7 @@ export default async function RootLayout({
               </footer>
             </div>
             <CustomCursor />
+            </TransitionProvider>
           </ThemeWrapper>
         </ThemeProvider>
         {process.env.NEXT_PUBLIC_GA_ID && (
