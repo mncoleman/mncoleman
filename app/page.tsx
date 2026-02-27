@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import Link from 'next/link';
 import { ArrowRight, FileText, BookOpen, Link2, User, Code2 } from 'lucide-react';
+import { motion } from 'motion/react';
 import DarkVeil from '@/components/ui/dark-veil';
 import GlassCube from '@/components/ui/glass-cube';
 import ScrollFloat from '@/components/ScrollFloat';
+import { TransitionLink } from '@/components/transition-link';
+import { usePageTransition } from '@/components/transition-provider';
 
 const bentoCards = [
   {
@@ -64,27 +66,36 @@ const bentoCards = [
 ];
 
 function CardContent({ card }: { card: (typeof bentoCards)[number] }) {
+  const { activeCardId } = usePageTransition();
+  const isActive = activeCardId === card.id;
+  const isSibling = activeCardId !== null && !isActive;
+
   return (
-    <Link href={card.link} className="group relative block p-8 h-full">
-      <div className="flex flex-col h-full justify-between min-h-[180px]">
-        <div>
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 block">
-            {card.label}
-          </span>
-          <h2 className="text-3xl font-bold mb-3 group-hover:text-primary transition-colors">
-            {card.title}
-          </h2>
-          <p className="text-muted-foreground leading-relaxed">
-            {card.description}
-          </p>
+    <motion.div
+      animate={isSibling ? { opacity: 0, scale: 0.95 } : { opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+    >
+      <TransitionLink href={card.link} cardId={card.id} className="group relative block p-8 h-full">
+        <div className="flex flex-col h-full justify-between min-h-[180px]">
+          <div>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 block">
+              {card.label}
+            </span>
+            <h2 className="text-3xl font-bold mb-3 group-hover:text-primary transition-colors">
+              {card.title}
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              {card.description}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 mt-6 text-sm font-medium text-primary">
+            Explore
+            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+          </div>
         </div>
-        <div className="flex items-center gap-2 mt-6 text-sm font-medium text-primary">
-          Explore
-          <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-        </div>
-      </div>
-      <card.icon className="absolute bottom-8 right-8 h-16 w-16 text-muted-foreground/10 group-hover:text-primary/20 transition-colors" />
-    </Link>
+        <card.icon className="absolute bottom-8 right-8 h-16 w-16 text-muted-foreground/10 group-hover:text-primary/20 transition-colors" />
+      </TransitionLink>
+    </motion.div>
   );
 }
 
@@ -147,6 +158,7 @@ function DesktopGrid() {
 function MobileStack() {
   const [headerH, setHeaderH] = useState(64);
   const scrollTriggerRef = useRef<HTMLDivElement>(null);
+  const { activeCardId } = usePageTransition();
 
   useEffect(() => {
     const header = document.querySelector('header');
@@ -161,47 +173,53 @@ function MobileStack() {
       className="flex-1 relative px-4 pb-16"
       style={{ paddingTop: `${24}px` }}
     >
-      {bentoCards.map((card, i) => (
-        <div
-          key={card.id}
-          className="sticky mb-6"
-          style={{
-            top: `${baseTop + i * cardStep}px`,
-            zIndex: i + 1,
-          }}
-        >
-          <Link
-            href={card.link}
-            className="group relative block p-8 rounded-2xl overflow-hidden
-              border border-border/30"
+      {bentoCards.map((card, i) => {
+        const isSibling = activeCardId !== null && activeCardId !== card.id;
+        return (
+          <motion.div
+            key={card.id}
+            className="sticky mb-6"
             style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              backdropFilter: 'blur(12px) saturate(1.4)',
-              WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15)',
+              top: `${baseTop + i * cardStep}px`,
+              zIndex: i + 1,
             }}
+            animate={isSibling ? { opacity: 0, scale: 0.95 } : { opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
           >
-            <div className="flex flex-col justify-between min-h-[160px]">
-              <div>
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">
-                  {card.label}
-                </span>
-                <h2 className="text-2xl font-bold mb-2">
-                  {card.title}
-                </h2>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {card.description}
-                </p>
+            <TransitionLink
+              href={card.link}
+              cardId={card.id}
+              className="group relative block p-8 rounded-2xl overflow-hidden
+                border border-border/30"
+              style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                backdropFilter: 'blur(12px) saturate(1.4)',
+                WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15)',
+              }}
+            >
+              <div className="flex flex-col justify-between min-h-[160px]">
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">
+                    {card.label}
+                  </span>
+                  <h2 className="text-2xl font-bold mb-2">
+                    {card.title}
+                  </h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {card.description}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 mt-4 text-sm font-medium text-primary">
+                  Explore
+                  <ArrowRight className="h-4 w-4" />
+                </div>
               </div>
-              <div className="flex items-center gap-2 mt-4 text-sm font-medium text-primary">
-                Explore
-                <ArrowRight className="h-4 w-4" />
-              </div>
-            </div>
-            <card.icon className="absolute bottom-6 right-6 h-12 w-12 text-muted-foreground/10" />
-          </Link>
-        </div>
-      ))}
+              <card.icon className="absolute bottom-6 right-6 h-12 w-12 text-muted-foreground/10" />
+            </TransitionLink>
+          </motion.div>
+        );
+      })}
 
       {/* Scroll area for the ending text */}
       <div ref={scrollTriggerRef} className="h-[50vh]">

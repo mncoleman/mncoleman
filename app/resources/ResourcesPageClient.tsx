@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { Bookmark, Filter, X } from 'lucide-react';
 import { CardActions } from '@/components/ui/card-actions';
 import { useToast } from '@/hooks/use-toast';
+import { PageEntrance } from '@/components/page-entrance';
 
 interface Resource {
     id: string;
@@ -34,6 +35,7 @@ export default function ResourcesPageClient({ initialResources }: ResourcesPageC
     }, [initialResources, selectedCategory]);
 
     return (
+        <PageEntrance>
         <div className="container mx-auto px-4 py-16 max-w-5xl">
             <header className="mb-12 text-center text-balance">
                 <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60 leading-tight">
@@ -153,5 +155,6 @@ export default function ResourcesPageClient({ initialResources }: ResourcesPageC
                 </div>
             )}
         </div>
+        </PageEntrance>
     );
 }

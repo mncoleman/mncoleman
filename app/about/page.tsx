@@ -4,11 +4,13 @@ import { FallInText } from '@/components/ui/fall-in-text';
 import { TextType } from '@/components/ui/text-type';
 import { BlurText } from '@/components/ui/blur-text';
 import { ProfileCard } from '@/components/ui/profile-card';
+import { PageEntrance } from '@/components/page-entrance';
 import { User, Cpu, Code2, Sparkles } from 'lucide-react';
 import aboutData from '@/data/about.json';
 
 export default function AboutPage() {
   return (
+    <PageEntrance>
     <div className="container mx-auto px-4 py-16 max-w-6xl">
       <header className="mb-12 text-center text-balance">
         <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight leading-tight">
@@ -115,5 +117,6 @@ export default function AboutPage() {
         </div>
       </div>
     </div>
+    </PageEntrance>
   );
 }
