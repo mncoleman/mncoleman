@@ -13,10 +13,7 @@ import { KeyBindings } from '@/components/key-bindings';
 import { Search, SearchItem } from '@/components/search';
 import { NavLogo } from '@/components/nav-logo';
 import { TransitionProvider } from '@/components/transition-provider';
-import { getPublishedPostsWithContent } from '@/lib/notion';
-import { getPublishedProjects } from '@/lib/projects';
-import { getPublishedResources } from '@/lib/resources';
-import { getResume } from '@/lib/resume';
+import searchIndex from '@/data/search-index.json';
 
 const roboto = localFont({
   src: [
@@ -66,51 +63,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Fetch data for search
-  const [posts, projects, resources, resume] = await Promise.all([
-    getPublishedPostsWithContent(),
-    getPublishedProjects(),
-    getPublishedResources(),
-    getResume(),
-  ]);
-
-  const searchItems: SearchItem[] = [
-    ...posts.map(p => ({
-      id: p.id,
-      title: p.title,
-      description: p.excerpt,
-      content: p.content,
-      url: `/blog/${p.slug}`,
-      type: 'blog' as const,
-      metadata: p.tags,
-    })),
-    ...projects.map(p => ({
-      id: p.id,
-      title: p.name,
-      description: p.description,
-      url: p.url || '/projects',
-      type: 'project' as const,
-      metadata: p.tech,
-    })),
-    ...resources.map(r => ({
-      id: r.id,
-      title: r.name,
-      description: r.description,
-      url: r.url || '/resources',
-      type: 'resource' as const,
-      metadata: r.categories,
-    })),
-  ];
-
-  if (resume) {
-    searchItems.push({
-      id: 'resume',
-      title: 'Resume',
-      description: 'Matthew Coleman\'s Professional Resume',
-      url: '/resume',
-      type: 'resume' as const,
-    });
-  }
+  const searchItems = searchIndex as SearchItem[];
 
   const Kbd = ({ children }: { children: React.ReactNode }) => (
     <kbd className="ml-2 hidden lg:inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold border rounded bg-muted/50 text-muted-foreground transition-all group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary">

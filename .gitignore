@@ -35,6 +35,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Generated data
+data/search-index.json
+
 # IDE
 .vscode/
 .idea/
