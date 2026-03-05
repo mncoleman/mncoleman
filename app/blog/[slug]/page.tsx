@@ -44,11 +44,11 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
           {post.readingTime && <span>• {post.readingTime} min read</span>}
         </div>
         {post.tags && post.tags.length > 0 && (
-          <div className="flex gap-2 mt-4">
+          <div className="flex flex-wrap gap-2 mt-4">
             {post.tags.map((tag) => (
               <span
                 key={tag}
-                className="px-3 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"
+                className="px-3 py-1 bg-accent text-accent-foreground border border-border rounded-full text-xs font-medium whitespace-nowrap"
               >
                 {tag}
               </span>
