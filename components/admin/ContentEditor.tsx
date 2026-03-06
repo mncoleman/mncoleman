@@ -9,11 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Save } from 'lucide-react';
 
 interface ContentEditorProps {
-    token: string;
     workerUrl: string;
 }
 
-export function ContentEditor({ token, workerUrl }: ContentEditorProps) {
+export function ContentEditor({ workerUrl }: ContentEditorProps) {
     const [content, setContent] = useState<any>(null);
     const [sha, setSha] = useState<string>('');
     const [loading, setLoading] = useState(false);
@@ -27,15 +26,8 @@ export function ContentEditor({ token, workerUrl }: ContentEditorProps) {
     const fetchContent = async () => {
         setLoading(true);
         try {
-            const headers: Record<string, string> = {
-                'X-Requested-With': 'mncoleman-admin'
-            };
-            if (token && token !== 'cookie-managed') {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-
             const res = await fetch(`${workerUrl}/api/content`, {
-                headers,
+                headers: { 'X-Requested-With': 'mncoleman-admin' },
                 credentials: 'include'
             });
 
@@ -65,17 +57,12 @@ export function ContentEditor({ token, workerUrl }: ContentEditorProps) {
         setMessage(null);
 
         try {
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'mncoleman-admin'
-            };
-            if (token && token !== 'cookie-managed') {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-
             const res = await fetch(`${workerUrl}/api/content`, {
                 method: 'POST',
-                headers,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'mncoleman-admin'
+                },
                 credentials: 'include',
                 body: JSON.stringify({
                     content: JSON.stringify(content, null, 2),

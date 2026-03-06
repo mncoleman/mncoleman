@@ -9,36 +9,26 @@ import { Loader2 } from 'lucide-react';
 // But as this is a static site + worker, we can hardcode the worker URL if needed, 
 // or use NEXT_PUBLIC_ env vars.
 const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:8787';
-const BOT_NAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME || 'YOUR_BOT_NAME_HERE';
+const BOT_NAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME || '';
 
 export default function AdminPage() {
-    const [session, setSession] = useState<{ token: string; user: any } | null>(null);
+    const [session, setSession] = useState<{ user: any } | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Check for existing session via /auth/me check
+        // Check for existing session via HttpOnly cookie
         const checkSession = async () => {
-            const storedToken = localStorage.getItem('admin_token');
             try {
-                const headers: Record<string, string> = { 'X-Requested-With': 'mncoleman-admin' };
-                if (storedToken) {
-                    headers['Authorization'] = `Bearer ${storedToken}`;
-                }
-
                 const res = await fetch(`${WORKER_URL}/auth/me`, {
                     credentials: 'include',
-                    headers
+                    headers: { 'X-Requested-With': 'mncoleman-admin' }
                 });
 
                 if (res.ok) {
                     const data = await res.json();
-                    setSession({ user: data.user, token: storedToken || 'cookie-managed' });
+                    setSession({ user: data.user });
                 } else {
-                    // If /auth/me fails, the session is invalid or expired.
-                    // We MUST clear the stored user/token to force a clean re-login.
-                    localStorage.removeItem('admin_token');
-                    localStorage.removeItem('admin_user');
                     setSession(null);
                 }
             } catch (e) {
@@ -71,12 +61,7 @@ export default function AdminPage() {
             }
 
             const data = await res.json();
-            // Store token and user profile in localStorage
-            if (data.token) {
-                localStorage.setItem('admin_token', data.token);
-            }
-            localStorage.setItem('admin_user', JSON.stringify(data.user));
-            setSession({ user: data.user, token: data.token || 'cookie-managed' });
+            setSession({ user: data.user });
         } catch (err) {
             setError('Failed to log in. You may not be authorized.');
             console.error(err);
@@ -86,23 +71,15 @@ export default function AdminPage() {
     };
 
     const handleLogout = async () => {
-        const storedToken = localStorage.getItem('admin_token');
         try {
-            const headers: Record<string, string> = { 'X-Requested-With': 'mncoleman-admin' };
-            if (storedToken) {
-                headers['Authorization'] = `Bearer ${storedToken}`;
-            }
-
             await fetch(`${WORKER_URL}/auth/logout`, {
                 method: 'POST',
                 credentials: 'include',
-                headers
+                headers: { 'X-Requested-With': 'mncoleman-admin' }
             });
         } catch (e) {
             console.error('Logout failed', e);
         }
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('admin_user');
         setSession(null);
     };
 
@@ -118,7 +95,6 @@ export default function AdminPage() {
         <div className="container py-20 flex flex-col items-center min-h-[80vh]">
             {session ? (
                 <AdminDashboard
-                    token={session.token}
                     user={session.user}
                     workerUrl={WORKER_URL}
                     onLogout={handleLogout}

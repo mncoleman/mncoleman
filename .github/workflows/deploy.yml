@@ -5,10 +5,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      resumeUrl:
-        description: 'Optional input from n8n (unused)'
-        required: false
   schedule:
     - cron: '0 6 * * *' # Rebuild daily at 6 AM UTC to fetch new Notion posts
   repository_dispatch:
@@ -71,8 +67,8 @@ jobs:
         uses: actions/deploy-pages@v4
 
       - name: Notify n8n
-        if: ${{ always() && github.event.inputs.resumeUrl != '' }}
+        if: ${{ always() && secrets.N8N_DEPLOY_WEBHOOK_URL != '' }}
         run: |
-          curl -X POST "${{ github.event.inputs.resumeUrl }}" \
+          curl -X POST "${{ secrets.N8N_DEPLOY_WEBHOOK_URL }}" \
           -H "Content-Type: application/json" \
-          -d '{"status": "${{ job.status }}", "url": "${{ steps.deployment.outputs.page_url }}"}'
+          --data-raw "{\"status\": \"${{ job.status }}\", \"url\": \"${{ steps.deployment.outputs.page_url }}\"}"

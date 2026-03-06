@@ -7,13 +7,12 @@ import { Loader2, RefreshCw, GitCommit, Database, LogOut } from 'lucide-react';
 import { ContentEditor } from './ContentEditor';
 
 interface AdminDashboardProps {
-    token: string;
     user: any;
     workerUrl: string;
     onLogout: () => void;
 }
 
-export function AdminDashboard({ token, user, workerUrl, onLogout }: AdminDashboardProps) {
+export function AdminDashboard({ user, workerUrl, onLogout }: AdminDashboardProps) {
     const [loading, setLoading] = useState<string | null>(null);
     const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -21,17 +20,12 @@ export function AdminDashboard({ token, user, workerUrl, onLogout }: AdminDashbo
         setLoading(action);
         setResult(null);
         try {
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'mncoleman-admin'
-            };
-            if (token && token !== 'cookie-managed') {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-
             const res = await fetch(`${workerUrl}/api/trigger`, {
                 method: 'POST',
-                headers,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'mncoleman-admin'
+                },
                 credentials: 'include',
                 body: JSON.stringify({ action, data })
             });
@@ -108,7 +102,7 @@ export function AdminDashboard({ token, user, workerUrl, onLogout }: AdminDashbo
             </div>
 
             {/* Content Editing Section */}
-            <ContentEditor token={token} workerUrl={workerUrl} />
+            <ContentEditor workerUrl={workerUrl} />
 
             {result && (
                 <div className={`p-4 rounded-md border ${result.success ? 'bg-green-500/10 border-green-500/20 text-green-600' : 'bg-red-500/10 border-red-500/20 text-red-600'}`}>

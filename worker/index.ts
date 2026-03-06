@@ -23,6 +23,9 @@ export default {
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
             'Access-Control-Allow-Credentials': 'true',
             'Vary': 'Origin',
+            'X-Content-Type-Options': 'nosniff',
+            'X-Frame-Options': 'DENY',
+            'Referrer-Policy': 'strict-origin-when-cross-origin',
         };
 
         if (activeOrigin) {
@@ -76,7 +79,7 @@ export default {
 
                     // Handle string vs number comparison safely
                     if (String(body.id) !== String(env.ALLOWED_USER_ID)) {
-                        return new Response(`Unauthorized user ID: ${body.id}`, { status: 403, headers: corsHeaders });
+                        return new Response('Unauthorized', { status: 403, headers: corsHeaders });
                     }
 
                     // Issue JWT
@@ -86,8 +89,7 @@ export default {
                     const cookie = `admin_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60 * 24 * 7}`;
 
                     return new Response(JSON.stringify({
-                        user: { name: body.first_name, id: body.id },
-                        token: token
+                        user: { name: body.first_name, id: body.id }
                     }), {
                         headers: {
                             ...corsHeaders,
@@ -96,7 +98,8 @@ export default {
                         }
                     });
                 } catch (e) {
-                    return new Response('Server Error: ' + (e as Error).message, { status: 500, headers: corsHeaders });
+                    console.error('Login error:', e);
+                    return new Response('Internal Server Error', { status: 500, headers: corsHeaders });
                 }
             }
 
@@ -125,19 +128,12 @@ export default {
                 });
             }
 
-            // Authenticated Endpoints
+            // Authenticated Endpoints — fail-closed: reject if no valid token
             const token = getAuthToken(request);
-            if (!token) {
-                if (url.pathname.startsWith('/api/')) {
-                    return new Response('Missing token', { status: 401, headers: corsHeaders });
-                }
-            } else {
-                const payload = await verifyJwt(token, env.JWT_SECRET);
-                if (!payload) {
-                    if (url.pathname.startsWith('/api/')) {
-                        return new Response('Invalid token', { status: 401, headers: corsHeaders });
-                    }
-                }
+            const authPayload = token ? await verifyJwt(token, env.JWT_SECRET) : null;
+
+            if (!authPayload) {
+                return new Response('Unauthorized', { status: 401, headers: corsHeaders });
             }
 
             // Trigger Action endpoint
@@ -220,10 +216,8 @@ export default {
 
             return new Response('Not Found', { status: 404, headers: corsHeaders });
         } catch (e) {
-            return new Response(JSON.stringify({
-                error: (e as Error).message,
-                stack: (e as Error).stack
-            }), {
+            console.error('Worker error:', e);
+            return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
                 status: 500,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
@@ -232,6 +226,16 @@ export default {
 };
 
 // --- Helpers ---
+
+// Constant-time string comparison to prevent timing attacks
+function timingSafeEqual(a: string, b: string): boolean {
+    if (a.length !== b.length) return false;
+    let mismatch = 0;
+    for (let i = 0; i < a.length; i++) {
+        mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    }
+    return mismatch === 0;
+}
 
 // Extract token from Authorization header or Cookie
 function getAuthToken(request: Request): string | null {
@@ -242,9 +246,12 @@ function getAuthToken(request: Request): string | null {
 
     const cookieHeader = request.headers.get('Cookie');
     if (cookieHeader) {
-        const cookies = cookieHeader.split(';').reduce((acc: any, cookie) => {
-            const [key, value] = cookie.trim().split('=');
-            acc[key] = value;
+        const cookies = cookieHeader.split(';').reduce((acc: Record<string, string>, cookie) => {
+            const trimmed = cookie.trim();
+            const eqIndex = trimmed.indexOf('=');
+            if (eqIndex > 0) {
+                acc[trimmed.slice(0, eqIndex)] = trimmed.slice(eqIndex + 1);
+            }
             return acc;
         }, {});
         return cookies.admin_token || null;
@@ -294,7 +301,7 @@ async function verifyTelegramAuth(data: any, botToken: string): Promise<boolean>
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
 
-    return signatureHex === hash;
+    return timingSafeEqual(signatureHex, hash);
 }
 
 // Simple JWT implementation using HmacSHA256
@@ -318,7 +325,7 @@ async function verifyJwt(token: string, secret: string): Promise<any | null> {
     const [header, payload, signature] = parts;
     const computedSignature = await createSignature(header + '.' + payload, secret);
 
-    if (signature !== computedSignature) return null;
+    if (!timingSafeEqual(signature, computedSignature)) return null;
 
     const decodedPayload = JSON.parse(atobUrl(payload));
     if (decodedPayload.exp < Math.floor(Date.now() / 1000)) return null;

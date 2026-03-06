@@ -30,7 +30,7 @@ async function main() {
             id: p.id,
             title: p.title,
             description: p.excerpt,
-            content: p.content,
+            content: p.content?.slice(0, 500),
             url: `/blog/${p.slug}`,
             type: 'blog' as const,
             metadata: p.tags,
