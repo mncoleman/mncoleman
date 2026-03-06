@@ -86,7 +86,7 @@ export default {
                     const token = await signJwt({ id: body.id, name: body.first_name }, env.JWT_SECRET);
 
                     // Set Secure, httpOnly Cookie
-                    const cookie = `admin_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60 * 24 * 7}`;
+                    const cookie = `admin_token=${token}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`;
 
                     return new Response(JSON.stringify({
                         user: { name: body.first_name, id: body.id }
@@ -118,7 +118,7 @@ export default {
 
             // Logout endpoint
             if (url.pathname === '/auth/logout' && request.method === 'POST') {
-                const cookie = `admin_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`;
+                const cookie = `admin_token=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0`;
                 return new Response(JSON.stringify({ success: true }), {
                     headers: {
                         ...corsHeaders,
