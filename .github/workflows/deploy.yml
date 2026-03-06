@@ -55,6 +55,8 @@ jobs:
           NOTION_RESUME_PAGE_ID: ${{ secrets.NOTION_RESUME_PAGE_ID }}
           NOTION_PROJECTS_DATABASE_ID: ${{ secrets.NOTION_PROJECTS_DATABASE_ID }}
           NEXT_PUBLIC_GA_ID: ${{ secrets.NEXT_PUBLIC_GA_ID }}
+          NEXT_PUBLIC_WORKER_URL: ${{ secrets.NEXT_PUBLIC_WORKER_URL }}
+          NEXT_PUBLIC_TELEGRAM_BOT_NAME: ${{ secrets.NEXT_PUBLIC_TELEGRAM_BOT_NAME }}
         run: npm run build
 
       - name: Upload artifact
@@ -67,8 +69,12 @@ jobs:
         uses: actions/deploy-pages@v4
 
       - name: Notify n8n
-        if: ${{ always() && secrets.N8N_DEPLOY_WEBHOOK_URL != '' }}
+        if: always()
+        env:
+          N8N_URL: ${{ secrets.N8N_DEPLOY_WEBHOOK_URL }}
         run: |
-          curl -X POST "${{ secrets.N8N_DEPLOY_WEBHOOK_URL }}" \
-          -H "Content-Type: application/json" \
-          --data-raw "{\"status\": \"${{ job.status }}\", \"url\": \"${{ steps.deployment.outputs.page_url }}\"}"
+          if [ -n "$N8N_URL" ]; then
+            curl -X POST "$N8N_URL" \
+            -H "Content-Type: application/json" \
+            --data-raw "{\"status\": \"${{ job.status }}\", \"url\": \"${{ steps.deployment.outputs.page_url }}\"}"
+          fi
