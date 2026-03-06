@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -69,11 +69,20 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
     [transitioning, prefersReducedMotion, router]
   );
 
-  const handleAnimationComplete = useCallback(() => {
-    if (targetHref) {
-      router.push(targetHref);
-    }
-  }, [targetHref, router]);
+  // Navigate early — as soon as the bg-mask starts fading in,
+  // the screen is about to be opaque so we can push underneath it.
+  const hasPushed = useRef(false);
+  useEffect(() => {
+    if (!transitioning || !targetHref) return;
+    hasPushed.current = false;
+    const timer = setTimeout(() => {
+      if (!hasPushed.current) {
+        hasPushed.current = true;
+        router.push(targetHref);
+      }
+    }, 250); // push while bg-mask is fading in
+    return () => clearTimeout(timer);
+  }, [transitioning, targetHref, router]);
 
   return (
     <TransitionContext.Provider value={{ startTransition, activeCardId }}>
@@ -88,7 +97,7 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.35, ease: 'easeOut' }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
               style={{
                 position: 'fixed',
                 inset: 0,
@@ -118,7 +127,7 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
               }}
               exit={{ opacity: 0 }}
               transition={{
-                duration: 0.55,
+                duration: 0.4,
                 ease: [0.32, 0.72, 0, 1], // ease-out cubic
               }}
               style={{
@@ -139,11 +148,10 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{
-                duration: 0.2,
-                delay: 0.35,
+                duration: 0.15,
+                delay: 0.2,
                 ease: 'easeIn',
               }}
-              onAnimationComplete={handleAnimationComplete}
               style={{
                 position: 'fixed',
                 inset: 0,
