@@ -13,7 +13,6 @@ import { KeyBindings } from '@/components/key-bindings';
 import { Search, SearchItem } from '@/components/search';
 import { NavLogo } from '@/components/nav-logo';
 import { TransitionProvider } from '@/components/transition-provider';
-import { AnimatedFavicon } from '@/components/animated-favicon';
 import searchIndex from '@/data/search-index.json';
 
 const roboto = localFont({
@@ -76,7 +75,6 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${roboto.className} antialiased`}>
         <PWAInstall />
-        <AnimatedFavicon />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
