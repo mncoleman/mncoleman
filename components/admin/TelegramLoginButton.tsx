@@ -31,7 +31,7 @@ export function TelegramLoginButton({ botName, onAuth }: TelegramLoginButtonProp
         script.setAttribute('data-telegram-login', botName);
         script.setAttribute('data-size', 'large');
         script.setAttribute('data-radius', '10');
-        script.setAttribute('data-request-access', 'write');
+        script.setAttribute('data-request-access', 'read');
         script.setAttribute('data-userpic', 'false');
         script.setAttribute('data-onauth', 'onTelegramAuth(user)');
         script.async = true;

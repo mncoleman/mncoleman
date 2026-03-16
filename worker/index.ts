@@ -1,3 +1,17 @@
+// Rate limiting store — persists within a Cloudflare Worker isolate
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string, maxAttempts: number, windowMs: number): boolean {
+    const now = Date.now();
+    const entry = rateLimitMap.get(key);
+    if (!entry || entry.resetAt <= now) {
+        rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+        return true;
+    }
+    if (entry.count >= maxAttempts) return false;
+    entry.count++;
+    return true;
+}
 
 export interface Env {
     BOT_TOKEN: string; // Secret
@@ -69,6 +83,12 @@ export default {
 
             // Login endpoint
             if (url.pathname === '/auth/login' && request.method === 'POST') {
+                // Rate limiting: max 5 attempts per IP per 60 seconds
+                const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+                if (!checkRateLimit(`login:${ip}`, 5, 60_000)) {
+                    return new Response('Too Many Requests', { status: 429, headers: { ...corsHeaders, 'Retry-After': '60' } });
+                }
+
                 try {
                     const body = await request.json() as any;
                     const isValid = await verifyTelegramAuth(body, env.BOT_TOKEN);
@@ -142,7 +162,9 @@ export default {
 
                 // Handle actions
                 if (body.action === 'github_dispatch') {
-                    const resp = await triggerGitHubDispatch(env, body.data?.event_type || 'admin_trigger');
+                    const allowedEventTypes = ['admin_trigger', 'rebuild_site', 'sync_notion', 'content_update'];
+                    const eventType = allowedEventTypes.includes(body.data?.event_type) ? body.data.event_type : 'admin_trigger';
+                    const resp = await triggerGitHubDispatch(env, eventType);
                     if (!resp.ok) {
                         return new Response(JSON.stringify(resp), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                     }
