@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scripture Canon Research Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300..900;1,300..900&family=Work+Sans:wght@300..700&display=swap" rel="stylesheet">
+<style>
+:root, [data-theme="light"] {
+  --color-bg: #f7f6f2; --color-surface: #f9f8f5; --color-surface-2: #fbfbf9;
+  --color-surface-offset: #f0ede7; --color-divider: #dcd9d5; --color-border: #d4d1ca;
+  --color-text: #28251d; --color-text-muted: #7a7974; --color-text-faint: #b0afa9;
+  --color-primary: #01696f; --color-primary-hover: #0c4e54; --color-primary-highlight: #cedcd8;
+  --color-christian: #01696f; --color-jewish: #d19900; --color-islam: #437a22;
+  --color-lds: #7a39bb; --color-gnostic: #964219; --color-skeptical: #a12c7b; --color-multi: #006494;
+  --radius-sm: .375rem; --radius-md: .5rem; --radius-lg: .75rem; --radius-xl: 1rem; --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px oklch(0.2 0.01 80 / 0.06); --shadow-md: 0 4px 12px oklch(0.2 0.01 80 / 0.08);
+  --text-xs: clamp(.75rem,.7rem + .25vw,.875rem); --text-sm: clamp(.875rem,.8rem + .35vw,1rem);
+  --text-base: clamp(1rem,.95rem + .25vw,1.125rem); --text-lg: clamp(1.125rem,1rem + .75vw,1.5rem);
+  --text-xl: clamp(1.5rem,1.2rem + 1.25vw,2.25rem); --text-2xl: clamp(2rem,1.2rem + 2.5vw,3.5rem);
+  --font-display: "Crimson Pro", Georgia, serif; --font-body: "Work Sans", "Helvetica Neue", sans-serif;
+  --t: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-theme="dark"] {
+  --color-bg: #171614; --color-surface: #1c1b19; --color-surface-2: #201f1d;
+  --color-surface-offset: #252422; --color-divider: #262523; --color-border: #393836;
+  --color-text: #cdccca; --color-text-muted: #797876; --color-text-faint: #5a5957;
+  --color-primary: #4f98a3; --color-primary-hover: #227f8b; --color-primary-highlight: #313b3b;
+  --color-christian: #4f98a3; --color-jewish: #e8af34; --color-islam: #6daa45;
+  --color-lds: #a86fdf; --color-gnostic: #bb653b; --color-skeptical: #d163a7; --color-multi: #5591c7;
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / .2); --shadow-md: 0 4px 12px oklch(0 0 0 / .3);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);font-size:var(--text-base);color:var(--color-text);background:var(--color-bg);line-height:1.6;min-height:100dvh}
+a{color:var(--color-primary);text-decoration:none;transition:color var(--t)}
+a:hover{color:var(--color-primary-hover);text-decoration:underline}
+
+.site-header{background:var(--color-surface);border-bottom:1px solid var(--color-border);position:sticky;top:0;z-index:100;padding:0 clamp(1rem,4vw,3rem)}
+.header-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:60px;gap:1rem}
+.logo{display:flex;align-items:center;gap:.75rem;font-family:var(--font-display);font-size:1.3rem;font-weight:600;color:var(--color-text);text-decoration:none}
+.logo svg{color:var(--color-primary);flex-shrink:0}
+.header-actions{display:flex;align-items:center;gap:.75rem}
+.theme-btn{background:none;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:.4rem .6rem;cursor:pointer;color:var(--color-text-muted);transition:all var(--t);line-height:1}
+.theme-btn:hover{color:var(--color-text);border-color:var(--color-text-muted)}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--color-text-muted);pointer-events:none}
+#search{background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:.4rem .75rem .4rem 2.1rem;font-family:var(--font-body);font-size:var(--text-sm);color:var(--color-text);width:220px;transition:all var(--t)}
+#search::placeholder{color:var(--color-text-faint)}
+#search:focus{outline:2px solid var(--color-primary);outline-offset:2px;width:280px}
+
+.hero{background:linear-gradient(135deg in oklab,var(--color-surface) 0%,var(--color-surface-offset) 100%);padding:clamp(3rem,8vw,6rem) clamp(1rem,4vw,3rem);text-align:center;border-bottom:1px solid var(--color-border)}
+.hero h1{font-family:var(--font-display);font-size:var(--text-2xl);font-weight:400;line-height:1.1;margin-bottom:1rem}
+.hero h1 em{font-style:italic;color:var(--color-primary)}
+.hero p{color:var(--color-text-muted);max-width:60ch;margin:0 auto 2rem}
+.stats{display:flex;justify-content:center;gap:2.5rem;flex-wrap:wrap}
+.stat{text-align:center}
+.stat-number{font-family:var(--font-display);font-size:var(--text-xl);font-weight:600;color:var(--color-primary);display:block}
+.stat-label{font-size:var(--text-xs);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em}
+
+.legend{display:flex;gap:.5rem 1rem;flex-wrap:wrap;justify-content:center;padding:1rem clamp(1rem,4vw,3rem);background:var(--color-surface);border-bottom:1px solid var(--color-divider)}
+.legend-item{display:flex;align-items:center;gap:.4rem;font-size:var(--text-xs);color:var(--color-text-muted)}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+.filter-bar{position:sticky;top:60px;z-index:90;background:var(--color-surface-2);border-bottom:1px solid var(--color-border);padding:.6rem clamp(1rem,4vw,3rem);overflow-x:auto}
+.filter-inner{display:flex;gap:.4rem;max-width:1200px;margin:0 auto;align-items:center;min-width:max-content}
+.filter-label{font-size:var(--text-xs);color:var(--color-text-muted);margin-right:.4rem;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.filter-btn{padding:.3rem .8rem;border-radius:var(--radius-full);border:1px solid var(--color-border);background:none;color:var(--color-text-muted);font-family:var(--font-body);font-size:var(--text-xs);cursor:pointer;transition:all var(--t);white-space:nowrap}
+.filter-btn:hover{border-color:var(--color-primary);color:var(--color-primary)}
+.filter-btn.active{background:var(--color-primary);border-color:var(--color-primary);color:white}
+
+.main-layout{max-width:1200px;margin:0 auto;padding:2rem clamp(1rem,4vw,3rem);display:grid;grid-template-columns:220px 1fr;gap:2rem;align-items:start}
+@media(max-width:768px){.main-layout{grid-template-columns:1fr}.sidebar{display:none}}
+.sidebar{position:sticky;top:130px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:1rem}
+.sidebar-title{font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--color-text-faint);margin-bottom:.75rem;padding:0 .25rem}
+.sidebar-nav{list-style:none}
+.sidebar-nav a{display:flex;align-items:center;gap:.5rem;padding:.45rem .5rem;border-radius:var(--radius-md);font-size:var(--text-sm);color:var(--color-text-muted);text-decoration:none;transition:all var(--t)}
+.sidebar-nav a:hover{background:var(--color-surface-offset);color:var(--color-text);text-decoration:none}
+.sidebar-nav a.active-nav{background:var(--color-primary-highlight);color:var(--color-primary)}
+.sidebar-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+.content{min-width:0}
+.section-block{margin-bottom:3rem}
+.section-header{display:flex;align-items:center;gap:.75rem;padding-bottom:.75rem;margin-bottom:1.25rem;border-bottom:2px solid var(--color-border)}
+.section-icon{width:36px;height:36px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.section-header h2{font-family:var(--font-display);font-size:var(--text-lg);font-weight:600}
+.section-header small{font-size:var(--text-xs);color:var(--color-text-muted);margin-left:auto;white-space:nowrap}
+.sub-section{margin-bottom:1.5rem}
+.sub-title{font-size:var(--text-sm);font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted);margin-bottom:.75rem}
+.resource-grid{display:grid;gap:.75rem}
+.resource-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1rem 1.1rem;transition:box-shadow var(--t),border-color var(--t);display:grid;grid-template-columns:1fr auto;gap:.3rem;align-items:start}
+.resource-card:hover{box-shadow:var(--shadow-md);border-color:var(--color-primary)}
+.resource-card.hidden{display:none}
+.card-top{display:flex;align-items:flex-start;gap:.5rem;margin-bottom:.3rem}
+.card-badge{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;padding:.15rem .45rem;border-radius:var(--radius-full);flex-shrink:0;margin-top:1px}
+.card-title{font-weight:600;font-size:var(--text-sm);color:var(--color-text);line-height:1.3}
+.card-desc{font-size:var(--text-xs);color:var(--color-text-muted);max-width:65ch}
+.card-tags{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.4rem}
+.tag{font-size:.63rem;padding:.12rem .4rem;border-radius:var(--radius-full);border:1px solid var(--color-border);color:var(--color-text-faint);white-space:nowrap}
+.card-link{display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:var(--text-xs);color:var(--color-text-muted);text-decoration:none;white-space:nowrap;transition:all var(--t);height:fit-content}
+.card-link:hover{border-color:var(--color-primary);color:var(--color-primary);text-decoration:none}
+.card-stance{grid-column:1/-1;margin-top:.25rem;font-size:var(--text-xs)}
+.stance-affirms{color:var(--color-islam)}
+.stance-skeptical{color:var(--color-skeptical)}
+.stance-neutral{color:var(--color-multi)}
+.stance-varied{color:var(--color-gnostic)}
+
+.badge-christian{background:color-mix(in oklab,var(--color-christian) 15%,transparent);color:var(--color-christian)}
+.badge-jewish{background:color-mix(in oklab,var(--color-jewish) 15%,transparent);color:var(--color-jewish)}
+.badge-islam{background:color-mix(in oklab,var(--color-islam) 15%,transparent);color:var(--color-islam)}
+.badge-lds{background:color-mix(in oklab,var(--color-lds) 15%,transparent);color:var(--color-lds)}
+.badge-gnostic{background:color-mix(in oklab,var(--color-gnostic) 15%,transparent);color:var(--color-gnostic)}
+.badge-skeptical{background:color-mix(in oklab,var(--color-skeptical) 15%,transparent);color:var(--color-skeptical)}
+.badge-multi{background:color-mix(in oklab,var(--color-multi) 15%,transparent);color:var(--color-multi)}
+.badge-manuscript{background:color-mix(in oklab,var(--color-text-muted) 12%,transparent);color:var(--color-text-muted)}
+
+#results-count{font-size:var(--text-xs);color:var(--color-text-faint);padding:.5rem 0 1.5rem}
+.no-results{text-align:center;padding:3rem;color:var(--color-text-muted);display:none}
+footer{text-align:center;padding:2rem 1rem;border-top:1px solid var(--color-border);color:var(--color-text-faint);font-size:var(--text-xs);margin-top:2rem}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+<div class="header-inner">
+  <a href="#" class="logo">
+    <svg width="26" height="26" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="22" rx="2"/><path d="M20 5h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+    Scripture Canon Research Library
+  </a>
+  <div class="header-actions">
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="search" id="search" placeholder="Search resources&hellip;" aria-label="Search">
+    </div>
+    <button class="theme-btn" data-theme-toggle aria-label="Toggle theme">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
+  </div>
+</div>
+</header>
+
+<section class="hero">
+  <h1>Your Personal <em>Scripture Canon</em> Research Library</h1>
+  <p>Curated manuscripts, digital libraries, academic tools, podcasts, and YouTube channels to explore how the Bible, Qur&apos;an, Book of Mormon, and other scriptures were canonized — with affirming, skeptical, and neutral perspectives labeled.</p>
+  <div class="stats">
+    <div class="stat"><span class="stat-number">80+</span><span class="stat-label">Resources</span></div>
+    <div class="stat"><span class="stat-number">7</span><span class="stat-label">Traditions</span></div>
+    <div class="stat"><span class="stat-number">6</span><span class="stat-label">Resource Types</span></div>
+  </div>
+</section>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot" style="background:var(--color-christian)"></span>Christian / Bible</div>
+  <div class="legend-item"><span class="legend-dot" style="background:var(--color-jewish)"></span>Jewish / Hebrew Bible</div>
+  <div class="legend-item"><span class="legend-dot" style="background:var(--color-islam)"></span>Islam / Qur&apos;an</div>
+  <div class="legend-item"><span class="legend-dot" style="background:var(--color-lds)"></span>LDS / Book of Mormon</div>
+  <div class="legend-item"><span class="legend-dot" style="background:var(--color-gnostic)"></span>Gnostic / Apocrypha</div>
+  <div class="legend-item"><span class="legend-dot" style="background:var(--color-skeptical)"></span>Skeptical / Academic</div>
+  <div class="legend-item"><span class="legend-dot" style="background:var(--color-multi)"></span>Multi-tradition</div>
+</div>
+
+<div class="filter-bar">
+  <div class="filter-inner">
+    <span class="filter-label">Filter:</span>
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="christian">Christian</button>
+    <button class="filter-btn" data-filter="jewish">Jewish</button>
+    <button class="filter-btn" data-filter="islam">Islam</button>
+    <button class="filter-btn" data-filter="lds">LDS</button>
+    <button class="filter-btn" data-filter="gnostic">Gnostic/Apocrypha</button>
+    <button class="filter-btn" data-filter="skeptical">Skeptical</button>
+    <button class="filter-btn" data-filter="multi">Multi-tradition</button>
+    <button class="filter-btn" data-filter="manuscript">Manuscripts</button>
+    <button class="filter-btn" data-filter="podcast">Podcasts</button>
+    <button class="filter-btn" data-filter="youtube">YouTube</button>
+    <button class="filter-btn" data-filter="affirms">Affirms Canon</button>
+    <button class="filter-btn" data-filter="questions">Questions Canon</button>
+  </div>
+</div>
+
+<div class="main-layout">
+<aside class="sidebar">
+  <p class="sidebar-title">Jump To</p>
+  <ul class="sidebar-nav">
+    <li><a href="#manuscripts" class="active-nav"><span class="sidebar-dot" style="background:var(--color-text-muted)"></span>Primary Manuscripts</a></li>
+    <li><a href="#christian"><span class="sidebar-dot" style="background:var(--color-christian)"></span>Christian / Bible</a></li>
+    <li><a href="#jewish"><span class="sidebar-dot" style="background:var(--color-jewish)"></span>Jewish / Hebrew Bible</a></li>
+    <li><a href="#islam"><span class="sidebar-dot" style="background:var(--color-islam)"></span>Islam / Qur&apos;an</a></li>
+    <li><a href="#lds"><span class="sidebar-dot" style="background:var(--color-lds)"></span>LDS / Book of Mormon</a></li>
+    <li><a href="#gnostic"><span class="sidebar-dot" style="background:var(--color-gnostic)"></span>Gnostic / Apocrypha</a></li>
+    <li><a href="#skeptical"><span class="sidebar-dot" style="background:var(--color-skeptical)"></span>Skeptical / Critical</a></li>
+    <li><a href="#multi"><span class="sidebar-dot" style="background:var(--color-multi)"></span>Multi-tradition</a></li>
+    <li><a href="#media"><span class="sidebar-dot" style="background:var(--color-primary)"></span>Podcasts &amp; YouTube</a></li>
+  </ul>
+</aside>
+
+<main class="content">
+<p id="results-count"></p>
+<div class="no-results" id="no-results">No resources match. Try a different search or filter.</div>
+
+  <div class="section-block" id="manuscripts">
+    <div class="section-header">
+      <div class="section-icon" style="background:color-mix(in oklab,var(--color-text-muted) 15%,transparent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <h2>Primary Manuscripts &amp; Digital Archives</h2>
+      <small>Direct source access — the actual ancient texts</small>
+    </div>
+    <div class="resource-grid">
+    <div class="resource-card" data-category="manuscript christian" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-manuscript">Manuscript</span><span class="card-title">Codex Sinaiticus (c. 330–360 AD)</span></div>
+        <div class="card-desc">The oldest complete Greek New Testament, handwritten c. 330–360 AD. Fully digitized with high-resolution images, transcription, and scholarly commentary. Held across British Library, Leipzig, St Petersburg, and St Catherine's Monastery.</div>
+        <div class="card-tags"><span class="tag">Greek NT</span><span class="tag">4th century</span><span class="tag">Free</span><span class="tag">British Library</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Neutral primary text source</span></div>
+      </div>
+      <a href="https://codexsinaiticus.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="manuscript christian jewish" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-manuscript">Manuscript</span><span class="card-title">Dead Sea Scrolls Digital Library (Leon Levy / IAA + Google)</span></div>
+        <div class="card-desc">Free high-resolution images of 930+ scroll manuscripts (thousands of fragments), discovered 1947–1960. Contains the oldest known Isaiah scroll — over 1,000 years older than previous copies. Developed in partnership with Google.</div>
+        <div class="card-tags"><span class="tag">Hebrew OT</span><span class="tag">2nd–1st century BC</span><span class="tag">Free</span><span class="tag">930+ Scrolls</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral archaeological primary source</span></div>
+      </div>
+      <a href="https://www.deadseascrolls.org.il" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="manuscript christian" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-manuscript">Manuscript</span><span class="card-title">CSNTM — Center for the Study of NT Manuscripts (Dr. Daniel Wallace)</span></div>
+        <div class="card-desc">Extensive database of Greek NT manuscripts with dating information and digital images. Most recently added Lambeth Palace Library manuscripts (2022). Freely accessible to all.</div>
+        <div class="card-tags"><span class="tag">5,800+ manuscripts</span><span class="tag">Greek NT</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Affirms reliability of NT textual transmission</span></div>
+      </div>
+      <a href="https://manuscripts.csntm.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="manuscript christian" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-manuscript">Manuscript</span><span class="card-title">Center for NT Restoration — Full Manuscript Collation Tool</span></div>
+        <div class="card-desc">Provides a side-by-side collation of NT manuscripts for every verse, allowing comparison of textual variations across the earliest known Greek copies.</div>
+        <div class="card-tags"><span class="tag">Textual Criticism</span><span class="tag">Verse-by-verse</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral raw manuscript comparison tool</span></div>
+      </div>
+      <a href="https://greekcntr.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="manuscript multi" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-multi">Multi</span><span class="card-title">DigiVatLib — Vatican Apostolic Library (30,542+ Manuscripts Online)</span></div>
+        <div class="card-desc">Free access to 30,000+ digitized Vatican manuscripts from an 80,000-codex ongoing digitization project. Includes biblical codices, councils records, and patristic documents.</div>
+        <div class="card-tags"><span class="tag">30,000+ manuscripts</span><span class="tag">Latin & Greek</span><span class="tag">Free</span><span class="tag">IIIF</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Catholic primary documents archive</span></div>
+      </div>
+      <a href="https://digi.vatlib.it" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="manuscript christian" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-manuscript">Manuscript</span><span class="card-title">BMATS — Ancient Biblical Manuscripts Online Catalog</span></div>
+        <div class="card-desc">Catalogued list of publicly available ancient biblical manuscripts organized to match the textual apparatus of the Hebrew Bible (BHS) and Greek NT. Curated by seminary librarians.</div>
+        <div class="card-tags"><span class="tag">BHS</span><span class="tag">OT & NT</span><span class="tag">Catalog</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral scholarly bibliography</span></div>
+      </div>
+      <a href="https://bmats.libguides.com/c.php?g=362544&p=2448726" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="manuscript islam" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-islam">Islam</span><span class="card-title">Birmingham Qur&apos;an Manuscript (Mingana Collection, Univ. of Birmingham)</span></div>
+        <div class="card-desc">Radiocarbon dated to 568–645 CE — possibly written during the Prophet Muhammad's lifetime. Contains Surahs 18–20 in Hijazi script. One of the earliest and most significant Qur'anic fragments in existence.</div>
+        <div class="card-tags"><span class="tag">568–645 CE</span><span class="tag">Hijazi Script</span><span class="tag">Radiocarbon Dated</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Evidence for early and stable Qur'anic text</span></div>
+      </div>
+      <a href="https://www.birmingham.ac.uk/facilities/cadbury/birmingham-quran-mingana-collection/birmingham-quran" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="manuscript islam" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-manuscript">Manuscript</span><span class="card-title">Sanaa Qur&apos;anic Manuscripts — University of Tübingen (Digital)</span></div>
+        <div class="card-desc">One of the oldest Qur'anic manuscripts (c. 645–690 CE) discovered in Yemen. Contains palimpsest layers (text-over-text) suggesting textual revision in early Islam. Key academic evidence in debates about early Qur'anic textual history.</div>
+        <div class="card-tags"><span class="tag">7th century</span><span class="tag">Palimpsest</span><span class="tag">Textual Variants</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Academically contested — cited in debates over Qur'anic textual evolution</span></div>
+      </div>
+      <a href="http://idb.ub.uni-tuebingen.de/diglit/MaVI165" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="manuscript islam" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-multi">Multi</span><span class="card-title">UMich — Digitized Islamic Manuscript Collections (World Directory)</span></div>
+        <div class="card-desc">Comprehensive academic library guide to online Islamic manuscript collections worldwide: Qatar Digital Library, Princeton Islamic Manuscripts, Harvard Islamic Heritage Project, Oman Ministry portals, and more.</div>
+        <div class="card-tags"><span class="tag">Worldwide</span><span class="tag">Arabic manuscripts</span><span class="tag">Free</span><span class="tag">Library Guide</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral academic archive directory</span></div>
+      </div>
+      <a href="https://guides.lib.umich.edu/islamicmsstudies/onlinecollections" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="manuscript lds" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-lds">Lds</span><span class="card-title">Joseph Smith Papers — Original Book of Mormon Manuscript (1828–1829)</span></div>
+        <div class="card-desc">Full photographic record and transcription of surviving portions of the original dictation manuscript. Includes scribe identification and editorial notes. About 28% of the original survives.</div>
+        <div class="card-tags"><span class="tag">1828–1829</span><span class="tag">Primary Source</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Church-sponsored scholarly edition; LDS affirming</span></div>
+      </div>
+      <a href="https://www.josephsmithpapers.org/paper-summary/original-manuscript-of-the-book-of-mormon-circa-12-april-1828-circa-1-july-1829/1" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="manuscript lds" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-lds">Lds</span><span class="card-title">Joseph Smith Papers — Printer's Manuscript of the Book of Mormon</span></div>
+        <div class="card-desc">The printer's manuscript copied by Oliver Cowdery (c. 1829–1830). Nearly 100% survives. This was the copy sent to the printer. Comparison with the original reveals small textual variants.</div>
+        <div class="card-tags"><span class="tag">1829–1830</span><span class="tag">Oliver Cowdery</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ LDS Church-sponsored primary source</span></div>
+      </div>
+      <a href="https://www.josephsmithpapers.org/paper-summary/printers-manuscript-of-the-book-of-mormon-circa-august-1829-circa-january-1830/1" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+    </div>
+  </div>
+  <div class="section-block" id="christian">
+    <div class="section-header">
+      <div class="section-icon" style="background:color-mix(in oklab,var(--color-christian) 15%,transparent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-christian)" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+      <h2>Christian / Bible Resources</h2>
+      <small>Canon formation, Church Fathers, NT scholarship, apologetics</small>
+    </div>
+    <div class="resource-grid">
+    <div class="resource-card" data-category="christian" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">Early Christian Writings (earlychristianwritings.com)</span></div>
+        <div class="card-desc">Most complete collection of Christian texts before the Council of Nicaea (325 AD). Includes the full NT, Apocrypha, Gnostic texts, Church Fathers, and non-Christian references — all with translations and scholarly commentary. Organized chronologically by estimated date.</div>
+        <div class="card-tags"><span class="tag">Pre-Nicene</span><span class="tag">All Christian texts</span><span class="tag">Translations</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Balanced — includes both affirming and skeptical materials</span></div>
+      </div>
+      <a href="https://www.earlychristianwritings.com" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">CCEL — Christian Classics Ethereal Library (Calvin College)</span></div>
+        <div class="card-desc">All 38 volumes of Ante-Nicene Fathers and Nicene &amp; Post-Nicene Fathers online free. Primary goal: digitize all public-domain theological sources. Also includes audio downloads of selected classics.</div>
+        <div class="card-tags"><span class="tag">38 volumes</span><span class="tag">Church Fathers</span><span class="tag">Audio</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Protestant/Reformed affirming perspective</span></div>
+      </div>
+      <a href="https://www.ccel.org/fathers" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">New Advent — Catholic Church Fathers &amp; Encyclopedia Online</span></div>
+        <div class="card-desc">Catholic website with comprehensive Church Fathers, the full Catholic Encyclopedia, and Bible resources. Strong on Patristic writings essential to understanding how the Catholic 73-book canon was recognized.</div>
+        <div class="card-tags"><span class="tag">Catholic</span><span class="tag">Church Fathers</span><span class="tag">Encyclopedia</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Affirms Catholic 73-book canon</span></div>
+      </div>
+      <a href="https://www.newadvent.org/fathers" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">Bible-Researcher.com — Council of Carthage (397 AD) Canon Decree</span></div>
+        <div class="card-desc">The full text of the Council of Carthage's (397 AD) canon list — the key Western church document formalizing the 27-book NT. Also includes the Synod of Hippo (393 AD) and other primary canon documents.</div>
+        <div class="card-tags"><span class="tag">Canon Decrees</span><span class="tag">397 AD</span><span class="tag">Primary Documents</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Affirming — documents the historical Western church consensus</span></div>
+      </div>
+      <a href="https://www.bible-researcher.com/carthage.html" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">Westar Institute — 'How the Canon Was Formed' (Scholarly Article)</span></div>
+        <div class="card-desc">Detailed scholarly article on how books were accepted or rejected using criteria of apostolicity, orthodoxy, and catholicity. Covers disputed books and Eusebius's classification system.</div>
+        <div class="card-tags"><span class="tag">Canon Formation</span><span class="tag">Criteria</span><span class="tag">Scholarly</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Academic critical scholarship lens</span></div>
+      </div>
+      <a href="https://www.westarinstitute.org/editorials/how-the-canon-was-formed" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">Tertullian.org — Early Latin Church Writings</span></div>
+        <div class="card-desc">Extensive collection of early church writings, particularly strong on Latin Fathers (Tertullian, Cyprian, etc.). Broad patristic coverage essential for tracking early canon debates.</div>
+        <div class="card-tags"><span class="tag">Latin Fathers</span><span class="tag">Tertullian</span><span class="tag">Cyprian</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Affirming Christian primary sources</span></div>
+      </div>
+      <a href="https://www.tertullian.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">Text &amp; Canon Institute — Phoenix Seminary (Gurry &amp; Meade)</span></div>
+        <div class="card-desc">Academic institute producing articles, lectures, and resources on how the biblical text and canon were formed. Accessible to non-specialists. Home of the book 'Scribes and Scripture.'</div>
+        <div class="card-tags"><span class="tag">Academic</span><span class="tag">NT Text</span><span class="tag">Phoenix Seminary</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Evangelical affirming scholarship</span></div>
+      </div>
+      <a href="https://textandcanon.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">Catholic Answers — 'Who Compiled the Bible and When?'</span></div>
+        <div class="card-desc">Catholic apologetics article explaining the process of biblical canon formation, including why the deuterocanonical books (rejected by Protestants) belong in the full canon.</div>
+        <div class="card-tags"><span class="tag">Catholic Apologetics</span><span class="tag">73-book Canon</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Strongly affirms Catholic 73-book canon</span></div>
+      </div>
+      <a href="https://www.catholic.com/qa/who-compiled-the-bible-and-when" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">Bible Gateway — 200+ Translations Compared Online</span></div>
+        <div class="card-desc">Access to 200+ Bible translations in English and other languages. Useful for directly comparing how Catholic, Protestant, and Orthodox editions differ — practical canon research tool.</div>
+        <div class="card-tags"><span class="tag">200+ translations</span><span class="tag">Comparison</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Presents various canonical traditions equally</span></div>
+      </div>
+      <a href="https://www.biblegateway.com" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">Bible Hub — Interlinear Greek/Hebrew + Strong's Concordance</span></div>
+        <div class="card-desc">Interlinear Greek NT and Hebrew OT, Strong's concordance, parallel passages, and commentary. Lets you read word-for-word original language texts alongside modern translations.</div>
+        <div class="card-tags"><span class="tag">Interlinear</span><span class="tag">Greek & Hebrew</span><span class="tag">Strong's</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral text study tool</span></div>
+      </div>
+      <a href="https://biblehub.com" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-multi">Multi</span><span class="card-title">Perseus Digital Library — Greek &amp; Latin Classical Texts (Free)</span></div>
+        <div class="card-desc">Free access to Greek and Latin texts including the Greek NT. Essential for reading primary Christian and classical sources in original languages with integrated dictionaries.</div>
+        <div class="card-tags"><span class="tag">Greek NT</span><span class="tag">Classical Texts</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral classical library</span></div>
+      </div>
+      <a href="https://www.perseus.tufts.edu" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian multi" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">Christian History Institute — 'How We Got Our Bible' Timeline</span></div>
+        <div class="card-desc">Visual timeline from early manuscripts through canon councils. Covers Septuagint, Irenaeus, Origen, Athanasius's 367 AD letter, Hippo/Carthage, and the Reformation splits.</div>
+        <div class="card-tags"><span class="tag">Visual Timeline</span><span class="tag">Bible History</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Christian affirming — based on historical data</span></div>
+      </div>
+      <a href="https://christianhistoryinstitute.org/magazine/article/how-we-got-our-bible-timeline" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+    </div>
+  </div>
+  <div class="section-block" id="jewish">
+    <div class="section-header">
+      <div class="section-icon" style="background:color-mix(in oklab,var(--color-jewish) 15%,transparent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-jewish)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+      <h2>Jewish / Hebrew Bible Resources</h2>
+      <small>Tanakh, Talmud, Rabbinic literature, Septuagint</small>
+    </div>
+    <div class="resource-grid">
+    <div class="resource-card" data-category="jewish" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-jewish">Jewish</span><span class="card-title">Sefaria — Free Jewish Texts Library (Torah through Kabbalah)</span></div>
+        <div class="card-desc">The largest free library of Jewish texts online — Torah, Tanakh, Mishnah, Talmud, Midrash, Kabbalah, and more — in Hebrew and English. 3,000 years of texts with hyperlinked commentaries. Also a free mobile app.</div>
+        <div class="card-tags"><span class="tag">Tanakh</span><span class="tag">Talmud</span><span class="tag">Midrash</span><span class="tag">Free</span><span class="tag">App</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Affirms Jewish Hebrew Bible / Tanakh canon</span></div>
+      </div>
+      <a href="https://www.sefaria.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="jewish christian multi" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-multi">Multi</span><span class="card-title">Britannica — 'Biblical Canon' Reference Article</span></div>
+        <div class="card-desc">Well-sourced encyclopedia article covering Jewish and Christian biblical canon development, including differences between Protestant, Catholic, and Orthodox traditions.</div>
+        <div class="card-tags"><span class="tag">Reference</span><span class="tag">Canon Overview</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral encyclopedic overview</span></div>
+      </div>
+      <a href="https://www.britannica.com/topic/biblical-canon" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="jewish christian" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-jewish">Jewish</span><span class="card-title">Josephus — 'Against Apion' (c. 95 AD) — CCEL Online</span></div>
+        <div class="card-desc">The earliest known explicit statement about the Jewish canon. Josephus (~95 AD) states Jews have exactly 22 books — the most specific early canon count. Key primary source demonstrating a functional Jewish canon before the NT.</div>
+        <div class="card-tags"><span class="tag">c. 95 AD</span><span class="tag">Primary Source</span><span class="tag">22-book canon</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Documents closed Jewish canon in 1st century</span></div>
+      </div>
+      <a href="https://www.ccel.org/j/josephus/works/apion-1.htm" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="jewish christian" data-stance="skeptical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-skeptical">Skeptical</span><span class="card-title">Wikiversity — Documentary Hypothesis Color-Coded Torah</span></div>
+        <div class="card-desc">Torah with the four proposed sources (J, E, D, P) color-coded. Visual tool for the scholarly theory that the Torah was compiled from multiple earlier documents — key background for OT canon debates.</div>
+        <div class="card-tags"><span class="tag">JEDP Theory</span><span class="tag">Torah Sources</span><span class="tag">Visual</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-skeptical">⚑ Questions single-author Mosaic authorship of the Torah</span></div>
+      </div>
+      <a href="https://en.wikiversity.org/wiki/The_Documentary_Hypothesis_in_Colour" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="jewish christian" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-multi">Multi</span><span class="card-title">Duke Divinity Library — Bible Texts &amp; Translations Online (Guide)</span></div>
+        <div class="card-desc">Academic library guide listing free online resources for BHS, Greek NT, Septuagint, Vulgate, and major English translations. Curated by Duke Divinity School librarians.</div>
+        <div class="card-tags"><span class="tag">BHS</span><span class="tag">Septuagint</span><span class="tag">Vulgate</span><span class="tag">Library Guide</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral academic library bibliography</span></div>
+      </div>
+      <a href="https://guides.library.duke.edu/c.php?g=289359&p=1929637" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+    </div>
+  </div>
+  <div class="section-block" id="islam">
+    <div class="section-header">
+      <div class="section-icon" style="background:color-mix(in oklab,var(--color-islam) 15%,transparent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-islam)" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></div>
+      <h2>Islam / Qur&apos;an Resources</h2>
+      <small>Compilation history, hadith, Islamic scholarship</small>
+    </div>
+    <div class="resource-grid">
+    <div class="resource-card" data-category="islam" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-islam">Islam</span><span class="card-title">SeekersPathway — 'Stages of Qur&apos;an Compilation' (2026 Updated)</span></div>
+        <div class="card-desc">Clear article explaining the complete Qur'anic compilation process: oral revelation during Muhammad's lifetime, Abu Bakr's written collection after the Battle of Yamama (632 AD), and Uthman's standardized codex (~650 AD).</div>
+        <div class="card-tags"><span class="tag">Compilation History</span><span class="tag">Sunni Islam</span><span class="tag">Free</span><span class="tag">2026</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Affirms divine preservation of the Qur'an</span></div>
+      </div>
+      <a href="https://seekerspathway.com/stages-of-quran-compilation/" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="islam" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-islam">Islam</span><span class="card-title">Yaqeen Institute — 'The First Codex: Abu Bakr's Compilation'</span></div>
+        <div class="card-desc">Peer-reviewed Islamic academic article detailing Abu Bakr's role as the first caliph in gathering Qur'anic fragments after 632 AD, led by Zayd ibn Thābit with dual-witness verification of each verse.</div>
+        <div class="card-tags"><span class="tag">Abu Bakr</span><span class="tag">Zayd ibn Thābit</span><span class="tag">Peer-Reviewed</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Affirms Islamic traditional compilation narrative</span></div>
+      </div>
+      <a href="https://yaqeeninstitute.org/read/paper/the-first-codex-abu-bakrs-compilation-of-the-quran" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="islam" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-islam">Islam</span><span class="card-title">Quran.com — Full Arabic Text + Multiple English Translations</span></div>
+        <div class="card-desc">The complete Qur'anic text in Arabic with multiple English translations, audio recitations, and tafsir (commentary). Essential companion to studying the Qur'anic compilation process.</div>
+        <div class="card-tags"><span class="tag">Full Quran Text</span><span class="tag">Multiple Translations</span><span class="tag">Audio</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Presents the Qur'an as authoritative divine text</span></div>
+      </div>
+      <a href="https://quran.com" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="islam" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-islam">Islam</span><span class="card-title">Harvard Islamic Heritage Project — Manuscripts &amp; Maps</span></div>
+        <div class="card-desc">Hundreds of Islamic manuscripts, maps, and published texts from Harvard's collections. Covers Qur'anic sciences, hadith, jurisprudence, geography, and Islamic history.</div>
+        <div class="card-tags"><span class="tag">Harvard</span><span class="tag">Islamic Manuscripts</span><span class="tag">Maps</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral academic archive</span></div>
+      </div>
+      <a href="https://library.harvard.edu/collections/islamic-heritage-project" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="islam" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-manuscript">Manuscript</span><span class="card-title">Qatar Digital Library — Islamic &amp; British Library Manuscripts</span></div>
+        <div class="card-desc">Qatar National Library's digitized manuscript repository including hundreds of Islamic manuscripts from the British Library's collections. Searchable by title, language, subject, and date.</div>
+        <div class="card-tags"><span class="tag">Qatar</span><span class="tag">British Library</span><span class="tag">Arabic Manuscripts</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral archive — no theological stance</span></div>
+      </div>
+      <a href="https://www.qdl.qa/en" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+    </div>
+  </div>
+  <div class="section-block" id="lds">
+    <div class="section-header">
+      <div class="section-icon" style="background:color-mix(in oklab,var(--color-lds) 15%,transparent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-lds)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg></div>
+      <h2>LDS / Book of Mormon Resources</h2>
+      <small>Latter-day Saint scripture, history, and scholarly analysis</small>
+    </div>
+    <div class="resource-grid">
+    <div class="resource-card" data-category="lds" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-lds">Lds</span><span class="card-title">Joseph Smith Papers — Full Project (27 Volumes, Free Online)</span></div>
+        <div class="card-desc">Comprehensive digital collection of all original Joseph Smith documents: journals, letters, revelations, translations, and histories. Free public access. Essential for serious LDS canon research.</div>
+        <div class="card-tags"><span class="tag">Journals</span><span class="tag">Revelations</span><span class="tag">Translations</span><span class="tag">27 Volumes</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ LDS Church History Dept. sponsored</span></div>
+      </div>
+      <a href="https://www.josephsmithpapers.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="lds" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-lds">Lds</span><span class="card-title">ChurchofJesusChrist.org — All Four Standard Works Online</span></div>
+        <div class="card-desc">Official LDS Church website with all four standard works: KJV Bible, Book of Mormon, Doctrine &amp; Covenants, and Pearl of Great Price. Also includes study helps, Topical Guide, and General Conference archives.</div>
+        <div class="card-tags"><span class="tag">All 4 Standard Works</span><span class="tag">Study Helps</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Official LDS canon declaration</span></div>
+      </div>
+      <a href="https://www.churchofjesuschrist.org/study/scriptures" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="lds" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-lds">Lds</span><span class="card-title">BYU Studies — 'The Original Book of Mormon Manuscript' (Scholarly Article)</span></div>
+        <div class="card-desc">Peer-reviewed academic article analyzing the handwriting, composition, and history of the surviving portions of the original BoM manuscript. Useful for understanding the physical evidence of its dictation and recording.</div>
+        <div class="card-tags"><span class="tag">BYU Peer-Reviewed</span><span class="tag">Handwriting Analysis</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ LDS-affirming scholarly analysis</span></div>
+      </div>
+      <a href="https://byustudies.byu.edu/article/the-original-book-of-mormon-manuscript" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="lds" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-lds">Lds</span><span class="card-title">BYU — 'The Bible, the Book of Mormon, and the Concept of Scripture'</span></div>
+        <div class="card-desc">Scholarly article comparing how the Bible and Book of Mormon each function as canon within LDS tradition. Explores why LDS hold both as equal 'standard works' vs. Protestant sola scriptura.</div>
+        <div class="card-tags"><span class="tag">LDS Canon Theory</span><span class="tag">Comparative</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ LDS affirming framework for scripture authority</span></div>
+      </div>
+      <a href="https://rsc.byu.edu/no-weapon-shall-prosper/bible-book-mormon-concept-scripture" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="lds" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-lds">Lds</span><span class="card-title">FAIR Latter-day Saints — LDS Apologetics Database</span></div>
+        <div class="card-desc">Largest LDS apologetics resource database. Addresses archaeological, historical, textual, and scientific criticisms of the Book of Mormon. Covers DNA evidence, anachronisms, chiasmus, and translation method debates. Responds directly to skeptical arguments.</div>
+        <div class="card-tags"><span class="tag">LDS Apologetics</span><span class="tag">Evidence</span><span class="tag">DNA</span><span class="tag">Archaeology</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Defends LDS canon and historical claims</span></div>
+      </div>
+      <a href="https://www.fairlatterdaysaints.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="lds" data-stance="skeptical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-skeptical">Skeptical</span><span class="card-title">CES Letter — Historical Problems with LDS Truth Claims</span></div>
+        <div class="card-desc">Originally a personal letter to a CES Director, now the most widely read critical document presenting historical, archaeological, and textual challenges to LDS truth claims including Book of Mormon historicity and translation method.</div>
+        <div class="card-tags"><span class="tag">LDS Critique</span><span class="tag">Historical Problems</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-skeptical">⚑ Questions LDS canon, translation claims, and Joseph Smith's history</span></div>
+      </div>
+      <a href="https://cesletter.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+    </div>
+  </div>
+  <div class="section-block" id="gnostic">
+    <div class="section-header">
+      <div class="section-icon" style="background:color-mix(in oklab,var(--color-gnostic) 15%,transparent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-gnostic)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
+      <h2>Gnostic, Apocryphal &amp; Non-Canonical Texts</h2>
+      <small>The books that didn't make canon — and why</small>
+    </div>
+    <div class="resource-grid">
+    <div class="resource-card" data-category="gnostic" data-stance="varied">
+      <div>
+        <div class="card-top"><span class="card-badge badge-gnostic">Gnostic</span><span class="card-title">The Gnosis Archive — Complete Nag Hammadi Library Online (Free)</span></div>
+        <div class="card-desc">Free access to all 52 Gnostic texts discovered in Egypt in 1945 (Gospel of Thomas, Gospel of Philip, Gospel of Truth, Apocryphon of John, etc.). These are the writings that did NOT make the canon. Essential for understanding what was rejected by the early church and why.</div>
+        <div class="card-tags"><span class="tag">Nag Hammadi</span><span class="tag">Gospel of Thomas</span><span class="tag">52 texts</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-varied">◆ Non-canonical texts — excluded by early church criteria of apostolicity, orthodoxy, catholicity</span></div>
+      </div>
+      <a href="http://www.gnosis.org/naghamm/nhl.html" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="gnostic" data-stance="varied">
+      <div>
+        <div class="card-top"><span class="card-badge badge-gnostic">Gnostic</span><span class="card-title">Coptic Gnostic Library Online (Brill — Authoritative Scholarly Edition)</span></div>
+        <div class="card-desc">The only authoritative critical edition of all Nag Hammadi texts in Coptic and English translation, originally 14 hardback volumes. Starting point for academic Gnosticism research. Subscription required for full access.</div>
+        <div class="card-tags"><span class="tag">Nag Hammadi</span><span class="tag">Coptic Text</span><span class="tag">Authoritative</span><span class="tag">Subscription</span></div>
+        <div class="card-stance"><span class="stance-varied">◆ Scholarly edition — no theological stance taken</span></div>
+      </div>
+      <a href="https://scholarlyeditions.brill.com/cglo/" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="gnostic christian" data-stance="varied">
+      <div>
+        <div class="card-top"><span class="card-badge badge-gnostic">Gnostic</span><span class="card-title">Project Gutenberg — Deuterocanonical Books / Apocrypha (Free)</span></div>
+        <div class="card-desc">Free public domain text of the deuterocanonical books (Tobit, Judith, Maccabees, Wisdom, Sirach, Baruch, etc.). Catholic canon includes these; Protestant canon excludes them. Also includes other apocryphal texts.</div>
+        <div class="card-tags"><span class="tag">Tobit</span><span class="tag">Maccabees</span><span class="tag">Deuterocanon</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-varied">◆ Catholic affirms; Protestant questions; primary texts only</span></div>
+      </div>
+      <a href="https://www.gutenberg.org/ebooks/124" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="gnostic christian" data-stance="varied">
+      <div>
+        <div class="card-top"><span class="card-badge badge-gnostic">Gnostic</span><span class="card-title">Online Critical Pseudepigrapha (OCP) — Tyndale University</span></div>
+        <div class="card-desc">Scholarly electronic editions of OT Pseudepigrapha in multiple original languages (Hebrew, Aramaic, Greek, Ethiopic, Syriac, Latin). Covers the full range of literature circulating in the intertestamental period.</div>
+        <div class="card-tags"><span class="tag">Pseudepigrapha</span><span class="tag">Multiple Languages</span><span class="tag">Scholarly</span></div>
+        <div class="card-stance"><span class="stance-varied">◆ Non-canonical texts studied academically</span></div>
+      </div>
+      <a href="http://ocp.tyndale.ca" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+    </div>
+  </div>
+  <div class="section-block" id="skeptical">
+    <div class="section-header">
+      <div class="section-icon" style="background:color-mix(in oklab,var(--color-skeptical) 15%,transparent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-skeptical)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+      <h2>Skeptical &amp; Critical Academic Resources</h2>
+      <small>Scholarly criticism, textual variants, historical challenges to canon claims</small>
+    </div>
+    <div class="resource-grid">
+    <div class="resource-card" data-category="skeptical" data-stance="skeptical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-skeptical">Skeptical</span><span class="card-title">Bart Ehrman Blog — NT Textual Criticism &amp; Historical Analysis</span></div>
+        <div class="card-desc">Blog by Bart Ehrman (UNC Chapel Hill), author of 'Misquoting Jesus.' Articles on manuscript variants, pseudonymous authorship, and canon formation from a secular academic perspective. Some free; full access by subscription.</div>
+        <div class="card-tags"><span class="tag">Textual Criticism</span><span class="tag">NT History</span><span class="tag">Misquoting Jesus</span><span class="tag">Partial Free</span></div>
+        <div class="card-stance"><span class="stance-skeptical">⚑ Critically questions inerrancy and traditional canon claims</span></div>
+      </div>
+      <a href="https://ehrmanblog.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="skeptical multi" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-skeptical">Skeptical</span><span class="card-title">r/AcademicBiblical — Gigantic Master Resource List</span></div>
+        <div class="card-desc">Community-compiled master resource list from Reddit's academic biblical studies community. Includes Greek/Hebrew text tools, manuscript databases, rabbinic literature, papyri archives. Non-confessional critical scholarship lens.</div>
+        <div class="card-tags"><span class="tag">Critical Scholarship</span><span class="tag">Resource List</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Broadly academic — non-confessional perspective</span></div>
+      </div>
+      <a href="https://www.reddit.com/r/AcademicBiblical/comments/17ywb15/my_gigantic_list_of_online_resources/" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="skeptical christian" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-multi">Multi</span><span class="card-title">Wikipedia — 'Development of the New Testament Canon' (Detailed Article)</span></div>
+        <div class="card-desc">Well-sourced Wikipedia article tracing NT canon from 1st through 5th centuries. Covers disputed books, early canon lists (Muratorian, Athanasius), and council decisions with neutral encyclopedic perspective.</div>
+        <div class="card-tags"><span class="tag">NT Canon History</span><span class="tag">Reference</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral reference — multiple perspectives cited</span></div>
+      </div>
+      <a href="https://en.wikipedia.org/wiki/Development_of_the_New_Testament_canon" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="skeptical christian" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">CARM — 'Manuscript Evidence for NT Reliability' (Apologetics)</span></div>
+        <div class="card-desc">Christian apologetics article responding to Ehrman-style textual criticism with data on the 5,800+ Greek NT manuscripts and early attestation. The main Christian counter-argument to skeptical manuscript claims.</div>
+        <div class="card-tags"><span class="tag">NT Manuscripts</span><span class="tag">Apologetics</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Argues NT text is reliably transmitted and preserved</span></div>
+      </div>
+      <a href="https://carm.org/about-the-bible/manuscript-evidence-for-superior-new-testament-reliability/" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="skeptical" data-stance="skeptical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-skeptical">Skeptical</span><span class="card-title">Cambridge — 'Critical Reflections on the Role of Canon in NT Studies' (2024)</span></div>
+        <div class="card-desc">Peer-reviewed 2024 journal article from New Testament Studies (Cambridge) examining whether canon boundaries shape textual interpretation in methodologically biased ways.</div>
+        <div class="card-tags"><span class="tag">Peer-Reviewed</span><span class="tag">2024</span><span class="tag">Methodological</span><span class="tag">Cambridge</span></div>
+        <div class="card-stance"><span class="stance-skeptical">⚑ Questions whether canon boundaries distort objective NT scholarship</span></div>
+      </div>
+      <a href="https://www.cambridge.org/core/journals/new-testament-studies/article/critical-reflections-on-the-role-of-the-canon-in-new-testament-studies" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+    </div>
+  </div>
+  <div class="section-block" id="multi">
+    <div class="section-header">
+      <div class="section-icon" style="background:color-mix(in oklab,var(--color-multi) 15%,transparent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-multi)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></div>
+      <h2>Multi-tradition &amp; Comparative Tools</h2>
+      <small>Cross-tradition canon comparisons and general comparative religion resources</small>
+    </div>
+    <div class="resource-grid">
+    <div class="resource-card" data-category="multi" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-multi">Multi</span><span class="card-title">Society of Biblical Literature (SBL) — Resources &amp; Bible Odyssey</span></div>
+        <div class="card-desc">Publishes the free SBL Greek NT and runs Bible Odyssey — a free online encyclopedia with scholar-written essays, photos, videos, maps, timelines, and interactive content covering multiple traditions.</div>
+        <div class="card-tags"><span class="tag">Free SBL GNT</span><span class="tag">Bible Odyssey</span><span class="tag">Multi-tradition</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral broad academic society</span></div>
+      </div>
+      <a href="https://www.sbl-site.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="multi christian" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-manuscript">Manuscript</span><span class="card-title">Christian History Institute — Timeline + Links Galore (Biblical Studies)</span></div>
+        <div class="card-desc">Aggregates links to major biblical studies resources. 'Links Galore' is a famous Classics and biblical studies aggregator — a rich starting point for any new research direction.</div>
+        <div class="card-tags"><span class="tag">Resources Aggregator</span><span class="tag">Biblical Studies</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral, broad resource aggregation</span></div>
+      </div>
+      <a href="https://christianhistoryinstitute.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+    </div>
+  </div>
+  <div class="section-block" id="media">
+    <div class="section-header">
+      <div class="section-icon" style="background:color-mix(in oklab,var(--color-primary) 15%,transparent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg></div>
+      <h2>Podcasts &amp; YouTube Channels</h2>
+      <small>Audio and video resources for ongoing research</small>
+    </div>
+    <div class="resource-grid">
+    <div class="resource-card" data-category="christian podcast" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">PODCAST: 'The Biblical Canon with Peter Gurry' (Apple Podcasts, 2025)</span></div>
+        <div class="card-desc">Peter Gurry (PhD Cambridge, Text &amp; Canon Institute) discusses common questions and misconceptions about NT canon formation. Accessible and apologetics-friendly. Referenced book: 'Scribes and Scripture.'</div>
+        <div class="card-tags"><span class="tag">Podcast</span><span class="tag">2025</span><span class="tag">Canon Formation</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Evangelical affirming perspective on canon</span></div>
+      </div>
+      <a href="https://podcasts.apple.com/us/podcast/the-biblical-canon-with-peter-gurry/id1632823229?i=1000683762941" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian youtube" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">YOUTUBE: 'Formation &amp; Development of the Biblical Canon' — Dr. John Meade (2025)</span></div>
+        <div class="card-desc">Hour-long interview with Dr. Meade (Phoenix Seminary) covering NT &amp; OT canon, Josephus's 22-book statement, Melito of Sardis's list (~170 AD), and how the Hebrew canon became the Christian OT.</div>
+        <div class="card-tags"><span class="tag">YouTube</span><span class="tag">2025</span><span class="tag">Deep Dive</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Evangelical affirming, historically grounded</span></div>
+      </div>
+      <a href="https://www.youtube.com/watch?v=25wMQVPs4Ns" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="multi youtube" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-multi">Multi</span><span class="card-title">YOUTUBE: 'Understanding Biblical Canon: Historical &amp; Theological Insights' (2024)</span></div>
+        <div class="card-desc">Video covering Protestant/Catholic/Orthodox canon differences, Apocrypha/Deuterocanon, Paul's letters becoming scripture, Gnostic Gospels, and Athanasius's 367 AD Festal Letter. Good broad overview.</div>
+        <div class="card-tags"><span class="tag">YouTube</span><span class="tag">2024</span><span class="tag">Multi-tradition</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Balanced multi-tradition overview</span></div>
+      </div>
+      <a href="https://www.youtube.com/watch?v=AZpR7arf5r8" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian youtube" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">YOUTUBE PLAYLIST: Bible Canon History — Church History Hub (4-Part Series)</span></div>
+        <div class="card-desc">Four-part YouTube series covering the complete story of how the Bible came to be, structured for systematic study from the writing of individual books through councils.</div>
+        <div class="card-tags"><span class="tag">YouTube Playlist</span><span class="tag">4-Part</span><span class="tag">Systematic</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Christian affirming series</span></div>
+      </div>
+      <a href="https://www.youtube.com/playlist?list=PLwWC-lJhgM6z2TrBAiJ-vp1Z_unIXwIMz" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="multi podcast" data-stance="skeptical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-skeptical">Skeptical</span><span class="card-title">PODCAST: 'All About Bible Canonization' — Religion on the Mind (Spotify, 2023)</span></div>
+        <div class="card-desc">With Shelby &amp; Nate Hansen (Almost Heretical Podcast). Explores how canon decisions were shaped by human choices, politics, and power structures. Progressive/questioning lens. Good counterweight to purely affirming content.</div>
+        <div class="card-tags"><span class="tag">Podcast</span><span class="tag">Spotify</span><span class="tag">2023</span><span class="tag">Progressive</span></div>
+        <div class="card-stance"><span class="stance-skeptical">⚑ Questions traditional canon assumptions; political/power analysis</span></div>
+      </div>
+      <a href="https://open.spotify.com/episode/2VMOTQ1NGQyBTP4Rhk0MZp" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="multi podcast" data-stance="skeptical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-multi">Multi</span><span class="card-title">PODCAST: Data Over Dogma — Non-Confessional Biblical Scholarship</span></div>
+        <div class="card-desc">Treats the Bible purely as a historical document without religious assumptions. Covers critical scholarship, canon formation, and textual history from a data-first standpoint. Highly recommended by r/AcademicBiblical.</div>
+        <div class="card-tags"><span class="tag">Podcast</span><span class="tag">Non-confessional</span><span class="tag">Critical</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-skeptical">⚑ Applies data and historical method without religious assumptions</span></div>
+      </div>
+      <a href="https://podcasts.apple.com/us/podcast/data-over-dogma/id1330003978" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="multi podcast" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-multi">Multi</span><span class="card-title">PODCAST: History in the Bible — Secular Deep Dive (historyinthebible.com)</span></div>
+        <div class="card-desc">Secular/academic podcast covering lesser-known textual traditions (Samaritan, Syriac, Aramaic), the full range of canon diversity, and the history of biblical scholarship from antiquity to modern times.</div>
+        <div class="card-tags"><span class="tag">Podcast</span><span class="tag">Secular</span><span class="tag">Textual History</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Secular historical perspective — no theological stance</span></div>
+      </div>
+      <a href="https://www.historyinthebible.com" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian youtube" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">YOUTUBE CHANNEL: BibleProject — Animated Bible Overviews (196M+ Views)</span></div>
+        <div class="card-desc">Animated explainer videos on every book of the Bible and biblical themes. 2.3M+ subscribers. Useful for understanding the literary structure and canonical role of each book in accessible format.</div>
+        <div class="card-tags"><span class="tag">YouTube Channel</span><span class="tag">Animated</span><span class="tag">Every Book</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Christian affirming; rigorous literary-canonical approach</span></div>
+      </div>
+      <a href="https://www.youtube.com/@bibleproject" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian youtube" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">YOUTUBE CHANNEL: Wes Huff — NT Manuscripts, Canon &amp; Apocryphal Gospels</span></div>
+        <div class="card-desc">Focused on NT canon formation, why apocryphal gospels were rejected, and biblical manuscript evidence. Strong for understanding the practical criteria used to exclude non-canonical books.</div>
+        <div class="card-tags"><span class="tag">YouTube Channel</span><span class="tag">NT Canon</span><span class="tag">Apocryphal Gospels</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Christian apologetics affirming perspective</span></div>
+      </div>
+      <a href="https://www.youtube.com/@WesHuff" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="multi youtube" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-multi">Multi</span><span class="card-title">YOUTUBE CHANNEL: Religion For Breakfast — Academic Comparative Religion</span></div>
+        <div class="card-desc">Dr. Andrew Henry (PhD religious studies). Academic, non-confessional videos on Bible formation, Islam, Judaism, and world religion comparisons. Highly recommended for objective scholarly starting point.</div>
+        <div class="card-tags"><span class="tag">YouTube Channel</span><span class="tag">Comparative Religion</span><span class="tag">Academic</span><span class="tag">Non-confessional</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral academic — treats all traditions equally</span></div>
+      </div>
+      <a href="https://www.youtube.com/@ReligionForBreakfast" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="multi youtube" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-multi">Multi</span><span class="card-title">YOUTUBE CHANNEL: Let's Talk Religion — Multi-Tradition Academic Overview</span></div>
+        <div class="card-desc">Well-researched coverage of Christianity, Islam, Judaism, Buddhism, and more from an academic non-confessional standpoint. Ideal for side-by-side canon comparisons across traditions.</div>
+        <div class="card-tags"><span class="tag">YouTube Channel</span><span class="tag">Multi-religion</span><span class="tag">Academic</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral academic overview across all traditions</span></div>
+      </div>
+      <a href="https://www.youtube.com/@LetsTalkReligion" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="multi youtube" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-multi">Multi</span><span class="card-title">YOUTUBE CHANNEL: Useful Charts — Visual Religion &amp; Canon Comparisons</span></div>
+        <div class="card-desc">Chart-based videos covering religious timelines, canon comparison charts, denomination trees, and historical data. Excellent for visually seeing which traditions accept which books and when decisions were made.</div>
+        <div class="card-tags"><span class="tag">YouTube Channel</span><span class="tag">Charts</span><span class="tag">Visual</span><span class="tag">Canon Comparisons</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Neutral visual reference — no theological stance</span></div>
+      </div>
+      <a href="https://www.youtube.com/@UsefulCharts" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian youtube" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">YOUTUBE CHANNEL: Gavin Ortlund — Church History &amp; Protestant Apologetics</span></div>
+        <div class="card-desc">Videos on apologetics, defending Protestantism (66-book canon), theology, and church history. Particularly good for understanding why Protestants removed the deuterocanonical books at the Reformation.</div>
+        <div class="card-tags"><span class="tag">YouTube Channel</span><span class="tag">Protestant</span><span class="tag">Apologetics</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Protestant affirming — 66-book canon perspective</span></div>
+      </div>
+      <a href="https://www.youtube.com/@GavinOrtlund" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian youtube" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">YOUTUBE CHANNEL: InspiringPhilosophy — Apologetics &amp; Documentary Hypothesis</span></div>
+        <div class="card-desc">Michael Jones (MA Philosophy) defending Christianity. Strong on refuting the Documentary Hypothesis, historicity of Exodus, and alleged Bible errors. Bridges philosophy and scripture reliability.</div>
+        <div class="card-tags"><span class="tag">YouTube Channel</span><span class="tag">Apologetics</span><span class="tag">Philosophy</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Defends biblical reliability and traditional authorship claims</span></div>
+      </div>
+      <a href="https://www.youtube.com/@InspiringPhilosophy" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian youtube" data-stance="affirms">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">YOUTUBE CHANNEL: Ward on Words — Bible Translation Differences (Mark Ward)</span></div>
+        <div class="card-desc">Videos on differences between Bible translations and what variant readings mean in practice. Helpful for understanding how manuscript and canon differences affect your everyday Bible reading.</div>
+        <div class="card-tags"><span class="tag">YouTube Channel</span><span class="tag">Translations</span><span class="tag">KJV</span><span class="tag">Variants</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-affirms">✔ Affirming; focused on translation accuracy across versions</span></div>
+      </div>
+      <a href="https://www.youtube.com/@MarkWardWords" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+
+    <div class="resource-card" data-category="christian youtube" data-stance="neutral">
+      <div>
+        <div class="card-top"><span class="card-badge badge-christian">Christian</span><span class="card-title">YOUTUBE CHANNEL: Early Christian History — Dr. Michael Bird (Anglican Scholar)</span></div>
+        <div class="card-desc">All about early Christian history with highly recommended content on ancient texts. Well-researched bridge between academic and popular audiences on NT canon and patristics.</div>
+        <div class="card-tags"><span class="tag">YouTube Channel</span><span class="tag">Early Church</span><span class="tag">Ancient Texts</span><span class="tag">Anglican</span><span class="tag">Free</span></div>
+        <div class="card-stance"><span class="stance-neutral">⬤ Anglican affirming; academically grounded and accessible</span></div>
+      </div>
+      <a href="https://www.youtube.com/@EarlyChristianHistory" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </div>
+    </div>
+  </div>
+</main>
+</div>
+<footer>
+  <p>Scripture Canon Research Library &mdash; Compiled March 2026. All links verified as active at time of compilation.</p>
+  <p style="margin-top:.5rem">Stance labels reflect each resource&apos;s perspective only &mdash; not an endorsement of any view.</p>
+</footer>
+<script>
+(function(){
+  const html = document.documentElement;
+  const btn = document.querySelector('[data-theme-toggle]');
+  let d = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  html.setAttribute('data-theme', d);
+  function updateBtn(){
+    if(!btn) return;
+    btn.innerHTML = d==='dark'
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  }
+  updateBtn();
+  if(btn) btn.addEventListener('click',()=>{
+    d = d==='dark'?'light':'dark';
+    html.setAttribute('data-theme',d);
+    updateBtn();
+  });
+  const cards=document.querySelectorAll('.resource-card');
+  const fbtns=document.querySelectorAll('.filter-btn');
+  const si=document.getElementById('search');
+  const noRes=document.getElementById('no-results');
+  const countEl=document.getElementById('results-count');
+  let cf='all';
+  function apply(){
+    const q=si.value.toLowerCase().trim();
+    let vis=0;
+    cards.forEach(c=>{
+      const cat=c.dataset.category||'';
+      const stance=c.dataset.stance||'';
+      const title=c.querySelector('.card-title')?.textContent.toLowerCase()||'';
+      const desc=c.querySelector('.card-desc')?.textContent.toLowerCase()||'';
+      const tags=c.querySelector('.card-tags')?.textContent.toLowerCase()||'';
+      const badge=c.querySelector('.card-badge')?.textContent.toLowerCase()||'';
+      let pf=false;
+      if(cf==='all') pf=true;
+      else if(cf==='affirms') pf=stance.includes('affirm');
+      else if(cf==='questions') pf=stance.includes('skeptic');
+      else if(cf==='manuscript') pf=badge.includes('manuscript');
+      else if(cf==='podcast') pf=badge.includes('podcast')||title.includes('podcast');
+      else if(cf==='youtube') pf=badge.includes('youtube')||title.includes('youtube');
+      else pf=cat.includes(cf);
+      let ps=true;
+      if(q) ps=title.includes(q)||desc.includes(q)||tags.includes(q)||cat.includes(q);
+      c.classList.toggle('hidden',!(pf&&ps));
+      if(pf&&ps) vis++;
+    });
+    countEl.textContent=(q||cf!=='all')?`Showing ${vis} of ${cards.length} resources`:'';
+    noRes.style.display=vis===0?'block':'none';
+  }
+  fbtns.forEach(b=>b.addEventListener('click',()=>{
+    fbtns.forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    cf=b.dataset.filter;
+    apply();
+  }));
+  si.addEventListener('input',apply);
+  // Sidebar scroll highlight
+  const secs=document.querySelectorAll('.section-block');
+  const navs=document.querySelectorAll('.sidebar-nav a');
+  const obs=new IntersectionObserver(e=>{
+    e.forEach(en=>{
+      if(en.isIntersecting){
+        navs.forEach(a=>a.classList.remove('active-nav'));
+        const l=document.querySelector('.sidebar-nav a[href="#'+en.target.id+'"]');
+        if(l) l.classList.add('active-nav');
+      }
+    });
+  },{rootMargin:'-30% 0px -60% 0px'});
+  secs.forEach(s=>obs.observe(s));
+})();
+</script>
+</body>
+</html>
