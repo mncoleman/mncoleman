@@ -170,12 +170,13 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                 throw new Error(errText || 'Upload failed');
             }
 
+            const resData = await res.json();
+            setArtifacts(prev => [...prev, resData.artifact]);
             setMessage({ type: 'success', text: `"${file.name}" uploaded successfully!${IS_DEV ? '' : ' A rebuild will be triggered.'}` });
             setFile(null);
             setName('');
             setDescription('');
             if (fileInputRef.current) fileInputRef.current.value = '';
-            await fetchArtifacts();
         } catch (e: any) {
             setMessage({ type: 'error', text: e.message });
         } finally {
