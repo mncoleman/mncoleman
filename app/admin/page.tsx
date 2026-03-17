@@ -10,6 +10,7 @@ import { Loader2 } from 'lucide-react';
 // or use NEXT_PUBLIC_ env vars.
 const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:8787';
 const BOT_NAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME || '';
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 export default function AdminPage() {
     const [session, setSession] = useState<{ user: any } | null>(null);
@@ -17,6 +18,13 @@ export default function AdminPage() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        // In dev mode, bypass auth entirely
+        if (IS_DEV) {
+            setSession({ user: { name: 'Dev User', id: 'dev' } });
+            setLoading(false);
+            return;
+        }
+
         // Check for existing session via HttpOnly cookie
         const checkSession = async () => {
             try {
@@ -92,7 +100,7 @@ export default function AdminPage() {
     }
 
     return (
-        <div className="container py-20 flex flex-col items-center min-h-[80vh]">
+        <div className="container mx-auto px-4 py-20 flex flex-col items-center min-h-[80vh]">
             {session ? (
                 <AdminDashboard
                     user={session.user}

@@ -33,7 +33,7 @@ export default {
         const activeOrigin = isAllowedOrigin ? origin! : '';
 
         const corsHeaders: Record<string, string> = {
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
             'Access-Control-Allow-Credentials': 'true',
             'Vary': 'Origin',
@@ -186,53 +186,218 @@ export default {
                 return new Response('Unknown action', { status: 400, headers: corsHeaders });
             }
 
-            // Content Management Endpoints
-            if (url.pathname === '/api/content') {
+            // Artifacts Management Endpoints
+            if (url.pathname === '/api/artifacts') {
                 if (request.method === 'GET') {
-                    const path = 'data/about.json'; // Hardcoded for now, could be query param
-                    const localUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/${path}`;
-
-                    const resp = await fetch(localUrl, {
+                    // Fetch the artifacts manifest
+                    const manifestUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/data/artifacts.json`;
+                    const resp = await fetch(manifestUrl, {
                         headers: {
                             'Authorization': `token ${env.GITHUB_TOKEN}`,
                             'Accept': 'application/vnd.github.v3+json',
-                            'User-Agent': 'Cloudflare-Worker'
-                        }
+                            'User-Agent': 'Cloudflare-Worker',
+                        },
                     });
-
-                    if (!resp.ok) return new Response('Failed to fetch content', { status: resp.status, headers: corsHeaders });
+                    if (!resp.ok) {
+                        return new Response(JSON.stringify({ artifacts: [] }), {
+                            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                        });
+                    }
                     const data = await resp.json() as any;
-                    const content = atob(data.content); // Decode Base64
-                    return new Response(JSON.stringify({ content, sha: data.sha }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                    const content = atob(data.content);
+                    return new Response(JSON.stringify({ artifacts: JSON.parse(content) }), {
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
                 }
 
                 if (request.method === 'POST') {
-                    const body = await request.json() as { content: string, sha: string, message?: string };
-                    const path = 'data/about.json';
-                    const localUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/${path}`;
-
-                    const updateBody = {
-                        message: body.message || 'Update content via Admin Dashboard',
-                        content: btoa(body.content), // Encode Base64
-                        sha: body.sha
+                    const body = await request.json() as {
+                        filename: string;
+                        content: string; // base64-encoded file content
+                        type: string;
+                        size: number;
+                        description?: string;
                     };
 
-                    const resp = await fetch(localUrl, {
+                    if (!body.filename || !body.content) {
+                        return new Response('Missing filename or content', { status: 400, headers: corsHeaders });
+                    }
+
+                    // Sanitize filename: only allow alphanumeric, hyphens, underscores, dots
+                    const safeFilename = body.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+                    // 1. Upload the file to public/artifacts/
+                    const filePath = `public/artifacts/${safeFilename}`;
+                    const fileUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/${filePath}`;
+
+                    // Check if file already exists (to get SHA for overwrite)
+                    let existingFileSha: string | undefined;
+                    const checkResp = await fetch(fileUrl, {
+                        headers: {
+                            'Authorization': `token ${env.GITHUB_TOKEN}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Cloudflare-Worker',
+                        },
+                    });
+                    if (checkResp.ok) {
+                        const existing = await checkResp.json() as any;
+                        existingFileSha = existing.sha;
+                    }
+
+                    const uploadBody: any = {
+                        message: `Upload artifact: ${safeFilename}`,
+                        content: body.content,
+                    };
+                    if (existingFileSha) uploadBody.sha = existingFileSha;
+
+                    const uploadResp = await fetch(fileUrl, {
                         method: 'PUT',
                         headers: {
                             'Authorization': `token ${env.GITHUB_TOKEN}`,
                             'Accept': 'application/vnd.github.v3+json',
-                            'User-Agent': 'Cloudflare-Worker'
+                            'User-Agent': 'Cloudflare-Worker',
                         },
-                        body: JSON.stringify(updateBody)
+                        body: JSON.stringify(uploadBody),
                     });
 
-                    if (!resp.ok) {
-                        const errText = await resp.text();
-                        return new Response(`Failed to update content: ${errText}`, { status: resp.status, headers: corsHeaders });
+                    if (!uploadResp.ok) {
+                        const errText = await uploadResp.text();
+                        return new Response(`Failed to upload file: ${errText}`, { status: 500, headers: corsHeaders });
                     }
 
-                    return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                    // 2. Update the manifest
+                    const manifestUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/data/artifacts.json`;
+                    const manifestResp = await fetch(manifestUrl, {
+                        headers: {
+                            'Authorization': `token ${env.GITHUB_TOKEN}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Cloudflare-Worker',
+                        },
+                    });
+
+                    let artifacts: any[] = [];
+                    let manifestSha: string | undefined;
+                    if (manifestResp.ok) {
+                        const manifestData = await manifestResp.json() as any;
+                        manifestSha = manifestData.sha;
+                        artifacts = JSON.parse(atob(manifestData.content));
+                    }
+
+                    // Remove existing entry with same filename if overwriting
+                    artifacts = artifacts.filter((a: any) => a.filename !== safeFilename);
+
+                    const newArtifact = {
+                        id: crypto.randomUUID(),
+                        name: safeFilename.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '),
+                        filename: safeFilename,
+                        description: body.description || '',
+                        type: body.type || 'application/octet-stream',
+                        size: body.size || 0,
+                        uploadedAt: new Date().toISOString(),
+                    };
+                    artifacts.push(newArtifact);
+
+                    const manifestUpdateBody: any = {
+                        message: `Update artifacts manifest: add ${safeFilename}`,
+                        content: btoa(JSON.stringify(artifacts, null, 2)),
+                    };
+                    if (manifestSha) manifestUpdateBody.sha = manifestSha;
+
+                    const manifestUpdateResp = await fetch(manifestUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${env.GITHUB_TOKEN}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Cloudflare-Worker',
+                        },
+                        body: JSON.stringify(manifestUpdateBody),
+                    });
+
+                    if (!manifestUpdateResp.ok) {
+                        const errText = await manifestUpdateResp.text();
+                        return new Response(`File uploaded but manifest update failed: ${errText}`, { status: 500, headers: corsHeaders });
+                    }
+
+                    // 3. Trigger rebuild
+                    await triggerGitHubDispatch(env, 'content_update');
+
+                    return new Response(JSON.stringify({ success: true, artifact: newArtifact }), {
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+
+                if (request.method === 'DELETE') {
+                    const filename = url.searchParams.get('file');
+                    if (!filename) {
+                        return new Response('Missing file parameter', { status: 400, headers: corsHeaders });
+                    }
+
+                    const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+                    // 1. Delete the file from public/artifacts/
+                    const filePath = `public/artifacts/${safeFilename}`;
+                    const fileUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/${filePath}`;
+
+                    const fileResp = await fetch(fileUrl, {
+                        headers: {
+                            'Authorization': `token ${env.GITHUB_TOKEN}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Cloudflare-Worker',
+                        },
+                    });
+
+                    if (fileResp.ok) {
+                        const fileData = await fileResp.json() as any;
+                        await fetch(fileUrl, {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': `token ${env.GITHUB_TOKEN}`,
+                                'Accept': 'application/vnd.github.v3+json',
+                                'User-Agent': 'Cloudflare-Worker',
+                            },
+                            body: JSON.stringify({
+                                message: `Delete artifact: ${safeFilename}`,
+                                sha: fileData.sha,
+                            }),
+                        });
+                    }
+
+                    // 2. Update manifest
+                    const manifestUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/data/artifacts.json`;
+                    const manifestResp = await fetch(manifestUrl, {
+                        headers: {
+                            'Authorization': `token ${env.GITHUB_TOKEN}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Cloudflare-Worker',
+                        },
+                    });
+
+                    if (manifestResp.ok) {
+                        const manifestData = await manifestResp.json() as any;
+                        const artifacts = JSON.parse(atob(manifestData.content));
+                        const filtered = artifacts.filter((a: any) => a.filename !== safeFilename);
+
+                        await fetch(manifestUrl, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `token ${env.GITHUB_TOKEN}`,
+                                'Accept': 'application/vnd.github.v3+json',
+                                'User-Agent': 'Cloudflare-Worker',
+                            },
+                            body: JSON.stringify({
+                                message: `Update artifacts manifest: remove ${safeFilename}`,
+                                content: btoa(JSON.stringify(filtered, null, 2)),
+                                sha: manifestData.sha,
+                            }),
+                        });
+                    }
+
+                    // 3. Trigger rebuild
+                    await triggerGitHubDispatch(env, 'content_update');
+
+                    return new Response(JSON.stringify({ success: true }), {
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
                 }
             }
 

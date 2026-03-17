@@ -2,6 +2,7 @@ import { getPublishedPostsWithContent } from '../lib/notion';
 import { getPublishedProjects } from '../lib/projects';
 import { getPublishedResources } from '../lib/resources';
 import { getResume } from '../lib/resume';
+import { getArtifacts } from '../lib/artifacts';
 import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
@@ -11,7 +12,7 @@ interface SearchItem {
     description: string;
     content?: string;
     url: string;
-    type: 'blog' | 'project' | 'resource' | 'resume';
+    type: 'blog' | 'project' | 'resource' | 'resume' | 'artifact';
     metadata?: string[];
 }
 
@@ -62,6 +63,18 @@ async function main() {
             type: 'resume' as const,
         });
     }
+
+    const artifacts = getArtifacts();
+    searchItems.push(
+        ...artifacts.map(a => ({
+            id: a.id,
+            title: a.name,
+            description: a.description || `${a.filename} (${a.type})`,
+            url: `/artifacts/${a.filename}`,
+            type: 'artifact' as const,
+            metadata: [a.type],
+        })),
+    );
 
     const outDir = join(process.cwd(), 'data');
     mkdirSync(outDir, { recursive: true });

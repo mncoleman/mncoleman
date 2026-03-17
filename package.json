@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
+    "dev:artifacts": "tsx scripts/dev-artifacts-server.ts",
     "generate-search-index": "tsx scripts/generate-search-index.ts",
     "build": "npm run generate-search-index && next build",
     "start": "next start",
