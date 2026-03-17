@@ -1,7 +1,43 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowRight, FileText, BookOpen, Link2, User, Code2 } from 'lucide-react';
+import { ArrowRight, Pen, User, Code2, Link2 } from 'lucide-react';
+
+function ResumeIcon({ className, strokeWidth = 1.5, ...props }: React.SVGProps<SVGSVGElement> & { strokeWidth?: number }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      {/* Rounded portrait rectangle */}
+      <rect x="4" y="2" width="16" height="20" rx="2.5" ry="2.5" />
+      {/* MC initials */}
+      <text
+        x="12"
+        y="8.5"
+        textAnchor="middle"
+        fill="currentColor"
+        stroke="none"
+        fontSize="5"
+        fontWeight="700"
+        fontFamily="system-ui, sans-serif"
+      >
+        MC
+      </text>
+      {/* Content lines */}
+      <line x1="8" y1="12" x2="16" y2="12" />
+      <line x1="8" y1="15" x2="16" y2="15" />
+      <line x1="8" y1="18" x2="13" y2="18" />
+    </svg>
+  );
+}
 import { motion } from 'motion/react';
 import DarkVeil from '@/components/ui/dark-veil';
 import GlassCube from '@/components/ui/glass-cube';
@@ -38,7 +74,7 @@ const bentoCards = [
     description:
       'Thoughts on technology, life, and sometimes just random things.',
     label: 'Articles',
-    icon: BookOpen,
+    icon: Pen,
     span: 'md:col-span-1 md:row-span-1',
     link: '/blog',
     col: 0,
@@ -58,7 +94,7 @@ const bentoCards = [
     title: 'Resume',
     description: 'Professional experience and qualifications.',
     label: 'Career',
-    icon: FileText,
+    icon: ResumeIcon,
     span: 'md:col-span-1 md:row-span-1',
     link: '/resume',
     col: 2,
@@ -93,7 +129,7 @@ function CardContent({ card }: { card: (typeof bentoCards)[number] }) {
             <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
-        <card.icon className="absolute bottom-8 right-8 h-16 w-16 text-muted-foreground/10 group-hover:text-primary/20 transition-colors" />
+        <card.icon className="absolute bottom-8 right-8 h-10 w-10 text-muted-foreground/10 group-hover:text-primary/20 transition-colors" strokeWidth={1.5} />
       </TransitionLink>
     </motion.div>
   );
@@ -215,7 +251,7 @@ function MobileStack() {
                   <ArrowRight className="h-4 w-4" />
                 </div>
               </div>
-              <card.icon className="absolute bottom-6 right-6 h-12 w-12 text-muted-foreground/10" />
+              <card.icon className="absolute bottom-6 right-6 h-8 w-8 text-muted-foreground/10" strokeWidth={1.5} />
             </TransitionLink>
           </motion.div>
         );

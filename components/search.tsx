@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search as SearchIcon, FileText, Briefcase, Link as LinkIcon, User, File, X, Command } from 'lucide-react';
+import { Search as SearchIcon, Pen, Briefcase, Link as LinkIcon, ContactRound, File, X, Command } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createPortal } from 'react-dom';
 
@@ -114,12 +114,12 @@ export function Search({ items }: SearchProps) {
 
     const getIcon = (type: SearchItem['type']) => {
         switch (type) {
-            case 'blog': return <FileText className="w-4 h-4" />;
+            case 'blog': return <Pen className="w-4 h-4" />;
             case 'project': return <Briefcase className="w-4 h-4" />;
             case 'resource': return <LinkIcon className="w-4 h-4" />;
-            case 'resume': return <User className="w-4 h-4" />;
+            case 'resume': return <ContactRound className="w-4 h-4" />;
             case 'artifact': return <File className="w-4 h-4" />;
-            default: return <FileText className="w-4 h-4" />;
+            default: return <File className="w-4 h-4" />;
         }
     };
 

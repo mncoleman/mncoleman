@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { BookOpen, Calendar, Filter, X, ArrowRight } from 'lucide-react';
+import { Pen, Calendar, Filter, X, ArrowRight } from 'lucide-react';
 import { Post } from '@/lib/blog';
 import { format } from 'date-fns';
 import { PageEntrance } from '@/components/page-entrance';
@@ -82,7 +82,7 @@ export default function BlogPageClient({ initialPosts, allTags }: BlogPageClient
                     >
                         <div className="flex justify-between items-start mb-4">
                             <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
-                                <BookOpen className="h-5 w-5" />
+                                <Pen className="h-5 w-5" />
                             </div>
                             {post.featured && (
                                 <span className="px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
