@@ -118,8 +118,7 @@ export function Search({ items }: SearchProps) {
             case 'project': return <Briefcase className="w-4 h-4" />;
             case 'resource': return <LinkIcon className="w-4 h-4" />;
             case 'resume': return <User className="w-4 h-4" />;
-            case 'artifact':
-            case 'artifacts': return <File className="w-4 h-4" />;
+            case 'artifact': return <File className="w-4 h-4" />;
             default: return <FileText className="w-4 h-4" />;
         }
     };
