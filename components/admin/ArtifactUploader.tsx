@@ -200,7 +200,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
             }
 
             setMessage({ type: 'success', text: `"${filename}" deleted.${IS_DEV ? '' : ' A rebuild will be triggered.'}` });
-            await fetchArtifacts();
+            setArtifacts(prev => prev.filter(a => a.filename !== filename));
         } catch (e: any) {
             setMessage({ type: 'error', text: e.message });
         } finally {
@@ -253,9 +253,10 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                 throw new Error(errText || 'Update failed');
             }
 
+            const resData = await res.json();
             setMessage({ type: 'success', text: `"${artifact.filename}" updated.${IS_DEV ? '' : ' A rebuild will be triggered.'}` });
+            setArtifacts(prev => prev.map(a => a.id === artifact.id ? { ...a, name: editName, description: editDesc, ...(editFile ? { type: editFile.type || a.type, size: editFile.size, uploadedAt: new Date().toISOString() } : {}) } : a));
             cancelEdit();
-            await fetchArtifacts();
         } catch (e: any) {
             setMessage({ type: 'error', text: e.message });
         } finally {
