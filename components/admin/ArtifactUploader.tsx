@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud } from 'lucide-react';
+import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw } from 'lucide-react';
 
 const IS_DEV = process.env.NODE_ENV === 'development';
 
@@ -38,13 +38,21 @@ function formatFileSize(bytes: number): string {
 }
 
 function getApiUrl(workerUrl: string, path: string) {
-    // In dev mode, use the standalone dev artifacts server
     if (IS_DEV) return `http://localhost:3001/api/artifacts${path}`;
     return `${workerUrl}/api/artifacts${path}`;
 }
 
+function apiHeaders(extra?: Record<string, string>) {
+    return {
+        'Content-Type': 'application/json',
+        ...(IS_DEV ? {} : { 'X-Requested-With': 'mncoleman-admin' }),
+        ...extra,
+    };
+}
+
 export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
-    const [file, setFile] = useState<File | null>(null);
+    const [file, setFile] = useState<globalThis.File | null>(null);
+    const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [uploading, setUploading] = useState(false);
     const [deleting, setDeleting] = useState<string | null>(null);
@@ -52,7 +60,13 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
     const [artifacts, setArtifacts] = useState<ArtifactEntry[]>([]);
     const [loadingList, setLoadingList] = useState(true);
     const [isDragging, setIsDragging] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editName, setEditName] = useState('');
+    const [editDesc, setEditDesc] = useState('');
+    const [editFile, setEditFile] = useState<globalThis.File | null>(null);
+    const [saving, setSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const editFileInputRef = useRef<HTMLInputElement>(null);
     const dragCounterRef = useRef(0);
 
     useEffect(() => {
@@ -77,10 +91,14 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         }
     };
 
-    const handleFileSelect = useCallback((selectedFile: File) => {
+    const handleFileSelect = useCallback((selectedFile: globalThis.File) => {
         setFile(selectedFile);
         setMessage(null);
-    }, []);
+        // Auto-fill name from filename if name is empty
+        if (!name) {
+            setName(selectedFile.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '));
+        }
+    }, [name]);
 
     const handleDragEnter = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -116,6 +134,13 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         }
     }, [handleFileSelect]);
 
+    const fileToBase64 = async (f: globalThis.File): Promise<string> => {
+        const arrayBuffer = await f.arrayBuffer();
+        return btoa(
+            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+    };
+
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!file) return;
@@ -124,20 +149,15 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         setMessage(null);
 
         try {
-            const arrayBuffer = await file.arrayBuffer();
-            const base64 = btoa(
-                new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-            );
+            const base64 = await fileToBase64(file);
 
             const res = await fetch(getApiUrl(workerUrl, ''), {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(IS_DEV ? {} : { 'X-Requested-With': 'mncoleman-admin' }),
-                },
+                headers: apiHeaders(),
                 credentials: 'include',
                 body: JSON.stringify({
                     filename: file.name,
+                    name: name || undefined,
                     content: base64,
                     type: file.type || 'application/octet-stream',
                     size: file.size,
@@ -152,6 +172,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
 
             setMessage({ type: 'success', text: `"${file.name}" uploaded successfully!${IS_DEV ? '' : ' A rebuild will be triggered.'}` });
             setFile(null);
+            setName('');
             setDescription('');
             if (fileInputRef.current) fileInputRef.current.value = '';
             await fetchArtifacts();
@@ -184,6 +205,61 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
             setMessage({ type: 'error', text: e.message });
         } finally {
             setDeleting(null);
+        }
+    };
+
+    const startEdit = (artifact: ArtifactEntry) => {
+        setEditingId(artifact.id);
+        setEditName(artifact.name);
+        setEditDesc(artifact.description);
+        setEditFile(null);
+        setMessage(null);
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setEditName('');
+        setEditDesc('');
+        setEditFile(null);
+        if (editFileInputRef.current) editFileInputRef.current.value = '';
+    };
+
+    const handleSaveEdit = async (artifact: ArtifactEntry) => {
+        setSaving(true);
+        setMessage(null);
+
+        try {
+            const body: any = {
+                filename: artifact.filename,
+                name: editName,
+                description: editDesc,
+            };
+
+            if (editFile) {
+                body.content = await fileToBase64(editFile);
+                body.type = editFile.type || 'application/octet-stream';
+                body.size = editFile.size;
+            }
+
+            const res = await fetch(getApiUrl(workerUrl, ''), {
+                method: 'PATCH',
+                headers: apiHeaders(),
+                credentials: 'include',
+                body: JSON.stringify(body),
+            });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || 'Update failed');
+            }
+
+            setMessage({ type: 'success', text: `"${artifact.filename}" updated.${IS_DEV ? '' : ' A rebuild will be triggered.'}` });
+            cancelEdit();
+            await fetchArtifacts();
+        } catch (e: any) {
+            setMessage({ type: 'error', text: e.message });
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -257,6 +333,16 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                     </div>
 
                     <div className="space-y-2">
+                        <Label htmlFor="artifact-name">Name (optional)</Label>
+                        <Input
+                            id="artifact-name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Display name (defaults to filename)"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
                         <Label htmlFor="artifact-desc">Description (optional)</Label>
                         <Input
                             id="artifact-desc"
@@ -291,6 +377,71 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                         <div className="space-y-2">
                             {artifacts.map((artifact) => {
                                 const IconComponent = getFileIcon(artifact.type);
+                                const isEditing = editingId === artifact.id;
+
+                                if (isEditing) {
+                                    return (
+                                        <div
+                                            key={artifact.id}
+                                            className="p-4 rounded-lg border border-primary/30 bg-primary/5 space-y-3"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-medium text-muted-foreground">Editing: {artifact.filename}</span>
+                                                <Button variant="ghost" size="sm" onClick={cancelEdit} className="h-7 w-7 p-0">
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs">Name</Label>
+                                                <Input
+                                                    value={editName}
+                                                    onChange={(e) => setEditName(e.target.value)}
+                                                    className="h-8 text-sm"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs">Description</Label>
+                                                <Input
+                                                    value={editDesc}
+                                                    onChange={(e) => setEditDesc(e.target.value)}
+                                                    placeholder="Brief description"
+                                                    className="h-8 text-sm"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs">Replace file (optional)</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        ref={editFileInputRef}
+                                                        type="file"
+                                                        onChange={(e) => setEditFile(e.target.files?.[0] || null)}
+                                                        className="h-8 text-xs cursor-pointer"
+                                                    />
+                                                    {editFile && (
+                                                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                                            {formatFileSize(editFile.size)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2 pt-1">
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => handleSaveEdit(artifact)}
+                                                    disabled={saving}
+                                                    className="h-8 gap-1.5"
+                                                >
+                                                    {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                                                    Save
+                                                </Button>
+                                                <Button size="sm" variant="ghost" onClick={cancelEdit} className="h-8">
+                                                    Cancel
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
                                 return (
                                     <div
                                         key={artifact.id}
@@ -300,24 +451,34 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                             <IconComponent className="h-4 w-4 text-muted-foreground shrink-0" />
                                             <div className="min-w-0">
                                                 <p className="text-sm font-medium truncate">{artifact.name}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {formatFileSize(artifact.size)} - {artifact.filename}
+                                                <p className="text-xs text-muted-foreground truncate">
+                                                    {artifact.description ? `${artifact.description} - ` : ''}{formatFileSize(artifact.size)} - {artifact.filename}
                                                 </p>
                                             </div>
                                         </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleDelete(artifact.filename)}
-                                            disabled={deleting === artifact.filename}
-                                            className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                                        >
-                                            {deleting === artifact.filename ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <Trash2 className="h-4 w-4" />
-                                            )}
-                                        </Button>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => startEdit(artifact)}
+                                                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                                            >
+                                                <Pencil className="h-3.5 w-3.5" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleDelete(artifact.filename)}
+                                                disabled={deleting === artifact.filename}
+                                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            >
+                                                {deleting === artifact.filename ? (
+                                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                ) : (
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                )}
+                                            </Button>
+                                        </div>
                                     </div>
                                 );
                             })}
