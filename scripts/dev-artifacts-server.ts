@@ -25,7 +25,7 @@ function writeManifest(artifacts: any[]) {
 
 function cors(res: ServerResponse) {
     res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
 }
@@ -66,7 +66,7 @@ const server = createServer(async (req, res) => {
 
     if (req.method === 'POST') {
         const body = JSON.parse(await readBody(req));
-        const { filename, content, type, size, description } = body;
+        const { filename, name: bodyName, content, type, size, description } = body;
 
         if (!filename || !content) {
             json(res, { error: 'Missing filename or content' }, 400);
@@ -84,7 +84,7 @@ const server = createServer(async (req, res) => {
 
         const newArtifact = {
             id: crypto.randomUUID(),
-            name: safeFilename.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '),
+            name: bodyName || safeFilename.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '),
             filename: safeFilename,
             description: description || '',
             type: type || 'application/octet-stream',
@@ -96,6 +96,46 @@ const server = createServer(async (req, res) => {
 
         console.log(`Uploaded: ${safeFilename} (${fileBuffer.length} bytes)`);
         json(res, { success: true, artifact: newArtifact });
+        return;
+    }
+
+    if (req.method === 'PATCH') {
+        const body = JSON.parse(await readBody(req));
+        const { filename, name, description, content, type, size } = body;
+
+        if (!filename) {
+            json(res, { error: 'Missing filename' }, 400);
+            return;
+        }
+
+        const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+        // Replace file if new content provided
+        if (content) {
+            mkdirSync(ARTIFACTS_DIR, { recursive: true });
+            const fileBuffer = Buffer.from(content, 'base64');
+            writeFileSync(join(ARTIFACTS_DIR, safeFilename), fileBuffer);
+        }
+
+        // Update manifest metadata
+        const artifacts = readManifest();
+        const idx = artifacts.findIndex((a: any) => a.filename === safeFilename);
+        if (idx === -1) {
+            json(res, { error: 'Artifact not found' }, 404);
+            return;
+        }
+
+        if (name !== undefined) artifacts[idx].name = name;
+        if (description !== undefined) artifacts[idx].description = description;
+        if (content) {
+            artifacts[idx].type = type || artifacts[idx].type;
+            artifacts[idx].size = size || artifacts[idx].size;
+            artifacts[idx].uploadedAt = new Date().toISOString();
+        }
+
+        writeManifest(artifacts);
+        console.log(`Updated: ${safeFilename}`);
+        json(res, { success: true, artifact: artifacts[idx] });
         return;
     }
 
