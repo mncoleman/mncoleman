@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search as SearchIcon, FileText, Briefcase, Link as LinkIcon, User, X, Command } from 'lucide-react';
+import { Search as SearchIcon, FileText, Briefcase, Link as LinkIcon, User, File, X, Command } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createPortal } from 'react-dom';
 
@@ -12,7 +12,7 @@ export interface SearchItem {
     description: string;
     content?: string;
     url: string;
-    type: 'blog' | 'project' | 'resource' | 'resume';
+    type: 'blog' | 'project' | 'resource' | 'resume' | 'artifact';
     metadata?: string[];
 }
 
@@ -118,6 +118,8 @@ export function Search({ items }: SearchProps) {
             case 'project': return <Briefcase className="w-4 h-4" />;
             case 'resource': return <LinkIcon className="w-4 h-4" />;
             case 'resume': return <User className="w-4 h-4" />;
+            case 'artifact':
+            case 'artifacts': return <File className="w-4 h-4" />;
             default: return <FileText className="w-4 h-4" />;
         }
     };
@@ -191,7 +193,7 @@ export function Search({ items }: SearchProps) {
                         <div className="py-4 px-3 space-y-4">
                             <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50 px-1">Quick Links</div>
                             <div className="grid grid-cols-2 gap-2">
-                                {['Blog', 'Projects', 'Resources', 'Resume'].map((label) => (
+                                {['Blog', 'Projects', 'Resources', 'Artifacts', 'Resume'].map((label) => (
                                     <button
                                         key={label}
                                         onClick={() => {

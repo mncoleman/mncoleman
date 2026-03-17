@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, RefreshCw, GitCommit, Database, LogOut } from 'lucide-react';
-import { ContentEditor } from './ContentEditor';
+import { Loader2, RefreshCw, LogOut } from 'lucide-react';
+import { ArtifactUploader } from './ArtifactUploader';
 
 interface AdminDashboardProps {
     user: any;
@@ -45,70 +44,36 @@ export function AdminDashboard({ user, workerUrl, onLogout }: AdminDashboardProp
     };
 
     return (
-        <div className="space-y-6 w-full max-w-4xl mx-auto p-4">
+        <div className="w-full max-w-4xl mx-auto p-4">
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-3xl font-bold">Admin Dashboard</h1>
                     <p className="text-muted-foreground">Welcome back, {user?.name || 'Admin'}</p>
                 </div>
-                <Button variant="outline" onClick={onLogout} className="gap-2">
-                    <LogOut size={16} />
-                    Logout
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => triggerAction('github_dispatch', { event_type: 'rebuild_site' })}
+                        disabled={loading !== null}
+                        className="gap-2"
+                    >
+                        {loading === 'github_dispatch' ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                        Rebuild
+                    </Button>
+                    <Button variant="outline" onClick={onLogout} className="gap-2">
+                        <LogOut size={16} />
+                        Logout
+                    </Button>
+                </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Helper Cards */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Site Management</CardTitle>
-                        <CardDescription>Control build and deployment</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <Button
-                            className="w-full justify-start gap-3"
-                            onClick={() => triggerAction('github_dispatch', { event_type: 'rebuild_site' })}
-                            disabled={loading !== null}
-                        >
-                            {loading === 'github_dispatch' ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-                            Trigger Full Rebuild
-                        </Button>
-                        <p className="text-xs text-muted-foreground">
-                            Triggers a GitHub Actions workflow to rebuild and deploy the site.
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Content Sync</CardTitle>
-                        <CardDescription>Update content from Notion</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <Button
-                            variant="secondary"
-                            className="w-full justify-start gap-3"
-                            onClick={() => triggerAction('github_dispatch', { event_type: 'sync_notion' })}
-                            disabled={loading !== null}
-                        >
-                            {loading === 'sync_notion' ? <Loader2 className="animate-spin" /> : <Database />}
-                            Sync & Deploy
-                        </Button>
-                        <p className="text-xs text-muted-foreground">
-                            Fetches latest data from Notion and triggers a deploy.
-                        </p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Content Editing Section */}
-            <ContentEditor workerUrl={workerUrl} />
 
             {result && (
-                <div className={`p-4 rounded-md border ${result.success ? 'bg-green-500/10 border-green-500/20 text-green-600' : 'bg-red-500/10 border-red-500/20 text-red-600'}`}>
+                <div className={`mb-6 p-4 rounded-md border ${result.success ? 'bg-green-500/10 border-green-500/20 text-green-600' : 'bg-red-500/10 border-red-500/20 text-red-600'}`}>
                     {result.message}
                 </div>
             )}
+
+            <ArtifactUploader workerUrl={workerUrl} />
         </div>
     );
 }

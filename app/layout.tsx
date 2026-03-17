@@ -105,6 +105,9 @@ export default async function RootLayout({
                       <Link href="/resources" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
                         Resources <Kbd>R</Kbd>
                       </Link>
+                      <Link href="/artifacts" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
+                        Artifacts <Kbd>T</Kbd>
+                      </Link>
                       <Link href="/resume" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
                         Resume <Kbd>M</Kbd>
                       </Link>
