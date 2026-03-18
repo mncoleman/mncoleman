@@ -45,26 +45,26 @@ export function AdminDashboard({ user, workerUrl, onLogout }: AdminDashboardProp
 
     return (
         <div className="w-full max-w-4xl mx-auto p-4">
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-                    <p className="text-muted-foreground">Welcome back, {user?.name || 'Admin'}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        onClick={() => triggerAction('github_dispatch', { event_type: 'rebuild_site' })}
-                        disabled={loading !== null}
-                        className="gap-2"
-                    >
-                        {loading === 'github_dispatch' ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                        Rebuild
-                    </Button>
-                    <Button variant="outline" onClick={onLogout} className="gap-2">
+            <div className="mb-8 space-y-4">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+                        <p className="text-muted-foreground">Welcome back, {user?.name || 'Admin'}</p>
+                    </div>
+                    <Button variant="outline" onClick={onLogout} className="gap-2 shrink-0 ml-4">
                         <LogOut size={16} />
                         Logout
                     </Button>
                 </div>
+                <Button
+                    variant="outline"
+                    onClick={() => triggerAction('github_dispatch', { event_type: 'rebuild_site' })}
+                    disabled={loading !== null}
+                    className="gap-2 w-full sm:w-auto"
+                >
+                    {loading === 'github_dispatch' ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                    Rebuild Site
+                </Button>
             </div>
 
             {result && (
