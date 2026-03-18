@@ -7,8 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw } from 'lucide-react';
 
-const IS_DEV = process.env.NODE_ENV === 'development';
-
 interface ArtifactUploaderProps {
     workerUrl: string;
 }
@@ -38,14 +36,13 @@ function formatFileSize(bytes: number): string {
 }
 
 function getApiUrl(workerUrl: string, path: string) {
-    if (IS_DEV) return `http://localhost:3001/api/artifacts${path}`;
     return `${workerUrl}/api/artifacts${path}`;
 }
 
 function apiHeaders(extra?: Record<string, string>) {
     return {
         'Content-Type': 'application/json',
-        ...(IS_DEV ? {} : { 'X-Requested-With': 'mncoleman-admin' }),
+        'X-Requested-With': 'mncoleman-admin',
         ...extra,
     };
 }
@@ -77,7 +74,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         setLoadingList(true);
         try {
             const res = await fetch(getApiUrl(workerUrl, ''), {
-                headers: IS_DEV ? {} : { 'X-Requested-With': 'mncoleman-admin' },
+                headers: { 'X-Requested-With': 'mncoleman-admin' },
                 credentials: 'include',
             });
             if (res.ok) {
@@ -172,7 +169,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
 
             const resData = await res.json();
             setArtifacts(prev => [...prev, resData.artifact]);
-            setMessage({ type: 'success', text: `"${file.name}" uploaded successfully!${IS_DEV ? '' : ' A rebuild will be triggered.'}` });
+            setMessage({ type: 'success', text: `"${file.name}" uploaded successfully! A rebuild will be triggered.` });
             setFile(null);
             setName('');
             setDescription('');
@@ -191,7 +188,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         try {
             const res = await fetch(getApiUrl(workerUrl, `?file=${encodeURIComponent(filename)}`), {
                 method: 'DELETE',
-                headers: IS_DEV ? {} : { 'X-Requested-With': 'mncoleman-admin' },
+                headers: { 'X-Requested-With': 'mncoleman-admin' },
                 credentials: 'include',
             });
 
@@ -200,7 +197,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                 throw new Error(errText || 'Delete failed');
             }
 
-            setMessage({ type: 'success', text: `"${filename}" deleted.${IS_DEV ? '' : ' A rebuild will be triggered.'}` });
+            setMessage({ type: 'success', text: `"${filename}" deleted. A rebuild will be triggered.` });
             setArtifacts(prev => prev.filter(a => a.filename !== filename));
         } catch (e: any) {
             setMessage({ type: 'error', text: e.message });
@@ -255,7 +252,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
             }
 
             const resData = await res.json();
-            setMessage({ type: 'success', text: `"${artifact.filename}" updated.${IS_DEV ? '' : ' A rebuild will be triggered.'}` });
+            setMessage({ type: 'success', text: `"${artifact.filename}" updated. A rebuild will be triggered.` });
             setArtifacts(prev => prev.map(a => a.id === artifact.id ? { ...a, name: editName, description: editDesc, ...(editFile ? { type: editFile.type || a.type, size: editFile.size, uploadedAt: new Date().toISOString() } : {}) } : a));
             cancelEdit();
         } catch (e: any) {
@@ -269,7 +266,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         <Card>
             <CardHeader>
                 <CardTitle>Artifacts</CardTitle>
-                <CardDescription>Upload files to the artifacts page. {IS_DEV ? 'Dev mode: files saved locally.' : 'Files are committed to the repo and served statically.'}</CardDescription>
+                <CardDescription>Upload files to the artifacts page. Files are committed to the repo and served statically.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 {/* Upload Form */}
