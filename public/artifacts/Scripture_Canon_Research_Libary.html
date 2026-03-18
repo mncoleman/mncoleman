@@ -72,7 +72,7 @@ a:hover{color:var(--color-primary-hover);text-decoration:underline}
 .filter-btn.active{background:var(--color-primary);border-color:var(--color-primary);color:white}
 
 .main-layout{max-width:1200px;margin:0 auto;padding:2rem clamp(1rem,4vw,3rem);display:grid;grid-template-columns:220px 1fr;gap:2rem;align-items:start}
-@media(max-width:768px){.main-layout{grid-template-columns:1fr}.sidebar{display:none}}
+.section-block.section-hidden{display:none}
 .sidebar{position:sticky;top:130px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:1rem}
 .sidebar-title{font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--color-text-faint);margin-bottom:.75rem;padding:0 .25rem}
 .sidebar-nav{list-style:none}
@@ -119,6 +119,34 @@ a:hover{color:var(--color-primary-hover);text-decoration:underline}
 #results-count{font-size:var(--text-xs);color:var(--color-text-faint);padding:.5rem 0 1.5rem}
 .no-results{text-align:center;padding:3rem;color:var(--color-text-muted);display:none}
 footer{text-align:center;padding:2rem 1rem;border-top:1px solid var(--color-border);color:var(--color-text-faint);font-size:var(--text-xs);margin-top:2rem}
+@media(max-width:768px){
+  .main-layout{grid-template-columns:1fr;padding:1.25rem .75rem}
+  .sidebar{display:none}
+  .site-header{padding:0 .75rem}
+  .header-inner{height:auto;flex-wrap:wrap;padding:.5rem 0;gap:.5rem}
+  .logo{font-size:.95rem;gap:.5rem}
+  .logo svg{width:20px;height:20px}
+  .header-actions{width:100%;gap:.5rem}
+  #search{width:100%;flex:1}
+  #search:focus{width:100%}
+  .hero{padding:2rem .75rem}
+  .hero h1{font-size:var(--text-lg)}
+  .hero p{font-size:var(--text-sm);margin-bottom:1.25rem}
+  .stats{gap:1.5rem}
+  .legend{padding:.75rem;gap:.4rem .75rem}
+  .filter-bar{top:auto;position:relative;padding:.5rem .75rem;-webkit-overflow-scrolling:touch}
+  .filter-inner{gap:.35rem}
+  .filter-btn{padding:.35rem .6rem;font-size:.7rem}
+  .resource-card{display:flex;flex-direction:column;gap:.5rem}
+  .resource-card.hidden{display:none}
+  .card-link{justify-content:center;width:100%;padding:.6rem;text-align:center}
+  .card-stance{grid-column:auto}
+  .card-top{flex-wrap:wrap}
+  .section-header{flex-wrap:wrap;gap:.5rem}
+  .section-header h2{font-size:var(--text-sm)}
+  .section-header small{margin-left:0;width:100%}
+  .section-icon{width:28px;height:28px}
+}
 </style>
 </head>
 <body>
@@ -958,6 +986,7 @@ footer{text-align:center;padding:2rem 1rem;border-top:1px solid var(--color-bord
   });
   const cards=document.querySelectorAll('.resource-card');
   const fbtns=document.querySelectorAll('.filter-btn');
+  const sections=document.querySelectorAll('.section-block');
   const si=document.getElementById('search');
   const noRes=document.getElementById('no-results');
   const countEl=document.getElementById('results-count');
@@ -984,6 +1013,11 @@ footer{text-align:center;padding:2rem 1rem;border-top:1px solid var(--color-bord
       if(q) ps=title.includes(q)||desc.includes(q)||tags.includes(q)||cat.includes(q);
       c.classList.toggle('hidden',!(pf&&ps));
       if(pf&&ps) vis++;
+    });
+    // Hide sections that have no visible cards
+    sections.forEach(s=>{
+      const visibleCards=s.querySelectorAll('.resource-card:not(.hidden)');
+      s.classList.toggle('section-hidden',visibleCards.length===0);
     });
     countEl.textContent=(q||cf!=='all')?`Showing ${vis} of ${cards.length} resources`:'';
     noRes.style.display=vis===0?'block':'none';
