@@ -444,39 +444,42 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                 return (
                                     <div
                                         key={artifact.id}
-                                        className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background/50"
+                                        className="p-3 rounded-lg border border-border/50 bg-background/50 space-y-2"
                                     >
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <IconComponent className="h-4 w-4 text-muted-foreground shrink-0" />
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-medium truncate">{artifact.name}</p>
-                                                <p className="text-xs text-muted-foreground truncate">
-                                                    {artifact.description ? `${artifact.description} - ` : ''}{formatFileSize(artifact.size)} - {artifact.filename}
-                                                </p>
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex items-start gap-3 min-w-0">
+                                                <IconComponent className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium break-words">{artifact.name}</p>
+                                                    <p className="text-xs text-muted-foreground break-words">
+                                                        {artifact.description ? `${artifact.description} - ` : ''}{formatFileSize(artifact.size)}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground break-all">{artifact.filename}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-1 shrink-0">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => startEdit(artifact)}
-                                                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                                            >
-                                                <Pencil className="h-3.5 w-3.5" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleDelete(artifact.filename)}
-                                                disabled={deleting === artifact.filename}
-                                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                            >
-                                                {deleting === artifact.filename ? (
-                                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                ) : (
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                )}
-                                            </Button>
+                                            <div className="flex items-center gap-1 shrink-0">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => startEdit(artifact)}
+                                                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                                                >
+                                                    <Pencil className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleDelete(artifact.filename)}
+                                                    disabled={deleting === artifact.filename}
+                                                    className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                >
+                                                    {deleting === artifact.filename ? (
+                                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                    ) : (
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    )}
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                 );
