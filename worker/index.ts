@@ -718,7 +718,34 @@ export default {
                     }
                 }
 
-                // Bot API lookup failed or unavailable — return unverified
+                // Bot API failed — fall back to public t.me profile page (OG tags)
+                try {
+                    const profileResp = await fetch(`https://t.me/${username}`, {
+                        headers: { 'User-Agent': 'Cloudflare-Worker' },
+                    });
+                    if (profileResp.ok) {
+                        const html = await profileResp.text();
+                        const ogTitle = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/)?.[1];
+                        const ogImage = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/)?.[1];
+
+                        if (ogTitle && ogTitle !== 'Telegram') {
+                            const nameParts = ogTitle.split(' ');
+                            return new Response(JSON.stringify({
+                                found: true,
+                                username,
+                                firstName: nameParts[0] || null,
+                                lastName: nameParts.slice(1).join(' ') || null,
+                                photoUrl: ogImage || null,
+                            }), {
+                                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error('t.me profile lookup failed:', e);
+                }
+
+                // All lookups failed — return unverified
                 return new Response(JSON.stringify({
                     found: false,
                     username,
