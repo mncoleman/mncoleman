@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { TelegramLoginButton } from '@/components/admin/TelegramLoginButton';
 import { AdminDashboard } from '@/components/admin/AdminDashboard';
 import { Loader2 } from 'lucide-react';
+import { setSessionToken, clearSessionToken, authHeaders } from '@/lib/admin-auth';
 
 const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:8787';
 
@@ -13,6 +14,16 @@ export default function AdminPage() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        // Check for session token from OIDC callback (URL fragment for mobile compatibility)
+        const hash = window.location.hash;
+        if (hash.includes('session_token=')) {
+            const token = hash.split('session_token=')[1];
+            if (token) {
+                setSessionToken(token);
+            }
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+
         // Check for auth error from OIDC callback redirect
         const params = new URLSearchParams(window.location.search);
         const authError = params.get('auth_error');
@@ -29,12 +40,12 @@ export default function AdminPage() {
             window.history.replaceState({}, '', window.location.pathname);
         }
 
-        // Check for existing session via HttpOnly cookie
+        // Check for existing session via cookie or stored token
         const checkSession = async () => {
             try {
                 const res = await fetch(`${WORKER_URL}/auth/me`, {
                     credentials: 'include',
-                    headers: { 'X-Requested-With': 'mncoleman-admin' }
+                    headers: authHeaders()
                 });
 
                 if (res.ok) {
@@ -56,11 +67,12 @@ export default function AdminPage() {
             await fetch(`${WORKER_URL}/auth/logout`, {
                 method: 'POST',
                 credentials: 'include',
-                headers: { 'X-Requested-With': 'mncoleman-admin' }
+                headers: authHeaders()
             });
         } catch (e) {
             console.error('Logout failed', e);
         }
+        clearSessionToken();
         setSession(null);
     };
 

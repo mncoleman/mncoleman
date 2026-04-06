@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, LogOut } from 'lucide-react';
 import { ArtifactUploader } from './ArtifactUploader';
+import { authHeaders } from '@/lib/admin-auth';
 
 interface AdminDashboardProps {
     user: any;
@@ -21,10 +22,7 @@ export function AdminDashboard({ user, workerUrl, onLogout }: AdminDashboardProp
         try {
             const res = await fetch(`${workerUrl}/api/trigger`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'mncoleman-admin'
-                },
+                headers: authHeaders({ 'Content-Type': 'application/json' }),
                 credentials: 'include',
                 body: JSON.stringify({ action, data })
             });
