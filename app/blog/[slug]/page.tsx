@@ -58,7 +58,19 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
       </header>
 
       <div className="prose prose-neutral dark:prose-invert max-w-none">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content || ''}</ReactMarkdown>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            a: ({ href, children, ...props }) => {
+              const isExternal = href?.startsWith('http');
+              return isExternal ? (
+                <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
+              ) : (
+                <a href={href} {...props}>{children}</a>
+              );
+            },
+          }}
+        >{post.content || ''}</ReactMarkdown>
       </div>
     </article>
   );
