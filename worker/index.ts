@@ -606,22 +606,30 @@ export default {
 
                 if (request.method === 'GET') {
                     const userList = await getUserList(env.ADMIN_USERS);
-                    const users: (AdminUser & { role: string })[] = [];
+                    const users: any[] = [];
 
-                    // Owner is always first
+                    // Owner — enrich with cached profile
+                    const ownerUsername = authPayload.username || '';
+                    const ownerProfile = ownerUsername
+                        ? await getCachedProfile(env.ADMIN_USERS, ownerUsername)
+                        : null;
                     users.push({
-                        username: authPayload.username || '',
+                        username: ownerUsername,
                         sub: authPayload.id,
-                        firstName: authPayload.name,
+                        firstName: ownerProfile?.firstName || authPayload.name,
                         status: 'active',
                         role: 'super_admin',
                         invitedAt: '',
                         claimedAt: '',
+                        photoUrl: ownerProfile?.photoUrl || null,
                     });
 
                     for (const uname of userList) {
                         const user = await getUser(env.ADMIN_USERS, uname);
-                        if (user) users.push(user);
+                        if (user) {
+                            const profile = await getCachedProfile(env.ADMIN_USERS, uname);
+                            users.push({ ...user, photoUrl: profile?.photoUrl || null });
+                        }
                     }
 
                     return new Response(JSON.stringify({ users }), {
@@ -1066,7 +1074,37 @@ async function removeUser(kv: KVNamespace, username: string): Promise<void> {
         await kv.delete(`sub:${user.sub}`);
     }
     await kv.delete(`user:${username}`);
+    await kv.delete(`profile:${username}`);
     const list = await getUserList(kv);
     const filtered = list.filter(u => u !== username);
     await kv.put('user_list', JSON.stringify(filtered));
+}
+
+async function getCachedProfile(kv: KVNamespace, username: string): Promise<{ firstName: string; photoUrl: string | null } | null> {
+    const cached = await kv.get(`profile:${username}`);
+    if (cached) return JSON.parse(cached);
+
+    // Fetch from t.me public profile
+    try {
+        const resp = await fetch(`https://t.me/${username}`, {
+            headers: { 'User-Agent': 'Cloudflare-Worker' },
+        });
+        if (!resp.ok) return null;
+
+        const html = await resp.text();
+        const ogTitle = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/)?.[1];
+        const ogImage = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/)?.[1];
+
+        if (!ogTitle || ogTitle === 'Telegram') return null;
+
+        const profile = {
+            firstName: ogTitle,
+            photoUrl: ogImage || null,
+        };
+        // Cache for 7 days
+        await kv.put(`profile:${username}`, JSON.stringify(profile), { expirationTtl: 60 * 60 * 24 * 7 });
+        return profile;
+    } catch {
+        return null;
+    }
 }
