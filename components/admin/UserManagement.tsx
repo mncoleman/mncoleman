@@ -19,6 +19,7 @@ interface AdminUser {
     role: string;
     invitedAt: string;
     claimedAt: string | null;
+    photoUrl?: string | null;
 }
 
 interface LookupResult {
@@ -245,12 +246,24 @@ export function UserManagement({ workerUrl }: UserManagementProps) {
                                 className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background/50"
                             >
                                 <div className="flex items-center gap-3 min-w-0">
-                                    {user.role === 'super_admin' ? (
-                                        <Shield className="h-4 w-4 text-primary shrink-0" />
-                                    ) : user.status === 'invited' ? (
-                                        <Clock className="h-4 w-4 text-amber-500 shrink-0" />
+                                    {user.photoUrl ? (
+                                        <img
+                                            src={user.photoUrl}
+                                            alt={user.username}
+                                            className="h-8 w-8 rounded-full object-cover shrink-0"
+                                        />
                                     ) : (
-                                        <div className="h-4 w-4 shrink-0" />
+                                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                                            {user.role === 'super_admin' ? (
+                                                <Shield className="h-4 w-4 text-primary" />
+                                            ) : user.status === 'invited' ? (
+                                                <Clock className="h-4 w-4 text-amber-500" />
+                                            ) : (
+                                                <span className="text-xs font-semibold text-muted-foreground">
+                                                    {(user.firstName || user.username || '?')[0]?.toUpperCase()}
+                                                </span>
+                                            )}
+                                        </div>
                                     )}
                                     <div className="min-w-0">
                                         <p className="text-sm font-medium">
