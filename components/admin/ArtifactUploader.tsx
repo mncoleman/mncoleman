@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw } from 'lucide-react';
+import { authHeaders } from '@/lib/admin-auth';
 
 interface ArtifactUploaderProps {
     workerUrl: string;
@@ -40,11 +41,7 @@ function getApiUrl(workerUrl: string, path: string) {
 }
 
 function apiHeaders(extra?: Record<string, string>) {
-    return {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'mncoleman-admin',
-        ...extra,
-    };
+    return authHeaders({ 'Content-Type': 'application/json', ...extra });
 }
 
 export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
@@ -74,7 +71,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         setLoadingList(true);
         try {
             const res = await fetch(getApiUrl(workerUrl, ''), {
-                headers: { 'X-Requested-With': 'mncoleman-admin' },
+                headers: authHeaders(),
                 credentials: 'include',
             });
             if (res.ok) {
@@ -188,7 +185,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         try {
             const res = await fetch(getApiUrl(workerUrl, `?file=${encodeURIComponent(filename)}`), {
                 method: 'DELETE',
-                headers: { 'X-Requested-With': 'mncoleman-admin' },
+                headers: authHeaders(),
                 credentials: 'include',
             });
 

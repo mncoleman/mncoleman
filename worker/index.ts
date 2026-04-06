@@ -183,8 +183,9 @@ export default {
                 const sessionToken = await signJwt({ id: idPayload.sub, name }, env.JWT_SECRET);
 
 
+                // Pass token via both cookie (desktop) and URL fragment (mobile fallback)
                 const headers = new Headers();
-                headers.append('Location', frontendAdmin);
+                headers.append('Location', `${frontendAdmin}#session_token=${sessionToken}`);
                 headers.append('Set-Cookie', 'oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
                 headers.append('Set-Cookie', `admin_token=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`);
 
