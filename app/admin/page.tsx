@@ -6,7 +6,6 @@ import { AdminDashboard } from '@/components/admin/AdminDashboard';
 import { Loader2 } from 'lucide-react';
 
 const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:8787';
-const BOT_NAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_NAME || '';
 
 export default function AdminPage() {
     const [session, setSession] = useState<{ user: any } | null>(null);
@@ -14,6 +13,22 @@ export default function AdminPage() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        // Check for auth error from OIDC callback redirect
+        const params = new URLSearchParams(window.location.search);
+        const authError = params.get('auth_error');
+        if (authError) {
+            const messages: Record<string, string> = {
+                missing_params: 'Authentication was interrupted.',
+                expired_session: 'Login session expired. Please try again.',
+                invalid_state: 'Invalid login session. Please try again.',
+                token_exchange_failed: 'Authentication failed. Please try again.',
+                invalid_token: 'Invalid authentication response.',
+                unauthorized: 'You are not authorized to access this area.',
+            };
+            setError(messages[authError] || 'Authentication failed.');
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+
         // Check for existing session via HttpOnly cookie
         const checkSession = async () => {
             try {
@@ -25,47 +40,16 @@ export default function AdminPage() {
                 if (res.ok) {
                     const data = await res.json();
                     setSession({ user: data.user });
-                } else {
-                    setSession(null);
+                    setError(null);
                 }
             } catch (e) {
                 console.error('Session check failed', e);
-                setSession(null);
             } finally {
                 setLoading(false);
             }
         };
         checkSession();
     }, []);
-
-    const handleLogin = async (user: any) => {
-        setLoading(true);
-        setError(null);
-
-        try {
-            const res = await fetch(`${WORKER_URL}/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'mncoleman-admin'
-                },
-                body: JSON.stringify(user),
-                credentials: 'include',
-            });
-
-            if (!res.ok) {
-                throw new Error('Authentication failed');
-            }
-
-            const data = await res.json();
-            setSession({ user: data.user });
-        } catch (err) {
-            setError('Failed to log in. You may not be authorized.');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleLogout = async () => {
         try {
@@ -109,10 +93,7 @@ export default function AdminPage() {
                         </div>
                     )}
 
-                    <TelegramLoginButton
-                        botName={BOT_NAME}
-                        onAuth={handleLogin}
-                    />
+                    <TelegramLoginButton workerUrl={WORKER_URL} />
                 </div>
             )}
         </div>

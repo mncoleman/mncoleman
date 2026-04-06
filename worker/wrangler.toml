@@ -2,12 +2,18 @@ name = "mncoleman-admin-auth"
 main = "index.ts"
 compatibility_date = "2024-04-01"
 
-# Environment variables (secrets should be set via `wrangler secret put`)
-# ALLOWED_USER_ID is stored as a Wrangler secret (set via `wrangler secret put ALLOWED_USER_ID`)
+# Public environment variables
+# Secrets (set via `wrangler secret put`):
+#   TELEGRAM_CLIENT_SECRET  — OIDC client secret from BotFather
+#   JWT_SECRET              — Signs session JWTs
+#   ALLOWED_USER_ID         — Your Telegram user ID
+#   GITHUB_TOKEN            — GitHub API access
 [vars]
+TELEGRAM_BOT_ID = "8681257901"  # mncolemandotcombot — OIDC client_id
+FRONTEND_URL = "https://mncoleman.com"
 GITHUB_REPO_OWNER = "mncoleman"
 GITHUB_REPO_NAME = "mncoleman"
-N8N_WEBHOOK_URL = "" # Optional webhook URL for n8n workflows
+N8N_WEBHOOK_URL = ""
 
 # KV Namespace binding (optional, for session storage if needed later)
 # [[kv_namespaces]]

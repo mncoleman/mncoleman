@@ -14,13 +14,15 @@ function checkRateLimit(key: string, maxAttempts: number, windowMs: number): boo
 }
 
 export interface Env {
-    BOT_TOKEN: string; // Secret
-    JWT_SECRET: string; // Secret
-    ALLOWED_USER_ID: string; // Your Telegram ID
-    GITHUB_TOKEN: string; // Secret
+    TELEGRAM_BOT_ID: string;        // Bot's numeric ID — OIDC client_id
+    TELEGRAM_CLIENT_SECRET: string;  // From BotFather — OIDC client_secret
+    JWT_SECRET: string;              // Signs session JWTs
+    ALLOWED_USER_ID: string;         // Your Telegram user ID
+    FRONTEND_URL: string;            // e.g. https://mncoleman.com
+    GITHUB_TOKEN: string;
     GITHUB_REPO_OWNER: string;
     GITHUB_REPO_NAME: string;
-    N8N_WEBHOOK_URL: string; // Optional
+    N8N_WEBHOOK_URL: string;
 }
 
 export default {
@@ -81,46 +83,103 @@ export default {
                 return new Response('Admin Auth Worker Running', { status: 200, headers: corsHeaders });
             }
 
-            // Login endpoint
-            if (url.pathname === '/auth/login' && request.method === 'POST') {
-                // Rate limiting: max 5 attempts per IP per 60 seconds
+            // Login: redirect to Telegram OIDC with PKCE
+            if (url.pathname === '/auth/login' && request.method === 'GET') {
                 const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-                if (!checkRateLimit(`login:${ip}`, 5, 60_000)) {
-                    return new Response('Too Many Requests', { status: 429, headers: { ...corsHeaders, 'Retry-After': '60' } });
+                if (!checkRateLimit(`login:${ip}`, 10, 60_000)) {
+                    return new Response('Too Many Requests', { status: 429, headers: { 'Retry-After': '60' } });
                 }
 
-                try {
-                    const body = await request.json() as any;
-                    const isValid = await verifyTelegramAuth(body, env.BOT_TOKEN);
+                const codeVerifier = generateCodeVerifier();
+                const codeChallenge = await generateCodeChallenge(codeVerifier);
+                const state = crypto.randomUUID();
 
-                    if (!isValid) {
-                        return new Response('Invalid authentication', { status: 401, headers: corsHeaders });
-                    }
+                const oauthData = JSON.stringify({ codeVerifier, state });
+                const signedCookie = await signOauthData(oauthData, env.JWT_SECRET);
 
-                    // Handle string vs number comparison safely
-                    if (String(body.id) !== String(env.ALLOWED_USER_ID)) {
-                        return new Response('Unauthorized', { status: 403, headers: corsHeaders });
-                    }
+                const redirectUri = `${url.origin}/auth/callback`;
+                const params = new URLSearchParams({
+                    client_id: env.TELEGRAM_BOT_ID,
+                    scope: 'openid profile',
+                    response_type: 'code',
+                    redirect_uri: redirectUri,
+                    state,
+                    code_challenge: codeChallenge,
+                    code_challenge_method: 'S256',
+                });
 
-                    // Issue JWT
-                    const token = await signJwt({ id: body.id, name: body.first_name }, env.JWT_SECRET);
+                return new Response(null, {
+                    status: 302,
+                    headers: {
+                        'Location': `https://oauth.telegram.org/auth?${params}`,
+                        'Set-Cookie': `oauth_state=${signedCookie}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=300`,
+                    },
+                });
+            }
 
-                    // Set Secure, httpOnly Cookie
-                    const cookie = `admin_token=${token}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`;
+            // OIDC callback: exchange code for tokens, verify, set session
+            if (url.pathname === '/auth/callback' && request.method === 'GET') {
+                const frontendAdmin = `${env.FRONTEND_URL || 'https://mncoleman.com'}/admin`;
+                const code = url.searchParams.get('code');
+                const state = url.searchParams.get('state');
 
-                    return new Response(JSON.stringify({
-                        user: { name: body.first_name, id: body.id }
-                    }), {
-                        headers: {
-                            ...corsHeaders,
-                            'Content-Type': 'application/json',
-                            'Set-Cookie': cookie
-                        }
-                    });
-                } catch (e) {
-                    console.error('Login error:', e);
-                    return new Response('Internal Server Error', { status: 500, headers: corsHeaders });
+                if (!code || !state) {
+                    return Response.redirect(`${frontendAdmin}?auth_error=missing_params`, 302);
                 }
+
+                const oauthCookie = getCookieValue(request, 'oauth_state');
+                if (!oauthCookie) {
+                    return Response.redirect(`${frontendAdmin}?auth_error=expired_session`, 302);
+                }
+
+                const oauthData = await verifyOauthData(oauthCookie, env.JWT_SECRET);
+                if (!oauthData || oauthData.state !== state) {
+                    return Response.redirect(`${frontendAdmin}?auth_error=invalid_state`, 302);
+                }
+
+                // Exchange authorization code for tokens
+                const redirectUri = `${url.origin}/auth/callback`;
+                const tokenResponse = await fetch('https://oauth.telegram.org/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        grant_type: 'authorization_code',
+                        code,
+                        redirect_uri: redirectUri,
+                        client_id: env.TELEGRAM_BOT_ID,
+                        client_secret: env.TELEGRAM_CLIENT_SECRET,
+                        code_verifier: oauthData.codeVerifier,
+                    }),
+                });
+
+                if (!tokenResponse.ok) {
+                    console.error('Token exchange failed:', await tokenResponse.text());
+                    return Response.redirect(`${frontendAdmin}?auth_error=token_exchange_failed`, 302);
+                }
+
+                const tokens = await tokenResponse.json() as { id_token: string };
+
+                // Verify ID token using Telegram's JWKS
+                const idPayload = await verifyTelegramIdToken(tokens.id_token, env.TELEGRAM_BOT_ID);
+                if (!idPayload) {
+                    return Response.redirect(`${frontendAdmin}?auth_error=invalid_token`, 302);
+                }
+
+                // Check user ID against allowlist
+                if (String(idPayload.sub) !== String(env.ALLOWED_USER_ID)) {
+                    return Response.redirect(`${frontendAdmin}?auth_error=unauthorized`, 302);
+                }
+
+                // Issue session JWT
+                const name = idPayload.first_name || idPayload.username || 'Admin';
+                const sessionToken = await signJwt({ id: idPayload.sub, name }, env.JWT_SECRET);
+
+                const headers = new Headers();
+                headers.append('Location', frontendAdmin);
+                headers.append('Set-Cookie', 'oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+                headers.append('Set-Cookie', `admin_token=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`);
+
+                return new Response(null, { status: 302, headers });
             }
 
             // Session check endpoint
@@ -554,48 +613,113 @@ function getAuthToken(request: Request): string | null {
     return null;
 }
 
-// Verify Telegram Auth Data
-// See: https://core.telegram.org/widgets/login#checking-authorization
-async function verifyTelegramAuth(data: any, botToken: string): Promise<boolean> {
-    const { hash, ...userData } = data;
-    if (!hash || !userData) return false;
+// --- OIDC / PKCE Helpers ---
 
-    // Check if auth is stale (e.g. older than 24h)
-    const authDate = userData.auth_date;
-    const now = Math.floor(Date.now() / 1000);
-    if (now - authDate > 86400) return false;
+function generateCodeVerifier(): string {
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    return btoaUrl(String.fromCharCode(...array));
+}
 
-    // Create check string
-    const checkString = Object.keys(userData)
-        .sort()
-        .map((key) => `${key}=${userData[key]}`)
-        .join('\n');
-
-    // Compute secret key: SHA256(botToken)
+async function generateCodeChallenge(verifier: string): Promise<string> {
     const encoder = new TextEncoder();
-    const secretKey = await crypto.subtle.digest('SHA-256', encoder.encode(botToken));
+    const digest = await crypto.subtle.digest('SHA-256', encoder.encode(verifier));
+    return btoaUrl(String.fromCharCode(...new Uint8Array(digest)));
+}
 
-    // Compute HMAC-SHA256 signature
-    const key = await crypto.subtle.importKey(
-        'raw',
-        secretKey,
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['sign']
-    );
+function getCookieValue(request: Request, name: string): string | null {
+    const cookieHeader = request.headers.get('Cookie');
+    if (!cookieHeader) return null;
+    for (const cookie of cookieHeader.split(';')) {
+        const trimmed = cookie.trim();
+        const eqIndex = trimmed.indexOf('=');
+        if (eqIndex > 0 && trimmed.slice(0, eqIndex) === name) {
+            return trimmed.slice(eqIndex + 1);
+        }
+    }
+    return null;
+}
 
-    const signature = await crypto.subtle.sign(
-        'HMAC',
-        key,
-        encoder.encode(checkString)
-    );
+async function signOauthData(data: string, secret: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
+    return btoaUrl(data) + '.' + btoaUrl(String.fromCharCode(...new Uint8Array(sig)));
+}
 
-    // Convert to hex
-    const signatureHex = [...new Uint8Array(signature)]
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+async function verifyOauthData(signed: string, secret: string): Promise<any | null> {
+    const dotIndex = signed.lastIndexOf('.');
+    if (dotIndex === -1) return null;
+    const dataB64 = signed.slice(0, dotIndex);
+    const sigB64 = signed.slice(dotIndex + 1);
+    const data = atobUrl(dataB64);
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
+    const computedSig = btoaUrl(String.fromCharCode(...new Uint8Array(sig)));
+    if (!timingSafeEqual(sigB64, computedSig)) return null;
+    return JSON.parse(data);
+}
 
-    return timingSafeEqual(signatureHex, hash);
+// Cache JWKS in worker isolate memory (refreshed hourly)
+let cachedJwks: any = null;
+let jwksCachedAt = 0;
+
+async function fetchTelegramJwks(): Promise<any> {
+    const now = Date.now();
+    if (cachedJwks && now - jwksCachedAt < 3600_000) return cachedJwks;
+    const resp = await fetch('https://oauth.telegram.org/.well-known/jwks.json');
+    if (!resp.ok) throw new Error('Failed to fetch Telegram JWKS');
+    cachedJwks = await resp.json();
+    jwksCachedAt = now;
+    return cachedJwks;
+}
+
+async function verifyTelegramIdToken(idToken: string, botId: string): Promise<any | null> {
+    const parts = idToken.split('.');
+    if (parts.length !== 3) return null;
+
+    const [headerB64, payloadB64, signatureB64] = parts;
+    const header = JSON.parse(atobUrl(headerB64));
+    const payload = JSON.parse(atobUrl(payloadB64));
+
+    // Validate standard OIDC claims
+    if (payload.iss !== 'https://oauth.telegram.org') return null;
+    if (String(payload.aud) !== String(botId)) return null;
+    if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+
+    // Fetch JWKS and find the signing key
+    const jwks = await fetchTelegramJwks();
+    const jwk = jwks.keys?.find((k: any) => k.kid === header.kid);
+    if (!jwk) return null;
+
+    // Determine algorithm from JWK (default RS256)
+    const alg = jwk.alg || header.alg || 'RS256';
+    let algorithm: RsaHashedImportParams | EcKeyImportParams;
+    if (alg === 'RS256') {
+        algorithm = { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' };
+    } else if (alg === 'ES256') {
+        algorithm = { name: 'ECDSA', namedCurve: 'P-256' };
+    } else {
+        return null; // Unsupported algorithm
+    }
+
+    const cryptoKey = await crypto.subtle.importKey('jwk', jwk, algorithm, false, ['verify']);
+
+    // Decode signature
+    const sigStr = atobUrl(signatureB64);
+    const sigBytes = new Uint8Array(sigStr.length);
+    for (let i = 0; i < sigStr.length; i++) sigBytes[i] = sigStr.charCodeAt(i);
+
+    const encoder = new TextEncoder();
+    const data = encoder.encode(`${headerB64}.${payloadB64}`);
+
+    const verifyParams = alg === 'ES256'
+        ? { name: 'ECDSA', hash: 'SHA-256' }
+        : 'RSASSA-PKCS1-v1_5';
+
+    const valid = await crypto.subtle.verify(verifyParams, cryptoKey, sigBytes, data);
+    return valid ? payload : null;
 }
 
 // Simple JWT implementation using HmacSHA256
