@@ -18,6 +18,7 @@ export interface Env {
     TELEGRAM_CLIENT_SECRET: string;
     JWT_SECRET: string;
     OWNER_SUB: string;              // Owner's OIDC sub — always allowed as super_admin
+    BOT_TOKEN: string;              // Bot API token for user lookups
     FRONTEND_URL: string;
     GITHUB_TOKEN: string;
     GITHUB_REPO_OWNER: string;
@@ -183,18 +184,21 @@ export default {
                     return Response.redirect(`${frontendAdmin}?auth_error=invalid_token`, 302);
                 }
 
+                // Resolve username from OIDC (Telegram may use either field)
+                const tgUsername = idPayload.username || idPayload.preferred_username || '';
+
                 // Check user authorization (owner, active user, or invited user claiming)
                 const authResult = await checkUserAuthorization(
-                    env, String(idPayload.sub), idPayload.username, idPayload.first_name
+                    env, String(idPayload.sub), tgUsername, idPayload.first_name
                 );
                 if (!authResult.authorized) {
                     return Response.redirect(`${frontendAdmin}?auth_error=unauthorized`, 302);
                 }
 
                 // Issue session JWT with role
-                const name = idPayload.first_name || idPayload.username || 'Admin';
+                const name = idPayload.first_name || tgUsername || 'Admin';
                 const sessionToken = await signJwt({
-                    id: idPayload.sub, name, role: authResult.role, username: idPayload.username
+                    id: idPayload.sub, name, role: authResult.role, username: tgUsername
                 }, env.JWT_SECRET);
 
 
@@ -606,7 +610,7 @@ export default {
 
                     // Owner is always first
                     users.push({
-                        username: authPayload.username || 'owner',
+                        username: authPayload.username || '',
                         sub: authPayload.id,
                         firstName: authPayload.name,
                         status: 'active',
@@ -654,6 +658,76 @@ export default {
                         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                     });
                 }
+            }
+
+            // Telegram user lookup (super_admin only)
+            if (url.pathname === '/api/users/lookup' && request.method === 'GET') {
+                if (authPayload.role !== 'super_admin') {
+                    return new Response('Forbidden', { status: 403, headers: corsHeaders });
+                }
+
+                const username = url.searchParams.get('username')?.toLowerCase().replace(/^@/, '');
+                if (!username || !/^[a-z0-9_]{1,32}$/.test(username)) {
+                    return new Response('Invalid username', { status: 400, headers: corsHeaders });
+                }
+
+                // Check if already invited
+                const existing = await getUser(env.ADMIN_USERS, username);
+                if (existing) {
+                    return new Response(JSON.stringify({ error: 'User already invited' }), {
+                        status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+
+                // Try to look up via Telegram Bot API
+                if (env.BOT_TOKEN) {
+                    try {
+                        const tgResp = await fetch(
+                            `https://api.telegram.org/bot${env.BOT_TOKEN}/getChat?chat_id=@${username}`
+                        );
+                        if (tgResp.ok) {
+                            const tgData = await tgResp.json() as any;
+                            if (tgData.ok && tgData.result) {
+                                const chat = tgData.result;
+                                // Build photo URL if available
+                                let photoUrl: string | null = null;
+                                if (chat.photo?.small_file_id) {
+                                    const fileResp = await fetch(
+                                        `https://api.telegram.org/bot${env.BOT_TOKEN}/getFile?file_id=${chat.photo.small_file_id}`
+                                    );
+                                    if (fileResp.ok) {
+                                        const fileData = await fileResp.json() as any;
+                                        if (fileData.ok) {
+                                            photoUrl = `https://api.telegram.org/file/bot${env.BOT_TOKEN}/${fileData.result.file_path}`;
+                                        }
+                                    }
+                                }
+                                return new Response(JSON.stringify({
+                                    found: true,
+                                    username: chat.username || username,
+                                    firstName: chat.first_name || null,
+                                    lastName: chat.last_name || null,
+                                    photoUrl,
+                                }), {
+                                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Telegram lookup failed:', e);
+                    }
+                }
+
+                // Bot API lookup failed or unavailable — return unverified
+                return new Response(JSON.stringify({
+                    found: false,
+                    username,
+                    firstName: null,
+                    lastName: null,
+                    photoUrl: null,
+                }), {
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
             }
 
             return new Response('Not Found', { status: 404, headers: corsHeaders });

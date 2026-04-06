@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loader2, UserPlus, Trash2, Shield, Clock } from 'lucide-react';
+import { Loader2, Search, UserPlus, Trash2, Shield, Clock, AlertTriangle } from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
 
 interface UserManagementProps {
@@ -21,10 +21,20 @@ interface AdminUser {
     claimedAt: string | null;
 }
 
+interface LookupResult {
+    found: boolean;
+    username: string;
+    firstName: string | null;
+    lastName: string | null;
+    photoUrl: string | null;
+}
+
 export function UserManagement({ workerUrl }: UserManagementProps) {
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [username, setUsername] = useState('');
+    const [searching, setSearching] = useState(false);
+    const [lookup, setLookup] = useState<LookupResult | null>(null);
     const [inviting, setInviting] = useState(false);
     const [removing, setRemoving] = useState<string | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -51,9 +61,42 @@ export function UserManagement({ workerUrl }: UserManagementProps) {
         }
     };
 
-    const handleInvite = async (e: React.FormEvent) => {
+    const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!username.trim()) return;
+
+        setSearching(true);
+        setLookup(null);
+        setMessage(null);
+
+        try {
+            const clean = username.trim().replace(/^@/, '');
+            const res = await fetch(`${workerUrl}/api/users/lookup?username=${encodeURIComponent(clean)}`, {
+                headers: authHeaders(),
+                credentials: 'include',
+            });
+
+            if (res.status === 409) {
+                setMessage({ type: 'error', text: 'This user has already been invited.' });
+                return;
+            }
+
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || 'Lookup failed');
+            }
+
+            const data = await res.json();
+            setLookup(data);
+        } catch (e: any) {
+            setMessage({ type: 'error', text: e.message });
+        } finally {
+            setSearching(false);
+        }
+    };
+
+    const handleConfirmInvite = async () => {
+        if (!lookup) return;
 
         setInviting(true);
         setMessage(null);
@@ -63,7 +106,7 @@ export function UserManagement({ workerUrl }: UserManagementProps) {
                 method: 'POST',
                 headers: authHeaders({ 'Content-Type': 'application/json' }),
                 credentials: 'include',
-                body: JSON.stringify({ username: username.trim() }),
+                body: JSON.stringify({ username: lookup.username }),
             });
 
             if (!res.ok) {
@@ -74,12 +117,18 @@ export function UserManagement({ workerUrl }: UserManagementProps) {
             const data = await res.json();
             setUsers(prev => [...prev, data.user]);
             setUsername('');
+            setLookup(null);
             setMessage({ type: 'success', text: `Invited @${data.user.username}` });
         } catch (e: any) {
             setMessage({ type: 'error', text: e.message });
         } finally {
             setInviting(false);
         }
+    };
+
+    const handleCancelLookup = () => {
+        setLookup(null);
+        setUsername('');
     };
 
     const handleRemove = async (uname: string) => {
@@ -110,21 +159,72 @@ export function UserManagement({ workerUrl }: UserManagementProps) {
         <Card>
             <CardHeader>
                 <CardTitle>User Management</CardTitle>
-                <CardDescription>Invite users by Telegram username. They can log in once invited.</CardDescription>
+                <CardDescription>Search for Telegram users and invite them to the admin panel.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <form onSubmit={handleInvite} className="flex gap-2">
-                    <Input
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="@username"
-                        className="flex-1"
-                    />
-                    <Button type="submit" disabled={inviting || !username.trim()} className="gap-2 shrink-0">
-                        {inviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-                        Invite
-                    </Button>
-                </form>
+                {/* Search / Confirm Flow */}
+                {!lookup ? (
+                    <form onSubmit={handleSearch} className="flex gap-2">
+                        <Input
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="@username"
+                            className="flex-1"
+                        />
+                        <Button type="submit" disabled={searching || !username.trim()} className="gap-2 shrink-0">
+                            {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                            Search
+                        </Button>
+                    </form>
+                ) : (
+                    <div className="p-4 rounded-lg border border-primary/30 bg-primary/5 space-y-3">
+                        <div className="flex items-center gap-3">
+                            {lookup.photoUrl ? (
+                                <img
+                                    src={lookup.photoUrl}
+                                    alt={lookup.username}
+                                    className="h-12 w-12 rounded-full object-cover"
+                                />
+                            ) : (
+                                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center text-lg font-semibold text-muted-foreground">
+                                    {(lookup.firstName || lookup.username)[0]?.toUpperCase()}
+                                </div>
+                            )}
+                            <div>
+                                {lookup.found ? (
+                                    <>
+                                        <p className="font-medium">
+                                            {lookup.firstName}{lookup.lastName ? ` ${lookup.lastName}` : ''}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">@{lookup.username}</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="font-medium">@{lookup.username}</p>
+                                        <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                            <AlertTriangle className="h-3 w-3" />
+                                            Not verified — user may need to message the bot first
+                                        </p>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                size="sm"
+                                onClick={handleConfirmInvite}
+                                disabled={inviting}
+                                className="gap-1.5"
+                            >
+                                {inviting ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus className="h-3 w-3" />}
+                                Confirm Invite
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={handleCancelLookup}>
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                )}
 
                 {message && (
                     <div className={`p-3 rounded text-sm ${message.type === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
@@ -132,6 +232,7 @@ export function UserManagement({ workerUrl }: UserManagementProps) {
                     </div>
                 )}
 
+                {/* User List */}
                 {loading ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
                         <Loader2 className="animate-spin h-4 w-4" /> Loading...
@@ -140,7 +241,7 @@ export function UserManagement({ workerUrl }: UserManagementProps) {
                     <div className="space-y-2">
                         {users.map((user) => (
                             <div
-                                key={user.username}
+                                key={user.role === 'super_admin' ? '_owner' : user.username}
                                 className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background/50"
                             >
                                 <div className="flex items-center gap-3 min-w-0">
@@ -153,8 +254,10 @@ export function UserManagement({ workerUrl }: UserManagementProps) {
                                     )}
                                     <div className="min-w-0">
                                         <p className="text-sm font-medium">
-                                            @{user.username}
-                                            {user.firstName && <span className="text-muted-foreground font-normal ml-2">{user.firstName}</span>}
+                                            {user.username ? `@${user.username}` : user.firstName || 'Owner'}
+                                            {user.firstName && user.username && (
+                                                <span className="text-muted-foreground font-normal ml-2">{user.firstName}</span>
+                                            )}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
                                             {user.role === 'super_admin' ? 'Owner' :
