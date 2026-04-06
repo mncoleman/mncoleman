@@ -14,15 +14,26 @@ function checkRateLimit(key: string, maxAttempts: number, windowMs: number): boo
 }
 
 export interface Env {
-    TELEGRAM_BOT_ID: string;        // Bot's numeric ID — OIDC client_id
-    TELEGRAM_CLIENT_SECRET: string;  // From BotFather — OIDC client_secret
-    JWT_SECRET: string;              // Signs session JWTs
-    ALLOWED_USER_ID: string;         // Your Telegram user ID
-    FRONTEND_URL: string;            // e.g. https://mncoleman.com
+    TELEGRAM_BOT_ID: string;
+    TELEGRAM_CLIENT_SECRET: string;
+    JWT_SECRET: string;
+    OWNER_SUB: string;              // Owner's OIDC sub — always allowed as super_admin
+    FRONTEND_URL: string;
     GITHUB_TOKEN: string;
     GITHUB_REPO_OWNER: string;
     GITHUB_REPO_NAME: string;
     N8N_WEBHOOK_URL: string;
+    ADMIN_USERS: KVNamespace;       // KV store for multi-user access
+}
+
+interface AdminUser {
+    username: string;
+    sub: string | null;
+    firstName: string | null;
+    status: 'invited' | 'active';
+    role: 'admin';
+    invitedAt: string;
+    claimedAt: string | null;
 }
 
 export default {
@@ -172,15 +183,19 @@ export default {
                     return Response.redirect(`${frontendAdmin}?auth_error=invalid_token`, 302);
                 }
 
-                // Check user ID against allowlist
-
-                if (String(idPayload.sub) !== String(env.ALLOWED_USER_ID)) {
+                // Check user authorization (owner, active user, or invited user claiming)
+                const authResult = await checkUserAuthorization(
+                    env, String(idPayload.sub), idPayload.username, idPayload.first_name
+                );
+                if (!authResult.authorized) {
                     return Response.redirect(`${frontendAdmin}?auth_error=unauthorized`, 302);
                 }
 
-                // Issue session JWT
+                // Issue session JWT with role
                 const name = idPayload.first_name || idPayload.username || 'Admin';
-                const sessionToken = await signJwt({ id: idPayload.sub, name }, env.JWT_SECRET);
+                const sessionToken = await signJwt({
+                    id: idPayload.sub, name, role: authResult.role, username: idPayload.username
+                }, env.JWT_SECRET);
 
 
                 // Pass token via both cookie (desktop) and URL fragment (mobile fallback)
@@ -200,7 +215,9 @@ export default {
                 const payload = await verifyJwt(token, env.JWT_SECRET);
                 if (!payload) return new Response('Invalid session', { status: 401, headers: corsHeaders });
 
-                return new Response(JSON.stringify({ user: { name: payload.name, id: payload.id } }), {
+                return new Response(JSON.stringify({ user: {
+                    name: payload.name, id: payload.id, role: payload.role, username: payload.username
+                } }), {
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
                 });
             }
@@ -577,6 +594,68 @@ export default {
                 }
             }
 
+            // User management endpoints (super_admin only)
+            if (url.pathname === '/api/users') {
+                if (authPayload.role !== 'super_admin') {
+                    return new Response('Forbidden', { status: 403, headers: corsHeaders });
+                }
+
+                if (request.method === 'GET') {
+                    const userList = await getUserList(env.ADMIN_USERS);
+                    const users: (AdminUser & { role: string })[] = [];
+
+                    // Owner is always first
+                    users.push({
+                        username: authPayload.username || 'owner',
+                        sub: authPayload.id,
+                        firstName: authPayload.name,
+                        status: 'active',
+                        role: 'super_admin',
+                        invitedAt: '',
+                        claimedAt: '',
+                    });
+
+                    for (const uname of userList) {
+                        const user = await getUser(env.ADMIN_USERS, uname);
+                        if (user) users.push(user);
+                    }
+
+                    return new Response(JSON.stringify({ users }), {
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+
+                if (request.method === 'POST') {
+                    const body = await request.json() as { username: string };
+                    let username = (body.username || '').toLowerCase().replace(/^@/, '');
+                    if (!/^[a-z0-9_]{1,32}$/.test(username)) {
+                        return new Response('Invalid username', { status: 400, headers: corsHeaders });
+                    }
+
+                    const existing = await getUser(env.ADMIN_USERS, username);
+                    if (existing) {
+                        return new Response('User already exists', { status: 409, headers: corsHeaders });
+                    }
+
+                    const user = await inviteUser(env.ADMIN_USERS, username);
+                    return new Response(JSON.stringify({ user }), {
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+
+                if (request.method === 'DELETE') {
+                    const username = url.searchParams.get('username')?.toLowerCase().replace(/^@/, '');
+                    if (!username) {
+                        return new Response('Missing username', { status: 400, headers: corsHeaders });
+                    }
+
+                    await removeUser(env.ADMIN_USERS, username);
+                    return new Response(JSON.stringify({ success: true }), {
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+            }
+
             return new Response('Not Found', { status: 404, headers: corsHeaders });
         } catch (e) {
             console.error('Worker error:', e);
@@ -806,4 +885,87 @@ async function triggerGitHubDispatch(env: Env, eventType: string) {
     }
 
     return { status: response.status, ok: response.ok };
+}
+
+// --- Multi-User KV Helpers ---
+
+async function checkUserAuthorization(
+    env: Env, sub: string, username?: string, firstName?: string
+): Promise<{ authorized: boolean; role: string }> {
+    // Owner is always authorized
+    if (sub === env.OWNER_SUB) {
+        return { authorized: true, role: 'super_admin' };
+    }
+
+    // Check by sub (fast path for active users)
+    const usernameFromSub = await env.ADMIN_USERS.get(`sub:${sub}`);
+    if (usernameFromSub) {
+        const user = await getUser(env.ADMIN_USERS, usernameFromSub);
+        if (user && user.status === 'active') {
+            return { authorized: true, role: user.role };
+        }
+    }
+
+    // Check by username for unclaimed invitations
+    if (username) {
+        const normalizedUsername = username.toLowerCase();
+        const user = await getUser(env.ADMIN_USERS, normalizedUsername);
+        if (user && user.status === 'invited') {
+            await claimInvitation(env.ADMIN_USERS, normalizedUsername, sub, firstName || null);
+            return { authorized: true, role: user.role };
+        }
+    }
+
+    return { authorized: false, role: '' };
+}
+
+async function getUserList(kv: KVNamespace): Promise<string[]> {
+    const raw = await kv.get('user_list');
+    return raw ? JSON.parse(raw) : [];
+}
+
+async function getUser(kv: KVNamespace, username: string): Promise<AdminUser | null> {
+    const raw = await kv.get(`user:${username}`);
+    return raw ? JSON.parse(raw) : null;
+}
+
+async function inviteUser(kv: KVNamespace, username: string): Promise<AdminUser> {
+    const user: AdminUser = {
+        username,
+        sub: null,
+        firstName: null,
+        status: 'invited',
+        role: 'admin',
+        invitedAt: new Date().toISOString(),
+        claimedAt: null,
+    };
+    await kv.put(`user:${username}`, JSON.stringify(user));
+    const list = await getUserList(kv);
+    if (!list.includes(username)) {
+        list.push(username);
+        await kv.put('user_list', JSON.stringify(list));
+    }
+    return user;
+}
+
+async function claimInvitation(kv: KVNamespace, username: string, sub: string, firstName: string | null): Promise<void> {
+    const user = await getUser(kv, username);
+    if (!user) return;
+    user.sub = sub;
+    user.firstName = firstName;
+    user.status = 'active';
+    user.claimedAt = new Date().toISOString();
+    await kv.put(`user:${username}`, JSON.stringify(user));
+    await kv.put(`sub:${sub}`, username);
+}
+
+async function removeUser(kv: KVNamespace, username: string): Promise<void> {
+    const user = await getUser(kv, username);
+    if (user?.sub) {
+        await kv.delete(`sub:${user.sub}`);
+    }
+    await kv.delete(`user:${username}`);
+    const list = await getUserList(kv);
+    const filtered = list.filter(u => u !== username);
+    await kv.put('user_list', JSON.stringify(filtered));
 }
