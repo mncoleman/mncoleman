@@ -123,16 +123,19 @@ export default {
                 const code = url.searchParams.get('code');
                 const state = url.searchParams.get('state');
 
+
                 if (!code || !state) {
                     return Response.redirect(`${frontendAdmin}?auth_error=missing_params`, 302);
                 }
 
                 const oauthCookie = getCookieValue(request, 'oauth_state');
+
                 if (!oauthCookie) {
                     return Response.redirect(`${frontendAdmin}?auth_error=expired_session`, 302);
                 }
 
                 const oauthData = await verifyOauthData(oauthCookie, env.JWT_SECRET);
+
                 if (!oauthData || oauthData.state !== state) {
                     return Response.redirect(`${frontendAdmin}?auth_error=invalid_state`, 302);
                 }
@@ -152,20 +155,25 @@ export default {
                     }),
                 });
 
+
                 if (!tokenResponse.ok) {
-                    console.error('Token exchange failed:', await tokenResponse.text());
+                    const errText = await tokenResponse.text();
+                    console.error('[callback] token exchange failed:', errText);
                     return Response.redirect(`${frontendAdmin}?auth_error=token_exchange_failed`, 302);
                 }
 
                 const tokens = await tokenResponse.json() as { id_token: string };
 
+
                 // Verify ID token using Telegram's JWKS
                 const idPayload = await verifyTelegramIdToken(tokens.id_token, env.TELEGRAM_BOT_ID);
+
                 if (!idPayload) {
                     return Response.redirect(`${frontendAdmin}?auth_error=invalid_token`, 302);
                 }
 
                 // Check user ID against allowlist
+
                 if (String(idPayload.sub) !== String(env.ALLOWED_USER_ID)) {
                     return Response.redirect(`${frontendAdmin}?auth_error=unauthorized`, 302);
                 }
@@ -173,6 +181,7 @@ export default {
                 // Issue session JWT
                 const name = idPayload.first_name || idPayload.username || 'Admin';
                 const sessionToken = await signJwt({ id: idPayload.sub, name }, env.JWT_SECRET);
+
 
                 const headers = new Headers();
                 headers.append('Location', frontendAdmin);
