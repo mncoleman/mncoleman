@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { FileText, Filter, X, ExternalLink, Download, File, Image, Code, FileType } from 'lucide-react';
+import { FileText, Filter, X, ExternalLink, Download, File, Image, Code, FileType, Palette } from 'lucide-react';
 import { PageEntrance } from '@/components/page-entrance';
+import { ArtifactDesignPopup } from '@/components/artifact-design-popup';
 import { formatDistanceToNow } from 'date-fns';
 
 interface Artifact {
@@ -80,9 +81,17 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
                             Files, Documents & Uploads
                         </span>
                     </h1>
-                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
                         A collection of uploaded files and documents available for viewing and download.
                     </p>
+                    <ArtifactDesignPopup
+                        trigger={
+                            <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border/50 bg-background/50 backdrop-blur-sm hover:border-[#016b72]/50 hover:bg-background/80 transition-all duration-300 group">
+                                <Palette className="h-4 w-4 text-[#016b72] group-hover:scale-110 transition-transform" />
+                                <span className="text-sm font-medium">Artifact Design System</span>
+                            </button>
+                        }
+                    />
                 </header>
 
                 {/* Filter Bar */}
