@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tmux Reference Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, monospace;
+  --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+  --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+  --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+  --text-2xl: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+  --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem;
+  --space-4: 1rem; --space-5: 1.25rem; --space-6: 1.5rem;
+  --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem; --space-16: 4rem;
+  --radius-sm: 0.375rem; --radius-md: 0.5rem; --radius-lg: 0.75rem;
+  --radius-xl: 1rem; --radius-full: 9999px;
+  --trans: 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  --sidebar-w: 240px;
+}
+:root, [data-theme="light"] {
+  --bg: #f7f6f2; --surface: #faf9f7; --surface-2: #fcfcfb;
+  --surface-off: #eeecea; --surface-dyn: #e5e2de;
+  --divider: #dcdad6; --border: #d4d2ce;
+  --text: #1a1915; --text-muted: #6b6966; --text-faint: #a8a7a4; --text-inv: #f9f8f5;
+  --primary: #016b72; --primary-hov: #0c5058; --primary-hl: #cddcda; --primary-dim: rgba(1,107,114,0.08);
+  --green: #2f7d34; --green-bg: rgba(47,125,52,0.09);
+  --orange: #b35d00; --orange-bg: rgba(179,93,0,0.09);
+  --red: #c0302a; --red-bg: rgba(192,48,42,0.09);
+  --blue: #0a5fa0; --blue-bg: rgba(10,95,160,0.09);
+  --code-bg: #1a1915; --code-text: #d4d2ce; --code-c: #6b6966;
+  --code-g: #6dbc6d; --code-o: #e8a24a; --code-p: #b48ef5;
+  --sh-sm: 0 1px 2px rgba(26,25,21,.06); --sh-md: 0 4px 12px rgba(26,25,21,.08);
+}
+[data-theme="dark"] {
+  --bg: #161512; --surface: #1c1a17; --surface-2: #201e1b;
+  --surface-off: #1f1d1a; --surface-dyn: #2a2826;
+  --divider: #2b2927; --border: #363432;
+  --text: #cccac6; --text-muted: #7a7876; --text-faint: #57554f; --text-inv: #2a2826;
+  --primary: #4a9da8; --primary-hov: #21808c; --primary-hl: #2d3d3d; --primary-dim: rgba(74,157,168,0.1);
+  --green: #65af65; --green-bg: rgba(101,175,101,0.1);
+  --orange: #e09840; --orange-bg: rgba(224,152,64,0.1);
+  --red: #d96b65; --red-bg: rgba(217,107,101,0.1);
+  --blue: #5290c5; --blue-bg: rgba(82,144,197,0.1);
+  --code-bg: #0f0e0c; --code-text: #cccac6; --code-c: #6b6966;
+  --code-g: #6dbc6d; --code-o: #e8a24a; --code-p: #b48ef5;
+  --sh-sm: 0 1px 2px rgba(0,0,0,.25); --sh-md: 0 4px 12px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) {
+  --bg:#161512;--surface:#1c1a17;--surface-2:#201e1b;--surface-off:#1f1d1a;--surface-dyn:#2a2826;
+  --divider:#2b2927;--border:#363432;--text:#cccac6;--text-muted:#7a7876;--text-faint:#57554f;--text-inv:#2a2826;
+  --primary:#4a9da8;--primary-hov:#21808c;--primary-hl:#2d3d3d;--primary-dim:rgba(74,157,168,0.1);
+  --green:#65af65;--green-bg:rgba(101,175,101,0.1);--orange:#e09840;--orange-bg:rgba(224,152,64,0.1);
+  --red:#d96b65;--red-bg:rgba(217,107,101,0.1);--blue:#5290c5;--blue-bg:rgba(82,144,197,0.1);
+  --code-bg:#0f0e0c;--code-text:#cccac6;--code-c:#6b6966;--code-g:#6dbc6d;--code-o:#e8a24a;--code-p:#b48ef5;
+  --sh-sm:0 1px 2px rgba(0,0,0,.25);--sh-md:0 4px 12px rgba(0,0,0,.35);
+}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:4rem;-webkit-text-size-adjust:none;text-size-adjust:none;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-body);font-size:var(--text-base);color:var(--text);background:var(--bg);line-height:1.6;min-height:100dvh}
+h1,h2,h3,h4{text-wrap:balance;line-height:1.2}
+p,li{text-wrap:pretty}
+a{color:var(--primary);text-decoration:none;transition:color var(--trans)}
+a:hover{color:var(--primary-hov)}
+a,button,input{transition:color var(--trans),background var(--trans),border-color var(--trans),box-shadow var(--trans)}
+button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
+::selection{background:var(--primary-dim);color:var(--text)}
+:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:var(--radius-sm)}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--divider);border-radius:var(--radius-full)}
+::-webkit-scrollbar-thumb:hover{background:var(--border)}
+
+/* Layout */
+.app{display:flex;min-height:100dvh}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--divider);display:flex;flex-direction:column;z-index:100}
+.sb-head{padding:var(--space-5) var(--space-5) var(--space-4);border-bottom:1px solid var(--divider);position:sticky;top:0;background:var(--surface);z-index:1}
+.logo{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3)}
+.logo-icon{width:32px;height:32px;flex-shrink:0}
+.logo-text{font-size:var(--text-sm);font-weight:700;letter-spacing:-.01em;color:var(--text)}
+.logo-text span{color:var(--primary)}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:var(--space-3);top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text-faint);pointer-events:none}
+#search{width:100%;padding:var(--space-2) var(--space-3) var(--space-2) calc(var(--space-3) + 18px);background:var(--surface-off);border:1px solid var(--border);border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--text);outline:none}
+#search::placeholder{color:var(--text-faint)}
+#search:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-dim)}
+.sb-nav{padding:var(--space-3);flex:1}
+.nav-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);padding:var(--space-2) var(--space-3) var(--space-1);display:block}
+.nav-a{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--text-muted);text-decoration:none;transition:background var(--trans),color var(--trans)}
+.nav-a:hover{background:var(--surface-dyn);color:var(--text)}
+.nav-a.active{background:var(--primary-dim);color:var(--primary);font-weight:500}
+.nav-chip{margin-left:auto;font-size:9px;font-weight:700;padding:2px 6px;border-radius:var(--radius-full);text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+.nc-b{background:var(--green-bg);color:var(--green)}
+.nc-i{background:var(--orange-bg);color:var(--orange)}
+.nc-a{background:var(--red-bg);color:var(--red)}
+.sb-foot{padding:var(--space-4);border-top:1px solid var(--divider);display:flex;align-items:center;justify-content:space-between}
+.theme-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-md);color:var(--text-muted);background:var(--surface-off);border:1px solid var(--border)}
+.theme-btn:hover{color:var(--text);background:var(--surface-dyn)}
+.sb-meta{font-size:11px;color:var(--text-faint)}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+.mob-header{display:none;position:sticky;top:0;z-index:90;background:var(--surface);border-bottom:1px solid var(--divider);padding:var(--space-3) var(--space-4);align-items:center;justify-content:space-between}
+.mob-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--radius-md);background:var(--surface-off);border:1px solid var(--border);color:var(--text-muted)}
+
+/* Main */
+.main{margin-left:var(--sidebar-w);flex:1;min-width:0;padding:var(--space-10) clamp(var(--space-6),5vw,var(--space-12))}
+
+/* Page header */
+.pg-head{margin-bottom:var(--space-12);padding-bottom:var(--space-8);border-bottom:1px solid var(--divider)}
+.pg-title{font-size:var(--text-2xl);font-weight:700;letter-spacing:-.03em;color:var(--text);line-height:1;margin-bottom:var(--space-4)}
+.pg-title em{font-style:normal;color:var(--primary)}
+.pg-desc{font-size:var(--text-base);color:var(--text-muted);max-width:56ch;line-height:1.6;margin-bottom:var(--space-4)}
+.pg-chips{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:var(--space-1);font-size:var(--text-xs);font-weight:500;padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);border:1px solid var(--border);background:var(--surface)}
+.chip-dot{width:6px;height:6px;border-radius:var(--radius-full)}
+.chip.cli{color:var(--green)} .chip.cli .chip-dot{background:var(--green)}
+.chip.pfx{color:var(--blue)} .chip.pfx .chip-dot{background:var(--blue)}
+
+/* Prefix callout */
+.prefix-note{display:flex;gap:var(--space-3);align-items:flex-start;padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);font-size:var(--text-xs);line-height:1.6;background:var(--blue-bg);color:var(--text-muted);border:1px solid rgba(10,95,160,.2);margin-top:var(--space-4)}
+[data-theme="dark"] .prefix-note{border-color:rgba(82,144,197,.25)}
+.prefix-note svg{flex-shrink:0;width:14px;height:14px;margin-top:2px;color:var(--blue)}
+.prefix-note strong{color:var(--blue)}
+
+/* Section */
+.sec{margin-bottom:var(--space-16)}
+.sec-head{display:flex;align-items:center;gap:var(--space-3);padding-bottom:var(--space-3);border-bottom:1px solid var(--divider);margin-bottom:var(--space-4)}
+.sec-num{font-size:var(--text-xs);font-weight:600;font-family:var(--font-mono);color:var(--text-faint);min-width:2ch}
+.sec-title{font-size:var(--text-lg);font-weight:600;color:var(--text);letter-spacing:-.02em}
+.sec-badge{margin-left:auto;font-size:10px;font-weight:600;padding:3px 10px;border-radius:var(--radius-full);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
+.sb-b{background:var(--green-bg);color:var(--green)}
+.sb-i{background:var(--orange-bg);color:var(--orange)}
+.sb-a{background:var(--blue-bg);color:var(--blue)}
+.sec-intro{color:var(--text-muted);font-size:var(--text-sm);margin-bottom:var(--space-5);max-width:70ch;line-height:1.7}
+
+/* Grid */
+.grid{display:grid;grid-template-columns:1fr;gap:var(--space-3)}
+@media (min-width:860px){.grid.two{grid-template-columns:1fr 1fr}}
+
+/* Card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;transition:border-color var(--trans),box-shadow var(--trans)}
+.card:hover{border-color:var(--primary);box-shadow:var(--sh-sm)}
+.card-head{padding:var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-3);border-bottom:1px solid var(--divider)}
+.card-title{font-size:var(--text-sm);font-weight:600;color:var(--text);flex:1;line-height:1.3}
+.cmd-tag{font-family:var(--font-mono);font-size:var(--text-xs);font-weight:500;padding:2px 8px;border-radius:var(--radius-sm);white-space:nowrap;flex-shrink:0}
+.cmd-cli{color:var(--green);background:var(--green-bg);border:1px solid rgba(47,125,52,.15)}
+.cmd-pfx{color:var(--blue);background:var(--blue-bg);border:1px solid rgba(10,95,160,.15)}
+[data-theme="dark"] .cmd-cli{border-color:rgba(101,175,101,.2)}
+[data-theme="dark"] .cmd-pfx{border-color:rgba(82,144,197,.2)}
+.card-body{padding:var(--space-3) var(--space-4);display:flex;flex-direction:column;gap:var(--space-2)}
+.desc{font-size:var(--text-sm);color:var(--text-muted);line-height:1.65}
+
+/* Inline code & kbd */
+code{font-family:var(--font-mono);font-size:.85em;background:var(--surface-off);color:var(--primary);padding:1px 6px;border-radius:var(--radius-sm);border:1px solid var(--border)}
+kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);color:var(--text);padding:2px 7px;border-radius:var(--radius-sm);border:1px solid var(--border);display:inline-block;min-width:1.6em;text-align:center;box-shadow:0 1px 0 var(--border)}
+.key-seq{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.key-seq .plus{color:var(--text-faint);font-size:.75em;font-weight:500}
+.key-seq .then{color:var(--text-faint);font-size:.7em;font-weight:500;letter-spacing:.04em;text-transform:uppercase;margin:0 2px}
+
+/* Callouts */
+.tip{display:flex;gap:var(--space-3);align-items:flex-start;padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);font-size:var(--text-xs);line-height:1.6;background:var(--green-bg);color:var(--text-muted);border:1px solid rgba(47,125,52,.2)}
+[data-theme="dark"] .tip{border-color:rgba(101,175,101,.25)}
+.tip svg{flex-shrink:0;width:14px;height:14px;margin-top:2px;color:var(--green)}
+.tip strong{color:var(--green)}
+
+/* Footer */
+.pg-foot{margin-top:var(--space-16);padding-top:var(--space-8);border-top:1px solid var(--divider);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-4)}
+.pg-foot p{font-size:var(--text-xs);color:var(--text-faint)}
+
+/* Mobile */
+@media (max-width:768px){
+  .sidebar{transform:translateX(-100%);transition:transform .3s cubic-bezier(.16,1,.3,1)}
+  .sidebar.open{transform:translateX(0)}
+  .sb-overlay.vis{display:block}
+  .mob-header{display:flex}
+  .main{margin-left:0;padding:var(--space-6) var(--space-4)}
+  .pg-title{font-size:var(--text-xl)}
+  .grid.two{grid-template-columns:1fr}
+}
+</style>
+</head><body>
+<div class="sb-overlay" id="overlay"></div>
+
+<!-- Mobile header -->
+<header class="mob-header" role="banner">
+  <button class="mob-btn" id="menu-btn" aria-label="Open navigation">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <span style="font-weight:700;font-size:var(--text-sm);letter-spacing:-.01em"><span style="color:var(--primary)">tmux</span> Reference</span>
+  <button class="mob-btn theme-btn" data-theme-toggle aria-label="Toggle theme">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+</header>
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar" aria-label="Section navigation">
+  <div class="sb-head">
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 32 32" fill="none" aria-label="tmux Logo">
+        <rect width="32" height="32" rx="8" fill="var(--code-bg)"/>
+        <line x1="16" y1="6" x2="16" y2="26" stroke="var(--primary)" stroke-width="1.5" opacity=".4"/>
+        <line x1="6" y1="16" x2="26" y2="16" stroke="var(--primary)" stroke-width="1.5" opacity=".4"/>
+        <path d="M7 11 L13 16 L7 21" stroke="var(--code-g)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="19" y1="21" x2="25" y2="21" stroke="var(--code-c)" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="logo-text"><span>tmux</span> reference</span>
+    </div>
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="search" id="search" placeholder="Search commands..." aria-label="Search commands">
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav">
+    <span class="nav-label">Sections</span>
+    <a href="#sessions" class="nav-a" data-sec="sessions">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Sessions
+      <span class="nav-chip nc-b">11</span>
+    </a>
+    <a href="#windows" class="nav-a" data-sec="windows">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      Windows
+      <span class="nav-chip nc-b">10</span>
+    </a>
+    <a href="#panes" class="nav-a" data-sec="panes">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="12"/></svg>
+      Panes
+      <span class="nav-chip nc-i">13</span>
+    </a>
+    <a href="#copy" class="nav-a" data-sec="copy">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      Copy Mode
+      <span class="nav-chip nc-i">11</span>
+    </a>
+    <a href="#commands" class="nav-a" data-sec="commands">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+      Command Mode
+      <span class="nav-chip nc-i">10</span>
+    </a>
+    <a href="#misc" class="nav-a" data-sec="misc">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Misc &amp; Config
+      <span class="nav-chip nc-i">10</span>
+    </a>
+    <a href="#workflows" class="nav-a" data-sec="workflows">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      Workflows
+      <span class="nav-chip nc-a">8</span>
+    </a>
+  </div>
+  <div class="sb-foot">
+    <span class="sb-meta">v2.0 &middot; 2026</span>
+    <button class="theme-btn" data-theme-toggle aria-label="Toggle theme">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- Main content -->
+<main class="main" id="main">
+  <header class="pg-head">
+    <h1 class="pg-title"><em>tmux</em><br>Reference Guide</h1>
+    <p class="pg-desc">Terminal multiplexer -- sessions, windows, panes, and key bindings. Everything you need to manage persistent terminal sessions.</p>
+    <div class="pg-chips">
+      <span class="chip cli"><span class="chip-dot"></span>CLI Command</span>
+      <span class="chip pfx"><span class="chip-dot"></span>Prefix Binding</span>
+    </div>
+    <div class="prefix-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span><strong>Default prefix:</strong> <kbd>Ctrl</kbd> <span class="plus">+</span> <kbd>b</kbd> -- press the prefix first, then release and press the binding key. Commands marked <span style="color:var(--green);font-weight:600">CLI</span> are typed directly in your shell. Commands marked <span style="color:var(--blue);font-weight:600">PREFIX</span> require the prefix key first.</span>
+    </div>
+  </header>
+
+<!-- Sessions -->
+<section id="sessions" class="sec">
+  <div class="sec-head">
+    <span class="sec-num">01</span>
+    <h2 class="sec-title">Session Management</h2>
+    <span class="sec-badge sb-b">Essential</span>
+  </div>
+  <p class="sec-intro">Sessions persist across terminal closes and SSH disconnects. Each session can have multiple windows.</p>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Start new unnamed session</span><span class="cmd-tag cmd-cli">tmux</span></div><div class="card-body"><p class="desc">Launches tmux with a default numbered session (0, 1, 2...).</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Start named session</span><span class="cmd-tag cmd-cli">tmux new -s name</span></div><div class="card-body"><p class="desc">Creates a session with a memorable name for easy reattachment.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">List all sessions</span><span class="cmd-tag cmd-cli">tmux ls</span></div><div class="card-body"><p class="desc">Shows all running sessions with their window count and dimensions.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Attach to session</span><span class="cmd-tag cmd-cli">tmux attach -t name</span></div><div class="card-body"><p class="desc">Reconnects to an existing named session. Use <code>tmux a</code> for the most recent.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Kill a session</span><span class="cmd-tag cmd-cli">tmux kill-session -t name</span></div><div class="card-body"><p class="desc">Destroys the named session and all its windows/panes.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Kill tmux server</span><span class="cmd-tag cmd-cli">tmux kill-server</span></div><div class="card-body"><p class="desc">Terminates all sessions and the tmux server process entirely.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Rename current session</span><span class="cmd-tag cmd-pfx">Prefix $</span></div><div class="card-body"><p class="desc">Opens a prompt to rename the current session.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Detach from session</span><span class="cmd-tag cmd-pfx">Prefix d</span></div><div class="card-body"><p class="desc">Disconnects from the session but keeps it running in the background.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Switch sessions interactively</span><span class="cmd-tag cmd-pfx">Prefix s</span></div><div class="card-body"><p class="desc">Opens a tree view of all sessions and windows for interactive selection.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Previous / next session</span><span class="cmd-tag cmd-pfx">Prefix ( / )</span></div><div class="card-body"><p class="desc">Cycles through sessions in order.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Last used session</span><span class="cmd-tag cmd-pfx">Prefix L</span></div><div class="card-body"><p class="desc">Jumps to the most recently active session (capital L).</p></div></article>
+  </div>
+</section>
+
+<!-- Windows -->
+<section id="windows" class="sec">
+  <div class="sec-head">
+    <span class="sec-num">02</span>
+    <h2 class="sec-title">Window Management</h2>
+    <span class="sec-badge sb-b">Essential</span>
+  </div>
+  <p class="sec-intro">Windows are like tabs within a session. Each window runs its own shell.</p>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Create new window</span><span class="cmd-tag cmd-pfx">Prefix c</span></div><div class="card-body"><p class="desc">Opens a new window with a fresh shell in the current session.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Rename current window</span><span class="cmd-tag cmd-pfx">Prefix ,</span></div><div class="card-body"><p class="desc">Opens a prompt to give the current window a meaningful name.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Kill current window</span><span class="cmd-tag cmd-pfx">Prefix &amp;</span></div><div class="card-body"><p class="desc">Destroys the current window after a confirmation prompt.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Next / previous window</span><span class="cmd-tag cmd-pfx">Prefix n / p</span></div><div class="card-body"><p class="desc">Cycles forward or backward through windows in the session.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Switch to window by number</span><span class="cmd-tag cmd-pfx">Prefix 0-9</span></div><div class="card-body"><p class="desc">Jumps directly to a window by its index number.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">List windows interactively</span><span class="cmd-tag cmd-pfx">Prefix w</span></div><div class="card-body"><p class="desc">Opens a tree view of all windows across all sessions.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Last active window</span><span class="cmd-tag cmd-pfx">Prefix l</span></div><div class="card-body"><p class="desc">Toggles to the previously active window (lowercase L).</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Find window by name</span><span class="cmd-tag cmd-pfx">Prefix f</span></div><div class="card-body"><p class="desc">Searches windows by name or content for quick navigation.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Move window to index</span><span class="cmd-tag cmd-pfx">Prefix .</span></div><div class="card-body"><p class="desc">Reassigns the current window to a different index number.</p></div></article>
+  </div>
+</section>
+
+<!-- Panes -->
+<section id="panes" class="sec">
+  <div class="sec-head">
+    <span class="sec-num">03</span>
+    <h2 class="sec-title">Pane Management</h2>
+    <span class="sec-badge sb-i">Intermediate</span>
+  </div>
+  <p class="sec-intro">Panes split a window into multiple terminals side by side or stacked.</p>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Split vertically (side by side)</span><span class="cmd-tag cmd-pfx">Prefix %</span></div><div class="card-body"><p class="desc">Creates a new pane to the right of the current one.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Split horizontally (top/bottom)</span><span class="cmd-tag cmd-pfx">Prefix "</span></div><div class="card-body"><p class="desc">Creates a new pane below the current one.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Kill current pane</span><span class="cmd-tag cmd-pfx">Prefix x</span></div><div class="card-body"><p class="desc">Closes the current pane after confirmation.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Toggle zoom (fullscreen)</span><span class="cmd-tag cmd-pfx">Prefix z</span></div><div class="card-body"><p class="desc">Maximizes the current pane to fill the window, or restores it.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Move focus by direction</span><span class="cmd-tag cmd-pfx">Prefix Arrow</span></div><div class="card-body"><p class="desc">Moves focus to the pane in the arrow key direction.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Cycle focus to next pane</span><span class="cmd-tag cmd-pfx">Prefix o</span></div><div class="card-body"><p class="desc">Rotates focus through panes in order.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Last active pane</span><span class="cmd-tag cmd-pfx">Prefix ;</span></div><div class="card-body"><p class="desc">Toggles focus to the previously active pane.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Show pane numbers</span><span class="cmd-tag cmd-pfx">Prefix q</span></div><div class="card-body"><p class="desc">Displays pane indices briefly. Press a number to jump to that pane.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Swap with previous / next</span><span class="cmd-tag cmd-pfx">Prefix { / }</span></div><div class="card-body"><p class="desc">Swaps the current pane's position with its neighbor.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Break pane into window</span><span class="cmd-tag cmd-pfx">Prefix !</span></div><div class="card-body"><p class="desc">Promotes the current pane to its own standalone window.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Resize pane (small steps)</span><span class="cmd-tag cmd-pfx">Prefix Ctrl+Arrow</span></div><div class="card-body"><p class="desc">Resizes the current pane by 1 cell in the arrow direction. Repeatable.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Resize pane (large steps)</span><span class="cmd-tag cmd-pfx">Prefix Alt+Arrow</span></div><div class="card-body"><p class="desc">Resizes the current pane by 5 cells in the arrow direction.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Cycle pane layouts</span><span class="cmd-tag cmd-pfx">Prefix Space</span></div><div class="card-body"><p class="desc">Rotates through built-in layouts: even-horizontal, even-vertical, main-horizontal, main-vertical, tiled.</p></div></article>
+  </div>
+</section>
+
+<!-- Copy Mode -->
+<section id="copy" class="sec">
+  <div class="sec-head">
+    <span class="sec-num">04</span>
+    <h2 class="sec-title">Copy Mode (Scroll &amp; Select)</h2>
+    <span class="sec-badge sb-i">Intermediate</span>
+  </div>
+  <p class="sec-intro">Copy mode lets you scroll through terminal output, search, and copy text. Vi-mode bindings shown (default is emacs; set <code>set -g mode-keys vi</code> to switch).</p>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Enter copy mode</span><span class="cmd-tag cmd-pfx">Prefix [</span></div><div class="card-body"><p class="desc">Enters scrollback mode. Navigate with arrow keys or vi motions.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Exit copy mode</span><span class="cmd-tag cmd-pfx">q / Esc</span></div><div class="card-body"><p class="desc">Returns to normal mode from copy mode.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Scroll</span><span class="cmd-tag cmd-pfx">Arrows / PgUp / PgDn</span></div><div class="card-body"><p class="desc">Navigate through the scrollback buffer in copy mode.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Jump to top / bottom</span><span class="cmd-tag cmd-pfx">g / G</span></div><div class="card-body"><p class="desc">Jumps to the start or end of the scrollback buffer (vi mode).</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Start selection</span><span class="cmd-tag cmd-pfx">Space</span></div><div class="card-body"><p class="desc">Begins text selection at the cursor position (vi mode).</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Copy selection</span><span class="cmd-tag cmd-pfx">Enter</span></div><div class="card-body"><p class="desc">Copies the selected text to the tmux paste buffer and exits copy mode.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Search forward</span><span class="cmd-tag cmd-pfx">/ then text</span></div><div class="card-body"><p class="desc">Searches forward through the scrollback buffer.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Search backward</span><span class="cmd-tag cmd-pfx">? then text</span></div><div class="card-body"><p class="desc">Searches backward through the scrollback buffer.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Next / previous match</span><span class="cmd-tag cmd-pfx">n / N</span></div><div class="card-body"><p class="desc">Jumps between search matches in the scrollback.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Paste buffer</span><span class="cmd-tag cmd-pfx">Prefix ]</span></div><div class="card-body"><p class="desc">Pastes the most recently copied text from the tmux buffer.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Choose paste buffer</span><span class="cmd-tag cmd-pfx">Prefix =</span></div><div class="card-body"><p class="desc">Opens a list of all paste buffers to select from.</p></div></article>
+  </div>
+</section>
+
+<!-- Command Mode -->
+<section id="commands" class="sec">
+  <div class="sec-head">
+    <span class="sec-num">05</span>
+    <h2 class="sec-title">Command Mode &amp; Config</h2>
+    <span class="sec-badge sb-i">Intermediate</span>
+  </div>
+  <p class="sec-intro">tmux has a built-in command prompt for runtime configuration and key binding management.</p>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Open command prompt</span><span class="cmd-tag cmd-pfx">Prefix :</span></div><div class="card-body"><p class="desc">Opens the tmux command line at the bottom of the screen.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Reload config</span><span class="cmd-tag cmd-pfx">:source ~/.tmux.conf</span></div><div class="card-body"><p class="desc">Re-reads the config file without restarting tmux or losing sessions.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Set global option</span><span class="cmd-tag cmd-pfx">:set -g option value</span></div><div class="card-body"><p class="desc">Changes a tmux option at runtime. Use <code>-g</code> for global scope.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Show all options</span><span class="cmd-tag cmd-pfx">:show-options -g</span></div><div class="card-body"><p class="desc">Displays every global option and its current value.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">List key bindings</span><span class="cmd-tag cmd-pfx">:list-keys</span></div><div class="card-body"><p class="desc">Shows all current key bindings in a searchable list.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Bind a key</span><span class="cmd-tag cmd-pfx">:bind key command</span></div><div class="card-body"><p class="desc">Creates a new key binding at runtime.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Unbind a key</span><span class="cmd-tag cmd-pfx">:unbind key</span></div><div class="card-body"><p class="desc">Removes an existing key binding.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Show all bindings</span><span class="cmd-tag cmd-pfx">Prefix ?</span></div><div class="card-body"><p class="desc">Displays a searchable list of every key binding.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Show clock</span><span class="cmd-tag cmd-pfx">Prefix t</span></div><div class="card-body"><p class="desc">Displays a clock overlay in the current pane.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Window info</span><span class="cmd-tag cmd-pfx">Prefix i</span></div><div class="card-body"><p class="desc">Shows brief info about the current window in the status bar.</p></div></article>
+  </div>
+</section>
+
+<!-- Misc -->
+<section id="misc" class="sec">
+  <div class="sec-head">
+    <span class="sec-num">06</span>
+    <h2 class="sec-title">Misc &amp; Configuration</h2>
+    <span class="sec-badge sb-i">Intermediate</span>
+  </div>
+  <p class="sec-intro">Useful shortcuts, common config options, and power-user commands.</p>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Quick attach</span><span class="cmd-tag cmd-cli">tmux a</span></div><div class="card-body"><p class="desc">Shorthand to attach to the most recent session.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Server info</span><span class="cmd-tag cmd-cli">tmux info</span></div><div class="card-body"><p class="desc">Shows tmux server information and terminal capabilities.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Reload config from shell</span><span class="cmd-tag cmd-cli">tmux source ~/.tmux.conf</span></div><div class="card-body"><p class="desc">Reloads config from outside a tmux session.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Refresh client</span><span class="cmd-tag cmd-pfx">Prefix r</span></div><div class="card-body"><p class="desc">Forces a redraw of the tmux client display.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Show message log</span><span class="cmd-tag cmd-pfx">Prefix ~</span></div><div class="card-body"><p class="desc">Displays the tmux internal message/debug log.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Enable mouse</span><span class="cmd-tag cmd-cli">set -g mouse on</span></div><div class="card-body"><p class="desc">Add to <code>~/.tmux.conf</code> for mouse scrolling, pane selection, and resizing.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Increase scrollback</span><span class="cmd-tag cmd-cli">set -g history-limit 50000</span></div><div class="card-body"><p class="desc">Sets the scrollback buffer to 50,000 lines (default is 2,000).</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Windows start at 1</span><span class="cmd-tag cmd-cli">set -g base-index 1</span></div><div class="card-body"><p class="desc">Numbers windows starting from 1 instead of 0 (easier to reach).</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Add reload shortcut</span><span class="cmd-tag cmd-cli">bind r source-file ~/.tmux.conf</span></div><div class="card-body"><p class="desc">Add to <code>~/.tmux.conf</code> to reload config with <kbd>Prefix</kbd> <kbd>r</kbd>.</p>
+    <div class="tip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><span><strong>Note:</strong> This overrides the default <kbd>Prefix</kbd> <kbd>r</kbd> (refresh-client). Most users prefer the reload shortcut.</span></div></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Check tmux version</span><span class="cmd-tag cmd-cli">tmux -V</span></div><div class="card-body"><p class="desc">Prints the installed tmux version number.</p></div></article>
+  </div>
+</section>
+
+<!-- Workflows -->
+<section id="workflows" class="sec">
+  <div class="sec-head">
+    <span class="sec-num">07</span>
+    <h2 class="sec-title">Common Workflows</h2>
+    <span class="sec-badge sb-a">Practical</span>
+  </div>
+  <p class="sec-intro">Real-world usage patterns that combine multiple commands.</p>
+  <div class="grid">
+    <article class="card"><div class="card-head"><span class="card-title">Start a named dev session</span><span class="cmd-tag cmd-cli">tmux new -s work</span></div><div class="card-body"><p class="desc">Creates a persistent dev environment that survives terminal closes, SSH drops, and can be reattached from any terminal.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Side-by-side editor + terminal</span><span class="cmd-tag cmd-pfx">Prefix % then Prefix Arrow</span></div><div class="card-body"><p class="desc">Split vertically for a code editor on one side and a terminal on the other, then navigate between them.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Temporary fullscreen for a pane</span><span class="cmd-tag cmd-pfx">Prefix z &rarr; work &rarr; Prefix z</span></div><div class="card-body"><p class="desc">Zoom in to read logs or debug output fullscreen, then zoom back out to restore your split layout.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Detach and reattach</span><span class="cmd-tag cmd-pfx">Prefix d &rarr; tmux a -t work</span></div><div class="card-body"><p class="desc">Detach from a long-running process, do other work, then reattach to pick up exactly where you left off.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Search scrollback output</span><span class="cmd-tag cmd-pfx">Prefix [ &rarr; / &rarr; search &rarr; Enter</span></div><div class="card-body"><p class="desc">Enter copy mode to scroll through command output or search log files without a separate pager.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Multiple windows per session</span><span class="cmd-tag cmd-pfx">Prefix c then Prefix 0-9</span></div><div class="card-body"><p class="desc">Open separate windows for server, tests, git, etc. and jump between them by number.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Break out a busy pane</span><span class="cmd-tag cmd-pfx">Prefix !</span></div><div class="card-body"><p class="desc">When a task in one pane grows too large for a split, promote it to its own full window.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Pull pane from another window</span><span class="cmd-tag cmd-pfx">:join-pane -s source</span></div><div class="card-body"><p class="desc">The reverse of break-pane: pulls a pane from another window into the current one as a split.</p></div></article>
+  </div>
+</section>
+
+  <footer class="pg-foot">
+    <p>tmux Reference Guide &middot; Fact-checked &amp; redesigned 2026</p>
+    <p>All bindings verified against tmux 3.x defaults</p>
+  </footer>
+</main>
+
+<script>
+(function(){
+  var html = document.documentElement;
+  var d = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+  html.setAttribute('data-theme', d);
+  document.querySelectorAll('[data-theme-toggle]').forEach(function(btn){
+    btn.innerHTML = d==='dark'
+      ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+      : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+    btn.addEventListener('click', function(){
+      d = d==='dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', d);
+      document.querySelectorAll('[data-theme-toggle]').forEach(function(b){
+        b.innerHTML = d==='dark'
+          ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+          : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+      });
+    });
+  });
+
+  // Mobile sidebar
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('overlay');
+  var menuBtn = document.getElementById('menu-btn');
+  if(menuBtn) menuBtn.addEventListener('click', function(){ sidebar.classList.toggle('open'); overlay.classList.toggle('vis'); });
+  if(overlay) overlay.addEventListener('click', function(){ sidebar.classList.remove('open'); overlay.classList.remove('vis'); });
+
+  // Active nav on scroll
+  var sections = document.querySelectorAll('section[id]');
+  var navLinks = document.querySelectorAll('.nav-a[data-sec]');
+  var observer = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){
+        navLinks.forEach(function(a){ a.classList.remove('active'); });
+        var active = document.querySelector('.nav-a[data-sec="'+entry.target.id+'"]');
+        if(active){ active.classList.add('active'); active.scrollIntoView({block:'nearest'}); }
+      }
+    });
+  }, {rootMargin:'-20% 0px -70% 0px'});
+  sections.forEach(function(s){ observer.observe(s); });
+
+  // Search
+  var searchInput = document.getElementById('search');
+  if(searchInput){
+    searchInput.addEventListener('input', function(){
+      var q = this.value.toLowerCase().trim();
+      document.querySelectorAll('.card').forEach(function(card){
+        if(!q){card.style.display='';return;}
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>
