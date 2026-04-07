@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, monospace;
+  --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+  --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+  --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+  --text-2xl: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+  --radius-sm: 0.375rem; --radius-md: 0.5rem; --radius-lg: 0.75rem;
+  --radius-xl: 1rem; --radius-full: 9999px;
+  --trans: 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  --sidebar-w: 240px;
+}
+:root, [data-theme="light"] {
+  --bg: #f7f6f2; --surface: #faf9f7; --surface-2: #fcfcfb;
+  --surface-off: #eeecea; --surface-dyn: #e5e2de;
+  --divider: #dcdad6; --border: #d4d2ce;
+  --text: #1a1915; --text-muted: #6b6966; --text-faint: #a8a7a4; --text-inv: #f9f8f5;
+  --primary: #016b72; --primary-hov: #0c5058; --primary-hl: #cddcda; --primary-dim: rgba(1,107,114,0.08);
+  --green: #2f7d34; --green-bg: rgba(47,125,52,0.09);
+  --orange: #b35d00; --orange-bg: rgba(179,93,0,0.09);
+  --red: #c0302a; --red-bg: rgba(192,48,42,0.09);
+  --blue: #0a5fa0; --blue-bg: rgba(10,95,160,0.09);
+  --purple: #6d28d9; --purple-bg: rgba(109,40,217,0.09);
+  --code-bg: #1a1915; --code-text: #d4d2ce; --code-c: #6b6966;
+  --code-g: #6dbc6d; --code-o: #e8a24a; --code-p: #b48ef5;
+  --sh-sm: 0 1px 2px rgba(26,25,21,.06); --sh-md: 0 4px 12px rgba(26,25,21,.08);
+}
+[data-theme="dark"] {
+  --bg: #161512; --surface: #1c1a17; --surface-2: #201e1b;
+  --surface-off: #1f1d1a; --surface-dyn: #2a2826;
+  --divider: #2b2927; --border: #363432;
+  --text: #cccac6; --text-muted: #7a7876; --text-faint: #57554f; --text-inv: #2a2826;
+  --primary: #4a9da8; --primary-hov: #21808c; --primary-hl: #2d3d3d; --primary-dim: rgba(74,157,168,0.1);
+  --green: #65af65; --green-bg: rgba(101,175,101,0.1);
+  --orange: #e09840; --orange-bg: rgba(224,152,64,0.1);
+  --red: #d96b65; --red-bg: rgba(217,107,101,0.1);
+  --blue: #5290c5; --blue-bg: rgba(82,144,197,0.1);
+  --purple: #a78bfa; --purple-bg: rgba(167,139,250,0.1);
+  --code-bg: #0f0e0c; --code-text: #cccac6; --code-c: #6b6966;
+  --code-g: #6dbc6d; --code-o: #e8a24a; --code-p: #b48ef5;
+  --sh-sm: 0 1px 2px rgba(0,0,0,.25); --sh-md: 0 4px 12px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) {
+  --bg:#161512;--surface:#1c1a17;--surface-2:#201e1b;--surface-off:#1f1d1a;--surface-dyn:#2a2826;
+  --divider:#2b2927;--border:#363432;--text:#cccac6;--text-muted:#7a7876;--text-faint:#57554f;--text-inv:#2a2826;
+  --primary:#4a9da8;--primary-hov:#21808c;--primary-hl:#2d3d3d;--primary-dim:rgba(74,157,168,0.1);
+  --green:#65af65;--green-bg:rgba(101,175,101,0.1);--orange:#e09840;--orange-bg:rgba(224,152,64,0.1);
+  --red:#d96b65;--red-bg:rgba(217,107,101,0.1);--blue:#5290c5;--blue-bg:rgba(82,144,197,0.1);
+  --purple:#a78bfa;--purple-bg:rgba(167,139,250,0.1);
+  --code-bg:#0f0e0c;--code-text:#cccac6;--code-c:#6b6966;--code-g:#6dbc6d;--code-o:#e8a24a;--code-p:#b48ef5;
+  --sh-sm:0 1px 2px rgba(0,0,0,.25);--sh-md:0 4px 12px rgba(0,0,0,.35);
+}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:4rem;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-body);font-size:var(--text-base);color:var(--text);background:var(--bg);line-height:1.6;min-height:100dvh}
+h1,h2,h3,h4{text-wrap:balance;line-height:1.2}
+a{color:var(--primary);text-decoration:none;transition:color var(--trans)}
+a:hover{color:var(--primary-hov)}
+button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
+::selection{background:var(--primary-dim);color:var(--text)}
+:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:var(--radius-sm)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--divider);border-radius:var(--radius-full)}
+
+/* Layout */
+.app{display:flex;min-height:100dvh}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--divider);display:flex;flex-direction:column;z-index:100}
+.sb-head{padding:1.25rem 1.25rem 1rem;border-bottom:1px solid var(--divider);position:sticky;top:0;background:var(--surface);z-index:1}
+.logo{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem}
+.logo-icon{width:32px;height:32px;flex-shrink:0}
+.logo-text{font-size:var(--text-sm);font-weight:700;letter-spacing:-.01em;color:var(--text)}
+.logo-text span{color:var(--primary)}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text-faint);pointer-events:none}
+#search{width:100%;padding:.5rem .75rem .5rem calc(.75rem + 18px);background:var(--surface-off);border:1px solid var(--border);border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--text);outline:none}
+#search::placeholder{color:var(--text-faint)}
+#search:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-dim)}
+.sb-nav{padding:.75rem;flex:1;overflow-y:auto}
+.nav-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);padding:.5rem .75rem .25rem;display:block}
+.nav-a{display:flex;align-items:center;gap:.5rem;padding:.4rem .75rem;border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--text-muted);text-decoration:none;transition:background var(--trans),color var(--trans)}
+.nav-a:hover{background:var(--surface-dyn);color:var(--text)}
+.nav-a.active{background:var(--primary-dim);color:var(--primary);font-weight:500}
+.nav-chip{margin-left:auto;font-size:9px;font-weight:700;padding:2px 6px;border-radius:var(--radius-full);text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+.nc-g{background:var(--green-bg);color:var(--green)}
+.nc-b{background:var(--blue-bg);color:var(--blue)}
+.nc-o{background:var(--orange-bg);color:var(--orange)}
+.nc-p{background:var(--purple-bg);color:var(--purple)}
+.nc-r{background:var(--red-bg);color:var(--red)}
+.sb-foot{padding:1rem;border-top:1px solid var(--divider);display:flex;align-items:center;justify-content:space-between}
+.theme-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-md);color:var(--text-muted);background:var(--surface-off);border:1px solid var(--border)}
+.theme-btn:hover{color:var(--text);background:var(--surface-dyn)}
+.sb-meta{font-size:11px;color:var(--text-faint)}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+.mob-header{display:none;position:sticky;top:0;z-index:90;background:var(--surface);border-bottom:1px solid var(--divider);padding:.75rem 1rem;align-items:center;justify-content:space-between}
+.mob-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--radius-md);background:var(--surface-off);border:1px solid var(--border);color:var(--text-muted)}
+
+/* Main */
+.main{margin-left:var(--sidebar-w);flex:1;min-width:0;padding:2.5rem clamp(1.5rem,5vw,3rem)}
+
+/* Page header */
+.pg-head{margin-bottom:3rem;padding-bottom:2rem;border-bottom:1px solid var(--divider)}
+.pg-title{font-size:var(--text-2xl);font-weight:700;letter-spacing:-.03em;color:var(--text);line-height:1;margin-bottom:1rem}
+.pg-title em{font-style:normal;color:var(--primary)}
+.pg-desc{font-size:var(--text-base);color:var(--text-muted);max-width:56ch;line-height:1.6;margin-bottom:1rem}
+.pg-chips{display:flex;gap:.5rem;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:.25rem;font-size:var(--text-xs);font-weight:500;padding:.25rem .75rem;border-radius:var(--radius-full);border:1px solid var(--border);background:var(--surface)}
+.chip-dot{width:6px;height:6px;border-radius:var(--radius-full)}
+
+/* Tip callout */
+.tip-box{display:flex;gap:.75rem;align-items:flex-start;padding:.75rem 1rem;border-radius:var(--radius-md);font-size:var(--text-xs);line-height:1.65;background:var(--blue-bg);color:var(--text-muted);border:1px solid rgba(10,95,160,.2);margin-top:1rem}
+[data-theme="dark"] .tip-box{border-color:rgba(82,144,197,.25)}
+.tip-box svg{flex-shrink:0;width:14px;height:14px;margin-top:2px;color:var(--blue)}
+.tip-box strong{color:var(--blue)}
+
+/* Section */
+.sec{margin-bottom:4rem}
+.sec-head{display:flex;align-items:center;gap:.75rem;padding-bottom:.75rem;border-bottom:1px solid var(--divider);margin-bottom:1rem}
+.sec-num{font-size:var(--text-xs);font-weight:600;font-family:var(--font-mono);color:var(--text-faint);min-width:2ch}
+.sec-title{font-size:var(--text-lg);font-weight:600;color:var(--text);letter-spacing:-.02em}
+.sec-badge{margin-left:auto;font-size:10px;font-weight:600;padding:3px 10px;border-radius:var(--radius-full);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
+.sec-intro{color:var(--text-muted);font-size:var(--text-sm);margin-bottom:1.25rem;max-width:70ch;line-height:1.7}
+
+/* Grid */
+.grid{display:grid;grid-template-columns:1fr;gap:.75rem}
+@media(min-width:860px){.grid.two{grid-template-columns:1fr 1fr}}
+
+/* Card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;transition:border-color var(--trans),box-shadow var(--trans)}
+.card:hover{border-color:var(--primary);box-shadow:var(--sh-sm)}
+.card-head{padding:.75rem 1rem;display:flex;align-items:center;gap:.75rem;border-bottom:1px solid var(--divider)}
+.card-title{font-size:var(--text-sm);font-weight:600;color:var(--text);flex:1;line-height:1.3}
+.cmd-tag{font-family:var(--font-mono);font-size:var(--text-xs);font-weight:500;color:var(--primary);background:var(--primary-dim);padding:2px 8px;border-radius:var(--radius-sm);border:1px solid rgba(1,107,114,.15);white-space:nowrap;flex-shrink:0}
+[data-theme="dark"] .cmd-tag{border-color:rgba(74,157,168,.2)}
+.card-body{padding:.75rem 1rem;display:flex;flex-direction:column;gap:.5rem}
+.desc{font-size:var(--text-sm);color:var(--text-muted);line-height:1.65}
+.aliases{font-size:var(--text-xs);color:var(--text-faint);font-family:var(--font-mono)}
+
+/* Inline code & kbd */
+code{font-family:var(--font-mono);font-size:.85em;background:var(--surface-off);color:var(--primary);padding:1px 6px;border-radius:var(--radius-sm);border:1px solid var(--border)}
+kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);color:var(--text);padding:2px 7px;border-radius:var(--radius-sm);border:1px solid var(--border);display:inline-block;min-width:1.6em;text-align:center;box-shadow:0 1px 0 var(--border)}
+
+/* Vim tables */
+.vim-table{width:100%;border-collapse:collapse;font-size:var(--text-xs);margin-bottom:.75rem}
+.vim-table th{text-align:left;padding:.5rem .75rem;background:var(--surface-off);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);border-bottom:1px solid var(--border)}
+.vim-table td{padding:.45rem .75rem;border-bottom:1px solid var(--divider);color:var(--text-muted)}
+.vim-table tr:hover td{background:var(--primary-dim)}
+.vim-table td:first-child{font-family:var(--font-mono);color:var(--primary);font-weight:500;white-space:nowrap}
+.vim-sub{margin-bottom:1.25rem}
+.vim-sub h3{font-size:var(--text-sm);font-weight:600;color:var(--text);margin-bottom:.5rem}
+
+/* Unsupported list */
+.unsup-grid{display:grid;grid-template-columns:1fr 1fr;gap:.25rem 1.5rem;list-style:none;padding:0}
+.unsup-grid li{font-size:var(--text-xs);color:var(--text-faint);padding:.25rem 0;display:flex;align-items:center;gap:.4rem}
+.unsup-grid li::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--red);opacity:.5;flex-shrink:0}
+
+/* Divider */
+.sec-divider{border:none;border-top:2px solid var(--divider);margin:4rem 0 3rem}
+
+/* Footer */
+.pg-foot{margin-top:4rem;padding-top:2rem;border-top:1px solid var(--divider);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+.pg-foot p{font-size:var(--text-xs);color:var(--text-faint)}
+
+/* Mobile */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);transition:transform .3s cubic-bezier(.16,1,.3,1)}
+  .sidebar.open{transform:translateX(0)}
+  .sb-overlay.vis{display:block}
+  .mob-header{display:flex}
+  .main{margin-left:0;padding:1.5rem 1rem}
+  .pg-title{font-size:var(--text-xl)}
+  .grid.two{grid-template-columns:1fr}
+  .unsup-grid{grid-template-columns:1fr}
+}
+</style>
+</head><body>
+<div class="sb-overlay" id="overlay"></div>
+
+<header class="mob-header" role="banner">
+  <button class="mob-btn" id="menu-btn" aria-label="Open navigation">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <span style="font-weight:700;font-size:var(--text-sm)"><span style="color:var(--primary)">Claude Code</span> Reference</span>
+  <button class="mob-btn theme-btn" data-theme-toggle aria-label="Toggle theme">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+</header>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sb-head">
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="var(--code-bg)"/>
+        <path d="M7 11 L13 16 L7 21" stroke="var(--code-g)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="15" y1="21" x2="25" y2="21" stroke="var(--code-c)" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="logo-text"><span>Claude</span> Code</span>
+    </div>
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="search" id="search" placeholder="Search commands..." aria-label="Search">
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav">
+    <span class="nav-label">Slash Commands</span>
+    <a href="#session" class="nav-a" data-sec="session">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Session
+      <span class="nav-chip nc-g">7</span>
+    </a>
+    <a href="#context" class="nav-a" data-sec="context">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Context &amp; Usage
+      <span class="nav-chip nc-g">5</span>
+    </a>
+    <a href="#model" class="nav-a" data-sec="model">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Model &amp; Output
+      <span class="nav-chip nc-g">5</span>
+    </a>
+    <a href="#config" class="nav-a" data-sec="config">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Configuration
+      <span class="nav-chip nc-o">11</span>
+    </a>
+    <a href="#tools" class="nav-a" data-sec="tools">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      Tools &amp; Integrations
+      <span class="nav-chip nc-o">7</span>
+    </a>
+    <a href="#code" class="nav-a" data-sec="code">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      Code &amp; Review
+      <span class="nav-chip nc-g">5</span>
+    </a>
+    <a href="#sharing" class="nav-a" data-sec="sharing">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Sharing &amp; Account
+      <span class="nav-chip nc-g">11</span>
+    </a>
+    <a href="#misc" class="nav-a" data-sec="misc">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Miscellaneous
+      <span class="nav-chip nc-g">13</span>
+    </a>
+    <span class="nav-label" style="margin-top:.5rem">Tips &amp; Concepts</span>
+    <a href="#tips-plugins" class="nav-a" data-sec="tips-plugins">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+      Plugins
+      <span class="nav-chip nc-o">Guide</span>
+    </a>
+    <a href="#tips-skills" class="nav-a" data-sec="tips-skills">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Skills
+      <span class="nav-chip nc-o">Guide</span>
+    </a>
+    <a href="#tips-mcp" class="nav-a" data-sec="tips-mcp">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      MCP Servers
+      <span class="nav-chip nc-o">Guide</span>
+    </a>
+    <span class="nav-label" style="margin-top:.5rem">Vim Mode</span>
+    <a href="#vim-modes" class="nav-a" data-sec="vim-modes">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+      Mode Switching
+      <span class="nav-chip nc-p">7</span>
+    </a>
+    <a href="#vim-nav" class="nav-a" data-sec="vim-nav">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg>
+      Navigation
+      <span class="nav-chip nc-p">16</span>
+    </a>
+    <a href="#vim-edit" class="nav-a" data-sec="vim-edit">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Editing
+      <span class="nav-chip nc-p">16</span>
+    </a>
+    <a href="#vim-obj" class="nav-a" data-sec="vim-obj">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      Text Objects
+      <span class="nav-chip nc-p">7</span>
+    </a>
+    <a href="#vim-unsup" class="nav-a" data-sec="vim-unsup">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      Not Supported
+      <span class="nav-chip nc-r">10</span>
+    </a>
+  </div>
+  <div class="sb-foot">
+    <span class="sb-meta">v2.0 &middot; 2026</span>
+    <button class="theme-btn" data-theme-toggle aria-label="Toggle theme">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</nav>
+
+<main class="main" id="main">
+  <header class="pg-head">
+    <h1 class="pg-title"><em>Claude Code</em><br>Reference</h1>
+    <p class="pg-desc">Slash commands and Vim mode guide for the Claude Code CLI. Every command in one searchable reference.</p>
+    <div class="pg-chips">
+      <span class="chip" style="color:var(--green)"><span class="chip-dot" style="background:var(--green)"></span>Slash Command</span>
+      <span class="chip" style="color:var(--purple)"><span class="chip-dot" style="background:var(--purple)"></span>Vim Binding</span>
+    </div>
+    <div class="tip-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span><strong>Quick tips:</strong> Prefix any shell command with <code>!</code> to run it directly (e.g. <code>!git status</code>). Type <code>@</code> for file path autocomplete. Custom skills appear alongside built-in commands when you type <code>/</code>.</span>
+    </div>
+  </header>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLASH COMMANDS                              -->
+<!-- ═══════════════════════════════════════════ -->
+
+<section id="session" class="sec">
+  <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title">Session Management</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">7 cmds</span></div>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Clear conversation</span><span class="cmd-tag">/clear</span></div><div class="card-body"><p class="desc">Wipes conversation history and frees context window space so you can start fresh without exiting.</p><p class="aliases">alias: /reset</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Compact conversation</span><span class="cmd-tag">/compact [focus]</span></div><div class="card-body"><p class="desc">Compresses the conversation into a summary to reclaim context space. Optional focus argument guides what gets preserved.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Resume session</span><span class="cmd-tag">/resume [session]</span></div><div class="card-body"><p class="desc">Picks up a previous conversation by session ID or name, or opens an interactive picker.</p><p class="aliases">alias: /continue</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Fork conversation</span><span class="cmd-tag">/fork [name]</span></div><div class="card-body"><p class="desc">Creates a branching copy at the current point to explore a different direction without losing the original.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Rename session</span><span class="cmd-tag">/rename [name]</span></div><div class="card-body"><p class="desc">Gives the session a custom name, or auto-generates one from conversation history.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Rewind</span><span class="cmd-tag">/rewind</span></div><div class="card-body"><p class="desc">Rolls back conversation and optionally code to a previous checkpoint. Useful for undoing a wrong turn.</p><p class="aliases">alias: /checkpoint</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Exit CLI</span><span class="cmd-tag">/exit</span></div><div class="card-body"><p class="desc">Closes the Claude Code session and returns you to your shell.</p><p class="aliases">alias: /quit</p></div></article>
+  </div>
+</section>
+
+<section id="context" class="sec">
+  <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title">Context &amp; Usage</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">5 cmds</span></div>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Context window</span><span class="cmd-tag">/context</span></div><div class="card-body"><p class="desc">Displays a colored grid visualization of context window consumption so you know when to compact.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Token cost</span><span class="cmd-tag">/cost</span></div><div class="card-body"><p class="desc">Shows token usage breakdown: input tokens, output tokens, and cache hits for the current session.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Plan usage</span><span class="cmd-tag">/usage</span></div><div class="card-body"><p class="desc">Displays current plan limits and rate-limit status to see remaining capacity.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Usage stats</span><span class="cmd-tag">/stats</span></div><div class="card-body"><p class="desc">Dashboard of daily usage patterns, session history, streaks, and model preferences over time.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Extra usage</span><span class="cmd-tag">/extra-usage</span></div><div class="card-body"><p class="desc">Configures overflow usage so Claude keeps working when you hit rate limits instead of stopping.</p></div></article>
+  </div>
+</section>
+
+<section id="model" class="sec">
+  <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title">Model &amp; Output</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">5 cmds</span></div>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Switch model</span><span class="cmd-tag">/model [model]</span></div><div class="card-body"><p class="desc">Switches the active model mid-session (e.g. Opus to Sonnet) and lets you adjust effort level.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Fast mode</span><span class="cmd-tag">/fast [on|off]</span></div><div class="card-body"><p class="desc">Toggles fast mode: same model, optimized for faster output at the cost of some thoroughness.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Output style</span><span class="cmd-tag">/output-style</span></div><div class="card-body"><p class="desc">Switches between output styles. <strong>Deprecated</strong> -- use <code>/config</code> instead. Output style is now fixed at session start for better prompt caching.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Voice input</span><span class="cmd-tag">/voice</span></div><div class="card-body"><p class="desc">Toggles voice input mode for dictating prompts instead of typing. Shows your dictation language on enable.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Status dialog</span><span class="cmd-tag">/status</span></div><div class="card-body"><p class="desc">Opens a status overlay showing session info, model, context usage, and config. Works even while Claude is responding.</p></div></article>
+  </div>
+</section>
+
+<section id="config" class="sec">
+  <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title">Configuration</h2><span class="sec-badge" style="background:var(--orange-bg);color:var(--orange)">11 cmds</span></div>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Settings UI</span><span class="cmd-tag">/config</span></div><div class="card-body"><p class="desc">Opens the interactive settings UI to configure all Claude Code options in one place.</p><p class="aliases">alias: /settings</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Permissions</span><span class="cmd-tag">/permissions</span></div><div class="card-body"><p class="desc">Shows and edits which tools run automatically vs. requiring approval each time.</p><p class="aliases">alias: /allowed-tools</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Hooks</span><span class="cmd-tag">/hooks</span></div><div class="card-body"><p class="desc">Manages shell commands that run automatically in response to tool events (pre/post hooks).</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Memory</span><span class="cmd-tag">/memory</span></div><div class="card-body"><p class="desc">Opens CLAUDE.md memory files for editing and manages auto-memory settings.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Init project</span><span class="cmd-tag">/init</span></div><div class="card-body"><p class="desc">Creates a CLAUDE.md file in the project root with starter instructions tailored to your codebase.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Keybindings</span><span class="cmd-tag">/keybindings</span></div><div class="card-body"><p class="desc">Opens keybindings config to customize keyboard shortcuts and add chord bindings.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Status line</span><span class="cmd-tag">/statusline</span></div><div class="card-body"><p class="desc">Configures the persistent status bar showing model, context, and live info.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Theme</span><span class="cmd-tag">/theme</span></div><div class="card-body"><p class="desc">Changes color theme between light, dark, colorblind-accessible, and ANSI palettes.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Terminal setup</span><span class="cmd-tag">/terminal-setup</span></div><div class="card-body"><p class="desc">Configures terminal keybindings for Shift+Enter multi-line input and other shortcuts.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Sandbox</span><span class="cmd-tag">/sandbox</span></div><div class="card-body"><p class="desc">Toggles sandboxed execution mode that restricts file system and network access.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Privacy</span><span class="cmd-tag">/privacy-settings</span></div><div class="card-body"><p class="desc">View and update data privacy preferences (Pro and Max subscribers).</p></div></article>
+  </div>
+</section>
+
+<section id="tools" class="sec">
+  <div class="sec-head"><span class="sec-num">05</span><h2 class="sec-title">Tools &amp; Integrations</h2><span class="sec-badge" style="background:var(--orange-bg);color:var(--orange)">7 cmds</span></div>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">MCP servers</span><span class="cmd-tag">/mcp</span></div><div class="card-body"><p class="desc">Manages Model Context Protocol server connections and OAuth for external tool integrations.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Plugins</span><span class="cmd-tag">/plugin</span></div><div class="card-body"><p class="desc">Installs, removes, and manages plugins that extend Claude Code with custom capabilities.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Reload plugins</span><span class="cmd-tag">/reload-plugins</span></div><div class="card-body"><p class="desc">Hot-reloads all active plugins to pick up code changes without restarting the session.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Skills</span><span class="cmd-tag">/skills</span></div><div class="card-body"><p class="desc">Lists all available skills (custom slash commands) configured for your project or globally.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Agents</span><span class="cmd-tag">/agents</span></div><div class="card-body"><p class="desc">Manages agent configurations that define specialized sub-agents with their own tools and instructions.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">IDE integration</span><span class="cmd-tag">/ide</span></div><div class="card-body"><p class="desc">Shows IDE integration status and connects to editors like VS Code or Cursor.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Chrome</span><span class="cmd-tag">/chrome</span></div><div class="card-body"><p class="desc">Configures Chrome integration for browser-based workflows and debugging.</p></div></article>
+  </div>
+</section>
+
+<section id="code" class="sec">
+  <div class="sec-head"><span class="sec-num">06</span><h2 class="sec-title">Code &amp; Review</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">5 cmds</span></div>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">View diff</span><span class="cmd-tag">/diff</span></div><div class="card-body"><p class="desc">Interactive diff viewer showing all uncommitted changes and per-turn diffs.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">PR review</span><span class="cmd-tag">/review</span></div><div class="card-body"><p class="desc">Comprehensive pull request review checking code quality, correctness, security, and test coverage.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Security review</span><span class="cmd-tag">/security-review</span></div><div class="card-body"><p class="desc">Scans pending changes specifically for security vulnerabilities and unsafe patterns.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">PR comments</span><span class="cmd-tag">/pr-comments [PR]</span></div><div class="card-body"><p class="desc">Fetches and displays all comments from a GitHub pull request in the terminal.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Plan mode</span><span class="cmd-tag">/plan</span></div><div class="card-body"><p class="desc">Enters plan mode: Claude explores the codebase and designs an approach for your approval before writing code.</p></div></article>
+  </div>
+</section>
+
+<section id="sharing" class="sec">
+  <div class="sec-head"><span class="sec-num">07</span><h2 class="sec-title">Sharing &amp; Account</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">11 cmds</span></div>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Copy response</span><span class="cmd-tag">/copy</span></div><div class="card-body"><p class="desc">Copies Claude's last response to clipboard, with an interactive picker for multiple code blocks.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Export conversation</span><span class="cmd-tag">/export [file]</span></div><div class="card-body"><p class="desc">Exports the full conversation as plain text to clipboard or a specified file.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Remote control</span><span class="cmd-tag">/remote-control</span></div><div class="card-body"><p class="desc">Makes your terminal session controllable from claude.ai to switch to the web interface mid-conversation.</p><p class="aliases">alias: /rc</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Remote environment</span><span class="cmd-tag">/remote-env</span></div><div class="card-body"><p class="desc">Configures the default remote environment for teleporting sessions to cloud dev machines.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Teleport session</span><span class="cmd-tag">/teleport</span></div><div class="card-body"><p class="desc">Resumes the current session on a remote cloud environment. Available for claude.ai subscribers.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Desktop app</span><span class="cmd-tag">/desktop</span></div><div class="card-body"><p class="desc">Transfers your CLI session to the Claude Code desktop app on macOS or Windows.</p><p class="aliases">alias: /app</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Login</span><span class="cmd-tag">/login</span></div><div class="card-body"><p class="desc">Signs in to your Anthropic account to authenticate Claude Code.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Logout</span><span class="cmd-tag">/logout</span></div><div class="card-body"><p class="desc">Signs out and clears stored credentials from this machine.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Upgrade plan</span><span class="cmd-tag">/upgrade</span></div><div class="card-body"><p class="desc">Opens the Anthropic upgrade page to switch to a higher plan tier.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Share passes</span><span class="cmd-tag">/passes</span></div><div class="card-body"><p class="desc">Share a free week of Claude Code with friends through a referral link.</p></div></article>
+  </div>
+</section>
+
+<section id="misc" class="sec">
+  <div class="sec-head"><span class="sec-num">08</span><h2 class="sec-title">Miscellaneous</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">13 cmds</span></div>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Help</span><span class="cmd-tag">/help</span></div><div class="card-body"><p class="desc">Overview of available commands, usage tips, and documentation links.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Diagnostics</span><span class="cmd-tag">/doctor</span></div><div class="card-body"><p class="desc">Runs a diagnostic check verifying settings, permissions, and connectivity are healthy.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Debug mode</span><span class="cmd-tag">/debug</span></div><div class="card-body"><p class="desc">Toggles debug logging on mid-session for troubleshooting. Debug logs are not written by default.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">TODOs</span><span class="cmd-tag">/todos</span></div><div class="card-body"><p class="desc">Lists and manages TODO items tracked in the current session.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Feedback</span><span class="cmd-tag">/feedback</span></div><div class="card-body"><p class="desc">Submits a bug report or feature request directly to the Claude Code team.</p><p class="aliases">alias: /bug</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Release notes</span><span class="cmd-tag">/release-notes</span></div><div class="card-body"><p class="desc">Displays the full changelog of recent Claude Code updates.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Insights</span><span class="cmd-tag">/insights</span></div><div class="card-body"><p class="desc">Analytical report of usage patterns, productivity metrics, and session trends.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Background tasks</span><span class="cmd-tag">/tasks</span></div><div class="card-body"><p class="desc">Lists and manages background tasks like running agents or async shell commands.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Add directory</span><span class="cmd-tag">/add-dir &lt;path&gt;</span></div><div class="card-body"><p class="desc">Adds an additional working directory so Claude can access files outside the launch directory.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">GitHub app</span><span class="cmd-tag">/install-github-app</span></div><div class="card-body"><p class="desc">Sets up the Claude GitHub Actions app for CI/CD integration and automated code review.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Slack app</span><span class="cmd-tag">/install-slack-app</span></div><div class="card-body"><p class="desc">Installs the Claude Slack app to interact with Claude from Slack channels.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Stickers</span><span class="cmd-tag">/stickers</span></div><div class="card-body"><p class="desc">Order physical Claude Code stickers for your laptop or workspace.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Mobile app</span><span class="cmd-tag">/mobile</span></div><div class="card-body"><p class="desc">Displays a QR code to download the Claude mobile app.</p><p class="aliases">aliases: /ios /android</p></div></article>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- VIM MODE                                    -->
+<!-- ═══════════════════════════════════════════ -->
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TIPS & CONCEPTS                            -->
+<!-- ═══════════════════════════════════════════ -->
+
+<hr class="sec-divider">
+
+<section id="tips-plugins" class="sec">
+  <div class="sec-head"><span class="sec-num">09</span><h2 class="sec-title">Plugins</h2><span class="sec-badge" style="background:var(--orange-bg);color:var(--orange)">Guide</span></div>
+  <p class="sec-intro">Plugins extend Claude Code with custom slash commands, agents, MCP servers, and hooks. They're distributed as directories with a <code>plugin.json</code> manifest.</p>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Install a plugin</span></div><div class="card-body"><p class="desc">Use <code>/plugin</code> to browse the plugin marketplace, or install from a local directory or Git URL. Plugins can also be loaded via <code>--plugin-dir</code> on the CLI.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Plugin structure</span></div><div class="card-body"><p class="desc">A plugin is a directory containing <code>plugin.json</code> (manifest with name, description, version), plus optional <code>commands/</code>, <code>agents/</code>, and <code>hooks/</code> folders. Each command is a Markdown file with YAML frontmatter.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Hot reload</span></div><div class="card-body"><p class="desc">After editing plugin files, run <code>/reload-plugins</code> to pick up changes without restarting your session. Great for development.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Plugin MCP servers</span></div><div class="card-body"><p class="desc">Plugins can bundle their own MCP servers. If a plugin's server duplicates one you've already configured, the duplicate is automatically suppressed.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Managing plugins</span></div><div class="card-body"><p class="desc">View installed plugins with <code>/plugin</code>. Remove with the plugin menu. Use <code>--plugin-dir</code> (repeatable) to load plugins from custom directories.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Creating a plugin</span></div><div class="card-body"><p class="desc">Use the community <code>/create-plugin</code> command for a guided workflow, or manually create the directory structure. Plugins can include custom agents with their own tools and instructions.</p></div></article>
+  </div>
+</section>
+
+<section id="tips-skills" class="sec">
+  <div class="sec-head"><span class="sec-num">10</span><h2 class="sec-title">Skills (Custom Slash Commands)</h2><span class="sec-badge" style="background:var(--orange-bg);color:var(--orange)">Guide</span></div>
+  <p class="sec-intro">Skills are custom slash commands defined as Markdown files with YAML frontmatter. They appear alongside built-in commands when you type <code>/</code>.</p>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Where to define skills</span></div><div class="card-body"><p class="desc">Skills live in <code>.claude/skills/</code> directories. Global skills go in <code>~/.claude/skills/</code>. Project skills go in <code>.claude/skills/</code> at the repo root. Each skill is a folder with a <code>SKILL.md</code> file inside.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Skill frontmatter</span></div><div class="card-body"><p class="desc">YAML frontmatter defines the skill's name, description, whether it's user-invocable, allowed tools, and optional model override. The Markdown body is the prompt Claude receives when the skill is invoked.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">User-invocable vs auto</span></div><div class="card-body"><p class="desc">Set <code>user-invocable: true</code> in frontmatter to make a skill appear in the <code>/</code> menu. Skills without this flag can still be invoked programmatically by Claude via the Skill tool.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Tool restrictions</span></div><div class="card-body"><p class="desc">Use <code>allowed-tools:</code> in frontmatter to restrict which tools a skill can access. This provides sandboxing for skills that shouldn't have full tool access.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Model override</span></div><div class="card-body"><p class="desc">Add <code>model: haiku</code> (or <code>sonnet</code>, <code>opus</code>) in frontmatter to force a specific model when the skill runs, regardless of the session's current model.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Listing skills</span></div><div class="card-body"><p class="desc">Use <code>/skills</code> to see all available skills, or just type <code>/</code> and start filtering. Skills from plugins also appear here.</p></div></article>
+  </div>
+</section>
+
+<section id="tips-mcp" class="sec">
+  <div class="sec-head"><span class="sec-num">11</span><h2 class="sec-title">MCP Servers</h2><span class="sec-badge" style="background:var(--orange-bg);color:var(--orange)">Guide</span></div>
+  <p class="sec-intro">MCP (Model Context Protocol) servers give Claude access to external tools, APIs, and data sources. They run as separate processes and communicate via stdio or HTTP.</p>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Adding an MCP server</span></div><div class="card-body"><p class="desc">Use <code>claude mcp add &lt;name&gt; -- &lt;command&gt;</code> from the CLI. For example: <code>claude mcp add github -- npx @anthropic-ai/mcp-server-github</code>. Servers can also be added via <code>/mcp</code> in-session.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Configuration scopes</span></div><div class="card-body"><p class="desc">Add with <code>-s user</code> for global (all projects), <code>-s project</code> for repo-specific, or via org-managed connectors. Config is stored in <code>~/.claude/settings.json</code> or <code>.claude/settings.json</code>.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">OAuth servers</span></div><div class="card-body"><p class="desc">Some MCP servers (like Slack) use OAuth. Use <code>--client-id</code> and <code>--client-secret</code> with <code>claude mcp add</code> for servers that don't support Dynamic Client Registration.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Managing servers</span></div><div class="card-body"><p class="desc">Use <code>claude mcp list</code> to see configured servers, <code>claude mcp remove &lt;name&gt;</code> to delete one, or <code>/mcp</code> in-session for an interactive view with connection status.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Deferred tool loading</span></div><div class="card-body"><p class="desc">MCP tools are loaded on-demand to save context. Claude uses <code>ToolSearch</code> to fetch tool schemas before calling them. This means MCP servers with many tools don't bloat the context window.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Troubleshooting</span></div><div class="card-body"><p class="desc">If an MCP server isn't connecting, check <code>/mcp</code> for status. Common issues: missing Node.js/Python, wrong path, or the server needs environment variables set via <code>-e KEY=VALUE</code>.</p></div></article>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- VIM MODE                                    -->
+<!-- ═══════════════════════════════════════════ -->
+
+<hr class="sec-divider">
+
+<section id="vim-modes" class="sec">
+  <div class="sec-head"><span class="sec-num">12</span><h2 class="sec-title">Vim Mode -- Mode Switching</h2><span class="sec-badge" style="background:var(--purple-bg);color:var(--purple)">Vim</span></div>
+  <p class="sec-intro">Enable via <code>/config</code> &rarr; Editor mode. The <code>/vim</code> slash command was removed in v2.1.92 -- use the config menu instead.</p>
+  <div class="grid">
+    <article class="card"><div class="card-body">
+      <table class="vim-table">
+        <thead><tr><th>Key</th><th>Action</th><th>From</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Esc</kbd></td><td>Enter NORMAL mode</td><td>INSERT</td></tr>
+          <tr><td><kbd>i</kbd></td><td>Insert before cursor</td><td>NORMAL</td></tr>
+          <tr><td><kbd>I</kbd></td><td>Insert at beginning of line</td><td>NORMAL</td></tr>
+          <tr><td><kbd>a</kbd></td><td>Insert after cursor</td><td>NORMAL</td></tr>
+          <tr><td><kbd>A</kbd></td><td>Insert at end of line</td><td>NORMAL</td></tr>
+          <tr><td><kbd>o</kbd></td><td>Open new line below</td><td>NORMAL</td></tr>
+          <tr><td><kbd>O</kbd></td><td>Open new line above</td><td>NORMAL</td></tr>
+        </tbody>
+      </table>
+    </div></article>
+  </div>
+</section>
+
+<section id="vim-nav" class="sec">
+  <div class="sec-head"><span class="sec-num">13</span><h2 class="sec-title">Vim -- Navigation</h2><span class="sec-badge" style="background:var(--purple-bg);color:var(--purple)">Normal</span></div>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Basic Movement</span></div><div class="card-body">
+      <table class="vim-table">
+        <thead><tr><th>Key</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>h</kbd></td><td>Move left</td></tr>
+          <tr><td><kbd>j</kbd></td><td>Move down</td></tr>
+          <tr><td><kbd>k</kbd></td><td>Move up</td></tr>
+          <tr><td><kbd>l</kbd></td><td>Move right</td></tr>
+        </tbody>
+      </table>
+    </div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Word &amp; Line</span></div><div class="card-body">
+      <table class="vim-table">
+        <thead><tr><th>Key</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>w</kbd></td><td>Next word</td></tr>
+          <tr><td><kbd>e</kbd></td><td>End of word</td></tr>
+          <tr><td><kbd>b</kbd></td><td>Previous word</td></tr>
+          <tr><td><kbd>0</kbd></td><td>Beginning of line</td></tr>
+          <tr><td><kbd>$</kbd></td><td>End of line</td></tr>
+          <tr><td><kbd>^</kbd></td><td>First non-blank character</td></tr>
+        </tbody>
+      </table>
+    </div></article>
+    <article class="card" style="grid-column:1/-1"><div class="card-head"><span class="card-title">Document &amp; Character Jumps</span></div><div class="card-body">
+      <table class="vim-table">
+        <thead><tr><th>Key</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>gg</kbd></td><td>Top of input</td></tr>
+          <tr><td><kbd>G</kbd></td><td>Bottom of input</td></tr>
+          <tr><td><kbd>f</kbd>{char}</td><td>Jump to next occurrence of character</td></tr>
+          <tr><td><kbd>F</kbd>{char}</td><td>Jump to previous occurrence of character</td></tr>
+          <tr><td><kbd>t</kbd>{char}</td><td>Jump to just before next occurrence</td></tr>
+          <tr><td><kbd>T</kbd>{char}</td><td>Jump to just before previous occurrence</td></tr>
+          <tr><td><kbd>;</kbd></td><td>Repeat last f/F/t/T</td></tr>
+          <tr><td><kbd>,</kbd></td><td>Repeat last f/F/t/T in reverse</td></tr>
+        </tbody>
+      </table>
+    </div></article>
+  </div>
+</section>
+
+<section id="vim-edit" class="sec">
+  <div class="sec-head"><span class="sec-num">14</span><h2 class="sec-title">Vim -- Editing</h2><span class="sec-badge" style="background:var(--purple-bg);color:var(--purple)">Normal</span></div>
+  <div class="grid two">
+    <article class="card"><div class="card-head"><span class="card-title">Delete</span></div><div class="card-body">
+      <table class="vim-table">
+        <thead><tr><th>Key</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>x</kbd></td><td>Delete character under cursor</td></tr>
+          <tr><td><kbd>dd</kbd></td><td>Delete entire line</td></tr>
+          <tr><td><kbd>D</kbd></td><td>Delete to end of line</td></tr>
+          <tr><td><kbd>dw</kbd></td><td>Delete word forward</td></tr>
+          <tr><td><kbd>de</kbd></td><td>Delete to end of word</td></tr>
+          <tr><td><kbd>db</kbd></td><td>Delete word backward</td></tr>
+        </tbody>
+      </table>
+    </div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Change (delete + INSERT)</span></div><div class="card-body">
+      <table class="vim-table">
+        <thead><tr><th>Key</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>cc</kbd></td><td>Change entire line</td></tr>
+          <tr><td><kbd>C</kbd></td><td>Change to end of line</td></tr>
+          <tr><td><kbd>cw</kbd></td><td>Change word forward</td></tr>
+          <tr><td><kbd>ce</kbd></td><td>Change to end of word</td></tr>
+          <tr><td><kbd>cb</kbd></td><td>Change word backward</td></tr>
+        </tbody>
+      </table>
+    </div></article>
+    <article class="card" style="grid-column:1/-1"><div class="card-head"><span class="card-title">Yank, Paste &amp; Other</span></div><div class="card-body">
+      <table class="vim-table">
+        <thead><tr><th>Key</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>yy</kbd> / <kbd>Y</kbd></td><td>Yank (copy) entire line</td></tr>
+          <tr><td><kbd>yw</kbd></td><td>Yank word</td></tr>
+          <tr><td><kbd>ye</kbd></td><td>Yank to end of word</td></tr>
+          <tr><td><kbd>yb</kbd></td><td>Yank word backward</td></tr>
+          <tr><td><kbd>p</kbd></td><td>Paste after cursor</td></tr>
+          <tr><td><kbd>P</kbd></td><td>Paste before cursor</td></tr>
+          <tr><td><kbd>&gt;&gt;</kbd></td><td>Indent line</td></tr>
+          <tr><td><kbd>&lt;&lt;</kbd></td><td>Dedent line</td></tr>
+          <tr><td><kbd>J</kbd></td><td>Join current line with next</td></tr>
+          <tr><td><kbd>.</kbd></td><td>Repeat last change</td></tr>
+        </tbody>
+      </table>
+    </div></article>
+  </div>
+</section>
+
+<section id="vim-obj" class="sec">
+  <div class="sec-head"><span class="sec-num">15</span><h2 class="sec-title">Vim -- Text Objects</h2><span class="sec-badge" style="background:var(--purple-bg);color:var(--purple)">Vim</span></div>
+  <p class="sec-intro">Use with operators: <code>d</code> (delete), <code>c</code> (change), <code>y</code> (yank). Example: <code>ci"</code> = change inside quotes.</p>
+  <div class="grid">
+    <article class="card"><div class="card-body">
+      <table class="vim-table">
+        <thead><tr><th>Object</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>iw</kbd> / <kbd>aw</kbd></td><td>Inner / around word</td></tr>
+          <tr><td><kbd>iW</kbd> / <kbd>aW</kbd></td><td>Inner / around WORD (whitespace-delimited)</td></tr>
+          <tr><td><kbd>i"</kbd> / <kbd>a"</kbd></td><td>Inner / around double quotes</td></tr>
+          <tr><td><kbd>i'</kbd> / <kbd>a'</kbd></td><td>Inner / around single quotes</td></tr>
+          <tr><td><kbd>i(</kbd> / <kbd>a(</kbd></td><td>Inner / around parentheses</td></tr>
+          <tr><td><kbd>i[</kbd> / <kbd>a[</kbd></td><td>Inner / around brackets</td></tr>
+          <tr><td><kbd>i{</kbd> / <kbd>a{</kbd></td><td>Inner / around braces</td></tr>
+        </tbody>
+      </table>
+    </div></article>
+  </div>
+</section>
+
+<section id="vim-unsup" class="sec">
+  <div class="sec-head"><span class="sec-num">16</span><h2 class="sec-title">Vim -- Not Supported</h2><span class="sec-badge" style="background:var(--red-bg);color:var(--red)">Limits</span></div>
+  <p class="sec-intro">These standard Vim features are not available in Claude Code's Vim mode:</p>
+  <div class="grid">
+    <article class="card"><div class="card-body">
+      <ul class="unsup-grid">
+        <li>Visual mode (v, V, Ctrl+V)</li>
+        <li>Undo / Redo (u, Ctrl+R)</li>
+        <li>Macros (q, @)</li>
+        <li>Marks (m, ')</li>
+        <li>Named registers</li>
+        <li>Search (/, ?)</li>
+        <li>Substitute (:s)</li>
+        <li>Ex commands (:w, :q)</li>
+        <li>Page navigation (Ctrl+D/U)</li>
+        <li>Count prefixes (3j, 5w)</li>
+      </ul>
+    </div></article>
+  </div>
+  <div class="tip-box" style="margin-top:1rem">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span><strong>Vim mode notes:</strong> <kbd>Esc</kbd> switches to NORMAL -- it does not cancel input. Most <kbd>Ctrl</kbd>+key shortcuts pass through regardless of mode. In NORMAL, <kbd>?</kbd> opens the help menu. Use <code>/rewind</code> instead of <kbd>u</kbd> for undo -- it rolls back both conversation and code. Enable vim mode via <code>/config</code> &rarr; Editor mode.</span>
+  </div>
+</section>
+
+  <footer class="pg-foot">
+    <p>Claude Code Reference &middot; Redesigned 2026</p>
+    <p>Slash commands &middot; Vim mode guide</p>
+  </footer>
+</main>
+
+<script>
+(function(){
+  var html=document.documentElement;
+  var d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+  html.setAttribute('data-theme',d);
+  function icons(m){return m==='dark'?'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>':'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';}
+  document.querySelectorAll('[data-theme-toggle]').forEach(function(btn){
+    btn.innerHTML=icons(d);
+    btn.addEventListener('click',function(){d=d==='dark'?'light':'dark';html.setAttribute('data-theme',d);document.querySelectorAll('[data-theme-toggle]').forEach(function(b){b.innerHTML=icons(d);});});
+  });
+  var sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay'),menuBtn=document.getElementById('menu-btn');
+  if(menuBtn)menuBtn.addEventListener('click',function(){sidebar.classList.toggle('open');overlay.classList.toggle('vis');});
+  if(overlay)overlay.addEventListener('click',function(){sidebar.classList.remove('open');overlay.classList.remove('vis');});
+  var sections=document.querySelectorAll('section[id]'),navLinks=document.querySelectorAll('.nav-a[data-sec]');
+  var obs=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){navLinks.forEach(function(a){a.classList.remove('active');});var a=document.querySelector('.nav-a[data-sec="'+e.target.id+'"]');if(a){a.classList.add('active');a.scrollIntoView({block:'nearest'});}}});},{rootMargin:'-20% 0px -70% 0px'});
+  sections.forEach(function(s){obs.observe(s);});
+  // Close sidebar on nav click (mobile)
+  navLinks.forEach(function(a){a.addEventListener('click',function(){if(window.innerWidth<=768){sidebar.classList.remove('open');overlay.classList.remove('vis');}});});
+  var si=document.getElementById('search');
+  if(si)si.addEventListener('input',function(){var q=this.value.toLowerCase().trim();document.querySelectorAll('.card').forEach(function(c){if(!q){c.style.display='';return;}c.style.display=c.textContent.toLowerCase().includes(q)?'':'none';});});
+})();
+</script>
+</body>
+</html>
