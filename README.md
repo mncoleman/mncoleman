@@ -4,16 +4,15 @@
 
 ### Personal Website
 
-A modern, minimalist personal website featuring blog, resources, and professional resume—all powered by Notion CMS and Next.js.
+A modern, minimalist personal website featuring blog, projects, resources, artifacts, and professional resume—all powered by Notion CMS and Next.js.
 
 [![Deploy to GitHub Pages](https://github.com/mncoleman/mncoleman/actions/workflows/deploy.yml/badge.svg)](https://github.com/mncoleman/mncoleman/actions/workflows/deploy.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Notion](https://img.shields.io/badge/CMS-Notion-black?logo=notion)](https://www.notion.so/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38bdf8?logo=tailwind-css)](https://tailwindcss.com/)
 
-[Live Demo](https://mncoleman.github.io/mncoleman/) · [Report Bug](https://github.com/mncoleman/mncoleman/issues) · [Request Feature](https://github.com/mncoleman/mncoleman/issues)
+[Live Site](https://mncoleman.com) · [Report Bug](https://github.com/mncoleman/mncoleman/issues) · [Request Feature](https://github.com/mncoleman/mncoleman/issues)
 
 </div>
 
@@ -27,10 +26,13 @@ A modern, minimalist personal website featuring blog, resources, and professiona
 
 ### 🎨 Design & UX
 
-- **WebGL Background** - Animated Dark Veil effect
+- **WebGL Background** - Animated Dark Veil effect (OGL)
+- **3D Glass Cubes** - Interactive bento grid on desktop (Three.js / R3F)
+- **Sticky Card Stack** - Scroll-driven mobile home page
 - **Frosted Glass UI** - Modern glassmorphism design
-- **Bento Grid Layout** - Clean, responsive personal website
+- **Page Transitions** - Smooth Motion-powered route transitions
 - **Dark Mode** - System-aware theme switching
+- **Custom Cursor** - Pointer-aware accent cursor
 - **PWA Ready** - Installable progressive web app
 - **100% Responsive** - Perfect on all devices
 
@@ -40,10 +42,12 @@ A modern, minimalist personal website featuring blog, resources, and professiona
 ### ⚡ Performance & Tech
 
 - **Static Generation** - Lightning-fast pre-rendered pages
+- **Global Search** - Pre-built search index with `Cmd/Ctrl+K`
+- **Keyboard Shortcuts** - Single-key navigation across the site
 - **Type Safety** - Full TypeScript coverage
-- **Zero Runtime** - 100% static export
-- **Auto Refresh** - Daily content updates
-- **SEO Optimized** - Meta tags & structured data
+- **Zero Runtime** - 100% static export to GitHub Pages
+- **Daily Auto-Rebuild** - Scheduled GitHub Actions workflow
+- **SEO Optimized** - Meta tags & app manifest
 - **Analytics Ready** - Google Analytics 4 integration
 
 </td>
@@ -55,12 +59,15 @@ A modern, minimalist personal website featuring blog, resources, and professiona
 | Feature | Description |
 |---------|-------------|
 | 📝 **Blog** | Notion-powered blog with markdown rendering & tag filtering |
-| 🔗 **Resources** | Curated link library organized by category |
-| 📄 **Resume** | Professional CV rendered from Notion pages |
-| ⭐ **Featured Posts** | Pin important content to the top |
+| 🛠️ **Projects** | Notion-powered portfolio of things I've made |
+| 🔗 **Resources** | Curated link library grouped by multi-select categories |
+| 📄 **Resume** | Professional CV rendered from a Notion page |
+| 📎 **Artifacts** | Static-file gallery (HTML/PDF/images) served from `/public/artifacts` |
+| 🎨 **Brand Kit** | Public brand assets and style reference page |
+| ⭐ **Featured Posts** | Pin important content to the top of the blog |
 | 🏷️ **Smart Tags** | Auto-extracted tag filtering system |
-| 🔐 **Secure Admin** | Telegram-authenticated dashboard for site management |
-| 🔄 **Content Sync** | Trigger rebuilds & edit "About Me" content directly |
+| 🔐 **Secure Admin** | Telegram-authenticated dashboard backed by a Cloudflare Worker |
+| 🔄 **Content Sync** | Trigger rebuilds, edit "About Me", manage users & artifacts |
 
 ## 🔐 Admin Dashboard
 
@@ -69,9 +76,13 @@ The site features a secure, hidden admin dashboard for managing content and depl
 - **Telegram Authentication**: Secure login via Telegram widget (no passwords to manage).
 - **One-Click Rebuilds**: Trigger GitHub Actions deployments directly from the dashboard.
 - **Content Editing**: Edit the "About Me" section with a live preview editor.
+- **Artifact Uploads**: Upload arbitrary files (HTML, PDF, images) to the artifacts gallery.
+- **User Management**: Manage allow-listed Telegram users.
 - **Status Monitoring**: View current deployment status and system health.
 
-> Access the dashboard at `/admin` (requires configuration).
+The admin auth flow is handled by a Cloudflare Worker (`worker/index.ts`).
+
+> Access the dashboard at `/admin` (requires configuration — see [`ADMIN_SETUP.md`](./ADMIN_SETUP.md)).
 
 ---
 
@@ -108,18 +119,26 @@ Visit [http://localhost:3000](http://localhost:3000) to see your site.
 
 ### Environment Variables
 
-Create a `.env.local` file with the following:
+Copy `.env.example` to `.env.local` and fill in your values:
 
 ```env
-# Notion Integration (required)
+# Notion Integration (required for content)
 NOTION_TOKEN=ntn_your_integration_token_here
 NOTION_DATABASE_ID=your_blog_database_id
 NOTION_RESOURCES_DATABASE_ID=your_resources_database_id
 NOTION_RESUME_PAGE_ID=your_resume_page_id
+NOTION_PROJECTS_DATABASE_ID=your_projects_database_id
 
 # Google Analytics (optional)
 NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+
+# Admin Dashboard (optional — required for /admin)
+NEXT_PUBLIC_WORKER_URL=https://your-worker.workers.dev
+NEXT_PUBLIC_TELEGRAM_BOT_NAME=your_bot_username
 ```
+
+If Notion credentials are missing or set to placeholder values, the data layer
+gracefully falls back to sample content so local development still works.
 
 ### Notion CMS Template (Quick Start)
 
@@ -138,7 +157,7 @@ NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
 
 1. Click the template link above and select "Duplicate" in the top-right corner
 2. Create a Notion integration at [notion.so/my-integrations](https://www.notion.so/my-integrations)
-3. Share all three databases/pages with your integration
+3. Share all databases/pages with your integration
 4. Copy the database/page IDs from the URLs and add to `.env.local`
 5. Copy your integration token (starts with `ntn_`) to `.env.local`
 
@@ -150,16 +169,18 @@ If you prefer to set up manually:
    - Go to [notion.so/my-integrations](https://www.notion.so/my-integrations)
    - Create new integration and copy the token (starts with `ntn_`)
 
-2. **Set Up Databases**
-   - **Blog**: Title, Slug, Date, Tags, Published, Featured, Excerpt, Author
-   - **Resources**: Name, URL, Category, Description, Published
-   - **Resume**: Single page with markdown content
+2. **Set Up Databases / Pages**
+   - **Blog database**: Title, Slug, Date, Tags, Published, Featured, Excerpt, Author
+   - **Resources database**: Name, URL, Category (multi-select), Description, Published
+   - **Projects database**: Name, Description, URL, Category, Published
+   - **Resume page**: Single page with markdown content
 
 3. **Share Databases**
    - Share each database/page with your integration
    - Copy the database/page IDs to `.env.local`
 
-📚 **Detailed guides**: See [`NOTION_SETUP.md`](./NOTION_SETUP.md) and [`GOOGLE_ANALYTICS_SETUP.md`](./GOOGLE_ANALYTICS_SETUP.md)
+> See [`CLAUDE.md`](./CLAUDE.md) for the full schema reference and architecture
+> notes.
 
 ---
 
@@ -193,14 +214,17 @@ If you prefer to set up manually:
 **Core Technologies:**
 
 - **Framework**: Next.js 16 (App Router) with static export
-- **Language**: TypeScript 5.0
-- **Styling**: Tailwind CSS + shadcn/ui components
+- **Language**: TypeScript 5.9
+- **Styling**: Tailwind CSS + shadcn/ui-style components, `@tailwindcss/typography`
 - **CMS**: Notion API (`@notionhq/client`, `notion-to-md`)
-- **Backend**: Cloudflare Workers (Auth & API)
-- **Graphics**: OGL (WebGL library) for animated backgrounds
-- **Deployment**: GitHub Pages with GitHub Actions
+- **Markdown**: `react-markdown` + `remark-gfm`, `@next/mdx`
+- **Backend**: Cloudflare Worker (Telegram auth, GitHub dispatch, admin API)
+- **Graphics**: OGL for the Dark Veil shader; `three` + `@react-three/fiber` + `@react-three/drei` for the 3D glass-cube bento
+- **Animation**: `motion` (Framer Motion successor), `gsap`, `lenis` for smooth scroll
+- **Hosting**: GitHub Pages on a custom domain (`mncoleman.com`)
+- **CI/CD**: GitHub Actions (push, daily cron, repository dispatch, manual)
 - **Analytics**: Google Analytics 4 via `@next/third-parties`
-- **PWA**: Service worker with app manifest
+- **PWA**: Service worker (`public/sw.js`) + Next.js `manifest.ts`
 
 ---
 
@@ -261,8 +285,10 @@ npm run build
 
 **4. Deploy to GitHub Pages**
 
-- GitHub Actions uploads `out/` folder to `gh-pages` branch
-- Site updates at your custom domain
+- GitHub Actions uploads `out/` via `actions/upload-pages-artifact`
+  and `actions/deploy-pages`
+- Site updates at the custom domain (`mncoleman.com`, configured via
+  `public/CNAME`)
 - **No downtime** - atomic deployment
 
 ### Why This Architecture?
@@ -287,11 +313,20 @@ User Request → CDN → Serve Pre-rendered HTML → Done
 
 ### Key Technical Details
 
-**Data Fetching** (`lib/notion.ts`)
+**Data Fetching** (`lib/notion.ts`, `lib/blog.ts`, `lib/projects.ts`,
+`lib/resources.ts`, `lib/resume.ts`, `lib/artifacts.ts`)
 
 - Uses `@notionhq/client` to query Notion databases
 - Fetches only published content (filtered by "Published" checkbox)
-- Gracefully falls back to sample data if Notion credentials are missing
+- Validates credentials before connecting and gracefully falls back to sample
+  data when Notion is not configured
+
+**Search Index** (`scripts/generate-search-index.ts`)
+
+- Runs as part of `npm run build` before `next build`
+- Aggregates blog posts, projects, resources, resume, and artifacts into
+  `data/search-index.json`
+- Powers the global `Cmd/Ctrl+K` search at runtime — no API calls needed
 
 **Markdown Conversion** (`notion-to-md`)
 
@@ -303,13 +338,14 @@ User Request → CDN → Serve Pre-rendered HTML → Done
 
 - Pre-renders all pages at build time
 - No server-side rendering (SSR) or API routes
-- Pure HTML/CSS/JS files
+- Pure HTML/CSS/JS files in `out/`
 
 **Content Refresh**
 
 - Daily automatic rebuilds keep content fresh
-- Notion webhook support could enable real-time updates (future enhancement)
-- For now, content updates require rebuild (15-30 seconds)
+- The Cloudflare Worker can dispatch a `repository_dispatch` event from the
+  admin dashboard to trigger an immediate rebuild
+- Content updates require a rebuild (~1–2 minutes)
 
 ### Trade-offs
 
@@ -334,37 +370,75 @@ For most blogs and portfolios, these trade-offs are worth it for the **speed, co
 
 ```
 mncoleman/
-├── app/                           # Next.js App Router
-│   ├── blog/                      # Blog pages
-│   │   ├── [slug]/page.tsx       # Dynamic post pages
-│   │   └── page.tsx              # Blog listing with tags
-│   ├── resources/page.tsx        # Resource library
-│   ├── resume/page.tsx           # Professional resume
-│   ├── about/page.tsx            # About page
-│   ├── admin/page.tsx            # Admin dashboard
-│   ├── layout.tsx                # Root layout & navigation
-│   ├── page.tsx                  # Bento grid home page
-│   └── globals.css               # Theme variables & styles
+├── app/                            # Next.js App Router
+│   ├── about/page.tsx              # About page
+│   ├── admin/page.tsx              # Admin dashboard (Telegram auth)
+│   ├── artifacts/                  # Static-file gallery
+│   ├── blog/                       # Blog listing + [slug] post pages
+│   ├── brand-kit/page.tsx          # Brand assets / style reference
+│   ├── projects/                   # Projects portfolio
+│   ├── resources/                  # Resource library
+│   ├── resume/page.tsx             # Professional resume
+│   ├── globals.css                 # Theme variables & styles
+│   ├── icon.svg                    # App icon
+│   ├── layout.tsx                  # Root layout, header & footer
+│   ├── manifest.ts                 # PWA manifest
+│   └── page.tsx                    # Bento grid home page
 │
 ├── components/
-│   ├── ui/                        # UI components
-│   │   ├── dark-veil.tsx         # WebGL animated background
-│   │   └── ...                   # shadcn/ui components
-│   ├── blog-list.tsx             # Tag filtering component
-│   ├── pwa-install.tsx           # PWA service worker
-│   └── theme-provider.tsx        # Dark mode provider
+│   ├── admin/                      # Admin dashboard widgets
+│   │   ├── AdminDashboard.tsx
+│   │   ├── ArtifactUploader.tsx
+│   │   ├── ContentEditor.tsx
+│   │   ├── TelegramLoginButton.tsx
+│   │   └── UserManagement.tsx
+│   ├── brand-kit/BrandKitClient.tsx
+│   ├── ui/                         # Reusable UI primitives
+│   │   ├── CustomCursor.tsx        # Pointer-aware accent cursor
+│   │   ├── dark-veil.tsx           # OGL/WebGL animated background
+│   │   ├── glass-cube.tsx          # 3D glass-cube wrapper (R3F)
+│   │   ├── profile-card.tsx
+│   │   └── ...                     # button, card, badge, input, tabs, …
+│   ├── MagicBento.tsx              # Bento grid effects
+│   ├── ScrollFloat.tsx             # Scroll-driven text animation
+│   ├── ScrollStack.tsx             # Sticky stacking cards
+│   ├── blog-list.tsx               # Tag filtering for blog
+│   ├── hamburger-button.tsx        # Mobile nav trigger
+│   ├── key-bindings.tsx            # Global keyboard shortcuts
+│   ├── mobile-nav.tsx              # Mobile drawer
+│   ├── nav-logo.tsx
+│   ├── pwa-install.tsx             # PWA service worker registration
+│   ├── refresh-button.tsx
+│   ├── search.tsx                  # Cmd/Ctrl+K global search
+│   ├── theme-provider.tsx          # next-themes wrapper
+│   ├── theme-toggle.tsx
+│   ├── theme-wrapper.tsx
+│   ├── transition-link.tsx         # Animated route link
+│   └── transition-provider.tsx     # Page-transition state
 │
-├── lib/                           # Data layer & utilities
-│   ├── notion.ts                 # Notion API integration
-│   ├── blog.ts                   # Blog adapter
-│   ├── resources.ts              # Resources adapter
-│   ├── resume.ts                 # Resume adapter
-│   └── utils.ts                  # Helper functions
+├── lib/                            # Data layer & utilities
+│   ├── admin-auth.ts               # Admin auth helpers
+│   ├── artifacts.ts                # Artifact metadata loader
+│   ├── blog.ts                     # Blog adapter
+│   ├── notion.ts                   # Notion API integration
+│   ├── projects.ts                 # Projects adapter
+│   ├── resources.ts                # Resources adapter
+│   ├── resume.ts                   # Resume adapter
+│   └── utils.ts                    # Helper functions
 │
-├── .github/workflows/
-│   └── deploy.yml                # GitHub Actions deployment
+├── scripts/
+│   ├── dev-artifacts-server.ts     # Local artifact dev server
+│   └── generate-search-index.ts    # Build-time search index generator
 │
-└── public/                        # Static assets & icons
+├── worker/                         # Cloudflare Worker (admin auth & API)
+│   ├── index.ts
+│   └── wrangler.toml
+│
+├── data/                           # JSON content (about, artifacts, search)
+├── hooks/                          # Custom React hooks (e.g. use-toast)
+├── public/                         # Static assets, fonts, icons, artifacts
+└── .github/workflows/
+    └── deploy.yml                  # GitHub Actions deployment
 ```
 
 ---
@@ -373,7 +447,13 @@ mncoleman/
 
 ### Bento Grid Layout
 
-The home page uses a responsive CSS Grid bento layout. Edit `app/page.tsx`:
+The home page renders two layouts depending on the device:
+
+- **Desktop** (`hover: hover` and width ≥ 768px) — a 3-column CSS Grid of
+  3D `<GlassCube>` tiles with an idle column-by-column pulse sweep.
+- **Mobile** — a sticky-stacked card list with a `ScrollFloat` outro.
+
+Both share the same `bentoCards` array. Edit `app/page.tsx`:
 
 ```typescript
 const bentoCards = [
@@ -381,11 +461,13 @@ const bentoCards = [
     id: 'hero',
     title: 'Matthew Coleman',
     description: 'Welcome to my personal website...',
+    label: 'Introduction',
     span: 'md:col-span-2 md:row-span-1',
     link: '/about',
-    icon: User
+    icon: User,
+    col: 0,
   },
-  // Add or modify cards...
+  // projects, blog, resources, resume...
 ];
 ```
 
@@ -450,7 +532,7 @@ npx shadcn@latest add @react-bits/avatar
 2. Add entries with:
    - **Name**: Resource title
    - **URL**: External link
-   - **Category**: Resource category
+   - **Category**: One or more categories (multi-select)
    - **Description**: Brief description
    - **Published**: ✓ Check to make visible
 3. Resources automatically group by category
@@ -484,7 +566,11 @@ Go to Settings → Secrets and variables → Actions:
 | `NOTION_DATABASE_ID` | Blog database ID | `2b5c6cc793dc...` |
 | `NOTION_RESOURCES_DATABASE_ID` | Resources database ID | `2dac6cc793dc...` |
 | `NOTION_RESUME_PAGE_ID` | Resume page ID | `2dac6cc793dc...` |
+| `NOTION_PROJECTS_DATABASE_ID` | Projects database ID | `2dac6cc793dc...` |
 | `NEXT_PUBLIC_GA_ID` | Google Analytics ID (optional) | `G-XXXXXXXXXX` |
+| `NEXT_PUBLIC_WORKER_URL` | Cloudflare Worker URL (admin) | `https://...workers.dev` |
+| `NEXT_PUBLIC_TELEGRAM_BOT_NAME` | Telegram bot username (admin) | `mncoleman_admin_bot` |
+| `N8N_DEPLOY_WEBHOOK_URL` | Optional n8n notify webhook | `https://n8n.example.com/...` |
 
 **2. Enable GitHub Pages**
 
@@ -497,18 +583,23 @@ Push to `main` branch or trigger manually from Actions tab.
 ### Deployment Triggers
 
 - ✅ **Push to main** - Automatic on every commit
-- ⏰ **Daily rebuild** - 6:00 AM UTC (keeps content fresh)
-- 🔘 **Manual dispatch** - Trigger from GitHub Actions
+- ⏰ **Daily rebuild** - 6:00 AM UTC (keeps Notion content fresh)
+- 🔘 **Manual dispatch** - Trigger from the GitHub Actions tab
+- 📡 **Repository dispatch** - `admin_trigger`, `rebuild_site`, `sync_notion`,
+  and `content_update` events from the admin worker
 
 ### Build Process
 
 ```bash
-npm ci              # Install dependencies
-npm run build       # Generate static site (out/)
-# Deploy to GitHub Pages
+npm ci                                # Install dependencies
+npm run generate-search-index         # (runs automatically before build)
+npm run build                         # Generate static site (out/)
+# Deploy to GitHub Pages via actions/deploy-pages
 ```
 
-The site will be available at: `https://mncoleman.github.io/mncoleman/`
+The site is hosted on a custom domain at <https://mncoleman.com>
+(`public/CNAME`). Because of this, `next.config.ts` does **not** set a
+`basePath` — assets are served from the domain root.
 
 ---
 
@@ -516,9 +607,12 @@ The site will be available at: `https://mncoleman.github.io/mncoleman/`
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server at localhost:3000 |
-| `npm run build` | Build static site for production (outputs to `out/`) |
-| `npm run start` | Start production server (for testing build) |
+| `npm run dev` | Start the Next.js development server at localhost:3000 |
+| `npm run dev:artifacts` | Start the local artifact upload dev server (`tsx scripts/dev-artifacts-server.ts`) |
+| `npm run generate-search-index` | Regenerate `data/search-index.json` from Notion + artifacts |
+| `npm run build` | Generate the search index, then build the static site to `out/` |
+| `npm run export` | Alias for `next build` (kept for backwards compat) |
+| `npm run start` | Start the Next.js production server (for testing the build) |
 | `npm run lint` | Run ESLint for code quality checks |
 
 ---
@@ -560,9 +654,11 @@ The site will be available at: `https://mncoleman.github.io/mncoleman/`
 <summary><strong>Images not loading</strong></summary>
 
 - Notion images have expiring URLs (require rebuild)
-- For permanent images, upload to `/public`
-- Reference with base path: `/mncoleman/image.jpg`
-- Use Next.js `Image` component with `unoptimized` prop
+- For permanent images, upload to `/public` and reference from the domain root
+  (e.g. `/profile.jpg`) — there is no `basePath` because the site uses a
+  custom domain
+- Use Next.js `Image` component with `unoptimized` prop (required for static
+  export)
 
 </details>
 
@@ -580,10 +676,9 @@ The site will be available at: `https://mncoleman.github.io/mncoleman/`
 
 ## 📚 Documentation
 
-- **[CLAUDE.md](./CLAUDE.md)** - AI assistant project guide & architecture
-- **[NOTION_SETUP.md](./NOTION_SETUP.md)** - Detailed Notion CMS configuration
+- **[CLAUDE.md](./CLAUDE.md)** - Project guide, architecture, and Notion schema reference
 - **[ADMIN_SETUP.md](./ADMIN_SETUP.md)** - Admin Dashboard & Telegram Auth setup
-- **[GOOGLE_ANALYTICS_SETUP.md](./GOOGLE_ANALYTICS_SETUP.md)** - Google Analytics integration
+- **[CUSTOM_DOMAIN_SETUP.md](./CUSTOM_DOMAIN_SETUP.md)** - GitHub Pages custom domain configuration
 
 ---
 
@@ -601,7 +696,8 @@ Contributions are welcome! Feel free to:
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **ISC License** as declared in
+[`package.json`](./package.json).
 
 ---
 
@@ -609,7 +705,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 **Matthew Coleman**
 
-- Website: [mncoleman.github.io/mncoleman/](https://mncoleman.github.io/mncoleman/)
+- Website: [mncoleman.com](https://mncoleman.com)
 - GitHub: [@mncoleman](https://github.com/mncoleman)
 
 ---
