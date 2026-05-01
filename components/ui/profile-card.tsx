@@ -2,7 +2,10 @@
 
 import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import Image from 'next/image';
-import { Linkedin, Instagram, Github } from 'lucide-react';
+import { LinkedinIcon, type LinkedinIconHandle } from '@/components/ui/linkedin';
+import { InstagramIcon, type InstagramIconHandle } from '@/components/ui/instagram';
+import { GithubIcon, type GithubIconHandle } from '@/components/ui/github';
+import { XTwitterIcon, type XTwitterIconHandle } from '@/components/ui/x-twitter';
 import './profile-card.css';
 
 const DEFAULT_INNER_GRADIENT = 'linear-gradient(145deg,#60496e8c 0%,#71C4FF44 100%)';
@@ -59,6 +62,10 @@ const ProfileCardComponent = ({
 }: ProfileCardProps) => {
     const wrapRef = useRef<HTMLDivElement>(null);
     const shellRef = useRef<HTMLDivElement>(null);
+    const linkedinRef = useRef<LinkedinIconHandle>(null);
+    const instagramRef = useRef<InstagramIconHandle>(null);
+    const githubRef = useRef<GithubIconHandle>(null);
+    const xRef = useRef<XTwitterIconHandle>(null);
 
     const enterTimerRef = useRef<number | null>(null);
     const leaveRafRef = useRef<number | null>(null);
@@ -343,8 +350,10 @@ const ProfileCardComponent = ({
                                                 className="pc-social-icon"
                                                 aria-label="LinkedIn"
                                                 style={{ pointerEvents: 'auto' }}
+                                                onMouseEnter={() => linkedinRef.current?.startAnimation()}
+                                                onMouseLeave={() => linkedinRef.current?.stopAnimation()}
                                             >
-                                                <Linkedin strokeWidth={2} />
+                                                <LinkedinIcon ref={linkedinRef} />
                                             </a>
                                         )}
                                         {instagramUrl && (
@@ -355,8 +364,10 @@ const ProfileCardComponent = ({
                                                 className="pc-social-icon"
                                                 aria-label="Instagram"
                                                 style={{ pointerEvents: 'auto' }}
+                                                onMouseEnter={() => instagramRef.current?.startAnimation()}
+                                                onMouseLeave={() => instagramRef.current?.stopAnimation()}
                                             >
-                                                <Instagram strokeWidth={2} />
+                                                <InstagramIcon ref={instagramRef} />
                                             </a>
                                         )}
                                         {xUrl && (
@@ -367,10 +378,10 @@ const ProfileCardComponent = ({
                                                 className="pc-social-icon"
                                                 aria-label="X (Twitter)"
                                                 style={{ pointerEvents: 'auto' }}
+                                                onMouseEnter={() => xRef.current?.startAnimation()}
+                                                onMouseLeave={() => xRef.current?.stopAnimation()}
                                             >
-                                                <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ background: 'none', border: 'none' }}>
-                                                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                                                </svg>
+                                                <XTwitterIcon ref={xRef} />
                                             </a>
                                         )}
                                         {githubUrl && (
@@ -381,8 +392,10 @@ const ProfileCardComponent = ({
                                                 className="pc-social-icon"
                                                 aria-label="GitHub"
                                                 style={{ pointerEvents: 'auto' }}
+                                                onMouseEnter={() => githubRef.current?.startAnimation()}
+                                                onMouseLeave={() => githubRef.current?.stopAnimation()}
                                             >
-                                                <Github strokeWidth={2} />
+                                                <GithubIcon ref={githubRef} />
                                             </a>
                                         )}
                                     </div>
