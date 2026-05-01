@@ -9,9 +9,11 @@ interface TransitionLinkProps {
   children: ReactNode;
   className?: string;
   style?: React.CSSProperties;
+  onMouseEnter?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onMouseLeave?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
-export function TransitionLink({ href, cardId, children, className, style }: TransitionLinkProps) {
+export function TransitionLink({ href, cardId, children, className, style, onMouseEnter, onMouseLeave }: TransitionLinkProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { startTransition } = usePageTransition();
 
@@ -43,6 +45,8 @@ export function TransitionLink({ href, cardId, children, className, style }: Tra
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       className={className}
       style={{ cursor: 'pointer', ...style }}
     >

@@ -1,14 +1,19 @@
 'use client';
 
+import { useRef } from 'react';
 import { FallInText } from '@/components/ui/fall-in-text';
 import { TextType } from '@/components/ui/text-type';
 import { BlurText } from '@/components/ui/blur-text';
 import { ProfileCard } from '@/components/ui/profile-card';
 import { PageEntrance } from '@/components/page-entrance';
-import { User, Cpu, Code2, Sparkles } from 'lucide-react';
+import { CpuIcon, type CpuIconHandle } from '@/components/ui/cpu';
+import { LayoutPanelTopIcon, type LayoutPanelTopIconHandle } from '@/components/ui/layout-panel-top';
 import aboutData from '@/data/about.json';
 
 export default function AboutPage() {
+  const cpuRef = useRef<CpuIconHandle>(null);
+  const layoutRef = useRef<LayoutPanelTopIconHandle>(null);
+
   return (
     <PageEntrance>
     <div className="container mx-auto px-4 py-16 max-w-6xl">
@@ -59,10 +64,14 @@ export default function AboutPage() {
           </div>
 
           {/* What I Do Card */}
-          <div className="p-8 rounded-3xl border border-border/50 bg-background/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 relative overflow-hidden group">
+          <div
+            className="p-8 rounded-3xl border border-border/50 bg-background/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 relative overflow-hidden group"
+            onMouseEnter={() => cpuRef.current?.startAnimation()}
+            onMouseLeave={() => cpuRef.current?.stopAnimation()}
+          >
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                <Cpu size={24} />
+                <CpuIcon ref={cpuRef} size={24} />
               </div>
               <h2 className="text-2xl font-bold tracking-tight">
                 <TextType text="What I Do" speed={80} />
@@ -80,10 +89,14 @@ export default function AboutPage() {
           </div>
 
           {/* This Website Card */}
-          <div className="p-8 rounded-3xl border border-border/50 bg-background/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 relative overflow-hidden group">
+          <div
+            className="p-8 rounded-3xl border border-border/50 bg-background/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 relative overflow-hidden group"
+            onMouseEnter={() => layoutRef.current?.startAnimation()}
+            onMouseLeave={() => layoutRef.current?.stopAnimation()}
+          >
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                <Code2 size={24} />
+                <LayoutPanelTopIcon ref={layoutRef} size={24} />
               </div>
               <h2 className="text-2xl font-bold tracking-tight">
                 <TextType text="This Website" speed={80} />
