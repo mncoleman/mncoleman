@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Bookmark, Filter, X } from 'lucide-react';
+import { useState, useMemo, useRef } from 'react';
+import { Filter, X } from 'lucide-react';
 import { CardActions } from '@/components/ui/card-actions';
 import { useToast } from '@/hooks/use-toast';
 import { PageEntrance } from '@/components/page-entrance';
+import { BookmarkIcon, type BookmarkIconHandle } from '@/components/ui/bookmark';
 
 interface Resource {
     id: string;
@@ -17,6 +18,65 @@ interface Resource {
 
 interface ResourcesPageClientProps {
     initialResources: Resource[];
+}
+
+function ResourceCard({
+    resource,
+    selectedCategory,
+    showToast,
+}: {
+    resource: Resource;
+    selectedCategory: string | null;
+    showToast: (msg: string) => void;
+}) {
+    const iconRef = useRef<BookmarkIconHandle>(null);
+
+    return (
+        <article
+            className="group relative flex flex-col h-full p-6 rounded-2xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/50 hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both overflow-hidden"
+            onMouseEnter={() => iconRef.current?.startAnimation()}
+            onMouseLeave={() => iconRef.current?.stopAnimation()}
+        >
+            <div className="flex justify-between items-start mb-4">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
+                    <BookmarkIcon ref={iconRef} size={20} />
+                </div>
+            </div>
+
+            <div className="flex-1">
+                <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors duration-300">
+                    {resource.name}
+                </h3>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                    {resource.description}
+                </p>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 mt-2 mb-4">
+                {resource.categories.map(cat => (
+                    <span
+                        key={cat}
+                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${selectedCategory === cat
+                            ? 'bg-primary/10 border-primary/20 text-primary'
+                            : 'bg-muted/50 border-border text-muted-foreground'
+                            }`}
+                    >
+                        {cat}
+                    </span>
+                ))}
+            </div>
+
+            <CardActions
+                url={resource.url}
+                title={resource.name}
+                onToast={showToast}
+            />
+
+            <div className="absolute bottom-0 left-0 right-0 h-1">
+                <div className="h-full w-0 bg-primary group-hover:w-full transition-all duration-500 mx-auto" />
+            </div>
+        </article>
+    );
 }
 
 export default function ResourcesPageClient({ initialResources }: ResourcesPageClientProps) {
@@ -89,49 +149,12 @@ export default function ResourcesPageClient({ initialResources }: ResourcesPageC
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredResources.map((resource) => (
-                    <article
+                    <ResourceCard
                         key={resource.id}
-                        className="group relative flex flex-col h-full p-6 rounded-2xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/50 hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both overflow-hidden"
-                    >
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
-                                <Bookmark className="h-5 w-5" />
-                            </div>
-                        </div>
-
-                        <div className="flex-1">
-                            <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors duration-300">
-                                {resource.name}
-                            </h3>
-                            <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                                {resource.description}
-                            </p>
-                        </div>
-
-                        <div className="flex flex-wrap gap-1.5 mt-2 mb-4">
-                            {resource.categories.map(cat => (
-                                <span
-                                    key={cat}
-                                    className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${selectedCategory === cat
-                                        ? 'bg-primary/10 border-primary/20 text-primary'
-                                        : 'bg-muted/50 border-border text-muted-foreground'
-                                        }`}
-                                >
-                                    {cat}
-                                </span>
-                            ))}
-                        </div>
-
-                        <CardActions
-                            url={resource.url}
-                            title={resource.name}
-                            onToast={showToast}
-                        />
-
-                        <div className="absolute bottom-0 left-0 right-0 h-1">
-                            <div className="h-full w-0 bg-primary group-hover:w-full transition-all duration-500 mx-auto" />
-                        </div>
-                    </article>
+                        resource={resource}
+                        selectedCategory={selectedCategory}
+                        showToast={showToast}
+                    />
                 ))}
             </div>
 
