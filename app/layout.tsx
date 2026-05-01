@@ -137,6 +137,10 @@ export default async function RootLayout({
                       Brand Kit
                     </Link>
                     <span className="mx-2">•</span>
+                    <a href="https://github.com/mncoleman/mncoleman" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors hover:underline underline-offset-4">
+                      Repository
+                    </a>
+                    <span className="mx-2">•</span>
                     <Link href="/admin" className="hover:text-primary transition-colors hover:underline underline-offset-4 opacity-50 text-xs">
                       Admin
                     </Link>

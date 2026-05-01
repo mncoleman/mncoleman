@@ -1,13 +1,24 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowRight, Pen, User, Code2, Link2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { UserIcon } from '@/components/ui/user';
+import { FolderCodeIcon } from '@/components/ui/folder-code';
+import { SquarePenIcon } from '@/components/ui/square-pen';
+import { BookmarkIcon } from '@/components/ui/bookmark';
 
-function ResumeIcon({ className, strokeWidth = 1.5, ...props }: React.SVGProps<SVGSVGElement> & { strokeWidth?: number }) {
+interface AnimatedIconHandle {
+  startAnimation: () => void;
+  stopAnimation: () => void;
+}
+
+function ResumeIcon({ className, size = 40, strokeWidth = 1.5, ...props }: React.SVGProps<SVGSVGElement> & { size?: number; strokeWidth?: number }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
+      width={size}
+      height={size}
       fill="none"
       stroke="currentColor"
       strokeWidth={strokeWidth}
@@ -16,9 +27,7 @@ function ResumeIcon({ className, strokeWidth = 1.5, ...props }: React.SVGProps<S
       className={className}
       {...props}
     >
-      {/* Rounded portrait rectangle */}
       <rect x="4" y="2" width="16" height="20" rx="2.5" ry="2.5" />
-      {/* MC initials */}
       <text
         x="12"
         y="8.5"
@@ -31,7 +40,6 @@ function ResumeIcon({ className, strokeWidth = 1.5, ...props }: React.SVGProps<S
       >
         MC
       </text>
-      {/* Content lines */}
       <line x1="8" y1="12" x2="16" y2="12" />
       <line x1="8" y1="15" x2="16" y2="15" />
       <line x1="8" y1="18" x2="13" y2="18" />
@@ -54,7 +62,7 @@ const bentoCards = [
     label: 'Introduction',
     span: 'md:col-span-2 md:row-span-1',
     link: '/about',
-    icon: User,
+    icon: UserIcon,
     col: 0, // grid column for pulse sweep
   },
   {
@@ -63,7 +71,7 @@ const bentoCards = [
     description:
       'A collection of projects, experiments, and tools (mostly built with AI).',
     label: 'Portfolio',
-    icon: Code2,
+    icon: FolderCodeIcon,
     span: 'md:col-span-1 md:row-span-1',
     link: '/projects',
     col: 2,
@@ -74,7 +82,7 @@ const bentoCards = [
     description:
       'Thoughts on technology, life, and sometimes just random things.',
     label: 'Articles',
-    icon: Pen,
+    icon: SquarePenIcon,
     span: 'md:col-span-1 md:row-span-1',
     link: '/blog',
     col: 0,
@@ -84,7 +92,7 @@ const bentoCards = [
     title: 'Resources',
     description: 'Curated collection of useful websites and tools.',
     label: 'Library',
-    icon: Link2,
+    icon: BookmarkIcon,
     span: 'md:col-span-1 md:row-span-1',
     link: '/resources',
     col: 1,
@@ -105,13 +113,24 @@ function CardContent({ card }: { card: (typeof bentoCards)[number] }) {
   const { activeCardId } = usePageTransition();
   const isActive = activeCardId === card.id;
   const isSibling = activeCardId !== null && !isActive;
+  const iconRef = useRef<AnimatedIconHandle>(null);
+  const Icon = card.icon as React.ForwardRefExoticComponent<
+    { className?: string; size?: number } & React.RefAttributes<AnimatedIconHandle>
+  >;
+  const isResume = card.id === 'resume';
 
   return (
     <motion.div
       animate={isSibling ? { opacity: 0, scale: 0.95 } : { opacity: 1, scale: 1 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
     >
-      <TransitionLink href={card.link} cardId={card.id} className="group relative block p-8 h-full">
+      <TransitionLink
+        href={card.link}
+        cardId={card.id}
+        className="group relative block p-8 h-full"
+        onMouseEnter={() => iconRef.current?.startAnimation()}
+        onMouseLeave={() => iconRef.current?.stopAnimation()}
+      >
         <div className="flex flex-col h-full justify-between min-h-[180px]">
           <div>
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 block">
@@ -129,7 +148,11 @@ function CardContent({ card }: { card: (typeof bentoCards)[number] }) {
             <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
-        <card.icon className="absolute bottom-8 right-8 h-10 w-10 text-muted-foreground/10 group-hover:text-primary/20 transition-colors" strokeWidth={1.5} />
+        {isResume ? (
+          <ResumeIcon className="absolute bottom-8 right-8 text-muted-foreground/10 group-hover:text-primary/20 transition-colors" size={40} strokeWidth={1.5} />
+        ) : (
+          <Icon ref={iconRef} className="absolute bottom-8 right-8 text-muted-foreground/10 group-hover:text-primary/20 transition-colors" size={40} />
+        )}
       </TransitionLink>
     </motion.div>
   );
@@ -251,7 +274,11 @@ function MobileStack() {
                   <ArrowRight className="h-4 w-4" />
                 </div>
               </div>
-              <card.icon className="absolute bottom-6 right-6 h-8 w-8 text-muted-foreground/10" strokeWidth={1.5} />
+              {card.id === 'resume' ? (
+                <ResumeIcon className="absolute bottom-6 right-6 text-muted-foreground/10" size={32} strokeWidth={1.5} />
+              ) : (
+                <card.icon className="absolute bottom-6 right-6 text-muted-foreground/10" size={32} />
+              )}
             </TransitionLink>
           </motion.div>
         );
