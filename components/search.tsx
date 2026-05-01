@@ -2,9 +2,92 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search as SearchIcon, Pen, Briefcase, Link as LinkIcon, ContactRound, File, X, Command } from 'lucide-react';
+import { Search as SearchIcon, X } from 'lucide-react';
+import { SquarePenIcon } from '@/components/ui/square-pen';
+import { FolderCodeIcon } from '@/components/ui/folder-code';
+import { BookmarkIcon } from '@/components/ui/bookmark';
+import { FileTextIcon } from '@/components/ui/file-text';
+import { ResumeIcon } from '@/components/ui/resume-icon';
 import { cn } from '@/lib/utils';
 import { createPortal } from 'react-dom';
+
+interface AnimatedIconHandle {
+    startAnimation: () => void;
+    stopAnimation: () => void;
+}
+
+type SearchType = 'blog' | 'project' | 'resource' | 'resume' | 'artifact';
+
+function TypeIcon({ type, iconRef, size = 16 }: {
+    type: SearchType;
+    iconRef?: React.Ref<AnimatedIconHandle>;
+    size?: number;
+}) {
+    switch (type) {
+        case 'blog': return <SquarePenIcon ref={iconRef} size={size} />;
+        case 'project': return <FolderCodeIcon ref={iconRef} size={size} />;
+        case 'resource': return <BookmarkIcon ref={iconRef} size={size} />;
+        case 'artifact': return <FileTextIcon ref={iconRef} size={size} />;
+        case 'resume': return <ResumeIcon size={size} strokeWidth={2} />;
+    }
+}
+
+function SearchResultRow({ item, index, isSelected, onSelect, onHover }: {
+    item: SearchItem;
+    index: number;
+    isSelected: boolean;
+    onSelect: () => void;
+    onHover: (index: number) => void;
+}) {
+    const iconRef = useRef<AnimatedIconHandle>(null);
+    return (
+        <button
+            onClick={onSelect}
+            onMouseEnter={() => {
+                onHover(index);
+                iconRef.current?.startAnimation();
+            }}
+            onMouseLeave={() => iconRef.current?.stopAnimation()}
+            className={cn(
+                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors",
+                isSelected ? "bg-accent text-accent-foreground" : "hover:bg-muted/50"
+            )}
+        >
+            <div className={cn(
+                "p-1.5 rounded-md",
+                isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+            )}>
+                <TypeIcon type={item.type} iconRef={iconRef} />
+            </div>
+            <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm truncate">{item.title}</div>
+                <div className="text-xs text-muted-foreground truncate">{item.description}</div>
+            </div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                {item.type}
+            </div>
+        </button>
+    );
+}
+
+function QuickLinkButton({ label, type, onClick }: {
+    label: string;
+    type: SearchType;
+    onClick: () => void;
+}) {
+    const iconRef = useRef<AnimatedIconHandle>(null);
+    return (
+        <button
+            onClick={onClick}
+            onMouseEnter={() => iconRef.current?.startAnimation()}
+            onMouseLeave={() => iconRef.current?.stopAnimation()}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 hover:bg-muted transition-colors text-sm text-left"
+        >
+            <TypeIcon type={type} iconRef={iconRef} />
+            {label}
+        </button>
+    );
+}
 
 export interface SearchItem {
     id: string;
@@ -112,17 +195,6 @@ export function Search({ items }: SearchProps) {
         setIsOpen(false);
     };
 
-    const getIcon = (type: SearchItem['type']) => {
-        switch (type) {
-            case 'blog': return <Pen className="w-4 h-4" />;
-            case 'project': return <Briefcase className="w-4 h-4" />;
-            case 'resource': return <LinkIcon className="w-4 h-4" />;
-            case 'resume': return <ContactRound className="w-4 h-4" />;
-            case 'artifact': return <File className="w-4 h-4" />;
-            default: return <File className="w-4 h-4" />;
-        }
-    };
-
     const searchModal = (
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4 overflow-y-auto">
             {/* Backdrop */}
@@ -159,29 +231,14 @@ export function Search({ items }: SearchProps) {
                     {filteredItems.length > 0 ? (
                         <div className="space-y-1">
                             {filteredItems.map((item, index) => (
-                                <button
+                                <SearchResultRow
                                     key={`${item.type}-${item.id}`}
-                                    onClick={() => handleSelect(item)}
-                                    onMouseEnter={() => setSelectedIndex(index)}
-                                    className={cn(
-                                        "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors",
-                                        index === selectedIndex ? "bg-accent text-accent-foreground" : "hover:bg-muted/50"
-                                    )}
-                                >
-                                    <div className={cn(
-                                        "p-1.5 rounded-md",
-                                        index === selectedIndex ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                                    )}>
-                                        {getIcon(item.type)}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="font-medium text-sm truncate">{item.title}</div>
-                                        <div className="text-xs text-muted-foreground truncate">{item.description}</div>
-                                    </div>
-                                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                                        {item.type}
-                                    </div>
-                                </button>
+                                    item={item}
+                                    index={index}
+                                    isSelected={index === selectedIndex}
+                                    onSelect={() => handleSelect(item)}
+                                    onHover={setSelectedIndex}
+                                />
                             ))}
                         </div>
                     ) : query.trim() ? (
@@ -192,18 +249,22 @@ export function Search({ items }: SearchProps) {
                         <div className="py-4 px-3 space-y-4">
                             <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50 px-1">Quick Links</div>
                             <div className="grid grid-cols-2 gap-2">
-                                {['Blog', 'Projects', 'Resources', 'Artifacts', 'Resume'].map((label) => (
-                                    <button
+                                {([
+                                    { label: 'Blog', path: '/blog', type: 'blog' },
+                                    { label: 'Projects', path: '/projects', type: 'project' },
+                                    { label: 'Resources', path: '/resources', type: 'resource' },
+                                    { label: 'Artifacts', path: '/artifacts', type: 'artifact' },
+                                    { label: 'Resume', path: '/resume', type: 'resume' },
+                                ] as const).map(({ label, path, type }) => (
+                                    <QuickLinkButton
                                         key={label}
+                                        label={label}
+                                        type={type}
                                         onClick={() => {
-                                            router.push(`/${label.toLowerCase()}`);
+                                            router.push(path);
                                             setIsOpen(false);
                                         }}
-                                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 hover:bg-muted transition-colors text-sm text-left"
-                                    >
-                                        {getIcon(label.toLowerCase() as any)}
-                                        {label}
-                                    </button>
+                                    />
                                 ))}
                             </div>
                         </div>
