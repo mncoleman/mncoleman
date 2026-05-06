@@ -360,13 +360,16 @@ app.get('/a/:slug', async (c) => {
     if (!meta) return new Response(notFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 
     if (meta.visibility === 'private' && !isUnlocked(c, slug)) {
-        return new Response(passwordPromptPage(slug, meta.name), {
-            status: 401,
-            headers: {
-                'Content-Type': 'text/html; charset=utf-8',
-                'Cache-Control': 'no-store',
-            },
-        });
+        return new Response(
+            passwordPromptPage({ slug, name: meta.name, description: meta.description, publicBase: PUBLIC_BASE }),
+            {
+                status: 401,
+                headers: {
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Cache-Control': 'no-store',
+                },
+            }
+        );
     }
 
     const file = await getFile(slug, meta.filename);
@@ -429,18 +432,24 @@ app.post('/unlock/:slug', async (c) => {
         const form = await c.req.formData();
         password = ((form.get('password') as string | null) || '').slice(0, 200);
     } catch {
-        return new Response(passwordPromptPage(slug, meta.name, 'Invalid form submission'), {
-            status: 400,
-            headers: { 'Content-Type': 'text/html; charset=utf-8' },
-        });
+        return new Response(
+            passwordPromptPage({ slug, name: meta.name, description: meta.description, publicBase: PUBLIC_BASE, error: 'Invalid form submission' }),
+            {
+                status: 400,
+                headers: { 'Content-Type': 'text/html; charset=utf-8' },
+            }
+        );
     }
 
     const ok = password.length > 0 && (await Bun.password.verify(password, meta.passwordHash));
     if (!ok) {
-        return new Response(passwordPromptPage(slug, meta.name, 'Incorrect password.'), {
-            status: 401,
-            headers: { 'Content-Type': 'text/html; charset=utf-8' },
-        });
+        return new Response(
+            passwordPromptPage({ slug, name: meta.name, description: meta.description, publicBase: PUBLIC_BASE, error: 'Incorrect password.' }),
+            {
+                status: 401,
+                headers: { 'Content-Type': 'text/html; charset=utf-8' },
+            }
+        );
     }
 
     const cookieValue = signSlugCookie(slug, 60 * 60 * 24); // 24h

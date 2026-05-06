@@ -82,12 +82,21 @@ const baseStyles = `
     }
 `;
 
-const baseHead = (title: string) => `
+const baseHead = (title: string, og?: { title: string; description: string; image: string; url: string }) => `
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${escape(title)}</title>
     <link rel="icon" type="image/svg+xml" href="https://mncoleman.com/icon.svg">
-    <link rel="alternate icon" href="https://mncoleman.com/favicon.ico">
+    <link rel="alternate icon" href="https://mncoleman.com/favicon.ico">${og ? `
+    <meta property="og:title" content="${escape(og.title)}">
+    <meta property="og:description" content="${escape(og.description)}">
+    <meta property="og:image" content="${og.image}">
+    <meta property="og:url" content="${og.url}">
+    <meta property="og:type" content="article">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${escape(og.title)}">
+    <meta name="twitter:description" content="${escape(og.description)}">
+    <meta name="twitter:image" content="${og.image}">` : ''}
     <style>${baseStyles}</style>
 `;
 
@@ -174,8 +183,22 @@ export function notFoundPage(): string {
     </div></body></html>`;
 }
 
-export function passwordPromptPage(slug: string, name: string, error?: string): string {
-    return `<!doctype html><html lang="en"><head>${baseHead(`${name} — locked`)}</head><body>
+export interface PasswordPromptOptions {
+    slug: string;
+    name: string;
+    description?: string;
+    publicBase: string;
+    error?: string;
+}
+
+export function passwordPromptPage({ slug, name, description, publicBase, error }: PasswordPromptOptions): string {
+    const og = {
+        title: name,
+        description: description || `mncoleman Artifact: ${name}`,
+        image: `${publicBase}/og/${slug}.png`,
+        url: `${publicBase}/a/${slug}`,
+    };
+    return `<!doctype html><html lang="en"><head>${baseHead(`${name} — locked`, og)}</head><body>
     <div class="card">
         <div class="eyebrow">Private artifact</div>
         <h1>${escape(name)}</h1>
