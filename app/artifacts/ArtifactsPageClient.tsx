@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { FileText, Filter, X, ExternalLink, Download, File, Image, Code, FileType, Palette } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { FileText, Filter, X, ExternalLink, Download, File, Image, Code, FileType, Palette, Zap } from 'lucide-react';
 import { PageEntrance } from '@/components/page-entrance';
 import { ArtifactDesignPopup } from '@/components/artifact-design-popup';
 import { formatDistanceToNow } from 'date-fns';
@@ -14,7 +14,12 @@ interface Artifact {
     type: string;
     size: number;
     uploadedAt: string;
+    url?: string;
+    downloadUrl?: string;
+    source?: 'static' | 'dynamic';
 }
+
+const ARTIFACTS_API = process.env.NEXT_PUBLIC_ARTIFACTS_API_URL || 'https://artifacts.mncoleman.com';
 
 function getFileTypeLabel(type: string): string {
     const labels: Record<string, string> = {
@@ -56,20 +61,47 @@ interface ArtifactsPageClientProps {
 
 export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageClientProps) {
     const [selectedType, setSelectedType] = useState<string | null>(null);
+    const [dynamicArtifacts, setDynamicArtifacts] = useState<Artifact[]>([]);
+
+    useEffect(() => {
+        let cancelled = false;
+        fetch(`${ARTIFACTS_API}/api/list`, { cache: 'no-store' })
+            .then(r => (r.ok ? r.json() : { artifacts: [] }))
+            .then(data => {
+                if (cancelled) return;
+                const items: Artifact[] = (data?.artifacts || []).map((a: Artifact) => ({
+                    ...a,
+                    source: 'dynamic' as const,
+                }));
+                setDynamicArtifacts(items);
+            })
+            .catch(() => {});
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const merged = useMemo(() => {
+        const staticItems: Artifact[] = initialArtifacts.map(a => ({ ...a, source: 'static' as const }));
+        // Dedup by filename — static artifacts use UUID ids, dynamic ones use slugs,
+        // so id-based dedup never matched. Filename is the stable identity.
+        const dynamicFilenames = new Set(dynamicArtifacts.map(a => a.filename));
+        return [...dynamicArtifacts, ...staticItems.filter(a => !dynamicFilenames.has(a.filename))];
+    }, [initialArtifacts, dynamicArtifacts]);
 
     const allTypes = useMemo(() => {
         const types = new Set<string>();
-        initialArtifacts.forEach(a => types.add(a.type));
+        merged.forEach(a => types.add(a.type));
         return Array.from(types).sort();
-    }, [initialArtifacts]);
+    }, [merged]);
 
     const filteredArtifacts = useMemo(() => {
-        let items = initialArtifacts;
+        let items = merged;
         if (selectedType) {
             items = items.filter(a => a.type === selectedType);
         }
         return items.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
-    }, [initialArtifacts, selectedType]);
+    }, [merged, selectedType]);
 
     return (
         <PageEntrance>
@@ -138,7 +170,9 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
                     {filteredArtifacts.map((artifact) => {
                         const IconComponent = getFileIcon(artifact.type);
                         const viewable = isViewableInBrowser(artifact.type);
-                        const artifactUrl = `/artifacts/${artifact.filename}`;
+                        const artifactUrl = artifact.url || `/artifacts/${artifact.filename}`;
+                        const downloadUrl = artifact.downloadUrl || artifactUrl;
+                        const isDynamic = artifact.source === 'dynamic';
 
                         return (
                             <article
@@ -149,9 +183,20 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
                                     <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
                                         <IconComponent className="h-5 w-5" />
                                     </div>
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full border bg-muted/50 border-border text-muted-foreground">
-                                        {getFileTypeLabel(artifact.type)}
-                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                        {isDynamic && (
+                                            <span
+                                                title="Instant artifact"
+                                                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border border-[#016b72]/40 bg-[#016b72]/10 text-[#016b72]"
+                                            >
+                                                <Zap className="h-2.5 w-2.5" />
+                                                Live
+                                            </span>
+                                        )}
+                                        <span className="text-[10px] px-2 py-0.5 rounded-full border bg-muted/50 border-border text-muted-foreground">
+                                            {getFileTypeLabel(artifact.type)}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <div className="flex-1">
@@ -184,7 +229,7 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
                                         </a>
                                     )}
                                     <a
-                                        href={artifactUrl}
+                                        href={downloadUrl}
                                         download={artifact.filename}
                                         className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewable
                                             ? 'bg-accent text-accent-foreground hover:bg-accent/80'

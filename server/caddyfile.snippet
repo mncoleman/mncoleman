@@ -1,0 +1,23 @@
+# Append to /etc/caddy/Caddyfile on the ARM server, then `sudo systemctl reload caddy`.
+artifacts.mncoleman.com {
+    # Compress text responses only — PNG/JPEG/etc are already compressed.
+    @compressible {
+        header_regexp Content-Type ^(text/|application/(json|javascript|xml))
+    }
+    encode @compressible gzip zstd
+
+    # Long-cache OG share images (immutable per-slug).
+    @og path /og/*
+    header @og Cache-Control "public, max-age=86400, immutable"
+
+    # Defense-in-depth headers.
+    header {
+        X-Content-Type-Options "nosniff"
+        Strict-Transport-Security "max-age=31536000"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Tell browsers/clients we expose the slug header on /api/* responses.
+        Access-Control-Expose-Headers "X-Artifact-Slug"
+    }
+
+    reverse_proxy 127.0.0.1:7878
+}

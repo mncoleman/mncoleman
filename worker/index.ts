@@ -25,6 +25,8 @@ export interface Env {
     GITHUB_REPO_NAME: string;
     N8N_WEBHOOK_URL: string;
     ADMIN_USERS: KVNamespace;       // KV store for multi-user access
+    ARTIFACTS_SERVICE_URL: string;  // e.g. https://artifacts.mncoleman.com
+    ARTIFACTS_JWT_SECRET: string;   // Shared HS256 secret with the Oracle artifact service
 }
 
 interface AdminUser {
@@ -49,15 +51,16 @@ export default {
         const corsHeaders: Record<string, string> = {
             'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-            'Access-Control-Allow-Credentials': 'true',
             'Vary': 'Origin',
             'X-Content-Type-Options': 'nosniff',
             'X-Frame-Options': 'DENY',
             'Referrer-Policy': 'strict-origin-when-cross-origin',
         };
 
+        // Only echo origin and credentials when the origin is explicitly allowed.
         if (activeOrigin) {
             corsHeaders['Access-Control-Allow-Origin'] = activeOrigin;
+            corsHeaders['Access-Control-Allow-Credentials'] = 'true';
         }
 
         // Handle preflight
@@ -276,6 +279,33 @@ export default {
                 return new Response('Unknown action', { status: 400, headers: corsHeaders });
             }
 
+            // Instant artifact delete: forwards to the Oracle service.
+            if (url.pathname.startsWith('/api/artifacts/instant/') && request.method === 'DELETE') {
+                if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
+                    return new Response(
+                        JSON.stringify({ error: 'Instant artifacts not configured' }),
+                        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                    );
+                }
+                const slug = decodeURIComponent(url.pathname.split('/').pop() || '');
+                if (!/^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?$/.test(slug)) {
+                    return new Response(JSON.stringify({ error: 'invalid slug' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+                const jwt = await signArtifactsJwt(
+                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'artifact-delete' },
+                    env.ARTIFACTS_JWT_SECRET
+                );
+                const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/${encodeURIComponent(slug)}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${jwt}` },
+                });
+                const text = await upstream.text();
+                return new Response(text, {
+                    status: upstream.status,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+            }
+
             // Artifacts Management Endpoints
             if (url.pathname === '/api/artifacts') {
                 if (request.method === 'GET') {
@@ -301,6 +331,47 @@ export default {
                 }
 
                 if (request.method === 'POST') {
+                    // Multipart path: stream-forward to the Oracle artifact service
+                    // without buffering the file in the Worker.
+                    const ctype = request.headers.get('Content-Type') || '';
+                    if (ctype.toLowerCase().startsWith('multipart/form-data')) {
+                        if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
+                            return new Response(
+                                JSON.stringify({ error: 'Instant artifacts not configured on this worker' }),
+                                { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                            );
+                        }
+                        const jwt = await signArtifactsJwt(
+                            { sub: authPayload.id || authPayload.username || 'admin', purpose: 'artifact-upload' },
+                            env.ARTIFACTS_JWT_SECRET
+                        );
+                        const upstreamHeaders: Record<string, string> = {
+                            'Authorization': `Bearer ${jwt}`,
+                            'Content-Type': ctype,
+                        };
+                        const cl = request.headers.get('Content-Length');
+                        if (cl) upstreamHeaders['Content-Length'] = cl;
+                        const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/upload`, {
+                            method: 'POST',
+                            headers: upstreamHeaders,
+                            body: request.body,
+                            // @ts-expect-error — Cloudflare Workers accept duplex for streaming requests
+                            duplex: 'half',
+                        });
+                        const upstreamText = await upstream.text();
+                        if (!upstream.ok) {
+                            return new Response(
+                                JSON.stringify({ error: 'Instant upload failed', detail: upstreamText }),
+                                { status: upstream.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                            );
+                        }
+                        const upstreamJson = JSON.parse(upstreamText) as { ok: boolean; artifact: any };
+                        return new Response(
+                            JSON.stringify({ success: true, artifact: upstreamJson.artifact }),
+                            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                        );
+                    }
+
                     const body = await request.json() as {
                         filename: string;
                         name?: string;
@@ -308,6 +379,8 @@ export default {
                         type: string;
                         size: number;
                         description?: string;
+                        destination?: 'github' | 'instant';
+                        slug?: string;
                     };
 
                     if (!body.filename || !body.content) {
@@ -316,6 +389,49 @@ export default {
 
                     // Sanitize filename: only allow alphanumeric, hyphens, underscores, dots
                     const safeFilename = body.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+                    // Legacy JSON+base64 path for instant uploads (kept for backwards compat).
+                    if (body.destination === 'instant') {
+                        if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
+                            return new Response(
+                                JSON.stringify({ error: 'Instant artifacts not configured on this worker' }),
+                                { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                            );
+                        }
+
+                        const jwt = await signArtifactsJwt(
+                            { sub: authPayload.id || authPayload.username || 'admin', purpose: 'artifact-upload' },
+                            env.ARTIFACTS_JWT_SECRET
+                        );
+
+                        const bytes = decodeBase64ToBytes(body.content);
+                        const blob = new Blob([bytes], { type: body.type || 'application/octet-stream' });
+                        const form = new FormData();
+                        form.append('file', blob, safeFilename);
+                        if (body.name) form.append('name', body.name);
+                        if (body.description) form.append('description', body.description);
+                        if (body.slug) form.append('slug', body.slug);
+
+                        const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/upload`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${jwt}` },
+                            body: form,
+                        });
+
+                        const upstreamText = await upstream.text();
+                        if (!upstream.ok) {
+                            return new Response(
+                                JSON.stringify({ error: 'Instant upload failed', detail: upstreamText }),
+                                { status: upstream.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                            );
+                        }
+
+                        const upstreamJson = JSON.parse(upstreamText) as { ok: boolean; artifact: any };
+                        return new Response(
+                            JSON.stringify({ success: true, artifact: upstreamJson.artifact }),
+                            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                        );
+                    }
 
                     // 1. Upload the file to public/artifacts/
                     const filePath = `public/artifacts/${safeFilename}`;
@@ -377,13 +493,15 @@ export default {
                     // Remove existing entry with same filename if overwriting
                     artifacts = artifacts.filter((a: any) => a.filename !== safeFilename);
 
+                    // Use the authoritative decoded byte length, not the client-supplied body.size.
+                    const decodedBytes = decodeBase64ToBytes(body.content).byteLength;
                     const newArtifact = {
                         id: crypto.randomUUID(),
                         name: body.name || safeFilename.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '),
                         filename: safeFilename,
                         description: body.description || '',
                         type: body.type || 'application/octet-stream',
-                        size: body.size || 0,
+                        size: decodedBytes,
                         uploadedAt: new Date().toISOString(),
                     };
                     artifacts.push(newArtifact);
@@ -498,7 +616,7 @@ export default {
                     if (body.description !== undefined) artifacts[idx].description = body.description;
                     if (body.content) {
                         artifacts[idx].type = body.type || artifacts[idx].type;
-                        artifacts[idx].size = body.size || artifacts[idx].size;
+                        artifacts[idx].size = decodeBase64ToBytes(body.content).byteLength;
                         artifacts[idx].uploadedAt = new Date().toISOString();
                     }
 
@@ -932,6 +1050,24 @@ async function signJwt(payload: any, secret: string): Promise<string> {
     const signature = await createSignature(encodedHeader + '.' + encodedPayload, secret);
 
     return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
+
+// Mints a short-lived (60s) HS256 JWT for the Oracle artifact service.
+async function signArtifactsJwt(payload: Record<string, unknown>, secret: string): Promise<string> {
+    const header = { alg: 'HS256', typ: 'JWT' };
+    const now = Math.floor(Date.now() / 1000);
+    const claims = { ...payload, iat: now, exp: now + 60, aud: 'artifacts-service' };
+    const h = btoaUrl(JSON.stringify(header));
+    const p = btoaUrl(JSON.stringify(claims));
+    const sig = await createSignature(`${h}.${p}`, secret);
+    return `${h}.${p}.${sig}`;
+}
+
+function decodeBase64ToBytes(b64: string): Uint8Array {
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
 }
 
 async function verifyJwt(token: string, secret: string): Promise<any | null> {

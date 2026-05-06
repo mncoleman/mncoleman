@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw } from 'lucide-react';
+import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw, Zap, Globe, Copy, ExternalLink } from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
 
 interface ArtifactUploaderProps {
     workerUrl: string;
 }
+
+type Destination = 'instant' | 'github';
 
 interface ArtifactEntry {
     id: string;
@@ -20,6 +22,25 @@ interface ArtifactEntry {
     type: string;
     size: number;
     uploadedAt: string;
+    slug?: string;
+    url?: string;
+    downloadUrl?: string;
+    source?: 'static' | 'dynamic';
+}
+
+const ARTIFACTS_API = process.env.NEXT_PUBLIC_ARTIFACTS_API_URL || 'https://artifacts.mncoleman.com';
+
+function suggestSlug(name: string): string {
+    return name
+        .replace(/\.[^.]+$/, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 60);
+}
+
+function isValidSlug(slug: string): boolean {
+    return /^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?$/.test(slug);
 }
 
 function getFileIcon(type: string) {
@@ -48,6 +69,9 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
     const [file, setFile] = useState<globalThis.File | null>(null);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
+    const [destination, setDestination] = useState<Destination>('instant');
+    const [slug, setSlug] = useState('');
+    const [lastShareUrl, setLastShareUrl] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const [deleting, setDeleting] = useState<string | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -70,16 +94,28 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
     const fetchArtifacts = async () => {
         setLoadingList(true);
         try {
-            const res = await fetch(getApiUrl(workerUrl, ''), {
-                headers: authHeaders(),
-                credentials: 'include',
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setArtifacts(data.artifacts || []);
-            }
-        } catch {
-            // Silently fail
+            const [staticRes, dynamicRes] = await Promise.all([
+                fetch(getApiUrl(workerUrl, ''), {
+                    headers: authHeaders(),
+                    credentials: 'include',
+                }).then(r => (r.ok ? r.json() : { artifacts: [] })).catch(() => ({ artifacts: [] })),
+                fetch(`${ARTIFACTS_API}/api/list`, { cache: 'no-store' })
+                    .then(r => (r.ok ? r.json() : { artifacts: [] }))
+                    .catch(() => ({ artifacts: [] })),
+            ]);
+
+            const staticArtifacts: ArtifactEntry[] = (staticRes.artifacts || []).map((a: ArtifactEntry) => ({
+                ...a,
+                source: 'static' as const,
+            }));
+            const dynamicArtifacts: ArtifactEntry[] = (dynamicRes.artifacts || []).map((a: ArtifactEntry) => ({
+                ...a,
+                source: 'dynamic' as const,
+            }));
+
+            const merged = [...dynamicArtifacts, ...staticArtifacts]
+                .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
+            setArtifacts(merged);
         } finally {
             setLoadingList(false);
         }
@@ -88,11 +124,14 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
     const handleFileSelect = useCallback((selectedFile: globalThis.File) => {
         setFile(selectedFile);
         setMessage(null);
-        // Auto-fill name from filename if name is empty
+        setLastShareUrl(null);
         if (!name) {
             setName(selectedFile.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '));
         }
-    }, [name]);
+        if (!slug) {
+            setSlug(suggestSlug(selectedFile.name));
+        }
+    }, [name, slug]);
 
     const handleDragEnter = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -139,25 +178,48 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         e.preventDefault();
         if (!file) return;
 
+        if (destination === 'instant' && slug && !isValidSlug(slug)) {
+            setMessage({ type: 'error', text: 'Slug must be 3-60 chars of [a-z0-9-], starting and ending with alphanumeric.' });
+            return;
+        }
+
         setUploading(true);
         setMessage(null);
+        setLastShareUrl(null);
 
         try {
-            const base64 = await fileToBase64(file);
-
-            const res = await fetch(getApiUrl(workerUrl, ''), {
-                method: 'POST',
-                headers: apiHeaders(),
-                credentials: 'include',
-                body: JSON.stringify({
-                    filename: file.name,
-                    name: name || undefined,
-                    content: base64,
-                    type: file.type || 'application/octet-stream',
-                    size: file.size,
-                    description,
-                }),
-            });
+            let res: Response;
+            if (destination === 'instant') {
+                // Stream the file as multipart so the Worker can pipe it through to Oracle
+                // without buffering the full payload in memory.
+                const fd = new FormData();
+                fd.append('file', file);
+                if (name) fd.append('name', name);
+                if (description) fd.append('description', description);
+                if (slug) fd.append('slug', slug);
+                res = await fetch(getApiUrl(workerUrl, ''), {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    credentials: 'include',
+                    body: fd,
+                });
+            } else {
+                const base64 = await fileToBase64(file);
+                res = await fetch(getApiUrl(workerUrl, ''), {
+                    method: 'POST',
+                    headers: apiHeaders(),
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        filename: file.name,
+                        name: name || undefined,
+                        content: base64,
+                        type: file.type || 'application/octet-stream',
+                        size: file.size,
+                        description,
+                        destination: 'github',
+                    }),
+                });
+            }
 
             if (!res.ok) {
                 const errText = await res.text();
@@ -165,11 +227,23 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
             }
 
             const resData = await res.json();
-            setArtifacts(prev => [...prev, resData.artifact]);
-            setMessage({ type: 'success', text: `"${file.name}" uploaded successfully! A rebuild will be triggered.` });
+            const uploaded: ArtifactEntry = {
+                ...resData.artifact,
+                source: destination === 'instant' ? 'dynamic' : 'static',
+            };
+            setArtifacts(prev => [uploaded, ...prev.filter(a => a.id !== uploaded.id)]);
+
+            if (destination === 'instant' && uploaded.url) {
+                setLastShareUrl(uploaded.url);
+                setMessage({ type: 'success', text: `"${file.name}" published instantly. Share URL ready below.` });
+            } else {
+                setMessage({ type: 'success', text: `"${file.name}" uploaded. A rebuild will be triggered.` });
+            }
+
             setFile(null);
             setName('');
             setDescription('');
+            setSlug('');
             if (fileInputRef.current) fileInputRef.current.value = '';
         } catch (e: any) {
             setMessage({ type: 'error', text: e.message });
@@ -178,24 +252,41 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         }
     };
 
-    const handleDelete = async (filename: string) => {
-        setDeleting(filename);
+    const deleteKey = (a: ArtifactEntry) => `${a.source || 'static'}:${a.slug || a.filename}`;
+
+    const handleDelete = async (artifact: ArtifactEntry) => {
+        const key = deleteKey(artifact);
+        setDeleting(key);
         setMessage(null);
 
         try {
-            const res = await fetch(getApiUrl(workerUrl, `?file=${encodeURIComponent(filename)}`), {
-                method: 'DELETE',
-                headers: authHeaders(),
-                credentials: 'include',
-            });
+            let res: Response;
+            if (artifact.source === 'dynamic' && artifact.slug) {
+                res = await fetch(`${workerUrl.replace(/\/$/, '')}/api/artifacts/instant/${encodeURIComponent(artifact.slug)}`, {
+                    method: 'DELETE',
+                    headers: authHeaders(),
+                    credentials: 'include',
+                });
+            } else {
+                res = await fetch(getApiUrl(workerUrl, `?file=${encodeURIComponent(artifact.filename)}`), {
+                    method: 'DELETE',
+                    headers: authHeaders(),
+                    credentials: 'include',
+                });
+            }
 
             if (!res.ok) {
                 const errText = await res.text();
                 throw new Error(errText || 'Delete failed');
             }
 
-            setMessage({ type: 'success', text: `"${filename}" deleted. A rebuild will be triggered.` });
-            setArtifacts(prev => prev.filter(a => a.filename !== filename));
+            setMessage({
+                type: 'success',
+                text: artifact.source === 'dynamic'
+                    ? `"${artifact.name}" removed.`
+                    : `"${artifact.filename}" deleted. A rebuild will be triggered.`,
+            });
+            setArtifacts(prev => prev.filter(a => a.id !== artifact.id));
         } catch (e: any) {
             setMessage({ type: 'error', text: e.message });
         } finally {
@@ -329,6 +420,42 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                     </div>
 
                     <div className="space-y-2">
+                        <Label className="text-xs uppercase tracking-wider text-muted-foreground">Destination</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setDestination('instant')}
+                                className={`flex items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
+                                    destination === 'instant'
+                                        ? 'border-primary bg-primary/5'
+                                        : 'border-border/50 hover:border-primary/30'
+                                }`}
+                            >
+                                <Zap className={`h-4 w-4 mt-0.5 shrink-0 ${destination === 'instant' ? 'text-primary' : 'text-muted-foreground'}`} />
+                                <div>
+                                    <p className="text-sm font-medium">Instant (server)</p>
+                                    <p className="text-xs text-muted-foreground">Live in seconds. Auto OG image.</p>
+                                </div>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setDestination('github')}
+                                className={`flex items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
+                                    destination === 'github'
+                                        ? 'border-primary bg-primary/5'
+                                        : 'border-border/50 hover:border-primary/30'
+                                }`}
+                            >
+                                <Globe className={`h-4 w-4 mt-0.5 shrink-0 ${destination === 'github' ? 'text-primary' : 'text-muted-foreground'}`} />
+                                <div>
+                                    <p className="text-sm font-medium">Static (GitHub)</p>
+                                    <p className="text-xs text-muted-foreground">Triggers a rebuild (~1 min).</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
                         <Label htmlFor="artifact-name">Name (optional)</Label>
                         <Input
                             id="artifact-name"
@@ -337,6 +464,28 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                             placeholder="Display name (defaults to filename)"
                         />
                     </div>
+
+                    {destination === 'instant' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="artifact-slug">
+                                Slug
+                                <span className="ml-2 text-xs text-muted-foreground font-normal">
+                                    URL: artifacts.mncoleman.com/a/<span className="font-mono">{slug || 'your-slug'}</span>
+                                </span>
+                            </Label>
+                            <Input
+                                id="artifact-slug"
+                                value={slug}
+                                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                                placeholder="my-artifact-name"
+                                className="font-mono"
+                                maxLength={60}
+                            />
+                            {slug && !isValidSlug(slug) && (
+                                <p className="text-xs text-destructive">3-60 chars, [a-z0-9-], starting and ending alphanumeric.</p>
+                            )}
+                        </div>
+                    )}
 
                     <div className="space-y-2">
                         <Label htmlFor="artifact-desc">Description (optional)</Label>
@@ -349,10 +498,47 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                     </div>
 
                     <Button type="submit" disabled={!file || uploading} className="w-full sm:w-auto">
-                        {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                        Upload Artifact
+                        {uploading ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : destination === 'instant' ? (
+                            <Zap className="mr-2 h-4 w-4" />
+                        ) : (
+                            <Upload className="mr-2 h-4 w-4" />
+                        )}
+                        {destination === 'instant' ? 'Publish Instantly' : 'Upload to Static'}
                     </Button>
                 </form>
+
+                {lastShareUrl && (
+                    <div className="p-4 rounded-lg border border-primary/30 bg-primary/5 space-y-2">
+                        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-primary font-medium">
+                            <Zap className="h-3 w-3" /> Live & shareable
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Input value={lastShareUrl} readOnly className="font-mono text-xs h-8" />
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => navigator.clipboard.writeText(lastShareUrl)}
+                                className="h-8 gap-1"
+                            >
+                                <Copy className="h-3 w-3" /> Copy
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                asChild
+                                className="h-8 gap-1"
+                            >
+                                <a href={lastShareUrl} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="h-3 w-3" /> Open
+                                </a>
+                            </Button>
+                        </div>
+                    </div>
+                )}
 
                 {message && (
                     <div className={`p-3 rounded text-sm ${message.type === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
@@ -447,30 +633,43 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                             <div className="flex items-start gap-3 min-w-0">
                                                 <IconComponent className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                                                 <div className="min-w-0">
-                                                    <p className="text-sm font-medium break-words">{artifact.name}</p>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <p className="text-sm font-medium break-words">{artifact.name}</p>
+                                                        {artifact.source === 'dynamic' && (
+                                                            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border border-primary/30 bg-primary/10 text-primary">
+                                                                <Zap className="h-2.5 w-2.5" /> Live
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <p className="text-xs text-muted-foreground break-words">
                                                         {artifact.description ? `${artifact.description} - ` : ''}{formatFileSize(artifact.size)}
                                                     </p>
-                                                    <p className="text-xs text-muted-foreground break-all">{artifact.filename}</p>
+                                                    <p className="text-xs text-muted-foreground break-all">
+                                                        {artifact.source === 'dynamic' && artifact.url
+                                                            ? artifact.url
+                                                            : artifact.filename}
+                                                    </p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1 shrink-0">
+                                                {artifact.source !== 'dynamic' && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => startEdit(artifact)}
+                                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => startEdit(artifact)}
-                                                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                                                >
-                                                    <Pencil className="h-3.5 w-3.5" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(artifact.filename)}
-                                                    disabled={deleting === artifact.filename}
+                                                    onClick={() => handleDelete(artifact)}
+                                                    disabled={deleting === deleteKey(artifact)}
                                                     className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                                 >
-                                                    {deleting === artifact.filename ? (
+                                                    {deleting === deleteKey(artifact) ? (
                                                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                                     ) : (
                                                         <Trash2 className="h-3.5 w-3.5" />
