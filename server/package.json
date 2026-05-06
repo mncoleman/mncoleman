@@ -9,6 +9,7 @@
     },
     "dependencies": {
         "@resvg/resvg-js": "^2.6.2",
+        "gifenc": "^1.0.3",
         "hono": "^4.12.0",
         "jose": "^6.2.0",
         "satori": "^0.26.0"

@@ -12,6 +12,8 @@ import {
     remove,
     saveOg,
     getOg,
+    saveOgGif,
+    getOgGif,
     updateMeta,
     replaceFile,
     type ArtifactMeta,
@@ -19,7 +21,7 @@ import {
 } from './storage';
 import { isValidSlug, suggestFromFilename } from './slugs';
 import { requireAuth } from './auth';
-import { renderOg } from './og';
+import { renderOg, renderOgGif } from './og';
 import { signSlugCookie, verifySlugCookie, cookieName, parseCookies } from './cookies';
 import { notFoundPage, passwordPromptPage } from './pages';
 import { encryptPassword, decryptPassword } from './crypto';
@@ -69,7 +71,8 @@ function publicArtifactView(m: ArtifactMeta) {
         filename: m.filename,
         url: `${PUBLIC_BASE}/a/${m.slug}`,
         downloadUrl: `${PUBLIC_BASE}/raw/${m.slug}`,
-        ogImage: `${PUBLIC_BASE}/og/${m.slug}.png`,
+        ogImage: `${PUBLIC_BASE}/og/${m.slug}.gif`,
+        ogImagePng: `${PUBLIC_BASE}/og/${m.slug}.png`,
         // Legacy artifacts written before Phase 4 didn't have this field — default to public.
         visibility: m.visibility ?? 'public',
         source: 'dynamic' as const,
@@ -191,13 +194,20 @@ app.post('/api/upload', requireAuth, async (c) => {
         throw e;
     }
 
-    // Render OG image in the background — don't block the upload response.
+    // Render OG images in the background — don't block the upload response.
+    // PNG first (fast), then animated GIF for platforms that support it.
     queueMicrotask(async () => {
         try {
             const png = await renderOg(meta.name);
             await saveOg(slug, png);
         } catch (e) {
-            console.error('[og] render failed:', e);
+            console.error('[og] png render failed:', e);
+        }
+        try {
+            const gif = await renderOgGif(meta.name);
+            await saveOgGif(slug, gif);
+        } catch (e) {
+            console.error('[og] gif render failed:', e);
         }
     });
 
@@ -293,13 +303,19 @@ app.patch('/api/:slug', requireAuth, async (c) => {
     await updateMeta(slug, next);
 
     if (nameChanged) {
-        // OG render is title-only — re-render in the background.
+        // OG render is title-only — re-render PNG and GIF in the background.
         queueMicrotask(async () => {
             try {
                 const png = await renderOg(next.name);
                 await saveOg(slug, png);
             } catch (e) {
-                console.error('[og] re-render failed:', e);
+                console.error('[og] png re-render failed:', e);
+            }
+            try {
+                const gif = await renderOgGif(next.name);
+                await saveOgGif(slug, gif);
+            } catch (e) {
+                console.error('[og] gif re-render failed:', e);
             }
         });
     }
@@ -309,9 +325,23 @@ app.patch('/api/:slug', requireAuth, async (c) => {
 
 app.get('/og/:filename', async (c) => {
     const filename = c.req.param('filename');
-    const m = filename.match(/^([a-z0-9][a-z0-9-]{0,59})\.png$/);
+    const m = filename.match(/^([a-z0-9][a-z0-9-]{0,59})\.(png|gif)$/);
     if (!m) return c.notFound();
-    const slug = m[1];
+    const [, slug, ext] = m;
+
+    if (ext === 'gif') {
+        const gif = await getOgGif(slug);
+        if (gif) {
+            return new Response(gif, {
+                headers: {
+                    'Content-Type': 'image/gif',
+                    'Cache-Control': 'public, max-age=86400',
+                },
+            });
+        }
+        // GIF not yet rendered — fall through to PNG so previewers still get something.
+    }
+
     const png = await getOg(slug);
     if (!png) return c.notFound();
     return new Response(png, {
@@ -329,7 +359,10 @@ function escapeAttr(s: string): string {
 }
 
 function injectOgMeta(html: string, meta: ArtifactMeta): string {
-    const ogUrl = `${PUBLIC_BASE}/og/${meta.slug}.png`;
+    // Use the animated GIF as the primary OG image — platforms that don't
+    // animate (Twitter, Facebook, LinkedIn) show the first frame, which is
+    // visually identical to the static PNG.
+    const ogUrl = `${PUBLIC_BASE}/og/${meta.slug}.gif`;
     const pageUrl = `${PUBLIC_BASE}/a/${meta.slug}`;
     const desc = meta.description || `mncoleman Artifact: ${meta.name}`;
 
