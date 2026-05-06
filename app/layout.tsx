@@ -141,7 +141,7 @@ export default async function RootLayout({
                       Repository
                     </a>
                     <span className="mx-2">•</span>
-                    <Link href="/admin" className="hover:text-primary transition-colors hover:underline underline-offset-4 opacity-50 text-xs">
+                    <Link href="/admin" className="hover:text-primary transition-colors hover:underline underline-offset-4">
                       Admin
                     </Link>
                   </div>
