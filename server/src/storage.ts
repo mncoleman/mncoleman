@@ -81,17 +81,6 @@ export async function getOg(slug: string): Promise<Buffer | null> {
     }
 }
 
-export async function saveOgGif(slug: string, gif: Buffer): Promise<void> {
-    await writeFile(join(ROOT, slug, 'og.gif'), gif);
-}
-
-export async function getOgGif(slug: string): Promise<Buffer | null> {
-    try {
-        return await readFile(join(ROOT, slug, 'og.gif'));
-    } catch {
-        return null;
-    }
-}
 
 export async function listAll(): Promise<ArtifactMeta[]> {
     await ensureRoot();
