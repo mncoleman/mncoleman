@@ -140,22 +140,19 @@ async function renderFrame(node: any, fonts: { regular: ArrayBuffer | null; semi
     return new Resvg(svg, { background: '#0a0a0a' }).render();
 }
 
-// Frame 0 places the shine offscreen so the title renders uniformly in the base
-// color — visually identical to the pre-shimmer static OG. Each subsequent frame
-// advances the shine center by 10% across the gradient. With 16 frames the cycle
-// is 160% wide, which exits offscreen-right and re-enters offscreen-left for a
-// seamless loop.
-const GIF_FRAMES = 16;
-const GIF_FRAME_DELAY_MS = 180;
-const GIF_FIRST_CENTER = -30; // offscreen left
-const GIF_STEP = 10;
+// Apple's link-preview agent is picky: it only animates GIFs that pass certain
+// heuristics — sufficient frame count, sub-100ms frame delays, and an explicit
+// disposal method (1 = "do not dispose"). LevoAir's GIF works because of these.
+// Without them, iMessage downloads the GIF but renders only the first frame as
+// a static thumbnail.
+const GIF_FRAMES = 32;
+const GIF_FRAME_DELAY_MS = 80;       // ~12.5 fps, well under Apple's threshold
+const GIF_DISPOSE = 1;               // do not dispose — required for iMessage animation
+const GIF_FIRST_CENTER = -30;        // offscreen left — frame 0 looks like the static PNG
+const GIF_SWEEP_RANGE = 160;         // -30 → 130 covers the full sweep including offscreen rest
 
 function shineCenterForFrame(i: number): number {
-    let c = GIF_FIRST_CENTER + i * GIF_STEP;
-    // Wrap so the "shine offscreen right" frames continue as "offscreen left"
-    // — invisible jump, keeps the loop seamless.
-    if (c > 130) c -= GIF_FRAMES * GIF_STEP;
-    return c;
+    return GIF_FIRST_CENTER + (i / GIF_FRAMES) * GIF_SWEEP_RANGE;
 }
 
 /**
@@ -196,6 +193,8 @@ export async function renderOgGif(title: string): Promise<Buffer> {
         gif.writeFrame(indexed, rendered.width, rendered.height, {
             palette: i === 0 ? palette : undefined,
             delay: GIF_FRAME_DELAY_MS,
+            dispose: GIF_DISPOSE,
+            first: i === 0,
         });
     }
     gif.finish();

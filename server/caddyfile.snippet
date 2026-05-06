@@ -6,9 +6,8 @@ artifacts.mncoleman.com {
     }
     encode @compressible gzip zstd
 
-    # Long-cache OG share images (immutable per-slug).
-    @og path /og/*
-    header @og Cache-Control "public, max-age=86400, immutable"
+    # OG share images: let the upstream service set Cache-Control so we don't
+    # double up on the header (Apple's link-preview agent is finicky about that).
 
     # Defense-in-depth headers.
     header {

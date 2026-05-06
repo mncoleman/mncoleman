@@ -78,13 +78,18 @@
   body {
     @apply bg-background text-foreground;
   }
+}
 
-  /* Only hide cursor on devices that support hover (desktop/mouse) */
-  @media (hover: hover) and (pointer: fine) {
-    body,
-    * {
-      cursor: none !important;
-    }
+/* Hide the OS cursor on devices that support hover so the CustomCursor can take over.
+ * Kept OUTSIDE @layer base so the !important wins against any layered utility class
+ * (Tailwind v3 emits `cursor-*` utilities into the utilities layer; layered !important
+ * has cascade quirks that can let those win against a same-!important layered base rule).
+ */
+@media (hover: hover) and (pointer: fine) {
+  html,
+  body,
+  body * {
+    cursor: none !important;
   }
 }
 
