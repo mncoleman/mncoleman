@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workspace Blueprint — Acme DevRel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, monospace;
+  --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+  --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+  --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+  --text-2xl: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+  --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem;
+  --space-4: 1rem; --space-5: 1.25rem; --space-6: 1.5rem;
+  --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem; --space-16: 4rem;
+  --radius-sm: 0.375rem; --radius-md: 0.5rem; --radius-lg: 0.75rem;
+  --radius-xl: 1rem; --radius-full: 9999px;
+  --trans: 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  --sidebar-w: 260px;
+}
+:root, [data-theme="light"] {
+  --bg: #f7f6f2; --surface: #faf9f7; --surface-2: #fcfcfb;
+  --surface-off: #eeecea; --surface-dyn: #e5e2de;
+  --divider: #dcdad6; --border: #d4d2ce;
+  --text: #1a1915; --text-muted: #6b6966; --text-faint: #a8a7a4; --text-inv: #f9f8f5;
+  --primary: #016b72; --primary-hov: #0c5058; --primary-hl: #cddcda; --primary-dim: rgba(1,107,114,0.08);
+  --green: #2f7d34; --green-bg: rgba(47,125,52,0.09);
+  --orange: #b35d00; --orange-bg: rgba(179,93,0,0.09);
+  --red: #c0302a; --red-bg: rgba(192,48,42,0.09);
+  --blue: #0a5fa0; --blue-bg: rgba(10,95,160,0.09);
+  --code-bg: #1a1915; --code-text: #d4d2ce; --code-c: #6b6966;
+  --code-g: #6dbc6d; --code-o: #e8a24a; --code-p: #b48ef5;
+  --sh-sm: 0 1px 2px rgba(26,25,21,.06); --sh-md: 0 4px 12px rgba(26,25,21,.08);
+}
+[data-theme="dark"] {
+  --bg: #161512; --surface: #1c1a17; --surface-2: #201e1b;
+  --surface-off: #1f1d1a; --surface-dyn: #2a2826;
+  --divider: #2b2927; --border: #363432;
+  --text: #cccac6; --text-muted: #7a7876; --text-faint: #57554f; --text-inv: #2a2826;
+  --primary: #4a9da8; --primary-hov: #21808c; --primary-hl: #2d3d3d; --primary-dim: rgba(74,157,168,0.1);
+  --green: #65af65; --green-bg: rgba(101,175,101,0.1);
+  --orange: #e09840; --orange-bg: rgba(224,152,64,0.1);
+  --red: #d96b65; --red-bg: rgba(217,107,101,0.1);
+  --blue: #5290c5; --blue-bg: rgba(82,144,197,0.1);
+  --code-bg: #0f0e0c; --code-text: #cccac6; --code-c: #6b6966;
+  --code-g: #6dbc6d; --code-o: #e8a24a; --code-p: #b48ef5;
+  --sh-sm: 0 1px 2px rgba(0,0,0,.25); --sh-md: 0 4px 12px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) {
+  --bg:#161512;--surface:#1c1a17;--surface-2:#201e1b;--surface-off:#1f1d1a;--surface-dyn:#2a2826;
+  --divider:#2b2927;--border:#363432;--text:#cccac6;--text-muted:#7a7876;--text-faint:#57554f;--text-inv:#2a2826;
+  --primary:#4a9da8;--primary-hov:#21808c;--primary-hl:#2d3d3d;--primary-dim:rgba(74,157,168,0.1);
+  --green:#65af65;--green-bg:rgba(101,175,101,0.1);--orange:#e09840;--orange-bg:rgba(224,152,64,0.1);
+  --red:#d96b65;--red-bg:rgba(217,107,101,0.1);--blue:#5290c5;--blue-bg:rgba(82,144,197,0.1);
+  --code-bg:#0f0e0c;--code-text:#cccac6;--code-c:#6b6966;--code-g:#6dbc6d;--code-o:#e8a24a;--code-p:#b48ef5;
+  --sh-sm:0 1px 2px rgba(0,0,0,.25);--sh-md:0 4px 12px rgba(0,0,0,.35);
+}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:4rem;-webkit-text-size-adjust:none;text-size-adjust:none;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-body);font-size:var(--text-base);color:var(--text);background:var(--bg);line-height:1.6;min-height:100dvh}
+h1,h2,h3,h4{text-wrap:balance;line-height:1.2}
+p,li{text-wrap:pretty}
+a{color:var(--primary);text-decoration:none;transition:color var(--trans)}
+a:hover{color:var(--primary-hov)}
+a,button,input{transition:color var(--trans),background var(--trans),border-color var(--trans),box-shadow var(--trans)}
+button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
+::selection{background:var(--primary-dim);color:var(--text)}
+:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:var(--radius-sm)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--divider);border-radius:var(--radius-full)}
+::-webkit-scrollbar-thumb:hover{background:var(--border)}
+
+.app{display:flex;min-height:100dvh}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--divider);display:flex;flex-direction:column;z-index:100}
+.sb-head{padding:var(--space-5) var(--space-5) var(--space-4);border-bottom:1px solid var(--divider);position:sticky;top:0;background:var(--surface);z-index:1}
+.logo{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3)}
+.logo-icon{width:32px;height:32px;flex-shrink:0}
+.logo-text{font-size:var(--text-sm);font-weight:700;letter-spacing:-.01em;color:var(--text)}
+.logo-text span{color:var(--primary)}
+.logo-sub{font-size:10px;color:var(--text-faint);letter-spacing:.04em;text-transform:uppercase;margin-top:1px}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:var(--space-3);top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text-faint);pointer-events:none}
+#search{width:100%;padding:var(--space-2) var(--space-3) var(--space-2) calc(var(--space-3) + 18px);background:var(--surface-off);border:1px solid var(--border);border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--text);outline:none;font-family:inherit}
+#search::placeholder{color:var(--text-faint)}
+#search:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-dim)}
+.sb-nav{padding:var(--space-3);flex:1}
+.nav-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);padding:var(--space-3) var(--space-3) var(--space-1);display:block}
+.nav-a{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--text-muted);text-decoration:none;transition:background var(--trans),color var(--trans)}
+.nav-a:hover{background:var(--surface-dyn);color:var(--text)}
+.nav-a.active{background:var(--primary-dim);color:var(--primary);font-weight:500}
+.nav-chip{margin-left:auto;font-size:9px;font-weight:700;padding:2px 6px;border-radius:var(--radius-full);text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+.nc-w{background:var(--blue-bg);color:var(--blue)}
+.nc-p{background:var(--orange-bg);color:var(--orange)}
+.nc-c{background:var(--green-bg);color:var(--green)}
+.nc-meta{background:var(--surface-off);color:var(--text-muted)}
+.sb-foot{padding:var(--space-4);border-top:1px solid var(--divider);display:flex;align-items:center;justify-content:space-between}
+.theme-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-md);color:var(--text-muted);background:var(--surface-off);border:1px solid var(--border)}
+.theme-btn:hover{color:var(--text);background:var(--surface-dyn)}
+.sb-meta{font-size:11px;color:var(--text-faint)}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+.mob-header{display:none;position:sticky;top:0;z-index:90;background:var(--surface);border-bottom:1px solid var(--divider);padding:var(--space-3) var(--space-4);align-items:center;justify-content:space-between}
+.mob-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--radius-md);background:var(--surface-off);border:1px solid var(--border);color:var(--text-muted)}
+
+.main{margin-left:var(--sidebar-w);flex:1;min-width:0;padding:var(--space-10) clamp(var(--space-6),5vw,var(--space-12));max-width:100%}
+
+.pg-head{margin-bottom:var(--space-12);padding-bottom:var(--space-8);border-bottom:1px solid var(--divider)}
+.pg-eyebrow{font-size:var(--text-xs);font-weight:600;color:var(--primary);letter-spacing:.08em;text-transform:uppercase;margin-bottom:var(--space-3);display:flex;align-items:center;gap:var(--space-2)}
+.pg-eyebrow::before{content:"";width:18px;height:1px;background:var(--primary)}
+.pg-title{font-size:var(--text-2xl);font-weight:700;letter-spacing:-.03em;color:var(--text);line-height:1;margin-bottom:var(--space-5)}
+.pg-title em{font-style:normal;color:var(--primary)}
+.pg-desc{font-size:var(--text-base);color:var(--text-muted);max-width:62ch;line-height:1.7;margin-bottom:var(--space-6)}
+.pg-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--space-4);margin-top:var(--space-6)}
+.stat{padding:var(--space-4) var(--space-5);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg)}
+.stat-num{font-size:var(--text-xl);font-weight:700;color:var(--primary);letter-spacing:-.02em;font-family:var(--font-mono);line-height:1;margin-bottom:var(--space-2)}
+.stat-lbl{font-size:var(--text-xs);color:var(--text-muted);letter-spacing:.02em}
+
+.sec{margin-bottom:var(--space-16);scroll-margin-top:var(--space-8)}
+.sec-head{display:flex;align-items:center;gap:var(--space-3);padding-bottom:var(--space-3);border-bottom:1px solid var(--divider);margin-bottom:var(--space-5)}
+.sec-num{font-size:var(--text-xs);font-weight:600;font-family:var(--font-mono);color:var(--text-faint);min-width:2ch}
+.sec-title{font-size:var(--text-lg);font-weight:600;color:var(--text);letter-spacing:-.02em}
+.sec-badge{margin-left:auto;font-size:10px;font-weight:600;padding:3px 10px;border-radius:var(--radius-full);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
+.sb-w{background:var(--blue-bg);color:var(--blue)}
+.sb-p{background:var(--orange-bg);color:var(--orange)}
+.sb-c{background:var(--green-bg);color:var(--green)}
+.sb-meta-b{background:var(--surface-off);color:var(--text-muted)}
+.sec-intro{color:var(--text-muted);font-size:var(--text-sm);margin-bottom:var(--space-6);max-width:72ch;line-height:1.7}
+
+.grid{display:grid;grid-template-columns:1fr;gap:var(--space-3)}
+@media (min-width:860px){.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:repeat(3,1fr)}}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;transition:border-color var(--trans),box-shadow var(--trans)}
+.card:hover{border-color:var(--primary);box-shadow:var(--sh-sm)}
+.card-head{padding:var(--space-4) var(--space-5) var(--space-3);display:flex;align-items:flex-start;gap:var(--space-3);border-bottom:1px solid var(--divider)}
+.card-title{font-size:var(--text-sm);font-weight:600;color:var(--text);flex:1;line-height:1.35}
+.cmd-tag{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--primary);background:var(--primary-dim);padding:3px 9px;border-radius:var(--radius-sm);border:1px solid rgba(1,107,114,.15);white-space:nowrap;flex-shrink:0}
+[data-theme="dark"] .cmd-tag{border-color:rgba(74,157,168,.2)}
+.card-body{padding:var(--space-4) var(--space-5);display:flex;flex-direction:column;gap:var(--space-3)}
+.desc{font-size:var(--text-sm);color:var(--text-muted);line-height:1.65}
+
+code{font-family:var(--font-mono);font-size:.875em;background:var(--surface-off);color:var(--primary);padding:1px 6px;border-radius:var(--radius-sm);border:1px solid var(--border)}
+
+.cbwrap{position:relative}
+.cb{background:var(--code-bg);border:1px solid #2a2926;border-radius:var(--radius-md);padding:var(--space-4);padding-right:3.5rem;font-family:var(--font-mono);font-size:var(--text-xs);color:var(--code-text);white-space:pre;line-height:1.7;overflow-x:auto;tab-size:2}
+.cb .c{color:var(--code-c);font-style:italic}
+.cb .g{color:var(--code-g)}
+.cb .o{color:var(--code-o)}
+.cb .p{color:var(--code-p)}
+.cb .dim{color:var(--code-c)}
+
+.warn,.tip,.note,.fc{display:flex;gap:var(--space-3);align-items:flex-start;padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);font-size:var(--text-xs);line-height:1.6}
+.warn{background:var(--red-bg);color:var(--red);border:1px solid rgba(192,48,42,.2)}
+.tip{background:var(--blue-bg);color:var(--text-muted);border:1px solid rgba(10,95,160,.2)}
+.note{background:var(--orange-bg);color:var(--orange);border:1px solid rgba(179,93,0,.2)}
+.fc{background:var(--green-bg);color:var(--text-muted);border:1px solid rgba(47,125,52,.2)}
+[data-theme="dark"] .warn{border-color:rgba(217,107,101,.25)}
+[data-theme="dark"] .tip{border-color:rgba(82,144,197,.25)}
+[data-theme="dark"] .note{border-color:rgba(224,152,64,.25)}
+[data-theme="dark"] .fc{border-color:rgba(101,175,101,.25)}
+.warn svg,.tip svg,.note svg,.fc svg{flex-shrink:0;width:14px;height:14px;margin-top:2px}
+.fc svg{color:var(--green)}
+.tip strong{color:var(--blue)}
+.fc strong{color:var(--green)}
+.note strong{color:var(--orange)}
+
+/* Tables */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface)}
+table.t{width:100%;border-collapse:collapse;font-size:var(--text-sm)}
+table.t th,table.t td{padding:var(--space-3) var(--space-4);text-align:left;vertical-align:top;border-bottom:1px solid var(--divider)}
+table.t th{font-size:var(--text-xs);font-weight:600;color:var(--text-faint);letter-spacing:.04em;text-transform:uppercase;background:var(--surface-2)}
+table.t tr:last-child td{border-bottom:0}
+table.t tr:hover td{background:var(--surface-2)}
+table.t code{font-size:.85em}
+
+/* Layer cards */
+.layers{display:grid;grid-template-columns:1fr;gap:var(--space-4);margin-top:var(--space-4)}
+@media (min-width:900px){.layers{grid-template-columns:repeat(3,1fr)}}
+.layer{position:relative;padding:var(--space-5) var(--space-5) var(--space-5);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;gap:var(--space-3)}
+.layer::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--c)}
+.layer.l1{--c:var(--blue)}
+.layer.l2{--c:var(--orange)}
+.layer.l3{--c:var(--primary)}
+.layer-num{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--c);letter-spacing:.06em;text-transform:uppercase}
+.layer-title{font-size:var(--text-base);font-weight:700;color:var(--text);letter-spacing:-.01em}
+.layer-file{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);background:var(--surface-off);padding:2px 8px;border-radius:var(--radius-sm);align-self:flex-start;border:1px solid var(--border)}
+.layer-desc{font-size:var(--text-sm);color:var(--text-muted);line-height:1.6}
+
+/* Workspace cards */
+.ws-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;height:100%;transition:border-color var(--trans),box-shadow var(--trans)}
+.ws-card:hover{border-color:var(--c,var(--primary));box-shadow:var(--sh-sm)}
+.ws-card.w{--c:var(--blue)} .ws-card.p{--c:var(--orange)} .ws-card.c{--c:var(--green)}
+.ws-head{padding:var(--space-5);border-bottom:1px solid var(--divider);display:flex;align-items:flex-start;gap:var(--space-3)}
+.ws-icon{width:36px;height:36px;flex-shrink:0;border-radius:var(--radius-md);background:var(--surface-off);display:flex;align-items:center;justify-content:center;color:var(--c)}
+.ws-icon svg{width:18px;height:18px}
+.ws-title{font-size:var(--text-base);font-weight:700;color:var(--text);letter-spacing:-.01em;margin-bottom:2px}
+.ws-path{font-family:var(--font-mono);font-size:11px;color:var(--text-faint)}
+.ws-body{padding:var(--space-5);display:flex;flex-direction:column;gap:var(--space-4);flex:1}
+.ws-tag{display:inline-block;font-size:10px;font-weight:600;padding:3px 9px;border-radius:var(--radius-full);background:var(--surface-off);color:var(--c);letter-spacing:.04em;text-transform:uppercase;align-self:flex-start;border:1px solid var(--border)}
+.ws-purpose{font-size:var(--text-sm);color:var(--text-muted);line-height:1.6}
+.ws-list{list-style:none;display:flex;flex-direction:column;gap:var(--space-2)}
+.ws-list li{display:flex;align-items:flex-start;gap:var(--space-2);font-size:var(--text-xs);color:var(--text-muted);line-height:1.5}
+.ws-list li::before{content:"";width:4px;height:4px;border-radius:50%;background:var(--c);margin-top:7px;flex-shrink:0}
+.ws-list-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:var(--space-1)}
+
+/* Pipeline */
+.pipeline{display:grid;grid-template-columns:1fr;gap:var(--space-3);margin:var(--space-5) 0;position:relative}
+@media (min-width:900px){.pipeline{grid-template-columns:repeat(4,1fr);gap:var(--space-2)}}
+.stage{position:relative;padding:var(--space-5);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;flex-direction:column;gap:var(--space-3);transition:all var(--trans)}
+.stage:hover{border-color:var(--primary);box-shadow:var(--sh-sm)}
+.stage-num{font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--primary);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:var(--space-2)}
+.stage-num::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--primary)}
+.stage-name{font-size:var(--text-sm);font-weight:700;color:var(--text);letter-spacing:-.01em}
+.stage-folder{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);background:var(--surface-off);padding:2px 8px;border-radius:var(--radius-sm);align-self:flex-start;border:1px solid var(--border)}
+.stage-desc{font-size:var(--text-xs);color:var(--text-muted);line-height:1.6;margin-top:var(--space-1)}
+.stage-tools{display:flex;flex-wrap:wrap;gap:4px;margin-top:auto;padding-top:var(--space-3);border-top:1px solid var(--divider)}
+.stage-tools-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:var(--space-2);width:100%}
+.tool-pill{font-family:var(--font-mono);font-size:10px;padding:3px 8px;border-radius:var(--radius-full);background:var(--primary-dim);color:var(--primary);border:1px solid rgba(1,107,114,.15)}
+[data-theme="dark"] .tool-pill{border-color:rgba(74,157,168,.2)}
+@media (min-width:900px){
+  .stage:not(:last-child)::after{content:"→";position:absolute;right:-14px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--text-faint);z-index:2;font-weight:300}
+}
+
+/* Folder tree */
+.tree{font-family:var(--font-mono);font-size:var(--text-xs);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-5) var(--space-6);line-height:1.85;color:var(--text);overflow-x:auto;white-space:pre}
+.tree .dir{color:var(--primary);font-weight:600}
+.tree .file{color:var(--text-muted)}
+.tree .meta{color:var(--text-faint);font-style:italic}
+.tree .blue{color:var(--blue)}
+.tree .orange{color:var(--orange)}
+.tree .green{color:var(--green)}
+
+/* Flow diagram */
+.flow{padding:var(--space-6);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin:var(--space-5) 0}
+.flow-row{display:flex;align-items:center;justify-content:center;gap:var(--space-4);flex-wrap:wrap;font-family:var(--font-mono);font-size:var(--text-xs)}
+.flow-node{padding:var(--space-3) var(--space-4);background:var(--surface-off);border:1px solid var(--border);border-radius:var(--radius-md);font-weight:600;color:var(--text)}
+.flow-node.w{border-color:var(--blue);color:var(--blue);background:var(--blue-bg)}
+.flow-node.p{border-color:var(--orange);color:var(--orange);background:var(--orange-bg)}
+.flow-node.c{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+.flow-arrow{color:var(--text-faint);font-size:var(--text-base)}
+.flow-cap{font-size:11px;color:var(--text-muted);font-family:var(--font-body);font-weight:400;display:block;margin-top:4px}
+
+/* Legend */
+.legend{display:flex;gap:var(--space-3);flex-wrap:wrap;margin-top:var(--space-4)}
+.lg-chip{display:inline-flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);font-weight:500;padding:var(--space-2) var(--space-3);border-radius:var(--radius-full);border:1px solid var(--border);background:var(--surface)}
+.lg-dot{width:8px;height:8px;border-radius:50%}
+.lg-chip.w{color:var(--blue)} .lg-chip.w .lg-dot{background:var(--blue)}
+.lg-chip.p{color:var(--orange)} .lg-chip.p .lg-dot{background:var(--orange)}
+.lg-chip.c{color:var(--green)} .lg-chip.c .lg-dot{background:var(--green)}
+
+.pg-foot{margin-top:var(--space-16);padding-top:var(--space-8);border-top:1px solid var(--divider);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-4)}
+.pg-foot p{font-size:var(--text-xs);color:var(--text-faint)}
+
+/* Mobile */
+@media (max-width:768px){
+  .sidebar{transform:translateX(-100%);transition:transform .3s cubic-bezier(.16,1,.3,1)}
+  .sidebar.open{transform:translateX(0)}
+  .sb-overlay.vis{display:block}
+  .mob-header{display:flex}
+  .main{margin-left:0;padding:var(--space-6) var(--space-4)}
+  .pg-title{font-size:var(--text-xl)}
+  .pipeline .stage:not(:last-child)::after{display:none}
+}
+</style>
+</head>
+<body>
+<div class="sb-overlay" id="overlay"></div>
+
+<header class="mob-header" role="banner">
+  <button class="mob-btn" id="menu-btn" aria-label="Open navigation">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <span style="font-weight:700;font-size:var(--text-sm);letter-spacing:-.01em">Workspace <span style="color:var(--primary)">Blueprint</span></span>
+  <button class="mob-btn theme-btn" data-theme-toggle aria-label="Toggle theme">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+</header>
+
+<nav class="sidebar" id="sidebar" aria-label="Section navigation">
+  <div class="sb-head">
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 32 32" fill="none" aria-label="Blueprint Logo">
+        <rect width="32" height="32" rx="8" fill="var(--primary-dim)"/>
+        <rect x="7" y="7" width="8" height="8" rx="1.5" stroke="var(--primary)" stroke-width="1.6" fill="none"/>
+        <rect x="17" y="7" width="8" height="8" rx="1.5" stroke="var(--primary)" stroke-width="1.6" fill="none"/>
+        <rect x="7" y="17" width="8" height="8" rx="1.5" stroke="var(--primary)" stroke-width="1.6" fill="none"/>
+        <rect x="17" y="17" width="8" height="8" rx="1.5" stroke="var(--primary)" stroke-width="1.6" fill="var(--primary)" fill-opacity="0.4"/>
+      </svg>
+      <div>
+        <div class="logo-text">workspace<span>/</span>blueprint</div>
+        <div class="logo-sub">Acme DevRel</div>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="search" id="search" placeholder="Search the blueprint…" aria-label="Search">
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav">
+    <span class="nav-label">Architecture</span>
+    <a href="#overview" class="nav-a" data-sec="overview">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Overview
+      <span class="nav-chip nc-meta">Start</span>
+    </a>
+    <a href="#layers" class="nav-a" data-sec="layers">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+      The 3 Layers
+    </a>
+    <a href="#structure" class="nav-a" data-sec="structure">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+      Folder Structure
+    </a>
+    <a href="#flow" class="nav-a" data-sec="flow">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Cross-Workspace Flow
+    </a>
+
+    <span class="nav-label">Workspaces</span>
+    <a href="#writing-room" class="nav-a" data-sec="writing-room">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+      Writing Room
+      <span class="nav-chip nc-w">W</span>
+    </a>
+    <a href="#production" class="nav-a" data-sec="production">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Production
+      <span class="nav-chip nc-p">P</span>
+    </a>
+    <a href="#pipeline" class="nav-a" data-sec="pipeline">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      Production Pipeline
+      <span class="nav-chip nc-p">4</span>
+    </a>
+    <a href="#community" class="nav-a" data-sec="community">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Community
+      <span class="nav-chip nc-c">C</span>
+    </a>
+
+    <span class="nav-label">Reference</span>
+    <a href="#skills" class="nav-a" data-sec="skills">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      Skills &amp; Tools
+    </a>
+    <a href="#naming" class="nav-a" data-sec="naming">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Naming Conventions
+    </a>
+    <a href="#concepts" class="nav-a" data-sec="concepts">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Key Concepts
+    </a>
+  </div>
+  <div class="sb-foot">
+    <span class="sb-meta">v1 · 2026</span>
+    <button class="theme-btn" data-theme-toggle aria-label="Toggle theme">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</nav>
+
+<main class="main" id="main">
+  <header class="pg-head">
+    <div class="pg-eyebrow">Acme DevRel · Agent-native template</div>
+    <h1 class="pg-title">Workspace <em>Blueprint</em></h1>
+    <p class="pg-desc">A context-delivery system for AI agents. Three siloed workspaces — writing, production, community — each with its own routing, docs, and tools. An agent drops in, reads a CONTEXT.md, does its work, and exits without ever loading the wrong context.</p>
+    <div class="pg-stats">
+      <div class="stat"><div class="stat-num">3</div><div class="stat-lbl">Workspaces</div></div>
+      <div class="stat"><div class="stat-num">3</div><div class="stat-lbl">Routing layers</div></div>
+      <div class="stat"><div class="stat-num">4</div><div class="stat-lbl">Pipeline stages</div></div>
+      <div class="stat"><div class="stat-num">8</div><div class="stat-lbl">Skills wired in</div></div>
+    </div>
+    <div class="legend">
+      <span class="lg-chip w"><span class="lg-dot"></span>Writing Room</span>
+      <span class="lg-chip p"><span class="lg-dot"></span>Production</span>
+      <span class="lg-chip c"><span class="lg-dot"></span>Community</span>
+    </div>
+  </header>
+
+  <section id="overview" class="sec">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2 class="sec-title">Overview</h2>
+      <span class="sec-badge sb-meta-b">Start Here</span>
+    </div>
+    <p class="sec-intro">When you give an agent a task, it needs three things: <strong>what to do</strong>, <strong>how to do it</strong>, and <strong>what NOT to load</strong>. This blueprint solves the third problem with a 3-layer routing system, so each agent loads only the context it needs.</p>
+
+    <div class="grid two">
+      <article class="card">
+        <div class="card-head">
+          <span class="card-title">The problem</span>
+          <span class="cmd-tag">why</span>
+        </div>
+        <div class="card-body">
+          <p class="desc">Most teams either dump everything into one mega-prompt (wasting tokens, blurring focus) or scatter context across 30 files with no routing (the agent doesn't know what matters).</p>
+          <div class="warn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>Without routing, agents lose the thread halfway through long tasks.</span>
+          </div>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head">
+          <span class="card-title">The solution</span>
+          <span class="cmd-tag">how</span>
+        </div>
+        <div class="card-body">
+          <p class="desc">Layered routing. <code>CLAUDE.md</code> shows the map. <code>CONTEXT.md</code> routes to a workspace. The workspace's own <code>CONTEXT.md</code> tells the agent exactly what to load and skip for each task type.</p>
+          <div class="fc">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>An agent writing a blog post never loads the deployment pipeline. An agent building code never loads voice guidelines.</span>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="layers" class="sec">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2 class="sec-title">The 3 Layers</h2>
+      <span class="sec-badge sb-meta-b">Architecture</span>
+    </div>
+    <p class="sec-intro">Each layer narrows the funnel. Together, they deliver only the context an agent needs for the task at hand.</p>
+
+    <div class="layers">
+      <div class="layer l1">
+        <span class="layer-num">Layer 1 · The Map</span>
+        <h3 class="layer-title">Always loaded</h3>
+        <span class="layer-file">CLAUDE.md</span>
+        <p class="layer-desc">The agent's GPS. Shows every folder, every ID system, every file placement rule. Load once at the start of every session.</p>
+      </div>
+      <div class="layer l2">
+        <span class="layer-num">Layer 2 · The Router</span>
+        <h3 class="layer-title">Top-level traffic cop</h3>
+        <span class="layer-file">CONTEXT.md</span>
+        <p class="layer-desc">"What's your task? Go here." Routes the agent to the right workspace and lists cross-workspace dependencies. Nothing more.</p>
+      </div>
+      <div class="layer l3">
+        <span class="layer-num">Layer 3 · The Workspace</span>
+        <h3 class="layer-title">Self-contained scope</h3>
+        <span class="layer-file">workspace/CONTEXT.md</span>
+        <p class="layer-desc">The detailed instructions live here — what to load, what to skip, when to invoke each skill, and what "done" looks like.</p>
+      </div>
+    </div>
+
+    <div class="tip" style="margin-top:var(--space-4)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <span><strong>Why 3 layers?</strong> Token management. A single mega-doc wastes context on things the agent doesn't need. Layered routing keeps the funnel tight at every step.</span>
+    </div>
+  </section>
+
+  <section id="structure" class="sec">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2 class="sec-title">Folder Structure</h2>
+      <span class="sec-badge sb-meta-b">Map</span>
+    </div>
+    <p class="sec-intro">Each workspace is siloed and self-contained. Reference docs (<code>docs/</code>) hold stable knowledge loaded on demand. Workflow folders (<code>workflows/</code>) hold the moving parts.</p>
+
+    <div class="tree"><span class="dir">acme-devrel/</span>
+├── <span class="file">CLAUDE.md</span>                       <span class="meta">← Layer 1: always loaded</span>
+├── <span class="file">CONTEXT.md</span>                      <span class="meta">← Layer 2: task router</span>
+├── <span class="file">START-HERE.md</span>                   <span class="meta">← Teaching guide</span>
+│
+├── <span class="dir blue">writing-room/</span>                   <span class="meta">← Ideas → polished drafts</span>
+│   ├── <span class="file">CONTEXT.md</span>
+│   ├── <span class="dir">docs/</span>
+│   │   ├── <span class="file">voice.md</span>                <span class="meta">← Hard constraints, personality</span>
+│   │   ├── <span class="file">style-guide.md</span>          <span class="meta">← Formatting, length</span>
+│   │   └── <span class="file">audience.md</span>             <span class="meta">← Who reads this</span>
+│   ├── <span class="dir">drafts/</span>                      <span class="meta">← Work in progress</span>
+│   └── <span class="dir">final/</span>                       <span class="meta">← Ready to publish or hand off</span>
+│
+├── <span class="dir orange">production/</span>                     <span class="meta">← Drafts → built deliverables</span>
+│   ├── <span class="file">CONTEXT.md</span>
+│   ├── <span class="dir">docs/</span>
+│   │   ├── <span class="file">tech-standards.md</span>
+│   │   ├── <span class="file">component-library.md</span>
+│   │   └── <span class="file">design-system.md</span>
+│   ├── <span class="dir">workflows/</span>                   <span class="meta">← The 4-stage pipeline</span>
+│   │   ├── <span class="file">CONTEXT.md</span>
+│   │   ├── <span class="dir">01-briefs/</span>               <span class="meta">← What to build</span>
+│   │   ├── <span class="dir">02-specs/</span>                <span class="meta">← How to build it</span>
+│   │   ├── <span class="dir">03-builds/</span>               <span class="meta">← The actual work</span>
+│   │   └── <span class="dir">04-output/</span>               <span class="meta">← Finished deliverables</span>
+│   └── <span class="dir">src/</span>                         <span class="meta">← Source code, demos</span>
+│
+├── <span class="dir green">community/</span>                      <span class="meta">← Multi-format distribution hub</span>
+│   ├── <span class="file">CONTEXT.md</span>
+│   ├── <span class="dir">docs/</span>
+│   │   ├── <span class="file">platforms.md</span>            <span class="meta">← Twitter, LinkedIn, etc.</span>
+│   │   └── <span class="file">calendar-rules.md</span>
+│   └── <span class="dir">content/</span>
+│       ├── <span class="dir">newsletters/</span>
+│       ├── <span class="dir">social/</span>
+│       ├── <span class="dir">events/</span>
+│       └── <span class="dir">templates/</span>
+│
+└── <span class="dir">_examples/</span>                      <span class="meta">← Teaching examples</span></div>
+  </section>
+
+  <section id="flow" class="sec">
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <h2 class="sec-title">Cross-Workspace Flow</h2>
+      <span class="sec-badge sb-meta-b">Handoffs</span>
+    </div>
+    <p class="sec-intro">Workspaces don't share context — they share <strong>files</strong>. The output of one workspace becomes the input of the next, through deliberate copies and references.</p>
+
+    <div class="flow">
+      <div class="flow-row">
+        <div>
+          <div class="flow-node w">writing-room</div>
+          <span class="flow-cap">voice + research → drafts</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div>
+          <div class="flow-node p">production</div>
+          <span class="flow-cap">brief → spec → build → deliverable</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div>
+          <div class="flow-node c">community</div>
+          <span class="flow-cap">repurposes into newsletters, social, events</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid two" style="margin-top:var(--space-5)">
+      <article class="card">
+        <div class="card-head">
+          <span class="card-title">Writing → Production handoff</span>
+          <span class="cmd-tag">copy</span>
+        </div>
+        <div class="card-body">
+          <p class="desc">A finalized draft is copied (not symlinked) into <code>production/workflows/01-briefs/</code> as the starting point for a build.</p>
+          <div class="cbwrap">
+            <pre class="cb"><span class="dim">writing-room/final/auth-guide-final.md</span>
+              <span class="o">↓</span>  <span class="c"># deliberate copy</span>
+<span class="dim">production/workflows/01-briefs/auth-guide.md</span></pre>
+          </div>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head">
+          <span class="card-title">Production → Community reference</span>
+          <span class="cmd-tag">link</span>
+        </div>
+        <div class="card-body">
+          <p class="desc">Community doesn't copy build output — it references it. Social posts and newsletters link back to the deliverable as an asset.</p>
+          <div class="cbwrap">
+            <pre class="cb"><span class="dim">production/workflows/04-output/auth-demo-v2.mp4</span>
+              <span class="o">↓</span>  <span class="c"># referenced as asset</span>
+<span class="dim">community/content/newsletters/2026-03-10-launch.md</span></pre>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="writing-room" class="sec">
+    <div class="sec-head">
+      <span class="sec-num">05</span>
+      <h2 class="sec-title">Writing Room</h2>
+      <span class="sec-badge sb-w">Workspace W</span>
+    </div>
+    <p class="sec-intro">Where ideas become polished drafts. Someone brings a topic. The agent helps research, outline, write, and refine in the right voice. Output goes to <code>final/</code> and can feed the production pipeline.</p>
+
+    <div class="ws-card w">
+      <div class="ws-head">
+        <div class="ws-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </div>
+        <div>
+          <div class="ws-title">Writing Room</div>
+          <div class="ws-path">writing-room/</div>
+          <span class="ws-tag" style="margin-top:var(--space-2)">Drafts &amp; Voice</span>
+        </div>
+      </div>
+      <div class="ws-body">
+        <p class="ws-purpose">Output: <code>drafts/[slug]-[status].md</code> moves through <code>draft → review → final</code>. A draft is <code>review</code> when structurally complete, <code>final</code> when voice and quality pass.</p>
+
+        <div>
+          <div class="ws-list-lbl">What to load</div>
+          <div class="tbl-wrap">
+            <table class="t">
+              <thead><tr><th>Task</th><th>Load</th><th>Skip</th></tr></thead>
+              <tbody>
+                <tr><td>Write a blog post</td><td><code>voice.md</code>, <code>style-guide.md</code></td><td><code>audience.md</code></td></tr>
+                <tr><td>Write a tutorial</td><td><code>voice.md</code>, <code>audience.md</code>, <code>style-guide.md</code></td><td>—</td></tr>
+                <tr><td>Edit / review a draft</td><td><code>voice.md</code>, the draft</td><td><code>audience.md</code>, <code>style-guide.md</code></td></tr>
+                <tr><td>Research only</td><td>Nothing — Web Search MCP</td><td>Everything</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <div class="ws-list-lbl">Skills wired in</div>
+          <ul class="ws-list">
+            <li><strong>/humanizer</strong> — Non-negotiable before any draft moves to <code>final/</code>. Catches AI-isms voice.md misses.</li>
+            <li><strong>/doc-coauthoring</strong> — Long-form only (2000+ words). Tutorials, technical guides, whitepapers.</li>
+            <li><strong>Web Search MCP</strong> — Research phase. Current data, competitor analysis, technical accuracy checks.</li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="ws-list-lbl">Voice essentials</div>
+          <ul class="ws-list">
+            <li>Direct. Lead with the point, not the preamble.</li>
+            <li>Specific. Concrete examples over abstract principles.</li>
+            <li>Honest about tradeoffs. Name the downsides.</li>
+            <li>Conversational but not sloppy. Contractions yes, dated slang no.</li>
+          </ul>
+        </div>
+
+        <div class="warn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          <span>Hard constraints: never <code>leverage</code>, <code>utilize</code>, or "In today's…". No emoji in technical content. No "It's worth noting that".</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="production" class="sec">
+    <div class="sec-head">
+      <span class="sec-num">06</span>
+      <h2 class="sec-title">Production</h2>
+      <span class="sec-badge sb-p">Workspace P</span>
+    </div>
+    <p class="sec-intro">The build shop. Finalized drafts become demos, videos, sample apps, interactive tutorials. Production is downstream from writing — it doesn't generate ideas, it builds them.</p>
+
+    <div class="grid two">
+      <article class="card">
+        <div class="card-head">
+          <span class="card-title">Reference docs (load per-task)</span>
+          <span class="cmd-tag">docs</span>
+        </div>
+        <div class="card-body">
+          <ul class="ws-list">
+            <li><code>tech-standards.md</code> — code quality, testing, deployment</li>
+            <li><code>component-library.md</code> — reusable components &amp; packages</li>
+            <li><code>design-system.md</code> — visual standards, color, typography</li>
+          </ul>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head">
+          <span class="card-title">Hard rules</span>
+          <span class="cmd-tag">rules</span>
+        </div>
+        <div class="card-body">
+          <ul class="ws-list">
+            <li>Specs are contracts, not blueprints. WHAT and WHEN, not HOW.</li>
+            <li>Output must be tested. Nothing reaches <code>04-output/</code> unverified.</li>
+            <li>Don't build without a spec — even small projects.</li>
+            <li>Don't load writing-room docs here. Voice doesn't matter.</li>
+          </ul>
+        </div>
+      </article>
+    </div>
+
+    <div class="tbl-wrap" style="margin-top:var(--space-5)">
+      <table class="t">
+        <thead><tr><th>Task</th><th>Load</th><th>Skip</th></tr></thead>
+        <tbody>
+          <tr><td>Brief → Spec</td><td>Brief, <code>tech-standards.md</code></td><td>design-system, components</td></tr>
+          <tr><td>Spec → Build</td><td>Spec, <code>design-system.md</code>, <code>component-library.md</code>, <code>tech-standards.md</code></td><td>writing-room docs</td></tr>
+          <tr><td>Review a build</td><td>Spec (as contract), the build output</td><td>docs/ unless checking specifics</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-size:var(--text-base);font-weight:600;margin-top:var(--space-8);margin-bottom:var(--space-3);color:var(--text)">Component Library Snapshot</h3>
+    <div class="grid two">
+      <article class="card">
+        <div class="card-head"><span class="card-title">Reusable components</span><span class="cmd-tag">src/</span></div>
+        <div class="card-body">
+          <ul class="ws-list">
+            <li><code>AuthFlow</code> — OAuth login/signup demo</li>
+            <li><code>APIExplorer</code> — interactive endpoint tester</li>
+            <li><code>CodePlayground</code> — embedded editor with output</li>
+            <li><code>DataViz</code> — charts and data visualization</li>
+          </ul>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head"><span class="card-title">Default packages</span><span class="cmd-tag">stack</span></div>
+        <div class="card-body">
+          <ul class="ws-list">
+            <li><strong>React + Vite</strong> — default web stack</li>
+            <li><strong>Tailwind CSS</strong> — styling default</li>
+            <li><strong>Playwright</strong> — E2E (wrapped by /webapp-testing)</li>
+            <li><strong>Shiki</strong> — code syntax highlighting</li>
+          </ul>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="pipeline" class="sec">
+    <div class="sec-head">
+      <span class="sec-num">07</span>
+      <h2 class="sec-title">Production Pipeline</h2>
+      <span class="sec-badge sb-p">4 Stages</span>
+    </div>
+    <p class="sec-intro">Four sequential stages. Each agent reads only the prior stage's output — no backtracking without explicit re-trigger. Skills accumulate as you move through the pipeline; an agent at Stage 02 never sees <code>/frontend-design</code> because it's not building yet.</p>
+
+    <div class="pipeline">
+      <div class="stage">
+        <span class="stage-num">Stage 01</span>
+        <span class="stage-folder">01-briefs/</span>
+        <h3 class="stage-name">The Input</h3>
+        <p class="stage-desc">Finalized content from writing-room, copied here as the starting point. Says what to build and why, in plain language. Not a technical spec.</p>
+        <div class="stage-tools">
+          <span class="stage-tools-lbl">No tools</span>
+          <span class="tool-pill" style="background:var(--surface-off);color:var(--text-faint)">input only</span>
+        </div>
+      </div>
+      <div class="stage">
+        <span class="stage-num">Stage 02</span>
+        <span class="stage-folder">02-specs/</span>
+        <h3 class="stage-name">The Plan</h3>
+        <p class="stage-desc">Turns the brief into a buildable contract. Defines WHAT and WHEN, never HOW. Includes scope, acceptance criteria, dependencies — never line-by-line implementation.</p>
+        <div class="stage-tools">
+          <span class="stage-tools-lbl">Tools</span>
+          <span class="tool-pill">Context7</span>
+          <span class="tool-pill">Web Search</span>
+        </div>
+      </div>
+      <div class="stage">
+        <span class="stage-num">Stage 03</span>
+        <span class="stage-folder">03-builds/</span>
+        <h3 class="stage-name">The Work</h3>
+        <p class="stage-desc">Code, demos, assemblies. Builder reads the spec + reference docs, then has full creative freedom for implementation. Quality floor enforced by docs.</p>
+        <div class="stage-tools">
+          <span class="stage-tools-lbl">Tools</span>
+          <span class="tool-pill">/frontend-design</span>
+          <span class="tool-pill">/webapp-testing</span>
+          <span class="tool-pill">Context7</span>
+        </div>
+      </div>
+      <div class="stage">
+        <span class="stage-num">Stage 04</span>
+        <span class="stage-folder">04-output/</span>
+        <h3 class="stage-name">The Deliverable</h3>
+        <p class="stage-desc">Finished, verified work. Versioned <code>v1, v2, v3</code>. Nothing lands here without passing the spec's acceptance criteria.</p>
+        <div class="stage-tools">
+          <span class="stage-tools-lbl">Tools</span>
+          <span class="tool-pill">/pdf</span>
+          <span class="tool-pill">/webapp-testing</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="fc">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      <span><strong>The spec-as-contract pattern</strong> lets you swap agents between stages. The spec agent might be great at planning. The build agent might be great at code. Neither needs to understand the other's full context — just the spec.</span>
+    </div>
+
+    <div class="note" style="margin-top:var(--space-3)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span><strong>Pipeline rule:</strong> Flow is forward. Briefs → specs → builds → output. Changes propagate forward — changed brief means regenerate spec; changed spec means rebuild.</span>
+    </div>
+  </section>
+
+  <section id="community" class="sec">
+    <div class="sec-head">
+      <span class="sec-num">08</span>
+      <h2 class="sec-title">Community</h2>
+      <span class="sec-badge sb-c">Workspace C</span>
+    </div>
+    <p class="sec-intro">The distribution hub. Content from writing-room and deliverables from production get repurposed into newsletters, social posts, event materials. Same input → many outputs. Skills here are <strong>format-specific</strong>, not stage-specific.</p>
+
+    <div class="grid three">
+      <article class="card">
+        <div class="card-head"><span class="card-title">Newsletter</span><span class="cmd-tag">📧</span></div>
+        <div class="card-body">
+          <p class="desc">500–800 words. Scannable. 3–5 sections max. Weekly cadence, Tuesday morning.</p>
+          <ul class="ws-list">
+            <li>TL;DR at top</li>
+            <li>One primary CTA only</li>
+            <li>Personal but valuable tone</li>
+          </ul>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head"><span class="card-title">Twitter / X</span><span class="cmd-tag">280</span></div>
+        <div class="card-body">
+          <p class="desc">280 chars per tweet. Threads up to 10. Daily cadence.</p>
+          <ul class="ws-list">
+            <li>One idea per tweet</li>
+            <li>Code screenshots &gt; text-only</li>
+            <li>No hashtag stuffing</li>
+          </ul>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head"><span class="card-title">LinkedIn</span><span class="cmd-tag">3000</span></div>
+        <div class="card-body">
+          <p class="desc">3000 chars max. Front-load value. 2–3 posts per week (Tues/Wed/Thurs).</p>
+          <ul class="ws-list">
+            <li>Hook in first line</li>
+            <li>Aggressive whitespace</li>
+            <li>PDF carousels perform well</li>
+          </ul>
+        </div>
+      </article>
+    </div>
+
+    <h3 style="font-size:var(--text-base);font-weight:600;margin-top:var(--space-8);margin-bottom:var(--space-3);color:var(--text)">Content Mix &amp; Cadence</h3>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead><tr><th>Format</th><th>Frequency</th><th>Day</th><th>Length</th></tr></thead>
+        <tbody>
+          <tr><td>Newsletter</td><td>Weekly</td><td>Tuesday morning</td><td>500–800 words</td></tr>
+          <tr><td>Blog post</td><td>1–2 / week</td><td>Mon or Thurs</td><td>800–1500 words</td></tr>
+          <tr><td>Twitter / X</td><td>Daily</td><td>—</td><td>280 chars</td></tr>
+          <tr><td>LinkedIn</td><td>2–3 / week</td><td>Tues / Wed / Thurs</td><td>≤ 3000 chars</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid two" style="margin-top:var(--space-5)">
+      <article class="card">
+        <div class="card-head"><span class="card-title">Content mix</span><span class="cmd-tag">balance</span></div>
+        <div class="card-body">
+          <ul class="ws-list">
+            <li><strong>60%</strong> educational (tutorials, explainers, how-tos)</li>
+            <li><strong>25%</strong> product (launches, updates, demos)</li>
+            <li><strong>15%</strong> community (events, highlights, conversations)</li>
+          </ul>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head"><span class="card-title">What NOT to do</span><span class="cmd-tag">never</span></div>
+        <div class="card-body">
+          <ul class="ws-list">
+            <li>Don't write original long-form here (writing-room's job)</li>
+            <li>Don't skip platform specs — LinkedIn ≠ Twitter</li>
+            <li>Don't post without <code>/humanizer</code></li>
+            <li>Don't compete with same-day content (e.g., two blog posts)</li>
+          </ul>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="skills" class="sec">
+    <div class="sec-head">
+      <span class="sec-num">09</span>
+      <h2 class="sec-title">Skills &amp; Tools Matrix</h2>
+      <span class="sec-badge sb-meta-b">Reference</span>
+    </div>
+    <p class="sec-intro">Skills aren't just markdown files sitting in a folder — they're capabilities wired into specific points in the workflow. The CONTEXT.md tells the agent <strong>when</strong> to invoke each one, not just that it exists.</p>
+
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead><tr><th>Tool</th><th>Type</th><th>Used in</th><th>Stage / trigger</th></tr></thead>
+        <tbody>
+          <tr><td><code>/humanizer</code></td><td>Skill</td><td style="color:var(--blue)">writing-room</td><td>Before any draft → <code>final/</code></td></tr>
+          <tr><td><code>/humanizer</code></td><td>Skill</td><td style="color:var(--green)">community</td><td>All written content</td></tr>
+          <tr><td><code>/doc-coauthoring</code></td><td>Skill</td><td style="color:var(--blue)">writing-room</td><td>Long-form (2000+ words) only</td></tr>
+          <tr><td><code>/frontend-design</code></td><td>Skill</td><td style="color:var(--orange)">production</td><td>Stage 03 — builds</td></tr>
+          <tr><td><code>/webapp-testing</code></td><td>Skill</td><td style="color:var(--orange)">production</td><td>Stage 03 + Stage 04 (final)</td></tr>
+          <tr><td><code>/pdf</code></td><td>Skill</td><td style="color:var(--orange)">production</td><td>Stage 04 — output (docs)</td></tr>
+          <tr><td><code>/pptx</code></td><td>Skill</td><td style="color:var(--green)">community</td><td>Event decks</td></tr>
+          <tr><td><code>/frontend-slides</code></td><td>Skill</td><td style="color:var(--green)">community</td><td>Web-based slide decks</td></tr>
+          <tr><td>Context7</td><td>MCP</td><td style="color:var(--orange)">production</td><td>Stage 02 — fetch library docs</td></tr>
+          <tr><td>Web Search</td><td>MCP</td><td style="color:var(--blue)">writing-room</td><td>Research phase</td></tr>
+          <tr><td>Web Search</td><td>MCP</td><td style="color:var(--green)">community</td><td>Trending topic checks</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tip" style="margin-top:var(--space-4)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <span><strong>Two skill patterns:</strong> production uses <em>stage-specific</em> skills (skill activates at pipeline step X); community uses <em>format-specific</em> skills (skill activates when creating format Y). Both wire into CONTEXT.md the same way.</span>
+    </div>
+  </section>
+
+  <section id="naming" class="sec">
+    <div class="sec-head">
+      <span class="sec-num">10</span>
+      <h2 class="sec-title">Naming Conventions</h2>
+      <span class="sec-badge sb-meta-b">Standards</span>
+    </div>
+    <p class="sec-intro">File names track state. Glance at a folder, know the status. <code>draft → review → final</code>. <code>v1 → v2 → v3</code>. No dashboard required.</p>
+
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead><tr><th>Content type</th><th>Pattern</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td>Blog draft</td><td><code>[slug]-[status].md</code></td><td><code>api-auth-guide-draft.md</code></td></tr>
+          <tr><td>Tutorial</td><td><code>[slug]-[status].md</code></td><td><code>getting-started-final.md</code></td></tr>
+          <tr><td>Build spec</td><td><code>[slug]-spec.md</code></td><td><code>auth-demo-spec.md</code></td></tr>
+          <tr><td>Build folder</td><td><code>[slug]/</code></td><td><code>auth-demo/</code></td></tr>
+          <tr><td>Deliverable</td><td><code>[slug]-v[n].[ext]</code></td><td><code>auth-demo-v2.mp4</code></td></tr>
+          <tr><td>Newsletter</td><td><code>[YYYY-MM-DD]-[slug].md</code></td><td><code>2026-03-10-launch-week.md</code></td></tr>
+          <tr><td>Social post</td><td><code>[platform]-[slug].md</code></td><td><code>twitter-launch-announce.md</code></td></tr>
+          <tr><td>Event folder</td><td><code>[event-name]/</code></td><td><code>devcon-2026/</code></td></tr>
+          <tr><td>Template</td><td><code>[slug].md</code></td><td><code>weekly-roundup.md</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fc" style="margin-top:var(--space-4)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      <span><strong>Statuses:</strong> <code>draft</code> → <code>review</code> → <code>final</code>. Version numbers increment per revision: <code>v1</code> = first complete output, <code>v2</code> = after first round of feedback, etc.</span>
+    </div>
+  </section>
+
+  <section id="concepts" class="sec">
+    <div class="sec-head">
+      <span class="sec-num">11</span>
+      <h2 class="sec-title">Key Concepts</h2>
+      <span class="sec-badge sb-meta-b">Mental Model</span>
+    </div>
+    <p class="sec-intro">If you remember nothing else, remember these.</p>
+
+    <div class="grid two">
+      <article class="card">
+        <div class="card-head"><span class="card-title">CONTEXT.md = the agent's entry point</span><span class="cmd-tag">.md</span></div>
+        <div class="card-body">
+          <p class="desc">Every workspace and sub-workspace has one. It answers: "You just landed here. Here's what this place is, what you can do, and what to load for each task." The README that agents actually read.</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head"><span class="card-title">Workspaces are siloed</span><span class="cmd-tag">silo</span></div>
+        <div class="card-body">
+          <p class="desc">Each workspace is a self-contained context. An agent in <code>writing-room/</code> never needs to know what's in <code>production/docs/</code>. Cross-workspace flow happens through <strong>file handoffs</strong>, not shared context.</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head"><span class="card-title">Docs ≠ workflow</span><span class="cmd-tag">split</span></div>
+        <div class="card-body">
+          <p class="desc">Reference docs (<code>docs/</code>) are stable knowledge loaded on demand — style guides, component registries, design systems. Workflow folders (<code>workflows/</code>) are the moving parts — stages, pipelines, active work. Separating them keeps loads tight.</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head"><span class="card-title">File naming = state tracking</span><span class="cmd-tag">state</span></div>
+        <div class="card-body">
+          <p class="desc">Instead of a database or PM tool, file names track progress. <code>M1-outline.md</code> exists? Module 1 is at outline stage. <code>M1-script.md</code> too? It's at script stage. Glance at a folder, know the status.</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head"><span class="card-title">Skills are wired, not listed</span><span class="cmd-tag">wire</span></div>
+        <div class="card-body">
+          <p class="desc">A skill is 10x more useful when CONTEXT.md says <em>when</em> to invoke it, not just that it exists. "Run <code>/humanizer</code> before moving any draft to <code>final/</code>" beats "the humanizer skill is available."</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head"><span class="card-title">MCPs extend the agent's reach</span><span class="cmd-tag">mcp</span></div>
+        <div class="card-body">
+          <p class="desc">MCP servers give agents new capabilities — web search, file conversion, API access. Like skills, they're most powerful when CONTEXT.md tells the agent <strong>when</strong> and <strong>where</strong> to use them.</p>
+        </div>
+      </article>
+    </div>
+
+    <div class="warn" style="margin-top:var(--space-5)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>The domain in this template is fictional (a software company's DevRel team). Replace it with yours. The architecture transfers — videos, courses, podcasts, agencies, internal teams.</span>
+    </div>
+  </section>
+
+  <footer class="pg-foot">
+    <p>workspace-blueprint · agent-native context delivery</p>
+    <p>Three workspaces. Three layers. One coherent system.</p>
+  </footer>
+</main>
+
+<script>
+(function(){
+  var html = document.documentElement;
+  var d = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+  html.setAttribute('data-theme', d);
+  function setIcons(mode){
+    document.querySelectorAll('[data-theme-toggle]').forEach(function(b){
+      b.innerHTML = mode==='dark'
+        ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+        : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+      b.setAttribute('aria-label','Switch to '+(mode==='dark'?'light':'dark')+' mode');
+    });
+  }
+  setIcons(d);
+  document.querySelectorAll('[data-theme-toggle]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      d = d==='dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', d);
+      setIcons(d);
+    });
+  });
+
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('overlay');
+  var menuBtn = document.getElementById('menu-btn');
+  if(menuBtn){
+    menuBtn.addEventListener('click', function(){
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('vis');
+    });
+  }
+  if(overlay){
+    overlay.addEventListener('click', function(){
+      sidebar.classList.remove('open');
+      overlay.classList.remove('vis');
+    });
+  }
+  document.querySelectorAll('.nav-a').forEach(function(a){
+    a.addEventListener('click', function(){
+      if(window.innerWidth <= 768){
+        sidebar.classList.remove('open');
+        overlay.classList.remove('vis');
+      }
+    });
+  });
+
+  var sections = document.querySelectorAll('section[id]');
+  var navLinks = document.querySelectorAll('.nav-a[data-sec]');
+  var observer = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){
+        navLinks.forEach(function(a){ a.classList.remove('active'); });
+        var active = document.querySelector('.nav-a[data-sec="'+entry.target.id+'"]');
+        if(active){
+          active.classList.add('active');
+          active.scrollIntoView({block:'nearest'});
+        }
+      }
+    });
+  }, {rootMargin:'-20% 0px -70% 0px'});
+  sections.forEach(function(s){ observer.observe(s); });
+
+  var searchInput = document.getElementById('search');
+  if(searchInput){
+    searchInput.addEventListener('input', function(){
+      var q = this.value.toLowerCase().trim();
+      var cards = document.querySelectorAll('.card, .layer, .ws-card, .stage');
+      var sectionsAll = document.querySelectorAll('section.sec');
+      if(!q){
+        cards.forEach(function(c){c.style.display=''});
+        sectionsAll.forEach(function(s){s.style.display=''});
+        return;
+      }
+      cards.forEach(function(card){
+        var text = card.innerText.toLowerCase();
+        card.style.display = text.includes(q) ? '' : 'none';
+      });
+      sectionsAll.forEach(function(sec){
+        var text = sec.innerText.toLowerCase();
+        sec.style.display = text.includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>
