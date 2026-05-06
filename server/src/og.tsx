@@ -32,12 +32,15 @@ async function loadFonts() {
     return fontCache;
 }
 
+const OG_WIDTH = 1200;
+const OG_HEIGHT = 500;
+
 function chooseTitleSize(title: string): number {
     const len = title.length;
-    if (len <= 24) return 96;
-    if (len <= 40) return 80;
-    if (len <= 60) return 64;
-    return 52;
+    if (len <= 24) return 80;
+    if (len <= 40) return 64;
+    if (len <= 60) return 52;
+    return 44;
 }
 
 // Match the original static OG title color exactly. The shimmer peaks at
@@ -67,7 +70,7 @@ function buildOgSvgNode(title: string, shineCenterPct: number) {
                 height: '100%',
                 backgroundColor: '#0a0a0a',
                 display: 'flex',
-                padding: 56,
+                padding: 24,
                 fontFamily: 'Inter',
             },
             children: {
@@ -76,11 +79,11 @@ function buildOgSvgNode(title: string, shineCenterPct: number) {
                     style: {
                         width: '100%',
                         height: '100%',
-                        border: '2px solid rgba(255,255,255,0.32)',
-                        borderRadius: 36,
+                        border: '1.5px solid rgba(255,255,255,0.28)',
+                        borderRadius: 28,
                         display: 'flex',
                         flexDirection: 'column',
-                        padding: '64px 80px',
+                        padding: '36px 48px',
                         color: '#e5e5e5',
                         position: 'relative',
                     },
@@ -89,7 +92,7 @@ function buildOgSvgNode(title: string, shineCenterPct: number) {
                             type: 'div',
                             props: {
                                 style: {
-                                    fontSize: 36,
+                                    fontSize: 28,
                                     opacity: 0.75,
                                     letterSpacing: '-0.01em',
                                 },
@@ -108,10 +111,11 @@ function buildOgSvgNode(title: string, shineCenterPct: number) {
                                     fontSize: chooseTitleSize(title),
                                     fontWeight: 600,
                                     letterSpacing: '-0.025em',
-                                    lineHeight: 1.15,
-                                    padding: '0 16px',
+                                    lineHeight: 1.1,
+                                    padding: '0 12px',
                                     backgroundImage: shineGradient(shineCenterPct),
                                     backgroundClip: 'text',
+                                    WebkitBackgroundClip: 'text',
                                     color: 'transparent',
                                 },
                                 children: title,
@@ -126,8 +130,8 @@ function buildOgSvgNode(title: string, shineCenterPct: number) {
 
 async function renderFrame(node: any, fonts: { regular: ArrayBuffer | null; semibold: ArrayBuffer | null }) {
     const svg = await satori(node, {
-        width: 1200,
-        height: 630,
+        width: OG_WIDTH,
+        height: OG_HEIGHT,
         fonts: [
             { name: 'Inter', data: fonts.regular!, weight: 400, style: 'normal' },
             { name: 'Inter', data: fonts.semibold!, weight: 600, style: 'normal' },
