@@ -195,7 +195,7 @@ export function passwordPromptPage({ slug, name, description, publicBase, error 
     const og = {
         title: name,
         description: description || `mncoleman Artifact: ${name}`,
-        image: `${publicBase}/og/${slug}.png`,
+        image: `${publicBase}/og/${slug}.gif`,
         url: `${publicBase}/a/${slug}`,
     };
     return `<!doctype html><html lang="en"><head>${baseHead(`${name} — locked`, og)}</head><body>
