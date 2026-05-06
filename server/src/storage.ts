@@ -4,6 +4,8 @@ import { join } from 'node:path';
 
 const ROOT = process.env.STORAGE_ROOT || '/srv/artifacts';
 
+export type Visibility = 'public' | 'private';
+
 export interface ArtifactMeta {
     slug: string;
     name: string;
@@ -12,6 +14,9 @@ export interface ArtifactMeta {
     type: string;
     size: number;
     uploadedAt: string;
+    visibility: Visibility;
+    /** bcrypt hash, present only when visibility === 'private' */
+    passwordHash?: string;
 }
 
 export class SlugTakenError extends Error {
