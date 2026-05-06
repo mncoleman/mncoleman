@@ -48,6 +48,9 @@ export function KeyBindings() {
                 case 'H':
                     router.push('/');
                     break;
+                case 'Q':
+                    router.push('/admin');
+                    break;
                 default:
                     break;
             }
