@@ -100,3 +100,22 @@ export function getLatestUploadedAt(metas: ArtifactMeta[]): string | null {
 export async function remove(slug: string): Promise<void> {
     await rm(join(ROOT, slug), { recursive: true, force: true });
 }
+
+/** Persist updated metadata for an existing artifact. */
+export async function updateMeta(slug: string, meta: ArtifactMeta): Promise<void> {
+    await writeFile(join(ROOT, slug, 'meta.json'), JSON.stringify(meta, null, 2));
+}
+
+/** Replace the artifact file. If the filename is changing, the old file is removed. */
+export async function replaceFile(
+    slug: string,
+    oldFilename: string,
+    newFilename: string,
+    fileBytes: ArrayBuffer
+): Promise<void> {
+    const dir = join(ROOT, slug);
+    await writeFile(join(dir, newFilename), Buffer.from(fileBytes));
+    if (oldFilename && oldFilename !== newFilename) {
+        await rm(join(dir, oldFilename), { force: true }).catch(() => {});
+    }
+}
