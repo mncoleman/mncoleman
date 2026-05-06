@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw, Zap, Globe, Copy, ExternalLink, Lock, Eye } from 'lucide-react';
+import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw, Zap, Globe, Copy, ExternalLink, Lock, Eye, AlertTriangle } from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
 
 interface ArtifactUploaderProps {
@@ -91,6 +91,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
     const [editPassword, setEditPassword] = useState('');
     const [editClearPassword, setEditClearPassword] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [pendingDelete, setPendingDelete] = useState<ArtifactEntry | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const editFileInputRef = useRef<HTMLInputElement>(null);
     const dragCounterRef = useRef(0);
@@ -418,7 +419,15 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         }
     };
 
+    const confirmDelete = async () => {
+        if (!pendingDelete) return;
+        const target = pendingDelete;
+        setPendingDelete(null);
+        await handleDelete(target);
+    };
+
     return (
+        <>
         <Card>
             <CardHeader>
                 <CardTitle>Artifacts</CardTitle>
@@ -846,7 +855,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => handleDelete(artifact)}
+                                                    onClick={() => setPendingDelete(artifact)}
                                                     disabled={deleting === deleteKey(artifact)}
                                                     className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                                 >
@@ -866,5 +875,85 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                 </div>
             </CardContent>
         </Card>
+        {pendingDelete && (
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="delete-modal-title"
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-150"
+                onClick={() => setPendingDelete(null)}
+                onKeyDown={(e) => { if (e.key === 'Escape') setPendingDelete(null); }}
+            >
+                <div
+                    role="document"
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-150"
+                >
+                    <div className="flex items-start gap-3 mb-4">
+                        <div className="p-2 rounded-full bg-destructive/10 text-destructive shrink-0">
+                            <AlertTriangle className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                            <h3 id="delete-modal-title" className="text-lg font-semibold leading-tight">
+                                Delete artifact?
+                            </h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                This cannot be undone.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="rounded-lg border border-border/50 bg-muted/30 p-3 mb-4">
+                        <p className="text-sm font-medium break-words">{pendingDelete.name}</p>
+                        <p className="text-xs text-muted-foreground break-all mt-0.5">
+                            {pendingDelete.source === 'dynamic' && pendingDelete.url
+                                ? pendingDelete.url
+                                : pendingDelete.filename}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-2 text-[10px]">
+                            {pendingDelete.source === 'dynamic' ? (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-primary/30 bg-primary/10 text-primary">
+                                    <Zap className="h-2.5 w-2.5" /> Live (instant)
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-muted/50 border-border text-muted-foreground">
+                                    <Globe className="h-2.5 w-2.5" /> Static (GitHub)
+                                </span>
+                            )}
+                            {pendingDelete.visibility === 'private' && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-500">
+                                    <Lock className="h-2.5 w-2.5" /> Private
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground mb-5">
+                        {pendingDelete.source === 'dynamic'
+                            ? 'The file, OG image, and metadata will be removed from the server immediately. Anyone holding the share link will get a 404.'
+                            : 'A commit will be created to remove the file from the repo, triggering a rebuild (~1 min).'}
+                    </p>
+
+                    <div className="flex justify-end gap-2">
+                        <Button
+                            variant="ghost"
+                            onClick={() => setPendingDelete(null)}
+                            autoFocus
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmDelete}
+                            className="gap-2"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 }
