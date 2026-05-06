@@ -13,6 +13,7 @@ import { KeyBindings } from '@/components/key-bindings';
 import { Search, SearchItem } from '@/components/search';
 import { NavLogo } from '@/components/nav-logo';
 import { TransitionProvider } from '@/components/transition-provider';
+import { FooterButtons } from '@/components/footer-buttons';
 import searchIndex from '@/data/search-index.json';
 
 const roboto = localFont({
@@ -128,23 +129,11 @@ export default async function RootLayout({
               </main>
               <footer className="border-t relative z-10 pwa-safe-bottom">
 
-                <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground max-w-4xl space-y-2">
+                <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground max-w-4xl space-y-3">
                   <div>
                     © 2003-{new Date().getFullYear()} Matthew Coleman. All rights reserved.
                   </div>
-                  <div>
-                    <Link href="/brand-kit" className="hover:text-primary transition-colors hover:underline underline-offset-4">
-                      Brand Kit
-                    </Link>
-                    <span className="mx-2">•</span>
-                    <a href="https://github.com/mncoleman/mncoleman" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors hover:underline underline-offset-4">
-                      Repository
-                    </a>
-                    <span className="mx-2">•</span>
-                    <Link href="/admin" className="hover:text-primary transition-colors hover:underline underline-offset-4">
-                      Admin
-                    </Link>
-                  </div>
+                  <FooterButtons />
                 </div>
               </footer>
             </div>
