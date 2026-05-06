@@ -9,6 +9,9 @@ export interface Artifact {
     type: string;
     size: number;
     uploadedAt: string;
+    url?: string;
+    downloadUrl?: string;
+    source?: 'static' | 'dynamic';
 }
 
 export function getArtifacts(): Artifact[] {
