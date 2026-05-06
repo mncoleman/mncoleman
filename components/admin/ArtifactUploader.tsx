@@ -87,6 +87,9 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
     const [editName, setEditName] = useState('');
     const [editDesc, setEditDesc] = useState('');
     const [editFile, setEditFile] = useState<globalThis.File | null>(null);
+    const [editVisibility, setEditVisibility] = useState<Visibility>('public');
+    const [editPassword, setEditPassword] = useState('');
+    const [editClearPassword, setEditClearPassword] = useState(false);
     const [saving, setSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const editFileInputRef = useRef<HTMLInputElement>(null);
@@ -314,6 +317,9 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         setEditName(artifact.name);
         setEditDesc(artifact.description);
         setEditFile(null);
+        setEditVisibility(artifact.visibility || 'public');
+        setEditPassword('');
+        setEditClearPassword(false);
         setMessage(null);
     };
 
@@ -322,32 +328,63 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         setEditName('');
         setEditDesc('');
         setEditFile(null);
+        setEditPassword('');
+        setEditClearPassword(false);
         if (editFileInputRef.current) editFileInputRef.current.value = '';
     };
 
     const handleSaveEdit = async (artifact: ArtifactEntry) => {
+        if (artifact.source === 'dynamic' && editVisibility === 'private') {
+            // Going private (or staying private with a rotation) requires either a new password
+            // OR the artifact must already have one stored.
+            if (editPassword && editPassword.length < 4) {
+                setMessage({ type: 'error', text: 'Password must be at least 4 characters.' });
+                return;
+            }
+            if (artifact.visibility !== 'private' && !editPassword) {
+                setMessage({ type: 'error', text: 'Set a password to make this artifact private.' });
+                return;
+            }
+        }
+
         setSaving(true);
         setMessage(null);
 
         try {
-            const body: any = {
-                filename: artifact.filename,
-                name: editName,
-                description: editDesc,
-            };
+            let res: Response;
+            if (artifact.source === 'dynamic' && artifact.slug) {
+                const fd = new FormData();
+                if (editName !== artifact.name) fd.append('name', editName);
+                if (editDesc !== artifact.description) fd.append('description', editDesc);
+                if (editVisibility !== (artifact.visibility || 'public')) fd.append('visibility', editVisibility);
+                if (editPassword) fd.append('password', editPassword);
+                if (editVisibility === 'public' && artifact.visibility === 'private') fd.append('clearPassword', 'true');
+                if (editFile) fd.append('file', editFile);
 
-            if (editFile) {
-                body.content = await fileToBase64(editFile);
-                body.type = editFile.type || 'application/octet-stream';
-                body.size = editFile.size;
+                res = await fetch(`${workerUrl.replace(/\/$/, '')}/api/artifacts/instant/${encodeURIComponent(artifact.slug)}`, {
+                    method: 'PATCH',
+                    headers: authHeaders(),
+                    credentials: 'include',
+                    body: fd,
+                });
+            } else {
+                const body: any = {
+                    filename: artifact.filename,
+                    name: editName,
+                    description: editDesc,
+                };
+                if (editFile) {
+                    body.content = await fileToBase64(editFile);
+                    body.type = editFile.type || 'application/octet-stream';
+                    body.size = editFile.size;
+                }
+                res = await fetch(getApiUrl(workerUrl, ''), {
+                    method: 'PATCH',
+                    headers: apiHeaders(),
+                    credentials: 'include',
+                    body: JSON.stringify(body),
+                });
             }
-
-            const res = await fetch(getApiUrl(workerUrl, ''), {
-                method: 'PATCH',
-                headers: apiHeaders(),
-                credentials: 'include',
-                body: JSON.stringify(body),
-            });
 
             if (!res.ok) {
                 const errText = await res.text();
@@ -355,8 +392,24 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
             }
 
             const resData = await res.json();
-            setMessage({ type: 'success', text: `"${artifact.filename}" updated. A rebuild will be triggered.` });
-            setArtifacts(prev => prev.map(a => a.id === artifact.id ? { ...a, name: editName, description: editDesc, ...(editFile ? { type: editFile.type || a.type, size: editFile.size, uploadedAt: new Date().toISOString() } : {}) } : a));
+            const updated = (resData.artifact ?? resData) as ArtifactEntry;
+            setMessage({
+                type: 'success',
+                text: artifact.source === 'dynamic'
+                    ? `"${artifact.name}" updated.`
+                    : `"${artifact.filename}" updated. A rebuild will be triggered.`,
+            });
+            setArtifacts(prev => prev.map(a => a.id === artifact.id ? {
+                ...a,
+                name: editName,
+                description: editDesc,
+                ...(artifact.source === 'dynamic' ? {
+                    visibility: editVisibility,
+                    hasPassword: editVisibility === 'private',
+                    ...(updated && typeof updated === 'object' ? updated : {}),
+                } : {}),
+                ...(editFile ? { type: editFile.type || a.type, size: editFile.size, uploadedAt: new Date().toISOString() } : {}),
+            } : a));
             cancelEdit();
         } catch (e: any) {
             setMessage({ type: 'error', text: e.message });
@@ -673,6 +726,61 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                                     )}
                                                 </div>
                                             </div>
+
+                                            {artifact.source === 'dynamic' && (
+                                                <>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs">Visibility</Label>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEditVisibility('public')}
+                                                                className={`flex items-center gap-2 rounded-lg border p-2 text-left transition-colors ${
+                                                                    editVisibility === 'public'
+                                                                        ? 'border-primary bg-primary/5'
+                                                                        : 'border-border/50 hover:border-primary/30'
+                                                                }`}
+                                                            >
+                                                                <Eye className={`h-3.5 w-3.5 shrink-0 ${editVisibility === 'public' ? 'text-primary' : 'text-muted-foreground'}`} />
+                                                                <span className="text-xs font-medium">Public</span>
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEditVisibility('private')}
+                                                                className={`flex items-center gap-2 rounded-lg border p-2 text-left transition-colors ${
+                                                                    editVisibility === 'private'
+                                                                        ? 'border-primary bg-primary/5'
+                                                                        : 'border-border/50 hover:border-primary/30'
+                                                                }`}
+                                                            >
+                                                                <Lock className={`h-3.5 w-3.5 shrink-0 ${editVisibility === 'private' ? 'text-primary' : 'text-muted-foreground'}`} />
+                                                                <span className="text-xs font-medium">Private</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    {editVisibility === 'private' && (
+                                                        <div className="space-y-2">
+                                                            <Label className="text-xs">
+                                                                Password
+                                                                {artifact.hasPassword && (
+                                                                    <span className="ml-2 text-[10px] text-muted-foreground font-normal">
+                                                                        (leave blank to keep current)
+                                                                    </span>
+                                                                )}
+                                                            </Label>
+                                                            <Input
+                                                                type="password"
+                                                                value={editPassword}
+                                                                onChange={(e) => setEditPassword(e.target.value)}
+                                                                placeholder={artifact.hasPassword ? 'Enter new password to rotate' : 'Min 4 characters'}
+                                                                className="h-8 text-sm"
+                                                                autoComplete="new-password"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
                                             <div className="flex gap-2 pt-1">
                                                 <Button
                                                     size="sm"
@@ -727,16 +835,14 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1 shrink-0">
-                                                {artifact.source !== 'dynamic' && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => startEdit(artifact)}
-                                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                                                    >
-                                                        <Pencil className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => startEdit(artifact)}
+                                                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                                                >
+                                                    <Pencil className="h-3.5 w-3.5" />
+                                                </Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"

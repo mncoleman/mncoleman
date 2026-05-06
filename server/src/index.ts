@@ -12,6 +12,8 @@ import {
     remove,
     saveOg,
     getOg,
+    updateMeta,
+    replaceFile,
     type ArtifactMeta,
     type Visibility,
 } from './storage';
@@ -196,6 +198,99 @@ app.delete('/api/:slug', requireAuth, async (c) => {
     if (!(await slugExists(slug))) return c.json({ error: 'not found' }, 404);
     await remove(slug);
     return c.json({ ok: true });
+});
+
+// Edit an existing artifact. Multipart body; all fields optional.
+//   name, description     — metadata
+//   visibility            — 'public' | 'private'
+//   password              — required when transitioning to private (or to rotate)
+//   clearPassword=true    — combined with visibility=public, drops the hash
+//   file                  — replaces the underlying file (size/type/filename update too)
+app.patch('/api/:slug', requireAuth, async (c) => {
+    const slug = c.req.param('slug');
+    if (!isValidSlug(slug)) return c.json({ error: 'invalid slug' }, 400);
+    const existing = await getMeta(slug);
+    if (!existing) return c.json({ error: 'not found' }, 404);
+
+    let form: FormData;
+    try {
+        form = await c.req.formData();
+    } catch {
+        return c.json({ error: 'invalid multipart body' }, 400);
+    }
+
+    const next: ArtifactMeta = { ...existing, visibility: existing.visibility ?? 'public' };
+    let nameChanged = false;
+
+    if (form.has('name')) {
+        const v = ((form.get('name') as string | null) || '').slice(0, 200);
+        if (v && v !== next.name) { next.name = v; nameChanged = true; }
+    }
+    if (form.has('description')) {
+        next.description = ((form.get('description') as string | null) || '').slice(0, 500);
+    }
+
+    const newVisibility = form.get('visibility') as string | null;
+    const newPassword = (form.get('password') as string | null) || '';
+    const clearPassword = form.get('clearPassword') === 'true';
+
+    if (newVisibility === 'private' || (next.visibility === 'private' && newVisibility === null && newPassword)) {
+        // Setting private OR rotating password on already-private artifact.
+        if (newPassword) {
+            if (newPassword.length < 4 || newPassword.length > 200) {
+                return c.json({ error: 'password must be 4-200 chars' }, 400);
+            }
+            next.passwordHash = await Bun.password.hash(newPassword);
+        } else if (next.visibility !== 'private' || !next.passwordHash) {
+            // Going private with no password and no existing one — not allowed.
+            return c.json({ error: 'private artifacts require a password' }, 400);
+        }
+        next.visibility = 'private';
+    } else if (newVisibility === 'public') {
+        next.visibility = 'public';
+        if (clearPassword || newVisibility === 'public') {
+            delete next.passwordHash;
+        }
+    }
+
+    // Optional file replacement.
+    const file = form.get('file');
+    if (file instanceof File && file.size > 0) {
+        if (file.size > MAX_BYTES) {
+            return c.json({ error: `file too large (max ${MAX_BYTES} bytes)` }, 413);
+        }
+        let safeFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200) || 'file';
+        if (RESERVED_FILENAMES.has(safeFilename) || safeFilename.startsWith('.')) {
+            safeFilename = `file_${safeFilename.replace(/^\.+/, '')}` || 'file';
+        }
+        const resolvedPath = resolve(join(STORAGE_ROOT, slug, safeFilename));
+        const slugDir = resolve(join(STORAGE_ROOT, slug)) + '/';
+        if (!resolvedPath.startsWith(slugDir)) {
+            return c.json({ error: 'invalid filename' }, 400);
+        }
+        const buf = await file.arrayBuffer();
+        await replaceFile(slug, existing.filename, safeFilename, buf);
+        next.filename = safeFilename;
+        next.type = normalizeMimeType(file.type);
+        next.size = buf.byteLength;
+        next.uploadedAt = new Date().toISOString();
+    }
+
+    await updateMeta(slug, next);
+
+    if (nameChanged) {
+        // OG render is title-only — re-render in the background.
+        queueMicrotask(async () => {
+            try {
+                const png = await renderOg(next.name);
+                await saveOg(slug, png);
+            } catch (e) {
+                console.error('[og] re-render failed:', e);
+            }
+        });
+    }
+
+    return c.json({ ok: true, artifact: adminArtifactView(next) });
 });
 
 app.get('/og/:filename', async (c) => {

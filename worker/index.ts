@@ -301,6 +301,43 @@ export default {
                 });
             }
 
+            // Instant artifact edit: streams multipart PATCH to Oracle.
+            if (url.pathname.startsWith('/api/artifacts/instant/') && request.method === 'PATCH') {
+                if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
+                    return new Response(
+                        JSON.stringify({ error: 'Instant artifacts not configured' }),
+                        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                    );
+                }
+                const slug = decodeURIComponent(url.pathname.split('/').pop() || '');
+                if (!/^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?$/.test(slug)) {
+                    return new Response(JSON.stringify({ error: 'invalid slug' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+                const jwt = await signArtifactsJwt(
+                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'artifact-edit' },
+                    env.ARTIFACTS_JWT_SECRET
+                );
+                const upstreamHeaders: Record<string, string> = {
+                    'Authorization': `Bearer ${jwt}`,
+                };
+                const ct = request.headers.get('Content-Type');
+                if (ct) upstreamHeaders['Content-Type'] = ct;
+                const cl = request.headers.get('Content-Length');
+                if (cl) upstreamHeaders['Content-Length'] = cl;
+                const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/${encodeURIComponent(slug)}`, {
+                    method: 'PATCH',
+                    headers: upstreamHeaders,
+                    body: request.body,
+                    // @ts-expect-error — Cloudflare Workers accept duplex for streaming requests
+                    duplex: 'half',
+                });
+                const text = await upstream.text();
+                return new Response(text, {
+                    status: upstream.status,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+            }
+
             // Instant artifact delete: forwards to the Oracle service.
             if (url.pathname.startsWith('/api/artifacts/instant/') && request.method === 'DELETE') {
                 if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
