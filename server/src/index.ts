@@ -360,13 +360,17 @@ app.get('/a/:slug', async (c) => {
     if (!meta) return new Response(notFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 
     if (meta.visibility === 'private' && !isUnlocked(c, slug)) {
+        // Serve the prompt with HTTP 200 so OpenGraph crawlers (iMessage/Slack/X)
+        // honor the og:image meta. Content is still gated — the artifact bytes
+        // are not in the response body.
         return new Response(
             passwordPromptPage({ slug, name: meta.name, description: meta.description, publicBase: PUBLIC_BASE }),
             {
-                status: 401,
+                status: 200,
                 headers: {
                     'Content-Type': 'text/html; charset=utf-8',
                     'Cache-Control': 'no-store',
+                    'X-Robots-Tag': 'noindex',
                 },
             }
         );
