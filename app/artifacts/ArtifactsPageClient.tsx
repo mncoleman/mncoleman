@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { FileText, Filter, X, ExternalLink, Download, File, Image, Code, FileType, Palette, Zap } from 'lucide-react';
+import { FileText, Filter, X, ExternalLink, Download, File, Image, Code, FileType, Palette, Zap, Lock, Copy, Check } from 'lucide-react';
 import { PageEntrance } from '@/components/page-entrance';
 import { ArtifactDesignPopup } from '@/components/artifact-design-popup';
 import { formatDistanceToNow } from 'date-fns';
+import { authHeaders, getSessionToken } from '@/lib/admin-auth';
 
 interface Artifact {
     id: string;
@@ -17,9 +18,11 @@ interface Artifact {
     url?: string;
     downloadUrl?: string;
     source?: 'static' | 'dynamic';
+    visibility?: 'public' | 'private';
 }
 
 const ARTIFACTS_API = process.env.NEXT_PUBLIC_ARTIFACTS_API_URL || 'https://artifacts.mncoleman.com';
+const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:8787';
 
 function normalizeType(type: string): string {
     return (type || '').split(';')[0].trim().toLowerCase();
@@ -69,10 +72,37 @@ interface ArtifactsPageClientProps {
 export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageClientProps) {
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const [dynamicArtifacts, setDynamicArtifacts] = useState<Artifact[]>([]);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
+
+    const copyLink = async (artifact: Artifact, artifactUrl: string) => {
+        const absoluteUrl = /^https?:\/\//.test(artifactUrl)
+            ? artifactUrl
+            : `${typeof window !== 'undefined' ? window.location.origin : ''}${artifactUrl}`;
+        try {
+            await navigator.clipboard.writeText(absoluteUrl);
+            setCopiedId(artifact.id);
+            setTimeout(() => setCopiedId(prev => (prev === artifact.id ? null : prev)), 1500);
+        } catch {
+            // Older browsers without clipboard permissions — fall back to prompt.
+            window.prompt('Copy link:', absoluteUrl);
+        }
+    };
 
     useEffect(() => {
         let cancelled = false;
-        fetch(`${ARTIFACTS_API}/api/list`, { cache: 'no-store' })
+        const token = getSessionToken();
+        const isAdminView = !!token;
+        setIsAdmin(isAdminView);
+
+        const fetchPromise = isAdminView
+            ? fetch(`${WORKER_URL.replace(/\/$/, '')}/api/artifacts/instant/list`, {
+                  headers: authHeaders(),
+                  credentials: 'include',
+              })
+            : fetch(`${ARTIFACTS_API}/api/list`, { cache: 'no-store' });
+
+        fetchPromise
             .then(r => (r.ok ? r.json() : { artifacts: [] }))
             .then(data => {
                 if (cancelled) return;
@@ -123,6 +153,12 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
                     <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
                         A collection of uploaded files and documents available for viewing and download.
                     </p>
+                    {isAdmin && (
+                        <p className="text-xs italic text-muted-foreground/80 mb-4 flex items-center justify-center gap-1.5">
+                            <Lock className="h-3 w-3" />
+                            Admin view — private artifacts are visible to you.
+                        </p>
+                    )}
                     <ArtifactDesignPopup
                         trigger={
                             <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border/50 bg-background/50 backdrop-blur-sm hover:border-[#016b72]/50 hover:bg-background/80 transition-all duration-300 group">
@@ -200,6 +236,15 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
                                                 Live
                                             </span>
                                         )}
+                                        {artifact.visibility === 'private' && (
+                                            <span
+                                                title="Password-protected artifact (admin-visible only)"
+                                                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-500"
+                                            >
+                                                <Lock className="h-2.5 w-2.5" />
+                                                Private
+                                            </span>
+                                        )}
                                         <span className="text-[10px] px-2 py-0.5 rounded-full border bg-muted/50 border-border text-muted-foreground">
                                             {getFileTypeLabel(artifact.type)}
                                         </span>
@@ -246,6 +291,19 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
                                         <Download className="h-4 w-4" />
                                         Download
                                     </a>
+                                    <button
+                                        type="button"
+                                        onClick={() => copyLink(artifact, artifactUrl)}
+                                        title="Copy share link"
+                                        aria-label="Copy share link"
+                                        className="flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium bg-accent text-accent-foreground hover:bg-accent/80 transition-colors"
+                                    >
+                                        {copiedId === artifact.id ? (
+                                            <Check className="h-4 w-4 text-emerald-500" />
+                                        ) : (
+                                            <Copy className="h-4 w-4" />
+                                        )}
+                                    </button>
                                 </div>
 
                                 <div className="absolute bottom-0 left-0 right-0 h-1">
