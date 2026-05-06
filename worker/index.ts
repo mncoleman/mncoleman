@@ -279,6 +279,28 @@ export default {
                 return new Response('Unknown action', { status: 400, headers: corsHeaders });
             }
 
+            // Instant artifact admin list: includes private artifacts (admin-only on Oracle).
+            if (url.pathname === '/api/artifacts/instant/list' && request.method === 'GET') {
+                if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
+                    return new Response(JSON.stringify({ artifacts: [] }), {
+                        status: 200,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+                const jwt = await signArtifactsJwt(
+                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'artifact-list' },
+                    env.ARTIFACTS_JWT_SECRET
+                );
+                const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/admin/list`, {
+                    headers: { 'Authorization': `Bearer ${jwt}` },
+                });
+                const text = await upstream.text();
+                return new Response(text, {
+                    status: upstream.status,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+            }
+
             // Instant artifact delete: forwards to the Oracle service.
             if (url.pathname.startsWith('/api/artifacts/instant/') && request.method === 'DELETE') {
                 if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {

@@ -21,7 +21,12 @@ interface Artifact {
 
 const ARTIFACTS_API = process.env.NEXT_PUBLIC_ARTIFACTS_API_URL || 'https://artifacts.mncoleman.com';
 
+function normalizeType(type: string): string {
+    return (type || '').split(';')[0].trim().toLowerCase();
+}
+
 function getFileTypeLabel(type: string): string {
+    const t = normalizeType(type);
     const labels: Record<string, string> = {
         'text/html': 'HTML',
         'application/pdf': 'PDF',
@@ -34,7 +39,7 @@ function getFileTypeLabel(type: string): string {
         'text/css': 'CSS',
         'text/javascript': 'JavaScript',
     };
-    return labels[type] || type.split('/').pop()?.toUpperCase() || 'File';
+    return labels[t] || t.split('/').pop()?.toUpperCase() || 'File';
 }
 
 function formatFileSize(bytes: number): string {
@@ -44,15 +49,17 @@ function formatFileSize(bytes: number): string {
 }
 
 function getFileIcon(type: string) {
-    if (type.startsWith('image/')) return Image;
-    if (type === 'text/html') return Code;
-    if (type === 'application/pdf') return FileType;
-    if (type.startsWith('text/')) return FileText;
+    const t = normalizeType(type);
+    if (t.startsWith('image/')) return Image;
+    if (t === 'text/html') return Code;
+    if (t === 'application/pdf') return FileType;
+    if (t.startsWith('text/')) return FileText;
     return File;
 }
 
 function isViewableInBrowser(type: string): boolean {
-    return type === 'text/html' || type === 'application/pdf' || type.startsWith('image/');
+    const t = normalizeType(type);
+    return t === 'text/html' || t === 'application/pdf' || t.startsWith('image/');
 }
 
 interface ArtifactsPageClientProps {
@@ -91,14 +98,14 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
 
     const allTypes = useMemo(() => {
         const types = new Set<string>();
-        merged.forEach(a => types.add(a.type));
+        merged.forEach(a => types.add(normalizeType(a.type)));
         return Array.from(types).sort();
     }, [merged]);
 
     const filteredArtifacts = useMemo(() => {
         let items = merged;
         if (selectedType) {
-            items = items.filter(a => a.type === selectedType);
+            items = items.filter(a => normalizeType(a.type) === selectedType);
         }
         return items.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
     }, [merged, selectedType]);

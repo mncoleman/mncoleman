@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw, Zap, Globe, Copy, ExternalLink } from 'lucide-react';
+import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw, Zap, Globe, Copy, ExternalLink, Lock, Eye } from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
 
 interface ArtifactUploaderProps {
@@ -13,6 +13,7 @@ interface ArtifactUploaderProps {
 }
 
 type Destination = 'instant' | 'github';
+type Visibility = 'public' | 'private';
 
 interface ArtifactEntry {
     id: string;
@@ -26,6 +27,8 @@ interface ArtifactEntry {
     url?: string;
     downloadUrl?: string;
     source?: 'static' | 'dynamic';
+    visibility?: Visibility;
+    hasPassword?: boolean;
 }
 
 const ARTIFACTS_API = process.env.NEXT_PUBLIC_ARTIFACTS_API_URL || 'https://artifacts.mncoleman.com';
@@ -70,6 +73,8 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [destination, setDestination] = useState<Destination>('instant');
+    const [visibility, setVisibility] = useState<Visibility>('public');
+    const [password, setPassword] = useState('');
     const [slug, setSlug] = useState('');
     const [lastShareUrl, setLastShareUrl] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -99,9 +104,11 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                     headers: authHeaders(),
                     credentials: 'include',
                 }).then(r => (r.ok ? r.json() : { artifacts: [] })).catch(() => ({ artifacts: [] })),
-                fetch(`${ARTIFACTS_API}/api/list`, { cache: 'no-store' })
-                    .then(r => (r.ok ? r.json() : { artifacts: [] }))
-                    .catch(() => ({ artifacts: [] })),
+                // Admin list — includes private artifacts (proxied through the Worker for auth).
+                fetch(`${workerUrl.replace(/\/$/, '')}/api/artifacts/instant/list`, {
+                    headers: authHeaders(),
+                    credentials: 'include',
+                }).then(r => (r.ok ? r.json() : { artifacts: [] })).catch(() => ({ artifacts: [] })),
             ]);
 
             const staticArtifacts: ArtifactEntry[] = (staticRes.artifacts || []).map((a: ArtifactEntry) => ({
@@ -182,6 +189,10 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
             setMessage({ type: 'error', text: 'Slug must be 3-60 chars of [a-z0-9-], starting and ending with alphanumeric.' });
             return;
         }
+        if (destination === 'instant' && visibility === 'private' && password.length < 4) {
+            setMessage({ type: 'error', text: 'Private artifacts require a password of at least 4 characters.' });
+            return;
+        }
 
         setUploading(true);
         setMessage(null);
@@ -197,6 +208,8 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                 if (name) fd.append('name', name);
                 if (description) fd.append('description', description);
                 if (slug) fd.append('slug', slug);
+                fd.append('visibility', visibility);
+                if (visibility === 'private') fd.append('password', password);
                 res = await fetch(getApiUrl(workerUrl, ''), {
                     method: 'POST',
                     headers: authHeaders(),
@@ -244,6 +257,8 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
             setName('');
             setDescription('');
             setSlug('');
+            setPassword('');
+            setVisibility('public');
             if (fileInputRef.current) fileInputRef.current.value = '';
         } catch (e: any) {
             setMessage({ type: 'error', text: e.message });
@@ -466,25 +481,77 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                     </div>
 
                     {destination === 'instant' && (
-                        <div className="space-y-2">
-                            <Label htmlFor="artifact-slug">
-                                Slug
-                                <span className="ml-2 text-xs text-muted-foreground font-normal">
-                                    URL: artifacts.mncoleman.com/a/<span className="font-mono">{slug || 'your-slug'}</span>
-                                </span>
-                            </Label>
-                            <Input
-                                id="artifact-slug"
-                                value={slug}
-                                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                                placeholder="my-artifact-name"
-                                className="font-mono"
-                                maxLength={60}
-                            />
-                            {slug && !isValidSlug(slug) && (
-                                <p className="text-xs text-destructive">3-60 chars, [a-z0-9-], starting and ending alphanumeric.</p>
+                        <>
+                            <div className="space-y-2">
+                                <Label htmlFor="artifact-slug">
+                                    Slug
+                                    <span className="ml-2 text-xs text-muted-foreground font-normal">
+                                        URL: artifacts.mncoleman.com/a/<span className="font-mono">{slug || 'your-slug'}</span>
+                                    </span>
+                                </Label>
+                                <Input
+                                    id="artifact-slug"
+                                    value={slug}
+                                    onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                                    placeholder="my-artifact-name"
+                                    className="font-mono"
+                                    maxLength={60}
+                                />
+                                {slug && !isValidSlug(slug) && (
+                                    <p className="text-xs text-destructive">3-60 chars, [a-z0-9-], starting and ending alphanumeric.</p>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Visibility</Label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setVisibility('public')}
+                                        className={`flex items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
+                                            visibility === 'public'
+                                                ? 'border-primary bg-primary/5'
+                                                : 'border-border/50 hover:border-primary/30'
+                                        }`}
+                                    >
+                                        <Eye className={`h-4 w-4 mt-0.5 shrink-0 ${visibility === 'public' ? 'text-primary' : 'text-muted-foreground'}`} />
+                                        <div>
+                                            <p className="text-sm font-medium">Public</p>
+                                            <p className="text-xs text-muted-foreground">Listed on /artifacts.</p>
+                                        </div>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setVisibility('private')}
+                                        className={`flex items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
+                                            visibility === 'private'
+                                                ? 'border-primary bg-primary/5'
+                                                : 'border-border/50 hover:border-primary/30'
+                                        }`}
+                                    >
+                                        <Lock className={`h-4 w-4 mt-0.5 shrink-0 ${visibility === 'private' ? 'text-primary' : 'text-muted-foreground'}`} />
+                                        <div>
+                                            <p className="text-sm font-medium">Private</p>
+                                            <p className="text-xs text-muted-foreground">Hidden, password-gated.</p>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {visibility === 'private' && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="artifact-password">Password</Label>
+                                    <Input
+                                        id="artifact-password"
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Min 4 characters"
+                                        autoComplete="new-password"
+                                    />
+                                </div>
                             )}
-                        </div>
+                        </>
                     )}
 
                     <div className="space-y-2">
@@ -638,6 +705,14 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                                         {artifact.source === 'dynamic' && (
                                                             <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border border-primary/30 bg-primary/10 text-primary">
                                                                 <Zap className="h-2.5 w-2.5" /> Live
+                                                            </span>
+                                                        )}
+                                                        {artifact.visibility === 'private' && (
+                                                            <span
+                                                                title="Private — password protected"
+                                                                className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-500"
+                                                            >
+                                                                <Lock className="h-2.5 w-2.5" /> Private
                                                             </span>
                                                         )}
                                                     </div>

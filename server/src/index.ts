@@ -13,13 +13,23 @@ import {
     saveOg,
     getOg,
     type ArtifactMeta,
+    type Visibility,
 } from './storage';
 import { isValidSlug, suggestFromFilename } from './slugs';
 import { requireAuth } from './auth';
 import { renderOg } from './og';
+import { signSlugCookie, verifySlugCookie, cookieName, parseCookies } from './cookies';
+import { notFoundPage, passwordPromptPage } from './pages';
 
 const STORAGE_ROOT = resolve(process.env.STORAGE_ROOT || '/srv/artifacts');
 const RESERVED_FILENAMES = new Set(['..', '.', 'meta.json', 'og.png', '']);
+const ROOT_REDIRECT = process.env.ROOT_REDIRECT || 'https://mncoleman.com/artifacts/';
+const SITE_FAVICON_SVG = 'https://mncoleman.com/icon.svg';
+const SITE_FAVICON_ICO = 'https://mncoleman.com/favicon.ico';
+
+function normalizeMimeType(t: string): string {
+    return (t || 'application/octet-stream').split(';')[0].trim().toLowerCase();
+}
 
 await ensureRoot();
 
@@ -50,19 +60,26 @@ function publicArtifactView(m: ArtifactMeta) {
         slug: m.slug,
         name: m.name,
         description: m.description,
-        type: m.type,
+        type: normalizeMimeType(m.type),
         size: m.size,
         uploadedAt: m.uploadedAt,
         filename: m.filename,
         url: `${PUBLIC_BASE}/a/${m.slug}`,
         downloadUrl: `${PUBLIC_BASE}/raw/${m.slug}`,
         ogImage: `${PUBLIC_BASE}/og/${m.slug}.png`,
+        // Legacy artifacts written before Phase 4 didn't have this field — default to public.
+        visibility: m.visibility ?? 'public',
         source: 'dynamic' as const,
     };
 }
 
+function adminArtifactView(m: ArtifactMeta) {
+    return { ...publicArtifactView(m), hasPassword: !!m.passwordHash };
+}
+
 app.get('/api/list', async (c) => {
-    const metas = await listAll();
+    const all = await listAll();
+    const metas = all.filter((m) => m.visibility !== 'private');
     const body = JSON.stringify({ artifacts: metas.map(publicArtifactView) });
     const latest = metas[0]?.uploadedAt || '0';
     const etag = `W/"${metas.length}-${latest}"`;
@@ -76,6 +93,12 @@ app.get('/api/list', async (c) => {
             ETag: etag,
         },
     });
+});
+
+// Admin-only listing — includes private artifacts (with hasPassword flag, never the hash).
+app.get('/api/admin/list', requireAuth, async (c) => {
+    const metas = await listAll();
+    return c.json({ artifacts: metas.map(adminArtifactView) });
 });
 
 app.post('/api/upload', requireAuth, async (c) => {
@@ -121,14 +144,28 @@ app.post('/api/upload', requireAuth, async (c) => {
         return c.json({ error: `file too large (max ${MAX_BYTES} bytes)` }, 413);
     }
 
+    const visibility: Visibility =
+        ((form.get('visibility') as string | null) || 'public') === 'private' ? 'private' : 'public';
+    const password = (form.get('password') as string | null) || '';
+    if (visibility === 'private') {
+        if (password.length < 4) {
+            return c.json({ error: 'private artifacts require a password of at least 4 characters' }, 400);
+        }
+        if (password.length > 200) {
+            return c.json({ error: 'password too long' }, 400);
+        }
+    }
+
     const meta: ArtifactMeta = {
         slug,
         name: ((form.get('name') as string | null) || file.name).slice(0, 200),
         description: ((form.get('description') as string | null) || '').slice(0, 500),
         filename: safeFilename,
-        type: file.type || 'application/octet-stream',
+        type: normalizeMimeType(file.type),
         size: buf.byteLength,
         uploadedAt: new Date().toISOString(),
+        visibility,
+        ...(visibility === 'private' ? { passwordHash: await Bun.password.hash(password) } : {}),
     };
 
     try {
@@ -150,7 +187,7 @@ app.post('/api/upload', requireAuth, async (c) => {
         }
     });
 
-    return c.json({ ok: true, artifact: publicArtifactView(meta) }, 201);
+    return c.json({ ok: true, artifact: adminArtifactView(meta) }, 201);
 });
 
 app.delete('/api/:slug', requireAuth, async (c) => {
@@ -187,7 +224,7 @@ function injectOgMeta(html: string, meta: ArtifactMeta): string {
     const pageUrl = `${PUBLIC_BASE}/a/${meta.slug}`;
     const desc = meta.description || `mncoleman Artifact: ${meta.name}`;
 
-    const tags = [
+    const tags: string[] = [
         `<meta property="og:title" content="${escapeAttr(meta.name)}">`,
         `<meta property="og:description" content="${escapeAttr(desc)}">`,
         `<meta property="og:image" content="${ogUrl}">`,
@@ -197,31 +234,56 @@ function injectOgMeta(html: string, meta: ArtifactMeta): string {
         `<meta name="twitter:title" content="${escapeAttr(meta.name)}">`,
         `<meta name="twitter:description" content="${escapeAttr(desc)}">`,
         `<meta name="twitter:image" content="${ogUrl}">`,
-    ].join('\n    ');
+    ];
 
+    // Inject the mncoleman favicon when the artifact HTML didn't ship one.
+    if (!/<link\s+[^>]*rel=["']?(?:shortcut\s+)?icon/i.test(html)) {
+        tags.push(`<link rel="icon" type="image/svg+xml" href="${SITE_FAVICON_SVG}">`);
+        tags.push(`<link rel="alternate icon" href="${SITE_FAVICON_ICO}">`);
+    }
+
+    const block = tags.join('\n    ');
     if (/<\/head>/i.test(html)) {
-        return html.replace(/<\/head>/i, `    ${tags}\n  </head>`);
+        return html.replace(/<\/head>/i, `    ${block}\n  </head>`);
     }
     if (/<head[^>]*>/i.test(html)) {
-        return html.replace(/<head[^>]*>/i, (m) => `${m}\n    ${tags}`);
+        return html.replace(/<head[^>]*>/i, (m) => `${m}\n    ${block}`);
     }
-    return `<!DOCTYPE html><html><head>${tags}</head><body>${html}</body></html>`;
+    return `<!DOCTYPE html><html><head>${block}</head><body>${html}</body></html>`;
+}
+
+/** Returns true if the request carries a valid unlock cookie for this slug. */
+function isUnlocked(c: any, slug: string): boolean {
+    const cookies = parseCookies(c.req.header('Cookie'));
+    return verifySlugCookie(cookies[cookieName(slug)], slug);
 }
 
 app.get('/a/:slug', async (c) => {
     const slug = c.req.param('slug');
-    if (!isValidSlug(slug)) return c.notFound();
+    if (!isValidSlug(slug)) return new Response(notFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     const meta = await getMeta(slug);
-    if (!meta) return c.notFound();
+    if (!meta) return new Response(notFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+
+    if (meta.visibility === 'private' && !isUnlocked(c, slug)) {
+        return new Response(passwordPromptPage(slug, meta.name), {
+            status: 401,
+            headers: {
+                'Content-Type': 'text/html; charset=utf-8',
+                'Cache-Control': 'no-store',
+            },
+        });
+    }
 
     const file = await getFile(slug, meta.filename);
+    const cacheControl = meta.visibility === 'private' ? 'private, no-store' : 'public, max-age=300';
+    const normType = normalizeMimeType(meta.type);
 
-    if (meta.type.startsWith('text/html')) {
+    if (normType === 'text/html') {
         const injected = injectOgMeta(file.toString('utf-8'), meta);
         return new Response(injected, {
             headers: {
                 'Content-Type': 'text/html; charset=utf-8',
-                'Cache-Control': 'public, max-age=300',
+                'Cache-Control': cacheControl,
                 'X-Artifact-Slug': slug,
             },
         });
@@ -229,9 +291,9 @@ app.get('/a/:slug', async (c) => {
 
     return new Response(file, {
         headers: {
-            'Content-Type': meta.type,
+            'Content-Type': normType,
             'Content-Disposition': `inline; filename="${meta.filename}"`,
-            'Cache-Control': 'public, max-age=300',
+            'Cache-Control': cacheControl,
             'X-Artifact-Slug': slug,
         },
     });
@@ -239,18 +301,77 @@ app.get('/a/:slug', async (c) => {
 
 app.get('/raw/:slug', async (c) => {
     const slug = c.req.param('slug');
-    if (!isValidSlug(slug)) return c.notFound();
+    if (!isValidSlug(slug)) return new Response(notFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     const meta = await getMeta(slug);
-    if (!meta) return c.notFound();
+    if (!meta) return new Response(notFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+
+    if (meta.visibility === 'private' && !isUnlocked(c, slug)) {
+        // Don't render a prompt for raw downloads — point the visitor at the gated viewer.
+        return c.redirect(`/a/${encodeURIComponent(slug)}`, 302);
+    }
+
     const file = await getFile(slug, meta.filename);
     return new Response(file, {
         headers: {
-            'Content-Type': meta.type,
+            'Content-Type': normalizeMimeType(meta.type),
             'Content-Disposition': `attachment; filename="${meta.filename}"`,
-            'Cache-Control': 'public, max-age=300',
+            'Cache-Control': meta.visibility === 'private' ? 'private, no-store' : 'public, max-age=300',
         },
     });
 });
+
+// Password gate — verifies the password and sets a slug-scoped signed cookie.
+app.post('/unlock/:slug', async (c) => {
+    const slug = c.req.param('slug');
+    if (!isValidSlug(slug)) return new Response(notFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    const meta = await getMeta(slug);
+    if (!meta || meta.visibility !== 'private' || !meta.passwordHash) {
+        return new Response(notFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+
+    let password = '';
+    try {
+        const form = await c.req.formData();
+        password = ((form.get('password') as string | null) || '').slice(0, 200);
+    } catch {
+        return new Response(passwordPromptPage(slug, meta.name, 'Invalid form submission'), {
+            status: 400,
+            headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        });
+    }
+
+    const ok = password.length > 0 && (await Bun.password.verify(password, meta.passwordHash));
+    if (!ok) {
+        return new Response(passwordPromptPage(slug, meta.name, 'Incorrect password.'), {
+            status: 401,
+            headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        });
+    }
+
+    const cookieValue = signSlugCookie(slug, 60 * 60 * 24); // 24h
+    return new Response(null, {
+        status: 303,
+        headers: {
+            'Location': `/a/${encodeURIComponent(slug)}`,
+            'Set-Cookie': `${cookieName(slug)}=${cookieValue}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`,
+        },
+    });
+});
+
+// Favicon: redirect to mncoleman.com's so artifact pages and direct visits look on-brand.
+app.get('/favicon.ico', (c) => c.redirect(SITE_FAVICON_ICO, 302));
+app.get('/icon.svg', (c) => c.redirect(SITE_FAVICON_SVG, 302));
+
+// Root: send people to the listings page on the main site.
+app.get('/', (c) => c.redirect(ROOT_REDIRECT, 302));
+
+// Catch-all: animated 404.
+app.notFound(() =>
+    new Response(notFoundPage(), {
+        status: 404,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    })
+);
 
 const port = parseInt(process.env.PORT || '7878', 10);
 Bun.serve({ port, fetch: app.fetch, idleTimeout: 60 });
