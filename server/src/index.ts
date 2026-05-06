@@ -22,6 +22,7 @@ import { requireAuth } from './auth';
 import { renderOg } from './og';
 import { signSlugCookie, verifySlugCookie, cookieName, parseCookies } from './cookies';
 import { notFoundPage, passwordPromptPage } from './pages';
+import { encryptPassword, decryptPassword } from './crypto';
 
 const STORAGE_ROOT = resolve(process.env.STORAGE_ROOT || '/srv/artifacts');
 const RESERVED_FILENAMES = new Set(['..', '.', 'meta.json', 'og.png', '']);
@@ -76,7 +77,13 @@ function publicArtifactView(m: ArtifactMeta) {
 }
 
 function adminArtifactView(m: ArtifactMeta) {
-    return { ...publicArtifactView(m), hasPassword: !!m.passwordHash };
+    return {
+        ...publicArtifactView(m),
+        hasPassword: !!m.passwordHash,
+        // Plaintext password decrypted from the at-rest cipher. May be null for
+        // legacy private artifacts uploaded before AES storage was added.
+        password: decryptPassword(m.passwordCipher),
+    };
 }
 
 app.get('/api/list', async (c) => {
@@ -167,7 +174,12 @@ app.post('/api/upload', requireAuth, async (c) => {
         size: buf.byteLength,
         uploadedAt: new Date().toISOString(),
         visibility,
-        ...(visibility === 'private' ? { passwordHash: await Bun.password.hash(password) } : {}),
+        ...(visibility === 'private'
+            ? {
+                  passwordHash: await Bun.password.hash(password),
+                  passwordCipher: encryptPassword(password),
+              }
+            : {}),
     };
 
     try {
@@ -241,6 +253,7 @@ app.patch('/api/:slug', requireAuth, async (c) => {
                 return c.json({ error: 'password must be 4-200 chars' }, 400);
             }
             next.passwordHash = await Bun.password.hash(newPassword);
+            next.passwordCipher = encryptPassword(newPassword);
         } else if (next.visibility !== 'private' || !next.passwordHash) {
             // Going private with no password and no existing one — not allowed.
             return c.json({ error: 'private artifacts require a password' }, 400);
@@ -250,6 +263,7 @@ app.patch('/api/:slug', requireAuth, async (c) => {
         next.visibility = 'public';
         if (clearPassword || newVisibility === 'public') {
             delete next.passwordHash;
+            delete next.passwordCipher;
         }
     }
 
