@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { FileText, Filter, X, ExternalLink, Download, File, Image, Code, FileType, Palette, Zap, Lock, Copy, Check } from 'lucide-react';
+import { FileText, Filter, X, ExternalLink, Download, File, Image, Code, FileType, Palette, Zap, Lock, Copy, Check, Eye, EyeOff } from 'lucide-react';
 import { PageEntrance } from '@/components/page-entrance';
 import { ArtifactDesignPopup } from '@/components/artifact-design-popup';
 import { formatDistanceToNow } from 'date-fns';
@@ -19,6 +19,8 @@ interface Artifact {
     downloadUrl?: string;
     source?: 'static' | 'dynamic';
     visibility?: 'public' | 'private';
+    /** Plaintext password — only present in admin-mode listing for private artifacts. */
+    password?: string | null;
 }
 
 const ARTIFACTS_API = process.env.NEXT_PUBLIC_ARTIFACTS_API_URL || 'https://artifacts.mncoleman.com';
@@ -74,6 +76,15 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
     const [dynamicArtifacts, setDynamicArtifacts] = useState<Artifact[]>([]);
     const [isAdmin, setIsAdmin] = useState(false);
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [revealedPasswords, setRevealedPasswords] = useState<Set<string>>(new Set());
+
+    const togglePasswordReveal = (id: string) => {
+        setRevealedPasswords(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
 
     const copyLink = async (artifact: Artifact, artifactUrl: string) => {
         const absoluteUrl = /^https?:\/\//.test(artifactUrl)
@@ -267,6 +278,52 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
                                     <span>-</span>
                                     <span>{formatDistanceToNow(new Date(artifact.uploadedAt), { addSuffix: true })}</span>
                                 </div>
+
+                                {isAdmin && artifact.visibility === 'private' && (
+                                    <div className="flex items-center gap-1.5 mb-4 text-xs">
+                                        <Lock className="h-3 w-3 text-amber-500 shrink-0" />
+                                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">PW:</span>
+                                        {artifact.password ? (
+                                            <>
+                                                <code className="font-mono bg-muted/50 px-1.5 py-0.5 rounded border border-border/40 select-all break-all">
+                                                    {revealedPasswords.has(artifact.id)
+                                                        ? artifact.password
+                                                        : '•'.repeat(Math.min(artifact.password.length, 12))}
+                                                </code>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => togglePasswordReveal(artifact.id)}
+                                                    aria-label={revealedPasswords.has(artifact.id) ? 'Hide password' : 'Reveal password'}
+                                                    className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+                                                >
+                                                    {revealedPasswords.has(artifact.id)
+                                                        ? <EyeOff className="h-3 w-3" />
+                                                        : <Eye className="h-3 w-3" />}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        try {
+                                                            await navigator.clipboard.writeText(artifact.password!);
+                                                            setCopiedId(`pw-${artifact.id}`);
+                                                            setTimeout(() => setCopiedId(prev => (prev === `pw-${artifact.id}` ? null : prev)), 1500);
+                                                        } catch {
+                                                            window.prompt('Copy password:', artifact.password!);
+                                                        }
+                                                    }}
+                                                    aria-label="Copy password"
+                                                    className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+                                                >
+                                                    {copiedId === `pw-${artifact.id}`
+                                                        ? <Check className="h-3 w-3 text-emerald-500" />
+                                                        : <Copy className="h-3 w-3" />}
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <span className="italic">not recoverable (legacy)</span>
+                                        )}
+                                    </div>
+                                )}
 
                                 <div className="flex gap-2 pt-4 mt-auto border-t border-border/30">
                                     {viewable && (

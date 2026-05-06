@@ -17,6 +17,11 @@ export interface ArtifactMeta {
     visibility: Visibility;
     /** bcrypt hash, present only when visibility === 'private' */
     passwordHash?: string;
+    /**
+     * AES-256-GCM-encrypted plaintext password (`{ivB64u}.{ciphertextWithTagB64u}`).
+     * Lets the admin reveal the password later without storing it in plaintext.
+     */
+    passwordCipher?: string;
 }
 
 export class SlugTakenError extends Error {

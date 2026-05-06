@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw, Zap, Globe, Copy, ExternalLink, Lock, Eye, AlertTriangle } from 'lucide-react';
+import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw, Zap, Globe, Copy, ExternalLink, Lock, Eye, EyeOff, AlertTriangle, Search } from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
 
 interface ArtifactUploaderProps {
@@ -29,6 +29,8 @@ interface ArtifactEntry {
     source?: 'static' | 'dynamic';
     visibility?: Visibility;
     hasPassword?: boolean;
+    /** Plaintext password — only present on admin-fetched dynamic artifacts. */
+    password?: string | null;
 }
 
 const ARTIFACTS_API = process.env.NEXT_PUBLIC_ARTIFACTS_API_URL || 'https://artifacts.mncoleman.com';
@@ -92,6 +94,38 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
     const [editClearPassword, setEditClearPassword] = useState(false);
     const [saving, setSaving] = useState(false);
     const [pendingDelete, setPendingDelete] = useState<ArtifactEntry | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [revealedPasswords, setRevealedPasswords] = useState<Set<string>>(new Set());
+    const [copiedPassword, setCopiedPassword] = useState<string | null>(null);
+
+    const togglePasswordReveal = (id: string) => {
+        setRevealedPasswords(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const copyToClipboard = async (text: string, key: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopiedPassword(key);
+            setTimeout(() => setCopiedPassword(prev => (prev === key ? null : prev)), 1500);
+        } catch {
+            window.prompt('Copy:', text);
+        }
+    };
+
+    const filteredArtifacts = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase();
+        if (!q) return artifacts;
+        return artifacts.filter(a =>
+            a.name.toLowerCase().includes(q)
+            || (a.slug || '').toLowerCase().includes(q)
+            || a.filename.toLowerCase().includes(q)
+            || (a.description || '').toLowerCase().includes(q)
+        );
+    }, [artifacts, searchQuery]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const editFileInputRef = useRef<HTMLInputElement>(null);
     const dragCounterRef = useRef(0);
@@ -676,17 +710,47 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                 )}
 
                 {/* Existing Artifacts List */}
-                <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-muted-foreground">Uploaded Artifacts</h4>
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                        <h4 className="text-sm font-medium text-muted-foreground shrink-0">
+                            Uploaded Artifacts
+                            {searchQuery && (
+                                <span className="ml-2 text-xs">
+                                    ({filteredArtifacts.length} of {artifacts.length})
+                                </span>
+                            )}
+                        </h4>
+                        <div className="relative flex-1 max-w-xs">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                            <Input
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search artifacts…"
+                                className="h-8 text-xs pl-8 pr-7"
+                            />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery('')}
+                                    aria-label="Clear search"
+                                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
                     {loadingList ? (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
                             <Loader2 className="animate-spin h-4 w-4" /> Loading...
                         </div>
                     ) : artifacts.length === 0 ? (
                         <p className="text-sm text-muted-foreground py-4">No artifacts uploaded yet.</p>
+                    ) : filteredArtifacts.length === 0 ? (
+                        <p className="text-sm text-muted-foreground py-4">No artifacts match &ldquo;{searchQuery}&rdquo;.</p>
                     ) : (
                         <div className="space-y-2">
-                            {artifacts.map((artifact) => {
+                            {filteredArtifacts.map((artifact) => {
                                 const IconComponent = getFileIcon(artifact.type);
                                 const isEditing = editingId === artifact.id;
 
@@ -841,6 +905,44 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                                             ? artifact.url
                                                             : artifact.filename}
                                                     </p>
+                                                    {artifact.visibility === 'private' && artifact.hasPassword && (
+                                                        <div className="flex items-center gap-1.5 mt-1.5 group/pw">
+                                                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Password:</span>
+                                                            {artifact.password ? (
+                                                                <code className="text-xs font-mono bg-muted/50 px-1.5 py-0.5 rounded border border-border/40 select-all">
+                                                                    {revealedPasswords.has(artifact.id)
+                                                                        ? artifact.password
+                                                                        : '•'.repeat(Math.min(artifact.password.length, 12))}
+                                                                </code>
+                                                            ) : (
+                                                                <span className="text-xs italic text-muted-foreground">not recoverable (legacy)</span>
+                                                            )}
+                                                            {artifact.password && (
+                                                                <>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => togglePasswordReveal(artifact.id)}
+                                                                        title={revealedPasswords.has(artifact.id) ? 'Hide' : 'Reveal'}
+                                                                        className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                                                                    >
+                                                                        {revealedPasswords.has(artifact.id)
+                                                                            ? <EyeOff className="h-3 w-3" />
+                                                                            : <Eye className="h-3 w-3" />}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => copyToClipboard(artifact.password!, `pw-${artifact.id}`)}
+                                                                        title="Copy password"
+                                                                        className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                                                                    >
+                                                                        {copiedPassword === `pw-${artifact.id}`
+                                                                            ? <Check className="h-3 w-3 text-emerald-500" />
+                                                                            : <Copy className="h-3 w-3" />}
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1 shrink-0">
