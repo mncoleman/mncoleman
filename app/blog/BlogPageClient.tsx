@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Calendar, Filter, X, ArrowRight } from 'lucide-react';
+import { Calendar, Filter, X, ArrowRight, Plus } from 'lucide-react';
 import { Post } from '@/lib/blog';
 import { format } from 'date-fns';
 import { PageEntrance } from '@/components/page-entrance';
 import { SquarePenIcon, type SquarePenIconHandle } from '@/components/ui/square-pen';
+import { getSessionToken } from '@/lib/admin-auth';
 
 interface BlogPageClientProps {
     initialPosts: Post[];
     allTags: string[];
+    databaseId: string;
 }
 
 function PostCard({
@@ -84,8 +86,17 @@ function PostCard({
     );
 }
 
-export default function BlogPageClient({ initialPosts, allTags }: BlogPageClientProps) {
+export default function BlogPageClient({ initialPosts, allTags, databaseId }: BlogPageClientProps) {
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    useEffect(() => {
+        setIsAdmin(!!getSessionToken());
+    }, []);
+
+    const notionDatabaseUrl = databaseId
+        ? `https://www.notion.so/${databaseId.replace(/-/g, '')}`
+        : null;
 
     const filteredPosts = useMemo(() => {
         if (!selectedTag) return initialPosts;
@@ -102,6 +113,19 @@ export default function BlogPageClient({ initialPosts, allTags }: BlogPageClient
                         Thoughts on technology, life, and sometimes just random things.
                     </span>
                 </h1>
+                {isAdmin && notionDatabaseUrl && (
+                    <div className="mt-6 flex justify-center">
+                        <a
+                            href={notionDatabaseUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-medium text-sm shadow-md shadow-primary/20 hover:opacity-90 hover:shadow-lg hover:shadow-primary/30 transition-all"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Create New Blog
+                        </a>
+                    </div>
+                )}
             </header>
 
             {/* Tag Filter */}
