@@ -51,6 +51,9 @@ export function KeyBindings() {
                 case 'Q':
                     router.push('/admin');
                     break;
+                case 'Y':
+                    window.open('https://github.com/mncoleman/mncoleman', '_blank', 'noopener,noreferrer');
+                    break;
                 default:
                     break;
             }
