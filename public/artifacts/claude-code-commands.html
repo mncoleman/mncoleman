@@ -187,6 +187,20 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
 }
 </style>
 </head><body>
+<a href="https://mncoleman.com/artifacts/" class="go-home-btn" aria-label="Back to mncoleman.com artifacts">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12 12 3l9 9"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+  <span>Go Home</span>
+</a>
+<style>
+.go-home-btn{position:fixed;top:12px;left:12px;z-index:9999;display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .8rem;border-radius:9999px;background:rgba(255,255,255,.88);color:#1a1915;border:1px solid rgba(0,0,0,.12);font:500 12.5px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;text-decoration:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 2px 10px rgba(0,0,0,.10);transition:transform 150ms ease,box-shadow 150ms ease,background 150ms ease;-webkit-tap-highlight-color:transparent}
+.go-home-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.16);text-decoration:none;background:rgba(255,255,255,.96)}
+.go-home-btn:focus-visible{outline:2px solid #016b72;outline-offset:2px}
+@media (prefers-color-scheme: dark){.go-home-btn{background:rgba(28,26,23,.85);color:#cccac6;border-color:rgba(255,255,255,.12);box-shadow:0 2px 10px rgba(0,0,0,.4)}.go-home-btn:hover{background:rgba(40,38,35,.95)}}
+[data-theme="dark"] .go-home-btn{background:rgba(28,26,23,.85);color:#cccac6;border-color:rgba(255,255,255,.12);box-shadow:0 2px 10px rgba(0,0,0,.4)}
+[data-theme="dark"] .go-home-btn:hover{background:rgba(40,38,35,.95)}
+[data-theme="light"] .go-home-btn{background:rgba(255,255,255,.88);color:#1a1915;border-color:rgba(0,0,0,.12);box-shadow:0 2px 10px rgba(0,0,0,.10)}
+@media (max-width:600px){.go-home-btn{top:8px;left:8px;padding:.5rem;border-radius:50%}.go-home-btn span{display:none}}
+</style>
 <div class="sb-overlay" id="overlay"></div>
 
 <header class="mob-header" role="banner">
