@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apologetics Research Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300..900;1,300..900&family=Work+Sans:wght@300..700&display=swap" rel="stylesheet">
+<style>
+:root, [data-theme="light"] {
+  --color-bg: #f7f6f2; --color-surface: #faf9f6; --color-surface-2: #fcfbf9;
+  --color-surface-offset: #eeecea; --color-surface-dyn: #e5e2de;
+  --color-divider: #dcdad6; --color-border: #d4d2ce;
+  --color-text: #1a1915; --color-text-muted: #6b6966; --color-text-faint: #a8a7a4;
+  --color-primary: #016b72; --color-primary-hover: #0c5058; --color-primary-highlight: #cddcda;
+  --color-primary-dim: rgba(1,107,114,0.08);
+  --color-beginner: #2f7d34; --color-intermediate: #b35d00; --color-advanced: #c0302a;
+  --color-evil: #c0302a; --color-science: #0a5fa0; --color-bible: #b35d00;
+  --color-jesus: #016b72; --color-moral: #964219; --color-pluralism: #7a39bb;
+  --color-philo: #006494; --color-cultural: #a12c7b; --color-modern: #2f7d34; --color-skeptic: #5a4dad;
+  --color-book: #016b72; --color-podcast: #b35d00; --color-youtube: #c0302a;
+  --color-website: #0a5fa0; --color-academic: #7a39bb; --color-ministry: #2f7d34;
+  --radius-sm: .375rem; --radius-md: .5rem; --radius-lg: .75rem; --radius-xl: 1rem; --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px rgba(26,25,21,.06); --shadow-md: 0 4px 12px rgba(26,25,21,.08);
+  --text-xs: clamp(.75rem,.7rem + .25vw,.875rem); --text-sm: clamp(.875rem,.8rem + .35vw,1rem);
+  --text-base: clamp(1rem,.95rem + .25vw,1.125rem); --text-lg: clamp(1.125rem,1rem + .75vw,1.5rem);
+  --text-xl: clamp(1.5rem,1.2rem + 1.25vw,2.25rem); --text-2xl: clamp(2rem,1.2rem + 2.5vw,3.5rem);
+  --font-display: "Crimson Pro", Georgia, serif; --font-body: "Work Sans", "Helvetica Neue", sans-serif;
+  --t: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-theme="dark"] {
+  --color-bg: #161512; --color-surface: #1c1a17; --color-surface-2: #201e1b;
+  --color-surface-offset: #252321; --color-surface-dyn: #2d2b28;
+  --color-divider: #262422; --color-border: #363432;
+  --color-text: #cccac6; --color-text-muted: #7a7876; --color-text-faint: #5a5957;
+  --color-primary: #4a9da8; --color-primary-hover: #21808c; --color-primary-highlight: #2d3a3c;
+  --color-primary-dim: rgba(74,157,168,0.12);
+  --color-beginner: #65af65; --color-intermediate: #e09840; --color-advanced: #d96b65;
+  --color-evil: #d96b65; --color-science: #5290c5; --color-bible: #e09840;
+  --color-jesus: #4a9da8; --color-moral: #c0814a; --color-pluralism: #a86fdf;
+  --color-philo: #5591c7; --color-cultural: #d163a7; --color-modern: #65af65; --color-skeptic: #8a7ed4;
+  --color-book: #4a9da8; --color-podcast: #e09840; --color-youtube: #d96b65;
+  --color-website: #5290c5; --color-academic: #a86fdf; --color-ministry: #65af65;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.25); --shadow-md: 0 4px 12px rgba(0,0,0,.35);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:140px;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-body);font-size:var(--text-base);color:var(--color-text);background:var(--color-bg);line-height:1.6;min-height:100dvh}
+h1,h2,h3,h4{text-wrap:balance}p{text-wrap:pretty}
+a{color:var(--color-primary);text-decoration:none;transition:color var(--t)}
+a:hover{color:var(--color-primary-hover);text-decoration:underline}
+:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px;border-radius:var(--radius-sm)}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--color-border);border-radius:var(--radius-full)}
+::-webkit-scrollbar-thumb:hover{background:var(--color-text-muted)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+.site-header{background:var(--color-surface);border-bottom:1px solid var(--color-border);position:sticky;top:0;z-index:100;padding:0 clamp(1rem,4vw,3rem);backdrop-filter:blur(8px)}
+.header-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px;gap:1rem}
+.logo{display:flex;align-items:center;gap:.65rem;font-family:var(--font-display);font-size:1.25rem;font-weight:600;color:var(--color-text);text-decoration:none;letter-spacing:.01em}
+.logo svg{color:var(--color-primary);flex-shrink:0}
+.logo em{font-style:italic;font-weight:400;color:var(--color-primary)}
+.header-actions{display:flex;align-items:center;gap:.6rem}
+.theme-btn{background:none;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:.45rem .6rem;cursor:pointer;color:var(--color-text-muted);transition:all var(--t);line-height:1;display:inline-flex;align-items:center;justify-content:center}
+.theme-btn:hover{color:var(--color-text);border-color:var(--color-text-muted)}
+.theme-btn .sun{display:none}[data-theme="dark"] .theme-btn .sun{display:inline}[data-theme="dark"] .theme-btn .moon{display:none}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--color-text-muted);pointer-events:none}
+#search{background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:.45rem .75rem .45rem 2.1rem;font-family:var(--font-body);font-size:var(--text-sm);color:var(--color-text);width:240px;transition:all var(--t)}
+#search::placeholder{color:var(--color-text-faint)}
+#search:focus{outline:none;border-color:var(--color-primary);box-shadow:0 0 0 3px var(--color-primary-dim);width:300px}
+
+.hero{background:linear-gradient(135deg,var(--color-surface) 0%,var(--color-surface-offset) 100%);padding:clamp(3rem,7vw,5.5rem) clamp(1rem,4vw,3rem);text-align:center;border-bottom:1px solid var(--color-border);position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center top,var(--color-primary-dim) 0%,transparent 60%);pointer-events:none}
+.hero-inner{max-width:780px;margin:0 auto;position:relative}
+.hero-eyebrow{font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.18em;color:var(--color-primary);font-weight:600;margin-bottom:.75rem;display:block}
+.hero h1{font-family:var(--font-display);font-size:var(--text-2xl);font-weight:400;line-height:1.05;margin-bottom:1rem;letter-spacing:-.01em}
+.hero h1 em{font-style:italic;color:var(--color-primary)}
+.hero-tagline{color:var(--color-text-muted);max-width:62ch;margin:0 auto 2.25rem;font-size:var(--text-base)}
+.stats{display:flex;justify-content:center;gap:clamp(1.5rem,4vw,3rem);flex-wrap:wrap}
+.stat{text-align:center}
+.stat-number{font-family:var(--font-display);font-size:var(--text-xl);font-weight:700;color:var(--color-primary);display:block;line-height:1}
+.stat-label{font-size:var(--text-xs);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.1em;margin-top:.35rem}
+
+.filter-bar{position:sticky;top:64px;z-index:90;background:var(--color-surface-2);border-bottom:1px solid var(--color-border);padding:.65rem clamp(1rem,4vw,3rem);overflow-x:auto;backdrop-filter:blur(8px)}
+.filter-inner{display:flex;gap:.4rem;max-width:1280px;margin:0 auto;align-items:center;min-width:max-content}
+.filter-label{font-size:var(--text-xs);color:var(--color-text-faint);margin-right:.4rem;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;font-weight:600}
+.filter-btn{padding:.35rem .85rem;border-radius:var(--radius-full);border:1px solid var(--color-border);background:none;color:var(--color-text-muted);font-family:var(--font-body);font-size:var(--text-xs);cursor:pointer;transition:all var(--t);white-space:nowrap;font-weight:500;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
+.filter-btn:hover{border-color:var(--color-primary);color:var(--color-primary)}
+.filter-btn.active{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+
+.main-layout{max-width:1280px;margin:0 auto;padding:2rem clamp(1rem,4vw,3rem);display:grid;grid-template-columns:230px 1fr;gap:2.25rem;align-items:start}
+.sidebar{position:sticky;top:140px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:1rem;max-height:calc(100vh - 160px);overflow-y:auto}
+.sidebar-title{font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.12em;color:var(--color-text-faint);margin-bottom:.75rem;padding:0 .5rem;font-weight:600}
+.sidebar-nav{list-style:none}
+.sidebar-nav li{margin-bottom:.1rem}
+.sidebar-nav a{display:flex;align-items:center;gap:.55rem;padding:.45rem .55rem;border-radius:var(--radius-md);font-size:var(--text-sm);color:var(--color-text-muted);text-decoration:none;transition:all var(--t);line-height:1.3}
+.sidebar-nav a:hover{background:var(--color-surface-offset);color:var(--color-text);text-decoration:none}
+.sidebar-nav a.active{background:var(--color-primary-dim);color:var(--color-primary);font-weight:500}
+.sidebar-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sidebar-divider{height:1px;background:var(--color-divider);margin:.75rem .25rem}
+.sidebar-sub{font-size:.7rem!important;padding-left:1.4rem!important;color:var(--color-text-faint)!important}
+
+.content{min-width:0}
+#results-count{font-size:var(--text-xs);color:var(--color-text-faint);padding:.25rem 0 1.25rem;font-style:italic}
+.no-results{text-align:center;padding:3rem;color:var(--color-text-muted);display:none}
+.no-results.visible{display:block}
+
+.section-block{margin-bottom:3.5rem;scroll-margin-top:140px}
+.section-block.section-hidden{display:none}
+.section-header{display:flex;align-items:center;gap:.85rem;padding-bottom:.85rem;margin-bottom:1.5rem;border-bottom:2px solid var(--color-border)}
+.section-icon{width:40px;height:40px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--color-primary-dim);color:var(--color-primary)}
+.section-header h2{font-family:var(--font-display);font-size:var(--text-lg);font-weight:600;line-height:1.2}
+.section-header small{font-size:var(--text-xs);color:var(--color-text-muted);margin-left:auto;white-space:nowrap;font-weight:500}
+.section-intro{color:var(--color-text-muted);max-width:75ch;margin-bottom:1.5rem;font-size:var(--text-sm)}
+
+.resource-grid{display:grid;gap:.85rem}
+.resource-grid.two-col{grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr))}
+
+.resource-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1.1rem 1.2rem;transition:box-shadow var(--t),border-color var(--t),transform var(--t);display:grid;grid-template-columns:1fr auto;gap:.4rem 1rem;align-items:start}
+.resource-card:hover{box-shadow:var(--shadow-md);border-color:var(--color-primary)}
+.resource-card.hidden,.argument-card.hidden{display:none!important}
+.card-top{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;flex-wrap:wrap}
+.card-badge{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:.18rem .5rem;border-radius:var(--radius-full);flex-shrink:0;line-height:1.2}
+.card-title{font-weight:600;font-size:var(--text-sm);color:var(--color-text);line-height:1.3;font-family:var(--font-display);font-size:1.05rem;letter-spacing:.005em}
+.card-author{font-size:var(--text-xs);color:var(--color-text-muted);font-style:italic;margin-bottom:.45rem}
+.card-desc{font-size:var(--text-xs);color:var(--color-text-muted);max-width:70ch;line-height:1.55}
+.card-meta{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.55rem;align-items:center}
+.tag{font-size:.65rem;padding:.14rem .5rem;border-radius:var(--radius-full);border:1px solid var(--color-border);color:var(--color-text-faint);white-space:nowrap;font-weight:500}
+.tag-best{background:var(--color-primary-dim);color:var(--color-primary);border-color:transparent;font-style:italic}
+.card-link{display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .8rem;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:var(--text-xs);color:var(--color-text-muted);text-decoration:none;white-space:nowrap;transition:all var(--t);height:fit-content;font-weight:500}
+.card-link:hover{border-color:var(--color-primary);color:var(--color-primary);text-decoration:none;background:var(--color-primary-dim)}
+
+.badge-beginner{background:color-mix(in oklab,var(--color-beginner) 18%,transparent);color:var(--color-beginner)}
+.badge-intermediate{background:color-mix(in oklab,var(--color-intermediate) 18%,transparent);color:var(--color-intermediate)}
+.badge-advanced{background:color-mix(in oklab,var(--color-advanced) 18%,transparent);color:var(--color-advanced)}
+.badge-mixed{background:color-mix(in oklab,var(--color-text-muted) 18%,transparent);color:var(--color-text-muted)}
+.badge-book{background:color-mix(in oklab,var(--color-book) 18%,transparent);color:var(--color-book)}
+.badge-podcast{background:color-mix(in oklab,var(--color-podcast) 18%,transparent);color:var(--color-podcast)}
+.badge-youtube{background:color-mix(in oklab,var(--color-youtube) 18%,transparent);color:var(--color-youtube)}
+.badge-website{background:color-mix(in oklab,var(--color-website) 18%,transparent);color:var(--color-website)}
+.badge-academic{background:color-mix(in oklab,var(--color-academic) 18%,transparent);color:var(--color-academic)}
+.badge-ministry{background:color-mix(in oklab,var(--color-ministry) 18%,transparent);color:var(--color-ministry)}
+
+.sub-section{margin:1.75rem 0 1rem}
+.sub-title{font-family:var(--font-display);font-size:var(--text-base);font-weight:600;color:var(--color-text);margin-bottom:.5rem;letter-spacing:.005em}
+.sub-divider{height:1px;background:var(--color-divider);margin:.4rem 0 1rem;width:60px}
+
+.argument-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1.4rem 1.5rem;transition:border-color var(--t),box-shadow var(--t);margin-bottom:1rem}
+.argument-card:hover{border-color:var(--color-primary)}
+.arg-header{display:flex;align-items:center;gap:.6rem;margin-bottom:.65rem;flex-wrap:wrap}
+.arg-num{font-family:var(--font-display);font-size:.95rem;font-weight:700;color:var(--color-primary);font-style:italic;letter-spacing:.02em}
+.arg-title{font-family:var(--font-display);font-size:1.15rem;font-weight:600;color:var(--color-text);line-height:1.3;flex:1;min-width:200px}
+.arg-block{margin-top:.95rem;padding-top:.85rem;border-top:1px dashed var(--color-divider)}
+.arg-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--color-text-faint);margin-bottom:.4rem;display:flex;align-items:center;gap:.4rem}
+.arg-label-icon{width:14px;height:14px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:.55rem;font-weight:700}
+.label-obj{background:var(--color-advanced)}
+.label-def{background:var(--color-beginner)}
+.label-src{background:var(--color-website)}
+.label-nuance{background:var(--color-intermediate)}
+.arg-text{font-size:var(--text-sm);color:var(--color-text);line-height:1.65}
+.arg-text-muted{color:var(--color-text-muted)}
+.arg-sources{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.4rem}
+.arg-source{font-size:.7rem;padding:.15rem .55rem;border-radius:var(--radius-sm);background:var(--color-surface-offset);border:1px solid var(--color-border);color:var(--color-text-muted);font-style:italic}
+.arg-nuance{background:color-mix(in oklab,var(--color-intermediate) 8%,transparent);border-left:3px solid var(--color-intermediate);padding:.7rem .9rem;border-radius:0 var(--radius-sm) var(--radius-sm) 0;margin-top:.6rem}
+.arg-nuance .arg-label{margin-bottom:.3rem;color:var(--color-intermediate)}
+.arg-nuance .arg-text{font-size:.85rem;color:var(--color-text-muted);line-height:1.6}
+
+.cat-pill{display:inline-flex;align-items:center;gap:.3rem;font-size:.65rem;padding:.18rem .55rem;border-radius:var(--radius-full);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.cat-evil{background:color-mix(in oklab,var(--color-evil) 15%,transparent);color:var(--color-evil)}
+.cat-science{background:color-mix(in oklab,var(--color-science) 15%,transparent);color:var(--color-science)}
+.cat-bible{background:color-mix(in oklab,var(--color-bible) 15%,transparent);color:var(--color-bible)}
+.cat-jesus{background:color-mix(in oklab,var(--color-jesus) 15%,transparent);color:var(--color-jesus)}
+.cat-moral{background:color-mix(in oklab,var(--color-moral) 15%,transparent);color:var(--color-moral)}
+.cat-pluralism{background:color-mix(in oklab,var(--color-pluralism) 15%,transparent);color:var(--color-pluralism)}
+.cat-philo{background:color-mix(in oklab,var(--color-philo) 15%,transparent);color:var(--color-philo)}
+.cat-cultural{background:color-mix(in oklab,var(--color-cultural) 15%,transparent);color:var(--color-cultural)}
+.cat-modern{background:color-mix(in oklab,var(--color-modern) 15%,transparent);color:var(--color-modern)}
+.cat-skeptic{background:color-mix(in oklab,var(--color-skeptic) 15%,transparent);color:var(--color-skeptic)}
+
+footer{text-align:center;padding:2.5rem 1rem;border-top:1px solid var(--color-border);color:var(--color-text-faint);font-size:var(--text-xs);margin-top:2rem}
+footer em{color:var(--color-primary);font-style:italic}
+
+.mobile-toggle{display:none;background:none;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:.45rem .6rem;cursor:pointer;color:var(--color-text-muted)}
+
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199;opacity:0;transition:opacity var(--t);backdrop-filter:blur(2px)}
+.sidebar-overlay.visible{display:block;opacity:1}
+.sidebar-close{display:none;background:none;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:.35rem .5rem;cursor:pointer;color:var(--color-text-muted);margin-left:auto}
+@media(max-width:980px){
+  .main-layout{grid-template-columns:1fr;padding:1.5rem 1rem;gap:1.25rem}
+  .sidebar{position:fixed;top:0;left:0;bottom:0;width:min(82vw,320px);max-height:none;height:100dvh;z-index:200;border-radius:0;border-right:1px solid var(--color-border);border-top:none;border-bottom:none;border-left:none;overflow-y:auto;transform:translateX(-100%);transition:transform var(--t);box-shadow:none;padding:1.25rem 1rem 2rem}
+  .sidebar.open{transform:translateX(0);box-shadow:8px 0 32px rgba(0,0,0,.35)}
+  .sidebar-close{display:inline-flex;align-items:center;justify-content:center}
+  .sidebar-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--color-divider)}
+  .sidebar-header-title{font-family:var(--font-display);font-size:1.05rem;font-weight:600;color:var(--color-text)}
+  .mobile-toggle{display:inline-flex;align-items:center;justify-content:center}
+  .resource-card:not(.hidden){display:flex;flex-direction:column;gap:.6rem}
+  .card-link{justify-content:center;width:100%;padding:.6rem}
+  .filter-bar{top:auto;position:relative;-webkit-overflow-scrolling:touch}
+  .filter-btn{padding:.45rem .9rem;font-size:.72rem}
+}
+@media(min-width:981px){
+  .sidebar-header{display:none}
+  .sidebar-overlay{display:none!important}
+}
+@media(max-width:600px){
+  .site-header{padding:0 .75rem}
+  .header-inner{height:auto;flex-wrap:wrap;padding:.6rem 0;gap:.5rem}
+  .logo{font-size:.95rem;gap:.45rem}
+  .logo svg{width:22px;height:22px}
+  .header-actions{width:100%;gap:.5rem}
+  #search{width:100%;flex:1}
+  #search:focus{width:100%}
+  .hero{padding:2.5rem .75rem}
+  .stats{gap:1.5rem}
+  .argument-card{padding:1.1rem 1rem}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+<div class="header-inner">
+  <a href="#top" class="logo">
+    <svg width="26" height="26" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7a4 4 0 0 1 4 4v17"/><path d="M24 4h-7a4 4 0 0 0-4 4"/><path d="M4 4v17h7a4 4 0 0 1 4 4"/><path d="M24 4v17h-7a4 4 0 0 0-4 4"/></svg>
+    Apologetics <em>Research Library</em>
+  </a>
+  <div class="header-actions">
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="search" id="search" placeholder="Search the library&hellip;" aria-label="Search resources">
+    </div>
+    <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle navigation">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <button class="theme-btn" data-theme-toggle aria-label="Toggle light/dark theme">
+      <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</div>
+</header>
+
+<section class="hero" id="top">
+<div class="hero-inner">
+  <span class="hero-eyebrow">A personal study collection</span>
+  <h1>Apologetics <em>Research Library</em></h1>
+  <p class="hero-tagline">Books, online resources, and the strongest arguments against Christianity paired with validated defenses &mdash; curated from leading apologists including Strobel, Koukl, Wallace, Craig, Habermas, Lewis, Keller, Plantinga, and N.T. Wright.</p>
+  <div class="stats">
+    <div class="stat"><span class="stat-number">25</span><span class="stat-label">Books</span></div>
+    <div class="stat"><span class="stat-number">34</span><span class="stat-label">Online Resources</span></div>
+    <div class="stat"><span class="stat-number">25</span><span class="stat-label">Arguments &amp; Defenses</span></div>
+    <div class="stat"><span class="stat-number">10</span><span class="stat-label">Topic Categories</span></div>
+  </div>
+</div>
+</section>
+
+<div class="filter-bar">
+  <div class="filter-inner">
+    <span class="filter-label">Filter</span>
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="book">Books</button>
+    <button class="filter-btn" data-filter="online">Online</button>
+    <button class="filter-btn" data-filter="argument">Arguments</button>
+    <button class="filter-btn" data-filter="beginner">Beginner</button>
+    <button class="filter-btn" data-filter="intermediate">Intermediate</button>
+    <button class="filter-btn" data-filter="advanced">Advanced</button>
+    <button class="filter-btn" data-filter="historical">Historical</button>
+    <button class="filter-btn" data-filter="philosophical">Philosophical</button>
+    <button class="filter-btn" data-filter="scientific">Scientific</button>
+    <button class="filter-btn" data-filter="resurrection">Resurrection</button>
+    <button class="filter-btn" data-filter="biblical">Biblical Reliability</button>
+    <button class="filter-btn" data-filter="moral">Moral</button>
+    <button class="filter-btn" data-filter="cultural">Cultural</button>
+  </div>
+</div>
+
+<div class="main-layout">
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <span class="sidebar-header-title">Navigation</span>
+    <button class="sidebar-close" id="sidebarClose" aria-label="Close navigation">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <p class="sidebar-title">Books</p>
+  <ul class="sidebar-nav">
+    <li><a href="#books"><span class="sidebar-dot" style="background:var(--color-book)"></span>All 25 Books</a></li>
+    <li><a href="#books-intro" class="sidebar-sub">Introductory &amp; Classic</a></li>
+    <li><a href="#books-evidence" class="sidebar-sub">Historical Evidence</a></li>
+    <li><a href="#books-resurrection" class="sidebar-sub">Resurrection</a></li>
+    <li><a href="#books-bible" class="sidebar-sub">Biblical Reliability</a></li>
+    <li><a href="#books-philo" class="sidebar-sub">Philosophical</a></li>
+    <li><a href="#books-science" class="sidebar-sub">Scientific</a></li>
+    <li><a href="#books-culture" class="sidebar-sub">Contemporary &amp; Comparative</a></li>
+  </ul>
+  <div class="sidebar-divider"></div>
+  <p class="sidebar-title">Online</p>
+  <ul class="sidebar-nav">
+    <li><a href="#online"><span class="sidebar-dot" style="background:var(--color-website)"></span>All 34 Resources</a></li>
+    <li><a href="#online-ministries" class="sidebar-sub">Ministries &amp; Websites</a></li>
+    <li><a href="#online-podcasts" class="sidebar-sub">Podcasts &amp; YouTube</a></li>
+    <li><a href="#online-academic" class="sidebar-sub">Academic &amp; Study Tools</a></li>
+  </ul>
+  <div class="sidebar-divider"></div>
+  <p class="sidebar-title">Arguments &amp; Defenses</p>
+  <ul class="sidebar-nav">
+    <li><a href="#args"><span class="sidebar-dot" style="background:var(--color-advanced)"></span>All 25 Arguments</a></li>
+    <li><a href="#args-evil" class="sidebar-sub">Problem of Evil</a></li>
+    <li><a href="#args-science" class="sidebar-sub">Science vs. Faith</a></li>
+    <li><a href="#args-bible" class="sidebar-sub">Biblical Reliability</a></li>
+    <li><a href="#args-jesus" class="sidebar-sub">Historicity of Jesus</a></li>
+    <li><a href="#args-moral" class="sidebar-sub">Moral Objections</a></li>
+    <li><a href="#args-pluralism" class="sidebar-sub">Pluralism</a></li>
+    <li><a href="#args-philo" class="sidebar-sub">Philosophical</a></li>
+    <li><a href="#args-cultural" class="sidebar-sub">Cultural &amp; Historical</a></li>
+    <li><a href="#args-modern" class="sidebar-sub">Modern Challenges</a></li>
+    <li><a href="#args-skeptic" class="sidebar-sub">Skeptic Talking Points</a></li>
+  </ul>
+</aside>
+
+<main class="content">
+<p id="results-count"></p>
+<div class="no-results" id="no-results">No resources match your search or filter. Try a different query.</div>
+
+<!-- ============= BOOKS ============= -->
+<section class="section-block" id="books" data-section="book">
+  <div class="section-header">
+    <div class="section-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+    <h2>Foundational Apologetics Library &mdash; 25 Books</h2>
+    <small>Beginner through advanced</small>
+  </div>
+  <p class="section-intro">A curated reading list spanning the major branches of Christian apologetics &mdash; historical evidence, the resurrection, biblical reliability, philosophy, science-and-faith, comparative religion, and contemporary cultural objections. Read in roughly the order presented for a structured progression from accessible to advanced.</p>
+
+  <div class="sub-section" id="books-intro">
+    <h3 class="sub-title">Introductory &amp; Classic Foundations</h3>
+    <div class="sub-divider"></div>
+  </div>
+  <div class="resource-grid two-col">
+
+    <article class="resource-card" data-category="book beginner intro">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-beginner">Beginner</span><span class="card-title">The Case for Christ</span></div>
+        <div class="card-author">Lee Strobel &mdash; 1998 &middot; Historical Evidence</div>
+        <div class="card-desc">A former legal-affairs journalist for the Chicago Tribune interviews thirteen scholars to cross-examine the historical case for Jesus' identity and resurrection. Structured like a courtroom investigation, it walks skeptics through eyewitness, documentary, corroborative, and scientific evidence.</div>
+        <div class="card-meta"><span class="tag tag-best">Best for skeptics &amp; new believers</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book beginner intro">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-beginner">Beginner</span><span class="card-title">I Don't Have Enough Faith to Be an Atheist</span></div>
+        <div class="card-author">Norman Geisler &amp; Frank Turek &mdash; 2004 &middot; Introductory</div>
+        <div class="card-desc">A twelve-step cumulative case moving from truth and theism to the reliability of the New Testament and the deity of Christ. Argues that atheism requires more blind faith than theism does, given cosmological, teleological, and moral evidence.</div>
+        <div class="card-meta"><span class="tag tag-best">Best single end-to-end case</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book intermediate intro classic">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">Mere Christianity</span></div>
+        <div class="card-author">C.S. Lewis &mdash; 1952 &middot; Classic</div>
+        <div class="card-desc">Lewis builds from the existence of an objective moral law to the case for Christian theism and orthodoxy. Originally delivered as BBC radio talks during WWII, it remains the most widely read defense of basic Christian belief.</div>
+        <div class="card-meta"><span class="tag tag-best">The foundational popular apologetic</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book beginner cultural">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-beginner">Beginner</span><span class="card-title">Street Smarts</span></div>
+        <div class="card-author">Greg Koukl &mdash; 2023 &middot; Contemporary Tactics</div>
+        <div class="card-desc">A follow-up to <em>Tactics</em> with short, ready-to-use question-based responses to the most common modern objections (evil, the Bible, sexuality, exclusivity of Christ). Each chapter equips readers with a Columbo-style question to redirect conversations.</div>
+        <div class="card-meta"><span class="tag tag-best">Conversational responses to skeptics</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book intermediate cultural">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">The Reason for God</span></div>
+        <div class="card-author">Timothy Keller &mdash; 2008 &middot; Contemporary Issues</div>
+        <div class="card-desc">Keller addresses the seven most common objections raised by skeptical New Yorkers (suffering, exclusivity, hell, science, the church's track record) then makes a positive case for Christianity. Pastoral in tone, philosophically literate, and culturally engaged.</div>
+        <div class="card-meta"><span class="tag tag-best">Urban &amp; post-Christian skeptics</span></div>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="sub-section" id="books-evidence">
+    <h3 class="sub-title">Historical Evidence</h3>
+    <div class="sub-divider"></div>
+  </div>
+  <div class="resource-grid two-col">
+
+    <article class="resource-card" data-category="book beginner historical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-beginner">Beginner</span><span class="card-title">Cold-Case Christianity</span></div>
+        <div class="card-author">J. Warner Wallace &mdash; 2013 &middot; Historical Evidence</div>
+        <div class="card-desc">A former atheist LAPD cold-case detective applies forensic statement analysis and circumstantial-evidence reasoning to the Gospel accounts. Teaches readers how detectives evaluate witnesses, then asks whether the Gospel writers pass that test.</div>
+        <div class="card-meta"><span class="tag tag-best">Analytical &amp; investigative thinkers</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book intermediate historical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">Evidence That Demands a Verdict</span></div>
+        <div class="card-author">Josh &amp; Sean McDowell &mdash; 2017 (rev.) &middot; Historical Evidence</div>
+        <div class="card-desc">A massive reference compendium of historical, manuscript, archaeological, and prophetic evidence for Christianity. More of an encyclopedia than a read-through book &mdash; structured for lookup and teaching.</div>
+        <div class="card-meta"><span class="tag tag-best">Reference shelf &amp; teachers</span></div>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="sub-section" id="books-resurrection">
+    <h3 class="sub-title">The Resurrection</h3>
+    <div class="sub-divider"></div>
+  </div>
+  <div class="resource-grid two-col">
+
+    <article class="resource-card" data-category="book intermediate resurrection">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">The Case for the Resurrection of Jesus</span></div>
+        <div class="card-author">Gary Habermas &amp; Michael Licona &mdash; 2004</div>
+        <div class="card-desc">Introduces Habermas's "minimal facts" approach &mdash; using only historical data accepted by the vast majority of scholars (including skeptics) to argue for the resurrection. Compact, well-organized, and ideal for teaching.</div>
+        <div class="card-meta"><span class="tag tag-best">Strongest concise resurrection case</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book advanced resurrection">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-advanced">Advanced</span><span class="card-title">The Resurrection of the Son of God</span></div>
+        <div class="card-author">N.T. Wright &mdash; 2003</div>
+        <div class="card-desc">An 800-page historical investigation arguing that the rise of early Christian resurrection belief is best explained by an actual bodily resurrection of Jesus. Wright examines second-temple Judaism, pagan views of afterlife, and the NT evidence in painstaking detail.</div>
+        <div class="card-meta"><span class="tag tag-best">Serious students of resurrection &amp; NT history</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book advanced resurrection">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-advanced">Advanced</span><span class="card-title">The Resurrection of Jesus: A New Historiographical Approach</span></div>
+        <div class="card-author">Michael Licona &mdash; 2010</div>
+        <div class="card-desc">A rigorous methodological treatment of how historians should evaluate miracle claims, applied to the resurrection. Engages directly with Bart Ehrman, Dale Allison, and Gerd L&uuml;demann.</div>
+        <div class="card-meta"><span class="tag tag-best">Historiographical depth</span></div>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="sub-section" id="books-bible">
+    <h3 class="sub-title">Biblical Reliability</h3>
+    <div class="sub-divider"></div>
+  </div>
+  <div class="resource-grid two-col">
+
+    <article class="resource-card" data-category="book beginner biblical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-beginner">Beginner</span><span class="card-title">Can We Trust the Gospels?</span></div>
+        <div class="card-author">Peter J. Williams &mdash; 2018</div>
+        <div class="card-desc">A short, punchy case that the Gospels show internal coincidences, accurate geographical and onomastic details, and transmission integrity that fit eyewitness origin. Excellent on small undesigned coincidences and naming patterns.</div>
+        <div class="card-meta"><span class="tag tag-best">Skeptics &amp; small groups</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book intermediate biblical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">The Historical Reliability of the Gospels</span></div>
+        <div class="card-author">Craig Blomberg &mdash; 1987 (2nd ed.)</div>
+        <div class="card-desc">A systematic defense of the Gospels' historical trustworthiness, addressing form criticism, contradictions, miracles, and the Synoptic problem. Remains a standard evangelical reference.</div>
+        <div class="card-meta"><span class="tag tag-best">Bible-college students &amp; pastors</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book advanced biblical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-advanced">Advanced</span><span class="card-title">Miracles: The Credibility of the New Testament Accounts</span></div>
+        <div class="card-author">Craig Keener &mdash; 2011</div>
+        <div class="card-desc">A two-volume work dismantling Humean objections to miracles by documenting thousands of credible contemporary miracle reports worldwide. Keener combines philosophy of history, anthropology, and biblical studies.</div>
+        <div class="card-meta"><span class="tag tag-best">Wrestling with miracle possibility</span></div>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="sub-section" id="books-philo">
+    <h3 class="sub-title">Philosophical Apologetics</h3>
+    <div class="sub-divider"></div>
+  </div>
+  <div class="resource-grid two-col">
+
+    <article class="resource-card" data-category="book intermediate philosophical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">On Guard</span></div>
+        <div class="card-author">William Lane Craig &mdash; 2010</div>
+        <div class="card-desc">An accessible distillation of <em>Reasonable Faith</em>, presenting Craig's main arguments (kalam, fine-tuning, moral, resurrection) with diagrams and sample dialogues. Designed as a defense manual for ordinary believers.</div>
+        <div class="card-meta"><span class="tag tag-best">Past-beginner readers</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book advanced philosophical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-advanced">Advanced</span><span class="card-title">Reasonable Faith</span></div>
+        <div class="card-author">William Lane Craig &mdash; 2008 (3rd ed.)</div>
+        <div class="card-desc">The standard graduate-level textbook in evangelical philosophical apologetics, covering the kalam cosmological argument, fine-tuning, the moral argument, and the historicity of the resurrection. Rigorous, footnoted, and written for serious study.</div>
+        <div class="card-meta"><span class="tag tag-best">Seminarians &amp; philosophy students</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book advanced philosophical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-advanced">Advanced</span><span class="card-title">Warranted Christian Belief</span></div>
+        <div class="card-author">Alvin Plantinga &mdash; 2000</div>
+        <div class="card-desc">The capstone of Plantinga's warrant trilogy, arguing that Christian belief can be properly basic and rationally warranted apart from arguments via the work of the Holy Spirit. A major contribution to religious epistemology.</div>
+        <div class="card-meta"><span class="tag tag-best">Philosophy of religion / epistemology</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book advanced philosophical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-advanced">Advanced</span><span class="card-title">Scaling the Secular City</span></div>
+        <div class="card-author">J.P. Moreland &mdash; 1987</div>
+        <div class="card-desc">A classic philosophical apologetic covering the kalam argument, the design argument, the resurrection, the existence of the soul, and Christianity vs. science. Moreland writes as a trained analytic philosopher.</div>
+        <div class="card-meta"><span class="tag tag-best">One of the strongest single-volume cases</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book advanced philosophical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-advanced">Advanced</span><span class="card-title">Always Ready: Directions for Defending the Faith</span></div>
+        <div class="card-author">Greg Bahnsen &mdash; 1996</div>
+        <div class="card-desc">The definitive presuppositional apologetics primer, arguing that Christian theism is the necessary precondition for intelligibility, logic, and morality. Represents the Van Tilian tradition in its most accessible form.</div>
+        <div class="card-meta"><span class="tag tag-best">Reformed &amp; presuppositional approach</span></div>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="sub-section" id="books-science">
+    <h3 class="sub-title">Science &amp; Faith</h3>
+    <div class="sub-divider"></div>
+  </div>
+  <div class="resource-grid two-col">
+
+    <article class="resource-card" data-category="book intermediate scientific">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">God's Undertaker: Has Science Buried God?</span></div>
+        <div class="card-author">John Lennox &mdash; 2007</div>
+        <div class="card-desc">An Oxford mathematician argues that modern science &mdash; cosmology, fine-tuning, information in DNA &mdash; points toward rather than away from a Creator. Engages directly with Dawkins and the New Atheists.</div>
+        <div class="card-meta"><span class="tag tag-best">Science-vs-faith doubters</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book advanced scientific">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-advanced">Advanced</span><span class="card-title">Signature in the Cell</span></div>
+        <div class="card-author">Stephen Meyer &mdash; 2009</div>
+        <div class="card-desc">Makes a detailed Intelligent Design argument that the specified information in DNA is best explained by an intelligent cause. Meyer surveys origin-of-life research and applies inference to the best explanation.</div>
+        <div class="card-meta"><span class="tag tag-best">Origin-of-life &amp; information theory</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book advanced scientific">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-advanced">Advanced</span><span class="card-title">The Return of the God Hypothesis</span></div>
+        <div class="card-author">Stephen Meyer &mdash; 2021</div>
+        <div class="card-desc">Argues that three major scientific discoveries &mdash; a finite universe, cosmic fine-tuning, and biological information &mdash; collectively support theism over naturalism or deism. Builds Meyer's earlier work into a cumulative cosmological case.</div>
+        <div class="card-meta"><span class="tag tag-best">Updated science-based case for God</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book intermediate scientific">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">Improbable Planet</span></div>
+        <div class="card-author">Hugh Ross &mdash; 2016</div>
+        <div class="card-desc">Astronomer Hugh Ross details the cascading sequence of geological, biological, and astronomical events required to prepare Earth for advanced civilization. Presents an old-earth, fine-tuned design argument.</div>
+        <div class="card-meta"><span class="tag tag-best">Cosmology &amp; old-earth apologetics</span></div>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="sub-section" id="books-culture">
+    <h3 class="sub-title">Contemporary Issues &amp; Comparative Religion</h3>
+    <div class="sub-divider"></div>
+  </div>
+  <div class="resource-grid two-col">
+
+    <article class="resource-card" data-category="book intermediate cultural">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">Confronting Christianity</span></div>
+        <div class="card-author">Rebecca McLaughlin &mdash; 2019</div>
+        <div class="card-desc">Tackles the twelve hardest contemporary objections to Christianity &mdash; diversity, science, sexuality, suffering, slavery, hell &mdash; from a Cambridge-trained scholar. Combines cultural fluency with rigorous research.</div>
+        <div class="card-meta"><span class="tag tag-best">Younger &amp; progressive-leaning readers</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book intermediate cultural">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">Jesus Among Other Gods</span></div>
+        <div class="card-author">Ravi Zacharias &mdash; 2000 &middot; Comparative Religion</div>
+        <div class="card-desc">Contrasts the claims of Christ with those of the founders of Islam, Hinduism, Buddhism, and other world religions. Argues for the unique exclusivity and answers of Jesus across questions of origin, meaning, morality, and destiny.</div>
+        <div class="card-meta"><span class="tag tag-best">Pluralistic settings</span></div>
+      </div>
+    </article>
+
+    <article class="resource-card" data-category="book beginner cultural">
+      <div>
+        <div class="card-top"><span class="card-badge badge-book">Book</span><span class="card-badge badge-beginner">Beginner</span><span class="card-title">Seeking Allah, Finding Jesus</span></div>
+        <div class="card-author">Nabeel Qureshi &mdash; 2014 &middot; Comparative Religion</div>
+        <div class="card-desc">A memoir-driven apologetic from a devout Muslim who converted to Christianity through study of the historical Jesus, the reliability of the Gospels, and the inconsistencies he found in Islamic sources. Personal, irenic, and evidence-based.</div>
+        <div class="card-meta"><span class="tag tag-best">Christian-Muslim witness</span></div>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============= ONLINE RESOURCES ============= -->
+<section class="section-block" id="online" data-section="online">
+  <div class="section-header">
+    <div class="section-icon" style="background:color-mix(in oklab,var(--color-website) 15%,transparent);color:var(--color-website)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+    <h2>Online Resources &mdash; 34 Ministries, Podcasts, &amp; Tools</h2>
+    <small>Websites &middot; podcasts &middot; YouTube &middot; academic</small>
+  </div>
+  <p class="section-intro">A curated directory of the highest-signal apologetics ministries and platforms online. Each entry includes type, focus area, difficulty level, and the best use case &mdash; whether quick answers, deep academic study, or sharing with skeptics.</p>
+
+  <div class="sub-section" id="online-ministries">
+    <h3 class="sub-title">Major Ministries &amp; Websites</h3>
+    <div class="sub-divider"></div>
+  </div>
+  <div class="resource-grid">
+
+    <article class="resource-card" data-category="online ministry website beginner intermediate">
+      <div>
+        <div class="card-top"><span class="card-badge badge-ministry">Ministry</span><span class="card-badge badge-beginner">Beginner&ndash;Int</span><span class="card-title">Stand to Reason</span></div>
+        <div class="card-author">Greg Koukl &middot; str.org</div>
+        <div class="card-desc">Ministry teaching Christians to think clearly and engage skeptics graciously. Home of the "Tactics" approach (Columbo questions), the #STRask podcast, and short-form apologetics content for everyday believers.</div>
+        <div class="card-meta"><span class="tag">Tactics</span><span class="tag">Worldview</span><span class="tag tag-best">Conversational apologetics</span></div>
+      </div>
+      <a href="https://www.str.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online ministry website intermediate advanced">
+      <div>
+        <div class="card-top"><span class="card-badge badge-ministry">Ministry</span><span class="card-badge badge-advanced">Int&ndash;Adv</span><span class="card-title">Reasonable Faith</span></div>
+        <div class="card-author">William Lane Craig &middot; reasonablefaith.org</div>
+        <div class="card-desc">Craig's site featuring scholarly articles, Q&amp;A, debates, and the Defenders class. Covers the classical theistic arguments at both popular and academic depth. The hub for serious philosophical apologetics.</div>
+        <div class="card-meta"><span class="tag">Kalam</span><span class="tag">Resurrection</span><span class="tag tag-best">Rigorous philosophy</span></div>
+      </div>
+      <a href="https://www.reasonablefaith.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online ministry website beginner intermediate historical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-ministry">Ministry</span><span class="card-badge badge-beginner">Beginner&ndash;Int</span><span class="card-title">Cold-Case Christianity</span></div>
+        <div class="card-author">J. Warner Wallace &middot; coldcasechristianity.com</div>
+        <div class="card-desc">Wallace applies homicide-detective investigative techniques to the Gospels. Features the Cold-Case Christianity podcast, abundant free training resources, and downloadable case-making tools.</div>
+        <div class="card-meta"><span class="tag">Evidential</span><span class="tag">Gospel reliability</span><span class="tag tag-best">Evidence-minded learners</span></div>
+      </div>
+      <a href="https://coldcasechristianity.com" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online ministry website beginner intermediate cultural">
+      <div>
+        <div class="card-top"><span class="card-badge badge-ministry">Ministry</span><span class="card-badge badge-beginner">Beginner&ndash;Int</span><span class="card-title">CrossExamined</span></div>
+        <div class="card-author">Frank Turek &middot; crossexamined.org</div>
+        <div class="card-desc">Ministry built around the "I Don't Have Enough Faith to Be an Atheist" framework. Hosts the CrossExamined podcast, campus events, and the Cross Examined Instructor Academy (CIA) for training apologists.</div>
+        <div class="card-meta"><span class="tag">General apologetics</span><span class="tag">Worldview</span><span class="tag tag-best">Training new apologists</span></div>
+      </div>
+      <a href="https://crossexamined.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online website beginner historical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-website">Website</span><span class="card-badge badge-beginner">Beginner</span><span class="card-title">Lee Strobel Official Site</span></div>
+        <div class="card-author">leestrobel.com</div>
+        <div class="card-desc">Former atheist journalist Lee Strobel's collection of articles, videos, and links to his "Case for..." series. Strong on personal testimony and accessible investigation of Christian truth claims.</div>
+        <div class="card-meta"><span class="tag">Investigative</span><span class="tag tag-best">Sharing with non-believers</span></div>
+      </div>
+      <a href="https://www.leestrobel.com" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online ministry website intermediate resurrection">
+      <div>
+        <div class="card-top"><span class="card-badge badge-ministry">Ministry</span><span class="card-badge badge-advanced">Int&ndash;Adv</span><span class="card-title">Risen Jesus</span></div>
+        <div class="card-author">Mike Licona &middot; risenjesus.com</div>
+        <div class="card-desc">Ministry centered on the historical case for Jesus's resurrection. Features Licona's debates (with Bart Ehrman, Dale Martin, Matt Dillahunty), articles, and Q&amp;A podcast.</div>
+        <div class="card-meta"><span class="tag">Resurrection</span><span class="tag">Historical Jesus</span><span class="tag tag-best">Engaging skeptical scholarship</span></div>
+      </div>
+      <a href="https://www.risenjesus.com" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online website intermediate advanced resurrection">
+      <div>
+        <div class="card-top"><span class="card-badge badge-website">Website</span><span class="card-badge badge-advanced">Int&ndash;Adv</span><span class="card-title">Gary Habermas</span></div>
+        <div class="card-author">garyhabermas.com</div>
+        <div class="card-desc">The world's leading scholar on the resurrection. Free access to many of his academic papers on the historical case for the resurrection, plus debates and lectures.</div>
+        <div class="card-meta"><span class="tag">Minimal facts</span><span class="tag">Resurrection</span><span class="tag tag-best">Deep resurrection study</span></div>
+      </div>
+      <a href="https://www.garyhabermas.com" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online ministry website beginner intermediate cultural">
+      <div>
+        <div class="card-top"><span class="card-badge badge-website">Website</span><span class="card-badge badge-beginner">Beginner&ndash;Int</span><span class="card-title">Sean McDowell</span></div>
+        <div class="card-author">seanmcdowell.org</div>
+        <div class="card-desc">Biola professor and son of Josh McDowell. Accessible articles, interviews, and YouTube content. Particularly strong on engaging next-generation believers and dialogue with skeptics.</div>
+        <div class="card-meta"><span class="tag">Youth apologetics</span><span class="tag tag-best">Youth leaders &amp; parents</span></div>
+      </div>
+      <a href="https://seanmcdowell.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online ministry website intermediate scientific">
+      <div>
+        <div class="card-top"><span class="card-badge badge-ministry">Ministry</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">Reasons to Believe</span></div>
+        <div class="card-author">Hugh Ross &middot; reasons.org</div>
+        <div class="card-desc">Argues for harmony between modern science and the Bible from an old-earth, progressive creation viewpoint. Strong on astronomy, cosmology, and biblical concordism.</div>
+        <div class="card-meta"><span class="tag">Old-earth</span><span class="tag">Astronomy</span><span class="tag tag-best">Science-curious Christians</span></div>
+      </div>
+      <a href="https://reasons.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online academic website advanced scientific">
+      <div>
+        <div class="card-top"><span class="card-badge badge-academic">Think Tank</span><span class="card-badge badge-advanced">Int&ndash;Adv</span><span class="card-title">Discovery Institute &mdash; Center for Science &amp; Culture</span></div>
+        <div class="card-author">discovery.org</div>
+        <div class="card-desc">The hub of the Intelligent Design movement, featuring Stephen Meyer, Douglas Axe, and others. Publishes research articles, the ID the Future podcast, and Evolution News.</div>
+        <div class="card-meta"><span class="tag">Intelligent Design</span><span class="tag tag-best">Origins &amp; ID arguments</span></div>
+      </div>
+      <a href="https://www.discovery.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online ministry website intermediate scientific">
+      <div>
+        <div class="card-top"><span class="card-badge badge-ministry">Ministry</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">BioLogos</span></div>
+        <div class="card-author">biologos.org</div>
+        <div class="card-desc">Founded by Francis Collins, advocates for the compatibility of evolutionary biology with Christian faith. Articles, the Language of God podcast, and curriculum for the science-and-faith conversation.</div>
+        <div class="card-meta"><span class="tag">Evolutionary creation</span><span class="tag tag-best">Christians comfortable with mainstream science</span></div>
+      </div>
+      <a href="https://biologos.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online ministry website intermediate cultural">
+      <div>
+        <div class="card-top"><span class="card-badge badge-ministry">Ministry</span><span class="card-badge badge-mixed">Mixed</span><span class="card-title">The Gospel Coalition</span></div>
+        <div class="card-author">thegospelcoalition.org</div>
+        <div class="card-desc">A large network of pastors and scholars producing articles, podcasts, and resources on theology, culture, and ministry. Apologetics content sits within a broader Reformed evangelical framework.</div>
+        <div class="card-meta"><span class="tag">Reformed</span><span class="tag">Cultural engagement</span><span class="tag tag-best">Theology-rich cultural takes</span></div>
+      </div>
+      <a href="https://www.thegospelcoalition.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online ministry website mixed">
+      <div>
+        <div class="card-top"><span class="card-badge badge-ministry">Ministry</span><span class="card-badge badge-mixed">Mixed</span><span class="card-title">Desiring God</span></div>
+        <div class="card-author">John Piper &middot; desiringgod.org</div>
+        <div class="card-desc">Piper's ministry with sermons, articles, and the Ask Pastor John podcast. Addresses many doubts and hard questions theologically &mdash; pastoral and devotional apologetics.</div>
+        <div class="card-meta"><span class="tag">Theological depth</span><span class="tag tag-best">God's character &amp; pastoral doubt</span></div>
+      </div>
+      <a href="https://www.desiringgod.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online ministry website intermediate cultural">
+      <div>
+        <div class="card-top"><span class="card-badge badge-ministry">Ministry</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">C.S. Lewis Institute</span></div>
+        <div class="card-author">cslewisinstitute.org</div>
+        <div class="card-desc">Fellows program and rich library of articles, the Questions That Matter podcast, and study guides in the Lewis tradition. Emphasizes "discipleship of heart and mind."</div>
+        <div class="card-meta"><span class="tag">Classical apologetics</span><span class="tag tag-best">Apologetics + discipleship</span></div>
+      </div>
+      <a href="https://www.cslewisinstitute.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online ministry mixed">
+      <div>
+        <div class="card-top"><span class="card-badge badge-ministry">Ministry</span><span class="card-badge badge-mixed">Mixed</span><span class="card-title">Ratio Christi</span></div>
+        <div class="card-author">ratiochristi.org</div>
+        <div class="card-desc">Campus apologetics ministry establishing student chapters at universities worldwide. Provides training, speakers, and resources for engaging the secular academy.</div>
+        <div class="card-meta"><span class="tag">Campus ministry</span><span class="tag tag-best">Students &amp; campus leaders</span></div>
+      </div>
+      <a href="https://ratiochristi.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online ministry website beginner intermediate">
+      <div>
+        <div class="card-top"><span class="card-badge badge-website">Website</span><span class="card-badge badge-beginner">Beginner&ndash;Int</span><span class="card-title">CARM &mdash; Christian Apologetics &amp; Research Ministry</span></div>
+        <div class="card-author">Matt Slick &middot; carm.org</div>
+        <div class="card-desc">Long-running ministry with extensive material on Mormonism, Jehovah's Witnesses, Islam, atheism, and Christian doctrine. Reformed theological orientation.</div>
+        <div class="card-meta"><span class="tag">Cults</span><span class="tag">World religions</span><span class="tag tag-best">Engaging non-Christian groups</span></div>
+      </div>
+      <a href="https://carm.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online website beginner">
+      <div>
+        <div class="card-top"><span class="card-badge badge-website">Website</span><span class="card-badge badge-beginner">Beginner</span><span class="card-title">Got Questions</span></div>
+        <div class="card-author">gotquestions.org</div>
+        <div class="card-desc">Massive searchable database answering thousands of common Bible and theology questions in short, accessible articles. Evangelical, broadly conservative perspective.</div>
+        <div class="card-meta"><span class="tag">Q&amp;A</span><span class="tag tag-best">Quick answers to specific questions</span></div>
+      </div>
+      <a href="https://www.gotquestions.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online ministry website beginner intermediate">
+      <div>
+        <div class="card-top"><span class="card-badge badge-ministry">Ministry</span><span class="card-badge badge-beginner">Beginner&ndash;Int</span><span class="card-title">Reasonable Theology</span></div>
+        <div class="card-author">reasonabletheology.org</div>
+        <div class="card-desc">Project (with podcast guests like Sam Storms and Wayne Grudem) making solid theology approachable for everyday Christians. Bridges systematic theology and apologetics.</div>
+        <div class="card-meta"><span class="tag">Theology</span><span class="tag tag-best">Accessible theology underpinning</span></div>
+      </div>
+      <a href="https://reasonabletheology.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online website mixed">
+      <div>
+        <div class="card-top"><span class="card-badge badge-website">Website</span><span class="card-badge badge-mixed">Mixed</span><span class="card-title">Apologetics 315</span></div>
+        <div class="card-author">apologetics315.com</div>
+        <div class="card-desc">Long-running aggregator and podcast curating apologetics articles, audio, debates, and book reviews from across the field. A great hub for discovering new resources.</div>
+        <div class="card-meta"><span class="tag">Aggregator</span><span class="tag tag-best">Discovering new resources</span></div>
+      </div>
+      <a href="https://apologetics315.com" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online website intermediate scientific">
+      <div>
+        <div class="card-top"><span class="card-badge badge-website">Website</span><span class="card-badge badge-advanced">Int&ndash;Adv</span><span class="card-title">John Lennox</span></div>
+        <div class="card-author">johnlennox.org</div>
+        <div class="card-desc">Oxford mathematician John Lennox's site featuring his books, talks, and debates (including with Dawkins, Hitchens, Krauss). Strong on the limits of scientific naturalism.</div>
+        <div class="card-meta"><span class="tag">Science-faith</span><span class="tag tag-best">Thoughtful &amp; gracious engagement</span></div>
+      </div>
+      <a href="https://www.johnlennox.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+  </div>
+
+  <div class="sub-section" id="online-podcasts">
+    <h3 class="sub-title">Podcasts &amp; YouTube Channels</h3>
+    <div class="sub-divider"></div>
+  </div>
+  <div class="resource-grid">
+
+    <article class="resource-card" data-category="online youtube intermediate advanced philosophical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-youtube">YouTube</span><span class="card-badge badge-advanced">Int&ndash;Adv</span><span class="card-title">Inspiring Philosophy</span></div>
+        <div class="card-author">Michael Jones &middot; youtube.com/@InspiringPhilosophy</div>
+        <div class="card-desc">Well-researched, heavily-cited video essays defending Christianity across philosophy, history, and science. Series on the Trinity, resurrection, and Genesis are particularly notable.</div>
+        <div class="card-meta"><span class="tag">Source-heavy</span><span class="tag tag-best">Visual learners wanting rigor</span></div>
+      </div>
+      <a href="https://www.youtube.com/@InspiringPhilosophy" target="_blank" rel="noopener noreferrer" class="card-link">Watch ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online youtube podcast intermediate advanced philosophical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-youtube">YouTube</span><span class="card-badge badge-advanced">Int&ndash;Adv</span><span class="card-title">Capturing Christianity</span></div>
+        <div class="card-author">Cameron Bertuzzi &middot; capturingchristianity.com</div>
+        <div class="card-desc">Hosts interviews and debates with leading philosophers (theist and atheist) on the existence of God and Christian doctrine. Excellent gateway to academic philosophy of religion.</div>
+        <div class="card-meta"><span class="tag">Philosophy of religion</span><span class="tag tag-best">Top-tier debates</span></div>
+      </div>
+      <a href="https://www.capturingchristianity.com" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online youtube beginner">
+      <div>
+        <div class="card-top"><span class="card-badge badge-youtube">YouTube</span><span class="card-badge badge-beginner">Beginner</span><span class="card-title">Red Pen Logic with Mr. B</span></div>
+        <div class="card-author">J. Warner Wallace &middot; youtube.com/@RedPenLogic</div>
+        <div class="card-desc">Short-form series "grading" common arguments against Christianity for logical errors. Excellent training in spotting fallacies in real-world claims.</div>
+        <div class="card-meta"><span class="tag">Logic &amp; fallacies</span><span class="tag tag-best">Quick critical-thinking training</span></div>
+      </div>
+      <a href="https://www.youtube.com/@RedPenLogic" target="_blank" rel="noopener noreferrer" class="card-link">Watch ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online youtube beginner intermediate biblical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-youtube">YouTube</span><span class="card-badge badge-beginner">Beginner&ndash;Int</span><span class="card-title">Mike Winger</span></div>
+        <div class="card-author">biblethinker.org &middot; youtube.com/@MikeWinger</div>
+        <div class="card-desc">Long-form Bible teaching and apologetics, including multi-hour deep dives on women in ministry, the problem of evil, and other contested topics. Pastoral tone with thorough engagement.</div>
+        <div class="card-meta"><span class="tag">Long-form</span><span class="tag tag-best">Patient deep treatments</span></div>
+      </div>
+      <a href="https://www.youtube.com/@MikeWinger" target="_blank" rel="noopener noreferrer" class="card-link">Watch ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online youtube intermediate biblical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-youtube">YouTube</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">Wesley Huff</span></div>
+        <div class="card-author">@WesleyHuff &middot; wesleyhuff.com</div>
+        <div class="card-desc">Canadian apologist and PhD candidate specializing in NT manuscripts and biblical reliability. Gained wide audience through long-form interviews and clear, calm engagement with skeptics.</div>
+        <div class="card-meta"><span class="tag">Manuscripts</span><span class="tag">Bible reliability</span><span class="tag tag-best">Textual evidence questions</span></div>
+      </div>
+      <a href="https://wesleyhuff.com" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online youtube intermediate philosophical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-youtube">YouTube</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">Whaddo You Meme??</span></div>
+        <div class="card-author">youtube.com/@WhaddoYouMeme</div>
+        <div class="card-desc">Catholic apologist responding to memes, atheist arguments, and pop-culture takes on Christianity. Sharp, philosophically informed, and accessible.</div>
+        <div class="card-meta"><span class="tag">Catholic</span><span class="tag">Pop-culture rebuttal</span><span class="tag tag-best">Online atheist rhetoric</span></div>
+      </div>
+      <a href="https://www.youtube.com/@WhaddoYouMeme" target="_blank" rel="noopener noreferrer" class="card-link">Watch ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online youtube beginner">
+      <div>
+        <div class="card-top"><span class="card-badge badge-youtube">YouTube</span><span class="card-badge badge-beginner">Beginner</span><span class="card-title">Allen Parr &mdash; The BEAT</span></div>
+        <div class="card-author">youtube.com/@TheBEATbyAllenParr</div>
+        <div class="card-desc">Dallas Seminary grad teaches Bible study skills, discernment, and answers common questions from a Black evangelical perspective. Accessible and pastoral.</div>
+        <div class="card-meta"><span class="tag">Bible literacy</span><span class="tag tag-best">Everyday discernment</span></div>
+      </div>
+      <a href="https://www.youtube.com/@TheBEATbyAllenParr" target="_blank" rel="noopener noreferrer" class="card-link">Watch ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online youtube podcast beginner intermediate cultural">
+      <div>
+        <div class="card-top"><span class="card-badge badge-podcast">Podcast</span><span class="card-badge badge-beginner">Beginner&ndash;Int</span><span class="card-title">Ruslan KD</span></div>
+        <div class="card-author">youtube.com/@RuslanKD</div>
+        <div class="card-desc">Christian rapper and podcaster who interviews apologists, ex-Christians, and cultural figures. Strong on engaging deconstruction stories and pop-culture Christianity.</div>
+        <div class="card-meta"><span class="tag">Cultural</span><span class="tag tag-best">Deconstruction conversations</span></div>
+      </div>
+      <a href="https://www.youtube.com/@RuslanKD" target="_blank" rel="noopener noreferrer" class="card-link">Watch ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online youtube ministry intermediate">
+      <div>
+        <div class="card-top"><span class="card-badge badge-youtube">YouTube</span><span class="card-badge badge-intermediate">Intermediate</span><span class="card-title">Acts 17 Apologetics</span></div>
+        <div class="card-author">David Wood &middot; youtube.com/@Acts17Apologetics</div>
+        <div class="card-desc">Ministry focused on engaging Islam through debates, street evangelism footage, and detailed critique of Islamic sources. Pointed and direct in style.</div>
+        <div class="card-meta"><span class="tag">Islam</span><span class="tag tag-best">Christian-Muslim dialogue</span></div>
+      </div>
+      <a href="https://www.youtube.com/@Acts17Apologetics" target="_blank" rel="noopener noreferrer" class="card-link">Watch ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online podcast youtube beginner intermediate">
+      <div>
+        <div class="card-top"><span class="card-badge badge-podcast">Podcast</span><span class="card-badge badge-beginner">Beginner&ndash;Int</span><span class="card-title">Justin Brierley &mdash; Unbelievable / Re-Enchanting</span></div>
+        <div class="card-author">justinbrierley.com</div>
+        <div class="card-desc">Host of the long-running <em>Unbelievable?</em> dialogues between Christians and skeptics, now producing <em>The Surprising Rebirth of Belief in God</em> &mdash; documenting the renewed cultural openness to Christianity.</div>
+        <div class="card-meta"><span class="tag">Dialogue</span><span class="tag">Cultural shift</span><span class="tag tag-best">Charitable engagement</span></div>
+      </div>
+      <a href="https://www.justinbrierley.com" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online ministry website intermediate advanced">
+      <div>
+        <div class="card-top"><span class="card-badge badge-ministry">Video Archive</span><span class="card-badge badge-advanced">Int&ndash;Adv</span><span class="card-title">The Veritas Forum</span></div>
+        <div class="card-author">veritas.org</div>
+        <div class="card-desc">Hosts thoughtful conversations on hard questions at top universities (Harvard, MIT, Stanford, etc.). Massive free archive of lectures and dialogues between Christian and secular thinkers.</div>
+        <div class="card-meta"><span class="tag">University dialogues</span><span class="tag tag-best">Academic-minded viewers</span></div>
+      </div>
+      <a href="https://www.veritas.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+  </div>
+
+  <div class="sub-section" id="online-academic">
+    <h3 class="sub-title">Academic Programs &amp; Study Tools</h3>
+    <div class="sub-divider"></div>
+  </div>
+  <div class="resource-grid">
+
+    <article class="resource-card" data-category="online academic advanced">
+      <div>
+        <div class="card-top"><span class="card-badge badge-academic">Academic</span><span class="card-badge badge-advanced">Advanced</span><span class="card-title">Biola University &mdash; M.A. in Christian Apologetics</span></div>
+        <div class="card-author">Talbot School of Theology &middot; biola.edu</div>
+        <div class="card-desc">Biola's well-known graduate apologetics program with faculty including Sean McDowell, Clay Jones, and others. Offers on-campus and distance learning options &mdash; one of the most respected programs in the field.</div>
+        <div class="card-meta"><span class="tag">Graduate degree</span><span class="tag tag-best">Formal apologetics training</span></div>
+      </div>
+      <a href="https://www.biola.edu/talbot/programs/ma-christian-apologetics" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online academic advanced">
+      <div>
+        <div class="card-top"><span class="card-badge badge-academic">Academic</span><span class="card-badge badge-advanced">Advanced</span><span class="card-title">Houston Christian University &mdash; M.A. Apologetics</span></div>
+        <div class="card-author">hc.edu (formerly HBU)</div>
+        <div class="card-desc">Graduate apologetics program associated with scholars like Holly Ordway. Strong on cultural and literary apologetics, including imaginative apologetics in the Lewis &amp; Tolkien tradition.</div>
+        <div class="card-meta"><span class="tag">Cultural apologetics</span><span class="tag tag-best">Literary &amp; cultural angle</span></div>
+      </div>
+      <a href="https://hc.edu" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online beginner intermediate biblical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-website">Tool</span><span class="card-badge badge-beginner">Beginner&ndash;Int</span><span class="card-title">The Bible Project</span></div>
+        <div class="card-author">Tim Mackie &amp; Jon Collins &middot; bibleproject.com</div>
+        <div class="card-desc">Beautifully animated videos and a deep podcast unpacking the Bible's literary and theological themes. Not strictly apologetics, but builds the biblical foundation apologetics rests on.</div>
+        <div class="card-meta"><span class="tag">Biblical theology</span><span class="tag tag-best">Bible literacy foundation</span></div>
+      </div>
+      <a href="https://bibleproject.com" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+    <article class="resource-card" data-category="online mixed biblical">
+      <div>
+        <div class="card-top"><span class="card-badge badge-website">Tool</span><span class="card-badge badge-mixed">Mixed</span><span class="card-title">Blue Letter Bible</span></div>
+        <div class="card-author">blueletterbible.org</div>
+        <div class="card-desc">Free study tools including interlinears, Strong's concordance, lexicons, and classic commentaries. Essential reference for serious Bible study and apologetics research.</div>
+        <div class="card-meta"><span class="tag">Greek/Hebrew</span><span class="tag">Lexicons</span><span class="tag tag-best">Looking up originals</span></div>
+      </div>
+      <a href="https://www.blueletterbible.org" target="_blank" rel="noopener noreferrer" class="card-link">Visit ↗</a>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============= ARGUMENTS & DEFENSES ============= -->
+<section class="section-block" id="args" data-section="argument">
+  <div class="section-header">
+    <div class="section-icon" style="background:color-mix(in oklab,var(--color-advanced) 15%,transparent);color:var(--color-advanced)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+    <h2>Arguments Against Christianity &amp; Their Defenses</h2>
+    <small>25 objections &middot; validated responses</small>
+  </div>
+  <p class="section-intro">The most common (and some less common but important) objections to Christianity, each stated fairly and steel-manned, paired with the validated defenses held by mainstream serious apologists &mdash; Plantinga, Craig, Habermas, Wright, Copan, Lewis, Wallace, Keller, Licona, and others. Each entry notes <em>key sources</em> and important <em>nuances</em> where legitimate Christian disagreement exists.</p>
+
+  <!-- Problem of Evil -->
+  <div class="sub-section" id="args-evil">
+    <h3 class="sub-title">Problem of Evil &amp; Suffering</h3>
+    <div class="sub-divider"></div>
+  </div>
+
+  <article class="argument-card" data-category="argument evil intermediate philosophical">
+    <div class="arg-header">
+      <span class="arg-num">01</span>
+      <span class="cat-pill cat-evil">Evil</span>
+      <span class="card-badge badge-intermediate">Intermediate</span>
+      <h4 class="arg-title">The Logical Problem of Evil</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">An omnipotent, omniscient, omnibenevolent God is logically incompatible with the existence of evil. If God could prevent evil and chose not to, he is not good; if he wants to but cannot, he is not omnipotent. Therefore the God of classical theism cannot exist.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Alvin Plantinga's <em>Free Will Defense</em> decisively answered the logical version: it is logically possible that God could not actualize a world containing moral good without also permitting the possibility of moral evil, because genuinely free creatures must be able to choose wrongly. Even atheist philosophers (William Rowe, J.L. Mackie) now concede the logical problem has been defeated &mdash; the debate has shifted to the evidential version.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Plantinga, <em>God, Freedom, and Evil</em></span><span class="arg-source">Plantinga, <em>The Nature of Necessity</em> (ch. 9)</span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Do not overstate by claiming this answers all evil &mdash; it only shows logical compatibility, not why God permits any particular instance. Avoid glib answers to suffering people; this is a philosophical defense, not pastoral care.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument evil advanced philosophical">
+    <div class="arg-header">
+      <span class="arg-num">02</span>
+      <span class="cat-pill cat-evil">Evil</span>
+      <span class="card-badge badge-advanced">Advanced</span>
+      <h4 class="arg-title">The Evidential Problem of Evil (Gratuitous Suffering)</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">Even if some evil is logically compatible with God, the sheer quantity, intensity, and apparent pointlessness of suffering (e.g., Rowe's fawn dying slowly in a forest fire) makes God's existence improbable.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text"><em>Skeptical theism</em> (Wykstra, Alston, Bergmann) argues we are not in an epistemic position to judge whether God lacks sufficient reasons &mdash; given the cognitive gap between an omniscient mind and ours, "I can't see a reason" doesn't warrant "there isn't one." Paired with greater-good theodicies (soul-making &mdash; John Hick) and the cumulative case for God's existence, the inference from apparent gratuitous evil to no-God is unwarranted.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Wykstra, "The Humean Obstacle to Evidential Arguments"</span><span class="arg-source">Howard-Snyder (ed.), <em>The Evidential Argument from Evil</em></span><span class="arg-source">Eleonore Stump, <em>Wandering in Darkness</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Don't lean entirely on skeptical theism &mdash; pair it with positive theodicy. Avoid claiming to know God's specific reasons in individual cases. Stump's relational/narrative response is more pastorally honest than abstract theodicy.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument evil advanced philosophical">
+    <div class="arg-header">
+      <span class="arg-num">03</span>
+      <span class="cat-pill cat-evil">Evil</span>
+      <span class="card-badge badge-advanced">Advanced</span>
+      <h4 class="arg-title">Divine Hiddenness</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">J.L. Schellenberg argues that a perfectly loving God would ensure no non-resistant non-believer existed; since such people demonstrably exist (sincere seekers who never find God), the loving God of Christianity probably doesn't exist.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Several responses: <strong>(1)</strong> God's hiddenness preserves morally significant free response &mdash; overwhelming evidence would coerce, not invite love (Pascal, Swinburne, Moser). <strong>(2)</strong> "Non-resistant non-belief" may be rarer than Schellenberg assumes &mdash; resistance can be subtle and self-deceptive (Romans 1). <strong>(3)</strong> Paul Moser argues God reveals himself volitionally to those willing to be transformed, not propositionally to detached inquirers.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Paul Moser, <em>The Elusive God</em></span><span class="arg-source">Michael Rea, <em>The Hiddenness of God</em></span><span class="arg-source">Travis Dumsday's work</span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Don't claim every sincere seeker is secretly resistant &mdash; that's uncharitable and unfalsifiable. This is a genuinely live problem; humility is warranted.</p>
+    </div>
+  </article>
+
+  <!-- Science -->
+  <div class="sub-section" id="args-science">
+    <h3 class="sub-title">Science vs. Faith</h3>
+    <div class="sub-divider"></div>
+  </div>
+
+  <article class="argument-card" data-category="argument science intermediate scientific">
+    <div class="arg-header">
+      <span class="arg-num">04</span>
+      <span class="cat-pill cat-science">Science</span>
+      <span class="card-badge badge-intermediate">Intermediate</span>
+      <h4 class="arg-title">Evolution Disproves Genesis / Christianity</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">Evolution by natural selection explains the diversity of life without a designer and contradicts Genesis's special creation, undermining Christianity's foundational story.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Most mainstream apologists (Craig, McGrath, Collins, Lennox, N.T. Wright) accept evolutionary biology and argue Genesis 1-2 is theological/literary, not a scientific manual &mdash; using ancient Near Eastern temple-cosmology imagery (John Walton). Christianity is grounded in the resurrection of Jesus, not biological mechanism; evolution describes <em>how</em>, not <em>why</em>, and is compatible with God as primary cause working through secondary causes (Aquinas).</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">John Walton, <em>The Lost World of Genesis One</em></span><span class="arg-source">Francis Collins, <em>The Language of God</em></span><span class="arg-source">Denis Alexander, <em>Creation or Evolution</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Christians legitimately disagree &mdash; young-earth creationism (Answers in Genesis), old-earth creationism (Hugh Ross/Reasons to Believe), evolutionary creationism (BioLogos), and intelligent design (Discovery Institute) are all held by serious believers. Don't represent any one position as <em>the</em> Christian view.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument science beginner scientific">
+    <div class="arg-header">
+      <span class="arg-num">05</span>
+      <span class="cat-pill cat-science">Science</span>
+      <span class="card-badge badge-beginner">Beginner</span>
+      <h4 class="arg-title">The Age of the Universe Contradicts the Bible</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">A 13.8-billion-year-old universe and 4.5-billion-year-old Earth contradict a literal Genesis 6-day creation and Ussher-style biblical chronology.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">The "day-age" view, framework hypothesis, analogical-day view, and Walton's functional-cosmic-temple view all read Genesis 1 as theological literature, not chronological science &mdash; Augustine in the 4th century already argued the days were not 24-hour periods. The Hebrew <em>yom</em> permits multiple meanings; Genesis's purpose is to identify <em>who</em> creates and <em>why</em>, polemicizing against ancient Near Eastern creation myths.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">John Walton, <em>Lost World of Genesis One</em></span><span class="arg-source">Hugh Ross, <em>A Matter of Days</em></span><span class="arg-source">C. John Collins, <em>Genesis 1-4</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Young-earth creationists (Ken Ham) read Genesis as literal history and propose alternative cosmologies &mdash; a minority scientific view but a legitimate theological position. Don't conflate scientific and theological claims when responding.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument science intermediate philosophical">
+    <div class="arg-header">
+      <span class="arg-num">06</span>
+      <span class="cat-pill cat-science">Science</span>
+      <span class="card-badge badge-intermediate">Intermediate</span>
+      <h4 class="arg-title">Miracles Violate the Laws of Nature</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">Hume argued that the uniform experience of natural laws makes miracle claims always less probable than alternative explanations (lying witnesses, mistake, legend). Therefore no testimony can rationally establish a miracle.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Hume's argument is question-begging &mdash; it presumes naturalism by defining "uniform experience" as excluding miracle reports a priori. Natural laws describe what happens absent intervention; they don't preclude an agent acting from outside the system (C.S. Lewis, <em>Miracles</em>). Bayesian analysis (Earman) shows miracle claims can be rational if the prior probability of theism is non-zero and evidence is strong. Keener's <em>Miracles</em> documents thousands of credibly attested modern miracle reports.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">C.S. Lewis, <em>Miracles</em></span><span class="arg-source">Craig Keener, <em>Miracles</em></span><span class="arg-source">John Earman, <em>Hume's Abject Failure</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Don't claim every miracle report is genuine &mdash; discernment is appropriate. Avoid "God of the gaps" reasoning where miracles are invoked for anything currently unexplained.</p>
+    </div>
+  </article>
+
+  <!-- Biblical Reliability -->
+  <div class="sub-section" id="args-bible">
+    <h3 class="sub-title">Biblical Reliability</h3>
+    <div class="sub-divider"></div>
+  </div>
+
+  <article class="argument-card" data-category="argument bible beginner biblical">
+    <div class="arg-header">
+      <span class="arg-num">07</span>
+      <span class="cat-pill cat-bible">Bible</span>
+      <span class="card-badge badge-beginner">Beginner</span>
+      <h4 class="arg-title">The Bible Is Full of Contradictions</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">The Gospels contradict each other (resurrection accounts, genealogies, who was at the tomb), and the Bible contains internal inconsistencies that disprove inerrancy and undermine its reliability.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Most alleged contradictions resolve through standard historiographic principles: different perspectives, telescoping, paraphrase, complementary (not contradictory) detail, and ancient biographical conventions (Mike Licona, <em>Why Are There Differences in the Gospels?</em>). Minor variations actually argue <em>for</em> independent eyewitness sources rather than collusion (Simon Greenleaf's legal-historical analysis).</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Licona, <em>Why Are There Differences in the Gospels?</em></span><span class="arg-source">Blomberg, <em>Historical Reliability of the Gospels</em></span><span class="arg-source">Archer, <em>Encyclopedia of Bible Difficulties</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Don't claim <em>every</em> alleged contradiction has a slam-dunk resolution &mdash; some remain genuinely difficult (e.g., death of Judas). Christians disagree on inerrancy: strict inerrancy (Chicago Statement), infallibility (limited to faith and practice), and inspiration without inerrancy are all held by orthodox believers.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument bible intermediate biblical">
+    <div class="arg-header">
+      <span class="arg-num">08</span>
+      <span class="cat-pill cat-bible">Bible</span>
+      <span class="card-badge badge-intermediate">Intermediate</span>
+      <h4 class="arg-title">Manuscript Variants Undermine the NT (Bart Ehrman)</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">Bart Ehrman (<em>Misquoting Jesus</em>) argues there are ~400,000 textual variants among NT manuscripts &mdash; more variants than words in the NT &mdash; making it impossible to know what the originals said.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Ehrman himself concedes in his scholarly work (and in debates with Daniel Wallace) that the vast majority of variants are insignificant (spelling, word order) and that no major Christian doctrine is in doubt due to textual variants. The high variant count reflects the <em>abundance</em> of manuscripts (~5,800 Greek NT mss vs. ~10 for Tacitus) &mdash; more data, not less reliability. The NT is the best-attested ancient document by orders of magnitude.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Daniel Wallace, <em>Revisiting the Corruption of the NT</em></span><span class="arg-source">Timothy Paul Jones, <em>Misquoting Truth</em></span><span class="arg-source">Peter Williams, <em>Can We Trust the Gospels?</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Acknowledge two genuinely disputed passages &mdash; the longer ending of Mark (16:9-20) and the pericope adulterae (John 7:53-8:11). Don't oversell &mdash; say "substantially reliable," not "perfectly preserved."</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument bible intermediate biblical">
+    <div class="arg-header">
+      <span class="arg-num">09</span>
+      <span class="cat-pill cat-bible">Bible</span>
+      <span class="card-badge badge-intermediate">Intermediate</span>
+      <h4 class="arg-title">Canon Formation Was Arbitrary / Political</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">The biblical canon was determined centuries after Jesus by Constantine or church councils for political reasons; "lost gospels" (Thomas, Mary, Judas) were suppressed because they didn't fit orthodox power structures (Dan Brown / Elaine Pagels popular version).</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">The canon was <em>recognized</em>, not invented &mdash; by the late 2nd century (Muratorian Fragment, Irenaeus) the core 22-24 books were already functioning as scripture, well before Constantine (4th century) or any council. Criteria were apostolicity, antiquity, orthodoxy, and catholicity. The Gnostic gospels are demonstrably 2nd-4th century, theologically and historically distinct from 1st-century apostolic writings, and were excluded on those grounds &mdash; not political suppression.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Michael Kruger, <em>Canon Revisited</em></span><span class="arg-source">Bruce Metzger, <em>The Canon of the New Testament</em></span><span class="arg-source">Charles Hill, <em>Who Chose the Gospels?</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Don't claim the canon was finalized in the 1st century &mdash; that's historically false. The process took ~300 years for full consensus, but the <em>core</em> was settled much earlier than skeptics suggest.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument bible intermediate biblical">
+    <div class="arg-header">
+      <span class="arg-num">10</span>
+      <span class="cat-pill cat-bible">Bible</span>
+      <span class="card-badge badge-intermediate">Intermediate</span>
+      <h4 class="arg-title">The "Lost Gospels" Reveal Suppressed Christianities</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">The Nag Hammadi finds (Gospel of Thomas, Mary, Philip, Judas) reveal that early Christianity was diverse and that "orthodoxy" is just the version that won &mdash; alternative Christianities were equally valid.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">The Gnostic texts post-date the canonical Gospels by 50-200 years, depend on them, and reflect a Hellenistic philosophical worldview alien to 1st-century Palestinian Judaism &mdash; the matrix Jesus actually operated in. Larry Hurtado and Darrell Bock show early Christianity had a stable core (Jesus as Lord, resurrection, Hebrew Scriptures) from the beginning; "diversity" is exaggerated.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Darrell Bock, <em>The Missing Gospels</em></span><span class="arg-source">Larry Hurtado, <em>Lord Jesus Christ</em></span><span class="arg-source">Nicholas Perrin, <em>Thomas: The Other Gospel</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Don't dismiss the texts as worthless for history of religion &mdash; they matter for understanding 2nd-century Gnosticism. The point is they're not contemporaneous rivals to the canonical Gospels.</p>
+    </div>
+  </article>
+
+  <!-- Historicity -->
+  <div class="sub-section" id="args-jesus">
+    <h3 class="sub-title">Historicity of Jesus</h3>
+    <div class="sub-divider"></div>
+  </div>
+
+  <article class="argument-card" data-category="argument jesus beginner historical resurrection">
+    <div class="arg-header">
+      <span class="arg-num">11</span>
+      <span class="cat-pill cat-jesus">Jesus</span>
+      <span class="card-badge badge-beginner">Beginner</span>
+      <h4 class="arg-title">Jesus Mythicism (Jesus Never Existed)</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">Richard Carrier, Robert Price, and popular figures argue Jesus is a mythological figure, never historical &mdash; a syncretic construction from dying-and-rising god myths and Jewish messianic expectation.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Jesus mythicism is rejected by virtually all credentialed historians of antiquity, including atheists and agnostics (Bart Ehrman, <em>Did Jesus Exist?</em>; Maurice Casey). Evidence: Paul's letters within 20-25 years referring to people who knew Jesus (James, Peter); multiple independent sources (Mark, Q, M, L, John, Paul); hostile non-Christian attestation (Tacitus, Josephus, Suetonius, Pliny); and embarrassing details (crucifixion as messianic disqualifier) that no inventor would include.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Bart Ehrman, <em>Did Jesus Exist?</em></span><span class="arg-source">Gary Habermas's minimal facts work</span><span class="arg-source">Craig Evans, <em>Jesus and His World</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Don't waste time treating this as a serious academic position &mdash; it isn't. But don't sneer at people who've encountered it online; explain the consensus calmly. Even hostile scholars accept Jesus's historicity.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument jesus beginner resurrection">
+    <div class="arg-header">
+      <span class="arg-num">12</span>
+      <span class="cat-pill cat-jesus">Resurrection</span>
+      <span class="card-badge badge-beginner">Beginner</span>
+      <h4 class="arg-title">Resurrection Alternative: The Swoon Theory</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">Jesus didn't die on the cross but lost consciousness, was revived in the cool tomb, and appeared to disciples as if resurrected.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Roman executioners were professionals &mdash; the <em>JAMA</em> medical analysis (Edwards et al., 1986) shows crucifixion combined with prior scourging causes hypovolemic shock and asphyxiation reliably; the spear thrust (John 19:34, blood-and-water consistent with pleural effusion) confirms death. Even David Strauss (no friend of Christianity) demolished the swoon theory in the 19th century: a half-dead, wounded man could not have inspired worship as the Risen Lord of Life. Virtually no contemporary skeptic defends this.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Edwards et al., "On the Physical Death of Jesus Christ," <em>JAMA</em> 1986</span><span class="arg-source">Habermas &amp; Licona, <em>Case for the Resurrection</em></span><span class="arg-source">N.T. Wright, <em>Resurrection of the Son of God</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">This is largely a 19th-century theory; modern skeptics have moved on to hallucination or legend theories. Engage the stronger alternatives.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument jesus intermediate resurrection">
+    <div class="arg-header">
+      <span class="arg-num">13</span>
+      <span class="cat-pill cat-jesus">Resurrection</span>
+      <span class="card-badge badge-intermediate">Intermediate</span>
+      <h4 class="arg-title">Resurrection Alternative: The Hallucination Theory</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">The disciples sincerely believed they saw Jesus, but the appearances were grief-induced hallucinations, bereavement visions, or "cognitive dissonance" experiences (Gerd L&uuml;demann).</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Hallucinations are individual psychological events; group hallucinations of the same content (1 Cor 15:6 &mdash; over 500 at once) are not clinically attested. The theory cannot account for the empty tomb, the conversion of skeptics (James, Paul), the variety of appearance contexts (indoor, outdoor, eating, touching), or the radical shift in disciples' messianic expectations (a crucified Messiah was not what they wanted to see). Habermas's "minimal facts" argument grants only what nearly all NT scholars accept and shows resurrection is still the best explanation.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Gary Habermas, <em>The Risen Jesus and Future Hope</em></span><span class="arg-source">Michael Licona, <em>Resurrection of Jesus</em></span><span class="arg-source">N.T. Wright, <em>Resurrection of the Son of God</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Acknowledge that individual grief visions are real psychological phenomena &mdash; the issue is that they don't match the data. Don't claim hallucinations are impossible in general.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument jesus beginner resurrection">
+    <div class="arg-header">
+      <span class="arg-num">14</span>
+      <span class="cat-pill cat-jesus">Resurrection</span>
+      <span class="card-badge badge-beginner">Beginner</span>
+      <h4 class="arg-title">Resurrection Alternative: Conspiracy / Stolen Body</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">The disciples stole the body and fabricated the resurrection (the Matthew 28 chief-priest narrative, naturalized).</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">This fails the "willing to die for a known lie" test &mdash; multiple disciples were martyred maintaining the resurrection claim, and people may die for what they wrongly believe to be true but virtually never for what they know to be false (J. Warner Wallace's chain-of-custody analysis). It also doesn't explain the conversion of Paul (an enemy) or James (a skeptical brother), or why early opponents didn't simply produce the body in Jerusalem where they preached.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">J. Warner Wallace, <em>Cold-Case Christianity</em></span><span class="arg-source">Sean McDowell, <em>The Fate of the Apostles</em></span><span class="arg-source">Habermas &amp; Licona, <em>Case for the Resurrection</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Be precise &mdash; we don't have ironclad evidence every apostle was martyred, but the early tradition of their willingness to suffer is well-attested. Don't oversell martyrdom evidence.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument jesus advanced resurrection">
+    <div class="arg-header">
+      <span class="arg-num">15</span>
+      <span class="cat-pill cat-jesus">Resurrection</span>
+      <span class="card-badge badge-advanced">Advanced</span>
+      <h4 class="arg-title">Resurrection Alternative: Legendary Development</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">The resurrection accounts developed legendarily over decades &mdash; Mark (earliest) ends with an empty tomb and no appearances; John (latest) has elaborate physical appearances. The legend grew with telling.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">The 1 Corinthians 15:3-8 creed dates to within 2-5 years of the crucifixion (scholarly consensus including L&uuml;demann and Crossan) &mdash; far too early for legendary development. A.N. Sherwin-White's classic study showed even two generations is insufficient to erase historical core in the Greco-Roman world. The trajectory from Mark to John is best explained as different theological emphases, not invention; Mark assumes appearances (16:7).</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">N.T. Wright, <em>Resurrection of the Son of God</em></span><span class="arg-source">Richard Bauckham, <em>Jesus and the Eyewitnesses</em></span><span class="arg-source">A.N. Sherwin-White, <em>Roman Society and Roman Law in the NT</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Acknowledge real differences between accounts &mdash; don't harmonize artificially. The argument is about <em>core</em> claims, not every detail.</p>
+    </div>
+  </article>
+
+  <!-- Moral Objections -->
+  <div class="sub-section" id="args-moral">
+    <h3 class="sub-title">Moral Objections</h3>
+    <div class="sub-divider"></div>
+  </div>
+
+  <article class="argument-card" data-category="argument moral intermediate">
+    <div class="arg-header">
+      <span class="arg-num">16</span>
+      <span class="cat-pill cat-moral">Moral</span>
+      <span class="card-badge badge-intermediate">Intermediate</span>
+      <h4 class="arg-title">The Bible Endorses Slavery</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">The OT regulates slavery rather than abolishing it; the NT (Philemon, Ephesians 6, "slaves obey your masters") tolerates it. A morally perfect God should have condemned slavery outright.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">ANE/Roman slavery was primarily economic indenture (debt servitude) rather than race-based chattel slavery; Mosaic law radically humanized it &mdash; mandatory release (Exodus 21, Deut 15), Sabbath rest for slaves, capital punishment for kidnapping into slavery (Exodus 21:16, which condemns the entire transatlantic trade), refuge for escaped slaves (Deut 23:15). The NT plants subversive seeds (Gal 3:28, Philemon's "no longer a slave but a brother") that ultimately drove Christian abolitionism (Wilberforce, Clarkson).</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Paul Copan, <em>Is God a Moral Monster?</em></span><span class="arg-source">William Webb, <em>Slaves, Women &amp; Homosexuals</em></span><span class="arg-source">Rodney Stark, <em>For the Glory of God</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Don't minimize &mdash; ancient slavery was still real bondage with real abuse; "it wasn't chattel slavery" can sound dismissive. Acknowledge American chattel slavery was a grievous distortion that some Christians wrongly defended using the Bible.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument moral advanced">
+    <div class="arg-header">
+      <span class="arg-num">17</span>
+      <span class="cat-pill cat-moral">Moral</span>
+      <span class="card-badge badge-advanced">Advanced</span>
+      <h4 class="arg-title">OT Violence / The Canaanite Conquest</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">God commands genocide in Joshua/Deuteronomy 7, 20 ("kill men, women, and children") and 1 Samuel 15 (Amalekites). This is morally indistinguishable from ethnic cleansing.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Multiple responses: <strong>(1)</strong> Hyperbolic ANE warfare language &mdash; Copan and Wolterstorff argue the "totally destroy" formula was conventional rhetorical hyperbole (Pharaoh, Hittites, and Moabites use identical language about enemies who clearly weren't exterminated; Joshua and Judges presuppose Canaanite survivors). <strong>(2)</strong> Targeted military centers, not civilian populations &mdash; "cities" were primarily fortified military outposts. <strong>(3)</strong> Divine judgment after 400 years of patience (Gen 15:16) on specific Canaanite practices including child sacrifice. <strong>(4)</strong> A unique, non-repeatable judgment tied to redemptive history, not a model for ethics.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Copan &amp; Flannagan, <em>Did God Really Command Genocide?</em></span><span class="arg-source">Christopher Wright, <em>The God I Don't Understand</em></span><span class="arg-source">Richard Hess on Joshua</span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">This is genuinely hard &mdash; don't pretend it's easy. Christians disagree: some accept all four points above, others (Greg Boyd) argue these commands reflect human projection accommodated by God and reinterpreted through Christ. Never use this defense to justify modern violence.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument moral advanced">
+    <div class="arg-header">
+      <span class="arg-num">18</span>
+      <span class="cat-pill cat-moral">Moral</span>
+      <span class="card-badge badge-advanced">Advanced</span>
+      <h4 class="arg-title">The Doctrine of Hell</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">Eternal conscious torment for finite sins is grossly disproportionate; a loving God who creates people knowing they will suffer forever is morally monstrous.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Three legitimate Christian views: <strong>(1)</strong> Traditional eternal conscious torment, defended by appeal to sin against an infinite God as infinite (Anselm, Edwards) and to free human choice to refuse God forever (C.S. Lewis's "doors locked on the inside" in <em>The Great Divorce</em>). <strong>(2)</strong> Conditional immortality / annihilationism (John Stott, Edward Fudge) &mdash; the lost cease to exist. <strong>(3)</strong> Hopeful universalism (some patristics). Most apologists emphasize hell as freely chosen separation from God rather than divine torture.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">C.S. Lewis, <em>The Great Divorce</em></span><span class="arg-source">Edward Fudge, <em>The Fire That Consumes</em></span><span class="arg-source">Jerry Walls, <em>Hell: The Logic of Damnation</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Genuine intramural disagreement &mdash; don't represent ECT as the only orthodox view (annihilationism is a minority but legitimate evangelical position). Avoid imagery of God as a torturer; emphasize freedom and love.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument moral intermediate philosophical">
+    <div class="arg-header">
+      <span class="arg-num">19</span>
+      <span class="cat-pill cat-moral">Moral</span>
+      <span class="card-badge badge-intermediate">Intermediate</span>
+      <h4 class="arg-title">Divine Command Theory / The Euthyphro Dilemma</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">Plato's dilemma: is something good because God commands it (then "good" is arbitrary &mdash; God could command torturing babies and it would be good), or does God command it because it's good (then there's a moral standard above God)?</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">The dilemma is false &mdash; a third option: goodness is grounded in God's <em>nature</em>, not arbitrary commands and not an independent standard. God commands what is good because his commands flow from his eternal, unchanging character (love, justice, holiness). He could not command torturing babies because his nature precludes it. This is modified divine command theory / theistic activism (Robert Adams, William Lane Craig, Mark Murphy).</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Robert Adams, <em>Finite and Infinite Goods</em></span><span class="arg-source">William Lane Craig's debates and writings</span><span class="arg-source">C. Stephen Evans, <em>God and Moral Obligation</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Don't say "God just commands and we obey" &mdash; that lands on the arbitrary horn. The "nature" move is essential.</p>
+    </div>
+  </article>
+
+  <!-- Pluralism -->
+  <div class="sub-section" id="args-pluralism">
+    <h3 class="sub-title">Pluralism &amp; Exclusivism</h3>
+    <div class="sub-divider"></div>
+  </div>
+
+  <article class="argument-card" data-category="argument pluralism intermediate">
+    <div class="arg-header">
+      <span class="arg-num">20</span>
+      <span class="cat-pill cat-pluralism">Pluralism</span>
+      <span class="card-badge badge-intermediate">Intermediate</span>
+      <h4 class="arg-title">What About Those Who Never Heard?</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">It's unjust for God to condemn people who never had the opportunity to hear about Jesus &mdash; billions before Christ, billions in unreached people groups.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Three legitimate positions: <strong>(1)</strong> Inclusivism &mdash; people respond to whatever revelation they have (general revelation, conscience); Christ's atonement applies to them if they would have accepted him (C.S. Lewis, Billy Graham later in life). <strong>(2)</strong> Molinism / middle knowledge &mdash; God uses his knowledge of counterfactuals to ensure no one is lost who would have accepted Christ (William Lane Craig). <strong>(3)</strong> Eschatological/postmortem opportunity (more controversial). God judges justly by what people knew (Romans 2:14-16).</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">William Lane Craig's work on Molinism</span><span class="arg-source">John Sanders, <em>No Other Name</em></span><span class="arg-source">Terrance Tiessen, <em>Who Can Be Saved?</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Restrictivism (only explicit faith in Christ saves) is also held by serious evangelicals. Don't claim certainty where Scripture is reserved.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument pluralism intermediate">
+    <div class="arg-header">
+      <span class="arg-num">21</span>
+      <span class="cat-pill cat-pluralism">Pluralism</span>
+      <span class="card-badge badge-intermediate">Intermediate</span>
+      <h4 class="arg-title">Religious Pluralism &mdash; All Religions Lead to God</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">John Hick argued the world religions are different culturally-conditioned responses to the same ultimate Real; Christian exclusivism is arrogant ethnocentrism &mdash; the "blind men and the elephant" analogy.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">The "elephant" analogy presupposes a privileged outside view &mdash; the storyteller sees the whole elephant the blind men can't. Pluralism itself is an exclusive truth claim that contradicts each religion's own self-understanding (Buddhism denies a personal God; Islam denies the Incarnation; Christianity affirms it). Plantinga and Newbigin show exclusivism is no more arrogant than any other position that takes truth seriously.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Lesslie Newbigin, <em>The Gospel in a Pluralist Society</em></span><span class="arg-source">Harold Netland, <em>Encountering Religious Pluralism</em></span><span class="arg-source">Plantinga, "Pluralism: A Defense of Religious Exclusivism"</span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Be charitable &mdash; pluralism arises from genuine concern about religious arrogance and conflict. Affirm that Christians can recognize truth and beauty in other traditions without endorsing them as salvific.</p>
+    </div>
+  </article>
+
+  <!-- Philosophical -->
+  <div class="sub-section" id="args-philo">
+    <h3 class="sub-title">Philosophical Challenges</h3>
+    <div class="sub-divider"></div>
+  </div>
+
+  <article class="argument-card" data-category="argument philo beginner philosophical">
+    <div class="arg-header">
+      <span class="arg-num">22</span>
+      <span class="cat-pill cat-philo">Philosophy</span>
+      <span class="card-badge badge-beginner">Beginner</span>
+      <h4 class="arg-title">"Who Made God?"</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">If everything needs a cause, what caused God? The cosmological argument either has an arbitrary stopping point (special pleading) or leads to infinite regress.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">The cosmological argument doesn't claim "everything has a cause" &mdash; it claims "everything that <em>begins to exist</em> has a cause" (Kalam, Craig) or "every contingent being has a cause" (Leibniz/Aquinas). God, by definition in classical theism, is necessary and eternal &mdash; not contingent and not begun &mdash; so the question doesn't apply. This isn't special pleading; it's what the argument concludes (a necessary being) based on the impossibility of an infinite regress of contingent causes.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">William Lane Craig, <em>Reasonable Faith</em></span><span class="arg-source">Edward Feser, <em>Five Proofs of the Existence of God</em></span><span class="arg-source">Aquinas, <em>Summa Theologiae</em> (Five Ways)</span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">This is often a "gotcha" from Dawkins (<em>The God Delusion</em>) that misrepresents the actual argument. Don't be condescending; explain the modal/contingency distinction patiently.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument philo advanced philosophical">
+    <div class="arg-header">
+      <span class="arg-num">23</span>
+      <span class="cat-pill cat-philo">Philosophy</span>
+      <span class="card-badge badge-advanced">Advanced</span>
+      <h4 class="arg-title">Free Will Is Incompatible with Omniscience</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">If God knows infallibly what I will do tomorrow, I cannot do otherwise &mdash; my choices are predetermined. Libertarian free will is incompatible with divine foreknowledge.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Several legitimate responses: <strong>(1)</strong> Boethian/Thomistic &mdash; God is timeless and knows all events in an "eternal now," not as future predictions; knowledge of an event doesn't cause it (Boethius, Aquinas, Stump). <strong>(2)</strong> Molinism &mdash; God knows counterfactuals of creaturely freedom (middle knowledge) and creates a world based on what free creatures would freely do (Molina, Craig, Plantinga). <strong>(3)</strong> Open theism &mdash; God knows all that is logically knowable; future free choices are not yet determinate (minority view).</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">William Lane Craig, <em>The Only Wise God</em></span><span class="arg-source">Eleonore Stump, <em>Aquinas</em></span><span class="arg-source">Linda Zagzebski, <em>The Dilemma of Freedom and Foreknowledge</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Calvinists (compatibilist free will) and Arminians (libertarian) disagree fundamentally. Open theism is widely rejected as heterodox. Be clear which solution you're advancing.</p>
+    </div>
+  </article>
+
+  <!-- Cultural -->
+  <div class="sub-section" id="args-cultural">
+    <h3 class="sub-title">Cultural &amp; Historical Critiques</h3>
+    <div class="sub-divider"></div>
+  </div>
+
+  <article class="argument-card" data-category="argument cultural intermediate">
+    <div class="arg-header">
+      <span class="arg-num">24</span>
+      <span class="cat-pill cat-cultural">Cultural</span>
+      <span class="card-badge badge-intermediate">Intermediate</span>
+      <h4 class="arg-title">Christianity Has Caused Massive Historical Harm</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">The Crusades, Inquisition, witch hunts, religious wars, colonialism, and church-sanctioned slavery show Christianity has caused immense suffering &mdash; perhaps more than any other ideology.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Acknowledge real evils first &mdash; these are genuine stains on Christian history. But: <strong>(1)</strong> The numbers are often inflated &mdash; the Spanish Inquisition executed ~3,000-5,000 over 350 years (Henry Kamen), not millions; the witch hunts killed ~40,000-60,000 mostly in late-medieval/early-modern Europe and were opposed by serious theologians (Friedrich Spee). <strong>(2)</strong> These actions contradict explicit Christian teaching (love enemies, image of God) and were enabled by political-religious fusion Jesus rejected. <strong>(3)</strong> Christianity also drove abolition (Wilberforce), hospitals, universities, human rights (Tom Holland's <em>Dominion</em>), and modern science. <strong>(4)</strong> Atheist regimes in the 20th century (Stalin, Mao, Pol Pot) killed exponentially more.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Tom Holland, <em>Dominion</em></span><span class="arg-source">Rodney Stark, <em>For the Glory of God</em></span><span class="arg-source">Henry Kamen, <em>The Spanish Inquisition</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Don't minimize victims. Don't argue "Christianity has a better body count" defensively &mdash; engage the substantive critique. Distinguish institutional Christendom from Christian teaching.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument cultural intermediate">
+    <div class="arg-header">
+      <span class="arg-num">25</span>
+      <span class="cat-pill cat-cultural">Cultural</span>
+      <span class="card-badge badge-intermediate">Intermediate</span>
+      <h4 class="arg-title">Church Sexual Abuse Scandals</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">Systematic abuse and cover-up in the Catholic Church, Southern Baptist Convention, and other Christian institutions reveal the religion produces predators and protects them &mdash; disproving its moral authority.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Lament and acknowledge fully &mdash; this is genuine evil that Christians should grieve and address, not defend. Theologically: this confirms rather than refutes Christian anthropology (humans, including religious leaders, are sinners; institutions can become idolatrous self-protective systems). Jesus's harshest words were for religious abusers (Matt 23, Matt 18:6 millstone). The scandal is that the church failed its own teaching, not that it lived it out.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Diane Langberg, <em>Redeeming Power</em></span><span class="arg-source">Wade Mullen, <em>Something's Not Right</em></span><span class="arg-source">Boz Tchividjian (GRACE)</span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Never lead with statistics &mdash; lead with lament. Don't whataboutism. Push for institutional reform, not defense. This objection often requires pastoral response, not just argument.</p>
+    </div>
+  </article>
+
+  <!-- Modern -->
+  <div class="sub-section" id="args-modern">
+    <h3 class="sub-title">Modern Cultural Challenges</h3>
+    <div class="sub-divider"></div>
+  </div>
+
+  <article class="argument-card" data-category="argument modern beginner scientific cultural">
+    <div class="arg-header">
+      <span class="arg-num">26</span>
+      <span class="cat-pill cat-modern">Modern</span>
+      <span class="card-badge badge-beginner">Beginner</span>
+      <h4 class="arg-title">Christianity Is Anti-Science / Anti-Intellectual</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">Christianity opposed Galileo, opposes evolution, drives creationism in schools, and fosters anti-intellectualism (young-earth creationism, anti-vaccine sentiments, climate denial).</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">Modern science emerged from Christian Europe, not in spite of Christianity but partly because of it &mdash; the conviction that a rational God created an orderly, intelligible universe motivated early scientists (Kepler, Newton, Boyle, Faraday, Maxwell, Mendel &mdash; a Catholic priest). The "warfare thesis" (Draper, White) is historiographically discredited (Ronald Numbers, <em>Galileo Goes to Jail</em>); Galileo's case was complex (politics, personality, theological method) not "science vs. religion." Many leading scientists today are Christians (Francis Collins, John Polkinghorne, Katharine Hayhoe).</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Ronald Numbers (ed.), <em>Galileo Goes to Jail</em></span><span class="arg-source">James Hannam, <em>The Genesis of Science</em></span><span class="arg-source">Alister McGrath, <em>Science and Religion</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Acknowledge fundamentalist anti-science currents within Christianity are real and embarrassing &mdash; don't pretend they don't exist. Address young-earth and climate denial honestly rather than defending them.</p>
+    </div>
+  </article>
+
+  <!-- Skeptic Talking Points -->
+  <div class="sub-section" id="args-skeptic">
+    <h3 class="sub-title">Specific Skeptic Talking Points</h3>
+    <div class="sub-divider"></div>
+  </div>
+
+  <article class="argument-card" data-category="argument skeptic beginner jesus">
+    <div class="arg-header">
+      <span class="arg-num">27</span>
+      <span class="cat-pill cat-skeptic">Skeptic</span>
+      <span class="card-badge badge-beginner">Beginner</span>
+      <h4 class="arg-title">Jesus Was Copied from Pagan Myths (Horus, Mithras, Dionysus)</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">Popularized by <em>Zeitgeist</em> and Acharya S &mdash; Jesus's biography (virgin birth, December 25, 12 disciples, crucified and resurrected) was copied from earlier mystery religions (Horus, Mithras, Dionysus, Attis).</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">This is fringe internet scholarship rejected by every serious scholar of comparative religion. The claimed parallels are fabricated or wildly exaggerated: Horus was not born of a virgin, had no 12 disciples, was not crucified; Mithras (the Roman mystery cult version) post-dates Christianity. The pagan "dying-and-rising god" category itself has been largely deconstructed by scholars (Jonathan Z. Smith, T.N.D. Mettinger). Jesus's matrix is 1st-century Palestinian Judaism, not Hellenistic mystery cults.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Ronald Nash, <em>The Gospel and the Greeks</em></span><span class="arg-source">Edwin Yamauchi, <em>Pre-Christian Gnosticism</em></span><span class="arg-source">Mark Foreman, "Challenging the Zeitgeist Movie"</span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Don't engage as if this is academically respectable &mdash; it isn't. But explain patiently, since it's widely believed online.</p>
+    </div>
+  </article>
+
+  <article class="argument-card" data-category="argument skeptic intermediate philosophical">
+    <div class="arg-header">
+      <span class="arg-num">28</span>
+      <span class="cat-pill cat-skeptic">Skeptic</span>
+      <span class="card-badge badge-intermediate">Intermediate</span>
+      <h4 class="arg-title">New Atheism: Religion Poisons Everything (Hitchens / Dawkins)</h4>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-obj">!</span>Objection</div>
+      <p class="arg-text arg-text-muted">Christopher Hitchens (<em>God Is Not Great</em>) and Richard Dawkins (<em>The God Delusion</em>) argue religion is irrational, evidentially baseless, morally corrosive, and a net evil for humanity &mdash; civilization would flourish without it.</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-def">✓</span>Defense</div>
+      <p class="arg-text">New Atheism is widely considered to have peaked and faded &mdash; even atheist philosophers (John Gray, Tim Crane) critique its philosophical thinness. Dawkins's central argument (<em>The God Delusion</em> ch. 4, the "ultimate 747") was demolished by Plantinga and McGrath for misunderstanding what God's simplicity means and confusing biological with metaphysical complexity. The moral argument cuts the other way: secular humanism's claims (human dignity, rights, equality) are arguably parasitic on Christian theological foundations (Tom Holland's <em>Dominion</em> &mdash; written by a non-Christian historian).</p>
+    </div>
+    <div class="arg-block">
+      <div class="arg-label"><span class="arg-label-icon label-src">📚</span>Key Sources</div>
+      <div class="arg-sources"><span class="arg-source">Alister McGrath, <em>The Dawkins Delusion</em></span><span class="arg-source">David Bentley Hart, <em>Atheist Delusions</em></span><span class="arg-source">Tom Holland, <em>Dominion</em></span><span class="arg-source">Edward Feser, <em>The Last Superstition</em></span></div>
+    </div>
+    <div class="arg-nuance">
+      <div class="arg-label">⚠ Nuance</div>
+      <p class="arg-text">Engage the strongest secular thinkers (Mackie, Rowe, Hick, Schellenberg) rather than New Atheist polemics. Hitchens raises real moral concerns (church abuses, religious violence) that deserve substantive engagement, not dismissal.</p>
+    </div>
+  </article>
+
+</section>
+
+<footer>
+  <p>A personal apologetics library &mdash; sourced from leading apologists across the classical, evidential, presuppositional, and Reformed epistemological traditions. <em>For private study.</em></p>
+  <p style="margin-top:.5rem;color:var(--color-text-faint)">Updated 2026 &middot; "Always be prepared to give an answer&hellip; with gentleness and respect." &mdash; 1 Peter 3:15</p>
+</footer>
+
+</main>
+</div>
+
+<script>
+(function(){
+  const root = document.documentElement;
+  const themeBtns = document.querySelectorAll('[data-theme-toggle]');
+  const stored = localStorage.getItem('apologetics-theme');
+  if(stored){root.setAttribute('data-theme',stored);}
+  else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches){root.setAttribute('data-theme','light');}
+  themeBtns.forEach(b=>b.addEventListener('click',()=>{
+    const cur=root.getAttribute('data-theme')==='dark'?'light':'dark';
+    root.setAttribute('data-theme',cur);
+    localStorage.setItem('apologetics-theme',cur);
+  }));
+
+  // Mobile sidebar drawer
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const mobileToggle = document.getElementById('mobileToggle');
+  const sidebarClose = document.getElementById('sidebarClose');
+  function openDrawer(){sidebar.classList.add('open');overlay.classList.add('visible');document.body.style.overflow='hidden';}
+  function closeDrawer(){sidebar.classList.remove('open');overlay.classList.remove('visible');document.body.style.overflow='';}
+  if(mobileToggle) mobileToggle.addEventListener('click',()=>{
+    sidebar.classList.contains('open')?closeDrawer():openDrawer();
+  });
+  if(sidebarClose) sidebarClose.addEventListener('click',closeDrawer);
+  if(overlay) overlay.addEventListener('click',closeDrawer);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&sidebar.classList.contains('open'))closeDrawer();});
+
+  // Filter buttons
+  const filterBtns = document.querySelectorAll('.filter-btn');
+  const cards = document.querySelectorAll('.resource-card, .argument-card');
+  const sections = document.querySelectorAll('.section-block');
+  const noResults = document.getElementById('no-results');
+  const resultsCount = document.getElementById('results-count');
+  const searchInput = document.getElementById('search');
+
+  let activeFilter = 'all';
+  let activeQuery = '';
+
+  function applyFilter(){
+    let visible = 0;
+    cards.forEach(c=>{
+      const cats = (c.getAttribute('data-category')||'').toLowerCase();
+      const text = c.textContent.toLowerCase();
+      const matchesFilter = activeFilter==='all' || cats.split(' ').includes(activeFilter);
+      const matchesQuery = !activeQuery || text.includes(activeQuery);
+      const show = matchesFilter && matchesQuery;
+      c.classList.toggle('hidden',!show);
+      if(show) visible++;
+    });
+    // Hide sub-section headings whose following cards are all hidden
+    document.querySelectorAll('.sub-section').forEach(sub=>{
+      let next = sub.nextElementSibling;
+      let anyVisible = false;
+      while(next && !next.classList.contains('sub-section') && !next.classList.contains('section-header')){
+        if(next.classList.contains('resource-grid')){
+          if([...next.querySelectorAll('.resource-card')].some(c=>!c.classList.contains('hidden'))) anyVisible = true;
+        } else if(next.classList.contains('argument-card')){
+          if(!next.classList.contains('hidden')) anyVisible = true;
+        }
+        next = next.nextElementSibling;
+      }
+      sub.style.display = anyVisible ? '' : 'none';
+    });
+    // Hide whole sections with no visible cards
+    sections.forEach(s=>{
+      const anyVisible = [...s.querySelectorAll('.resource-card, .argument-card')].some(c=>!c.classList.contains('hidden'));
+      s.classList.toggle('section-hidden',!anyVisible);
+    });
+    noResults.classList.toggle('visible',visible===0);
+    resultsCount.textContent = visible===cards.length || (activeFilter==='all'&&!activeQuery)
+      ? ''
+      : `Showing ${visible} of ${cards.length} items`;
+  }
+
+  function selectFilter(btn){
+    filterBtns.forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.getAttribute('data-filter');
+    applyFilter();
+  }
+  filterBtns.forEach(b=>{
+    b.addEventListener('click',e=>{e.preventDefault();selectFilter(b);});
+    // Fallback for mobile browsers where click is swallowed inside overflow-x scroll containers
+    let startX=0,startY=0,moved=false;
+    b.addEventListener('touchstart',e=>{startX=e.touches[0].clientX;startY=e.touches[0].clientY;moved=false;},{passive:true});
+    b.addEventListener('touchmove',e=>{
+      const dx=Math.abs(e.touches[0].clientX-startX), dy=Math.abs(e.touches[0].clientY-startY);
+      if(dx>8||dy>8) moved=true;
+    },{passive:true});
+    b.addEventListener('touchend',e=>{if(!moved){e.preventDefault();selectFilter(b);}});
+  });
+  searchInput.addEventListener('input',e=>{
+    activeQuery = e.target.value.trim().toLowerCase();
+    applyFilter();
+  });
+
+  // Scroll-spy
+  const navLinks = document.querySelectorAll('.sidebar-nav a');
+  const targets = [...navLinks].map(a=>{
+    const id = a.getAttribute('href').slice(1);
+    return {link:a, el:document.getElementById(id)};
+  }).filter(t=>t.el);
+
+  const observer = new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        const id = entry.target.id;
+        navLinks.forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+id));
+      }
+    });
+  },{rootMargin:'-25% 0px -65% 0px',threshold:0});
+  targets.forEach(t=>observer.observe(t.el));
+
+  // Close mobile drawer when a nav link is tapped
+  navLinks.forEach(l=>l.addEventListener('click',()=>{
+    if(window.innerWidth<=980) closeDrawer();
+  }));
+})();
+</script>
+
+</body>
+</html>
