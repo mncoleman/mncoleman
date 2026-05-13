@@ -34,5 +34,14 @@
     "type": "text/html",
     "size": 63934,
     "uploadedAt": "2026-04-07T01:00:21.421Z"
+  },
+  {
+    "id": "0b2808fc-7cdb-479f-9918-4b899f5e87cc",
+    "name": "Apologetics Research Library v1.0",
+    "filename": "apologetics-research-library.html",
+    "description": "A compilation of resources on apologetics",
+    "type": "text/html",
+    "size": 150112,
+    "uploadedAt": "2026-05-13T04:08:57.565Z"
   }
 ]
