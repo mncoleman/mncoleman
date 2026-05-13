@@ -43,5 +43,14 @@
     "type": "text/html",
     "size": 150112,
     "uploadedAt": "2026-05-13T04:08:57.565Z"
+  },
+  {
+    "id": "7a3c1e08-9d12-4f6b-b8e4-1c52d8a3f9b1",
+    "name": "Personal HTML Skill Reference",
+    "filename": "personal-html-skill-reference.html",
+    "description": "The full personal-html SKILL.md viewable as rendered markdown or raw source, with copy and download options",
+    "type": "text/html",
+    "size": 52401,
+    "uploadedAt": "2026-05-13T04:45:00.000Z"
   }
 ]
