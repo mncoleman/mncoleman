@@ -47,10 +47,6 @@
 
   <br />
 
-  <img alt="GitHub streak" src="https://streak-stats.demolab.com?user=mncoleman&hide_border=true&background=0D1117&ring=2DD4BF&fire=2DD4BF&currStreakLabel=2DD4BF&sideLabels=c9d1d9&dates=8B949E&currStreakNum=FFFFFF&sideNums=FFFFFF" />
-
-  <br />
-
   <img width="98%" alt="Contribution graph" src="https://github-readme-activity-graph.vercel.app/graph?username=mncoleman&bg_color=0D1117&color=2DD4BF&line=016B72&point=FFFFFF&area=true&hide_border=true" />
 
 </div>
