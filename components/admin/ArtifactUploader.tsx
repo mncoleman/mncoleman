@@ -758,8 +758,8 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                 )}
 
                 </div>
-                {/* Right column — uploaded artifacts */}
-                <div className="space-y-3">
+                {/* Right column — uploaded artifacts (with a divider on desktop) */}
+                <div className="space-y-3 lg:border-l lg:border-border/50 lg:pl-6">
                     <div className="flex items-center justify-between gap-3">
                         <h4 className="text-sm font-medium text-muted-foreground shrink-0">
                             Uploaded Artifacts
