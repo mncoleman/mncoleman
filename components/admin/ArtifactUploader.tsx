@@ -8,6 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw, Zap, Globe, Copy, ExternalLink, Lock, Eye, EyeOff, AlertTriangle, Search } from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
 
+type SourceFilter = 'all' | 'dynamic' | 'static';
+type VisibilityFilter = 'all' | 'public' | 'private';
+
 interface ArtifactUploaderProps {
     workerUrl: string;
 }
@@ -66,8 +69,32 @@ function getApiUrl(workerUrl: string, path: string) {
     return `${workerUrl}/api/artifacts${path}`;
 }
 
+/** Public, shareable URL for an artifact (absolute, copy-paste ready). */
+function artifactPublicUrl(a: ArtifactEntry): string {
+    if (a.url) return a.url; // dynamic artifacts carry their absolute share URL
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://mncoleman.com';
+    return `${origin}/artifacts/${a.filename}`;
+}
+
 function apiHeaders(extra?: Record<string, string>) {
     return authHeaders({ 'Content-Type': 'application/json', ...extra });
+}
+
+function FilterPill({ active, label, count, onClick }: { active: boolean; label: string; count: number; onClick: () => void }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                active
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground'
+            }`}
+        >
+            {label}
+            <span className={`text-[10px] tabular-nums ${active ? 'text-primary/70' : 'text-muted-foreground/60'}`}>{count}</span>
+        </button>
+    );
 }
 
 export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
@@ -95,8 +122,10 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
     const [saving, setSaving] = useState(false);
     const [pendingDelete, setPendingDelete] = useState<ArtifactEntry | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
+    const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('all');
     const [revealedPasswords, setRevealedPasswords] = useState<Set<string>>(new Set());
-    const [copiedPassword, setCopiedPassword] = useState<string | null>(null);
+    const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
     const togglePasswordReveal = (id: string) => {
         setRevealedPasswords(prev => {
@@ -109,8 +138,8 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
     const copyToClipboard = async (text: string, key: string) => {
         try {
             await navigator.clipboard.writeText(text);
-            setCopiedPassword(key);
-            setTimeout(() => setCopiedPassword(prev => (prev === key ? null : prev)), 1500);
+            setCopiedKey(key);
+            setTimeout(() => setCopiedKey(prev => (prev === key ? null : prev)), 1500);
         } catch {
             window.prompt('Copy:', text);
         }
@@ -118,14 +147,29 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
 
     const filteredArtifacts = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
-        if (!q) return artifacts;
-        return artifacts.filter(a =>
-            a.name.toLowerCase().includes(q)
-            || (a.slug || '').toLowerCase().includes(q)
-            || a.filename.toLowerCase().includes(q)
-            || (a.description || '').toLowerCase().includes(q)
-        );
-    }, [artifacts, searchQuery]);
+        return artifacts.filter(a => {
+            if (sourceFilter !== 'all' && (a.source || 'static') !== sourceFilter) return false;
+            if (visibilityFilter !== 'all' && (a.visibility || 'public') !== visibilityFilter) return false;
+            if (q) {
+                const matches = a.name.toLowerCase().includes(q)
+                    || (a.slug || '').toLowerCase().includes(q)
+                    || a.filename.toLowerCase().includes(q)
+                    || (a.description || '').toLowerCase().includes(q);
+                if (!matches) return false;
+            }
+            return true;
+        });
+    }, [artifacts, searchQuery, sourceFilter, visibilityFilter]);
+
+    const counts = useMemo(() => ({
+        all: artifacts.length,
+        dynamic: artifacts.filter(a => a.source === 'dynamic').length,
+        static: artifacts.filter(a => (a.source || 'static') === 'static').length,
+        public: artifacts.filter(a => (a.visibility || 'public') === 'public').length,
+        private: artifacts.filter(a => a.visibility === 'private').length,
+    }), [artifacts]);
+
+    const filtersActive = sourceFilter !== 'all' || visibilityFilter !== 'all' || searchQuery.trim().length > 0;
     const fileInputRef = useRef<HTMLInputElement>(null);
     const editFileInputRef = useRef<HTMLInputElement>(null);
     const dragCounterRef = useRef(0);
@@ -714,7 +758,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                     <div className="flex items-center justify-between gap-3">
                         <h4 className="text-sm font-medium text-muted-foreground shrink-0">
                             Uploaded Artifacts
-                            {searchQuery && (
+                            {filtersActive && (
                                 <span className="ml-2 text-xs">
                                     ({filteredArtifacts.length} of {artifacts.length})
                                 </span>
@@ -740,6 +784,57 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                             )}
                         </div>
                     </div>
+
+                    {/* Filters */}
+                    {artifacts.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70 shrink-0">Source</span>
+                                <div className="flex items-center gap-1">
+                                    {([
+                                        ['all', 'All', counts.all],
+                                        ['dynamic', 'Live', counts.dynamic],
+                                        ['static', 'Static', counts.static],
+                                    ] as const).map(([value, label, count]) => (
+                                        <FilterPill
+                                            key={value}
+                                            active={sourceFilter === value}
+                                            label={label}
+                                            count={count}
+                                            onClick={() => setSourceFilter(value)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70 shrink-0">Visibility</span>
+                                <div className="flex items-center gap-1">
+                                    {([
+                                        ['all', 'All', counts.all],
+                                        ['public', 'Public', counts.public],
+                                        ['private', 'Private', counts.private],
+                                    ] as const).map(([value, label, count]) => (
+                                        <FilterPill
+                                            key={value}
+                                            active={visibilityFilter === value}
+                                            label={label}
+                                            count={count}
+                                            onClick={() => setVisibilityFilter(value)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                            {(sourceFilter !== 'all' || visibilityFilter !== 'all') && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setSourceFilter('all'); setVisibilityFilter('all'); }}
+                                    className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                                >
+                                    Reset
+                                </button>
+                            )}
+                        </div>
+                    )}
                     {loadingList ? (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
                             <Loader2 className="animate-spin h-4 w-4" /> Loading...
@@ -747,7 +842,11 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                     ) : artifacts.length === 0 ? (
                         <p className="text-sm text-muted-foreground py-4">No artifacts uploaded yet.</p>
                     ) : filteredArtifacts.length === 0 ? (
-                        <p className="text-sm text-muted-foreground py-4">No artifacts match &ldquo;{searchQuery}&rdquo;.</p>
+                        <p className="text-sm text-muted-foreground py-4">
+                            {searchQuery
+                                ? <>No artifacts match &ldquo;{searchQuery}&rdquo;{(sourceFilter !== 'all' || visibilityFilter !== 'all') ? ' with these filters' : ''}.</>
+                                : 'No artifacts match these filters.'}
+                        </p>
                     ) : (
                         <div className="space-y-2">
                             {filteredArtifacts.map((artifact) => {
@@ -900,11 +999,34 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                                     <p className="text-xs text-muted-foreground break-words">
                                                         {artifact.description ? `${artifact.description} - ` : ''}{formatFileSize(artifact.size)}
                                                     </p>
-                                                    <p className="text-xs text-muted-foreground break-all">
-                                                        {artifact.source === 'dynamic' && artifact.url
-                                                            ? artifact.url
-                                                            : artifact.filename}
-                                                    </p>
+                                                    <div className="flex items-center gap-1.5 mt-0.5 group/url">
+                                                        <span className="text-xs text-muted-foreground break-all min-w-0">
+                                                            {artifact.source === 'dynamic' && artifact.url
+                                                                ? artifact.url
+                                                                : artifact.filename}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => copyToClipboard(artifactPublicUrl(artifact), `url-${artifact.id}`)}
+                                                            title="Copy URL"
+                                                            aria-label="Copy URL"
+                                                            className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                                                        >
+                                                            {copiedKey === `url-${artifact.id}`
+                                                                ? <Check className="h-3 w-3 text-emerald-500" />
+                                                                : <Copy className="h-3 w-3" />}
+                                                        </button>
+                                                        <a
+                                                            href={artifactPublicUrl(artifact)}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            title="Open URL"
+                                                            aria-label="Open URL"
+                                                            className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                                                        >
+                                                            <ExternalLink className="h-3 w-3" />
+                                                        </a>
+                                                    </div>
                                                     {artifact.visibility === 'private' && artifact.hasPassword && (
                                                         <div className="flex items-center gap-1.5 mt-1.5 group/pw">
                                                             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Password:</span>
@@ -935,7 +1057,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                                                         title="Copy password"
                                                                         className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                                                                     >
-                                                                        {copiedPassword === `pw-${artifact.id}`
+                                                                        {copiedKey === `pw-${artifact.id}`
                                                                             ? <Check className="h-3 w-3 text-emerald-500" />
                                                                             : <Copy className="h-3 w-3" />}
                                                                     </button>

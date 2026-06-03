@@ -788,7 +788,7 @@ export default {
                     // Owner — enrich with cached profile
                     const ownerUsername = authPayload.username || '';
                     const ownerProfile = ownerUsername
-                        ? await getCachedProfile(env.ADMIN_USERS, ownerUsername)
+                        ? await getCachedProfile(env, ownerUsername)
                         : null;
                     users.push({
                         username: ownerUsername,
@@ -804,7 +804,7 @@ export default {
                     for (const uname of userList) {
                         const user = await getUser(env.ADMIN_USERS, uname);
                         if (user) {
-                            const profile = await getCachedProfile(env.ADMIN_USERS, uname);
+                            const profile = await getCachedProfile(env, uname);
                             users.push({ ...user, photoUrl: profile?.photoUrl || null });
                         }
                     }
@@ -864,79 +864,24 @@ export default {
                     });
                 }
 
-                // Try to look up via Telegram Bot API
-                if (env.BOT_TOKEN) {
-                    try {
-                        const tgResp = await fetch(
-                            `https://api.telegram.org/bot${env.BOT_TOKEN}/getChat?chat_id=@${username}`
-                        );
-                        if (tgResp.ok) {
-                            const tgData = await tgResp.json() as any;
-                            if (tgData.ok && tgData.result) {
-                                const chat = tgData.result;
-                                // Build photo URL if available
-                                let photoUrl: string | null = null;
-                                if (chat.photo?.small_file_id) {
-                                    const fileResp = await fetch(
-                                        `https://api.telegram.org/bot${env.BOT_TOKEN}/getFile?file_id=${chat.photo.small_file_id}`
-                                    );
-                                    if (fileResp.ok) {
-                                        const fileData = await fileResp.json() as any;
-                                        if (fileData.ok) {
-                                            photoUrl = `https://api.telegram.org/file/bot${env.BOT_TOKEN}/${fileData.result.file_path}`;
-                                        }
-                                    }
-                                }
-                                return new Response(JSON.stringify({
-                                    found: true,
-                                    username: chat.username || username,
-                                    firstName: chat.first_name || null,
-                                    lastName: chat.last_name || null,
-                                    photoUrl,
-                                }), {
-                                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                                });
-                            }
-                        }
-                    } catch (e) {
-                        console.error('Telegram lookup failed:', e);
-                    }
+                const profile = await resolveTelegramProfile(env, username);
+
+                // Pre-warm the profile cache so the user list renders the same
+                // avatar instantly once this user is invited.
+                if (profile.found || profile.photoUrl) {
+                    await env.ADMIN_USERS.put(
+                        `profile:${username}`,
+                        JSON.stringify({ firstName: profile.firstName || username, photoUrl: profile.photoUrl }),
+                        { expirationTtl: 60 * 60 * 24 * 7 }
+                    );
                 }
 
-                // Bot API failed — fall back to public t.me profile page (OG tags)
-                try {
-                    const profileResp = await fetch(`https://t.me/${username}`, {
-                        headers: { 'User-Agent': 'Cloudflare-Worker' },
-                    });
-                    if (profileResp.ok) {
-                        const html = await profileResp.text();
-                        const ogTitle = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/)?.[1];
-                        const ogImage = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/)?.[1];
-
-                        if (ogTitle && ogTitle !== 'Telegram') {
-                            const nameParts = ogTitle.split(' ');
-                            return new Response(JSON.stringify({
-                                found: true,
-                                username,
-                                firstName: nameParts[0] || null,
-                                lastName: nameParts.slice(1).join(' ') || null,
-                                photoUrl: ogImage || null,
-                            }), {
-                                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                            });
-                        }
-                    }
-                } catch (e) {
-                    console.error('t.me profile lookup failed:', e);
-                }
-
-                // All lookups failed — return unverified
                 return new Response(JSON.stringify({
-                    found: false,
-                    username,
-                    firstName: null,
-                    lastName: null,
-                    photoUrl: null,
+                    found: profile.found,
+                    username: profile.username || username,
+                    firstName: profile.firstName,
+                    lastName: profile.lastName,
+                    photoUrl: profile.photoUrl,
                 }), {
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 });
@@ -1275,31 +1220,108 @@ async function removeUser(kv: KVNamespace, username: string): Promise<void> {
     await kv.put('user_list', JSON.stringify(filtered));
 }
 
-async function getCachedProfile(kv: KVNamespace, username: string): Promise<{ firstName: string; photoUrl: string | null } | null> {
+async function getCachedProfile(env: Env, username: string): Promise<{ firstName: string; photoUrl: string | null } | null> {
+    const kv = env.ADMIN_USERS;
     const cached = await kv.get(`profile:${username}`);
     if (cached) return JSON.parse(cached);
 
-    // Fetch from t.me public profile
-    try {
-        const resp = await fetch(`https://t.me/${username}`, {
-            headers: { 'User-Agent': 'Cloudflare-Worker' },
-        });
-        if (!resp.ok) return null;
+    const profile = await resolveTelegramProfile(env, username);
+    if (!profile.found && !profile.photoUrl) return null;
 
-        const html = await resp.text();
-        const ogTitle = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/)?.[1];
-        const ogImage = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/)?.[1];
+    const result = { firstName: profile.firstName || username, photoUrl: profile.photoUrl };
+    // Cache for 7 days
+    await kv.put(`profile:${username}`, JSON.stringify(result), { expirationTtl: 60 * 60 * 24 * 7 });
+    return result;
+}
 
-        if (!ogTitle || ogTitle === 'Telegram') return null;
+/**
+ * Resolve a Telegram user's public profile (existence, name, avatar).
+ *
+ * Strategy:
+ *  1. Bot API getChat — authoritative existence check + structured name.
+ *  2. t.me Open Graph tags — token-free CDN avatar URL (preferred for display)
+ *     plus a name fallback when the bot cannot see the user.
+ *  3. Bot API getFile — last-resort avatar only; the resulting URL embeds the
+ *     bot token, so it is used only when t.me yields no image.
+ */
+async function resolveTelegramProfile(
+    env: Env,
+    username: string,
+): Promise<{ found: boolean; username: string; firstName: string | null; lastName: string | null; photoUrl: string | null }> {
+    let found = false;
+    let canonicalUsername = username;
+    let firstName: string | null = null;
+    let lastName: string | null = null;
+    let photoUrl: string | null = null;
+    let botPhotoFileId: string | null = null;
 
-        const profile = {
-            firstName: ogTitle,
-            photoUrl: ogImage || null,
-        };
-        // Cache for 7 days
-        await kv.put(`profile:${username}`, JSON.stringify(profile), { expirationTtl: 60 * 60 * 24 * 7 });
-        return profile;
-    } catch {
-        return null;
+    // 1) Bot API — authoritative existence + structured name
+    if (env.BOT_TOKEN) {
+        try {
+            const tgResp = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/getChat?chat_id=@${username}`);
+            if (tgResp.ok) {
+                const tgData = await tgResp.json() as any;
+                if (tgData.ok && tgData.result) {
+                    const chat = tgData.result;
+                    found = true;
+                    canonicalUsername = chat.username || username;
+                    firstName = chat.first_name || null;
+                    lastName = chat.last_name || null;
+                    botPhotoFileId = chat.photo?.small_file_id || null;
+                }
+            }
+        } catch (e) {
+            console.error('Telegram getChat failed:', e);
+        }
     }
+
+    // 2) t.me Open Graph — token-free avatar + name fallback
+    try {
+        const profileResp = await fetch(`https://t.me/${username}`, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; mncoleman-admin)' },
+        });
+        if (profileResp.ok) {
+            const html = await profileResp.text();
+            const ogTitle = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/)?.[1];
+            const ogImage = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/)?.[1];
+
+            if (ogImage) photoUrl = decodeHtmlEntities(ogImage);
+            if (ogTitle && ogTitle !== 'Telegram') {
+                found = true;
+                if (!firstName) {
+                    const parts = decodeHtmlEntities(ogTitle).split(' ');
+                    firstName = parts[0] || null;
+                    lastName = parts.slice(1).join(' ') || null;
+                }
+            }
+        }
+    } catch (e) {
+        console.error('t.me profile lookup failed:', e);
+    }
+
+    // 3) Bot API avatar — last resort (URL carries the bot token)
+    if (!photoUrl && botPhotoFileId && env.BOT_TOKEN) {
+        try {
+            const fileResp = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/getFile?file_id=${botPhotoFileId}`);
+            if (fileResp.ok) {
+                const fileData = await fileResp.json() as any;
+                if (fileData.ok) {
+                    photoUrl = `https://api.telegram.org/file/bot${env.BOT_TOKEN}/${fileData.result.file_path}`;
+                }
+            }
+        } catch (e) {
+            console.error('Telegram getFile failed:', e);
+        }
+    }
+
+    return { found, username: canonicalUsername, firstName, lastName, photoUrl };
+}
+
+function decodeHtmlEntities(s: string): string {
+    return s
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>');
 }

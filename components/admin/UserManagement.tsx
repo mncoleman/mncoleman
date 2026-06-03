@@ -30,6 +30,43 @@ interface LookupResult {
     photoUrl: string | null;
 }
 
+/**
+ * Avatar that renders the Telegram profile photo when available and gracefully
+ * falls back to `children` (initials / role icon) when there is no URL OR when
+ * the image fails to load (expired Telegram file URL, CORS, 404, etc.).
+ */
+function Avatar({
+    src,
+    alt,
+    imgClassName,
+    fallbackClassName,
+    children,
+}: {
+    src?: string | null;
+    alt?: string | null;
+    imgClassName: string;
+    fallbackClassName: string;
+    children: React.ReactNode;
+}) {
+    // Track the specific URL that failed rather than a boolean, so a new `src`
+    // is retried automatically on the next render without needing an effect.
+    const [erroredSrc, setErroredSrc] = useState<string | null>(null);
+
+    if (src && erroredSrc !== src) {
+        return (
+            <img
+                src={src}
+                alt={alt || ''}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                onError={() => setErroredSrc(src)}
+                className={imgClassName}
+            />
+        );
+    }
+    return <div className={fallbackClassName}>{children}</div>;
+}
+
 export function UserManagement({ workerUrl }: UserManagementProps) {
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [loading, setLoading] = useState(true);
@@ -180,17 +217,14 @@ export function UserManagement({ workerUrl }: UserManagementProps) {
                 ) : (
                     <div className="p-4 rounded-lg border border-primary/30 bg-primary/5 space-y-3">
                         <div className="flex items-center gap-3">
-                            {lookup.photoUrl ? (
-                                <img
-                                    src={lookup.photoUrl}
-                                    alt={lookup.username}
-                                    className="h-12 w-12 rounded-full object-cover"
-                                />
-                            ) : (
-                                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center text-lg font-semibold text-muted-foreground">
-                                    {(lookup.firstName || lookup.username)[0]?.toUpperCase()}
-                                </div>
-                            )}
+                            <Avatar
+                                src={lookup.photoUrl}
+                                alt={lookup.username}
+                                imgClassName="h-12 w-12 rounded-full object-cover bg-muted"
+                                fallbackClassName="h-12 w-12 rounded-full bg-muted flex items-center justify-center text-lg font-semibold text-muted-foreground"
+                            >
+                                {(lookup.firstName || lookup.username)[0]?.toUpperCase()}
+                            </Avatar>
                             <div>
                                 {lookup.found ? (
                                     <>
@@ -246,25 +280,22 @@ export function UserManagement({ workerUrl }: UserManagementProps) {
                                 className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background/50"
                             >
                                 <div className="flex items-center gap-3 min-w-0">
-                                    {user.photoUrl ? (
-                                        <img
-                                            src={user.photoUrl}
-                                            alt={user.username}
-                                            className="h-8 w-8 rounded-full object-cover shrink-0"
-                                        />
-                                    ) : (
-                                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                                            {user.role === 'super_admin' ? (
-                                                <Shield className="h-4 w-4 text-primary" />
-                                            ) : user.status === 'invited' ? (
-                                                <Clock className="h-4 w-4 text-amber-500" />
-                                            ) : (
-                                                <span className="text-xs font-semibold text-muted-foreground">
-                                                    {(user.firstName || user.username || '?')[0]?.toUpperCase()}
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
+                                    <Avatar
+                                        src={user.photoUrl}
+                                        alt={user.username}
+                                        imgClassName="h-8 w-8 rounded-full object-cover shrink-0 bg-muted"
+                                        fallbackClassName="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0"
+                                    >
+                                        {user.role === 'super_admin' ? (
+                                            <Shield className="h-4 w-4 text-primary" />
+                                        ) : user.status === 'invited' ? (
+                                            <Clock className="h-4 w-4 text-amber-500" />
+                                        ) : (
+                                            <span className="text-xs font-semibold text-muted-foreground">
+                                                {(user.firstName || user.username || '?')[0]?.toUpperCase()}
+                                            </span>
+                                        )}
+                                    </Avatar>
                                     <div className="min-w-0">
                                         <p className="text-sm font-medium">
                                             {user.username ? `@${user.username}` : user.firstName || 'Owner'}

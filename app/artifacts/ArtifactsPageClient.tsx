@@ -5,7 +5,7 @@ import { FileText, Filter, X, ExternalLink, Download, File, Image, Code, FileTyp
 import { PageEntrance } from '@/components/page-entrance';
 import { ArtifactDesignPopup } from '@/components/artifact-design-popup';
 import { formatDistanceToNow } from 'date-fns';
-import { authHeaders, getSessionToken } from '@/lib/admin-auth';
+import { authHeaders } from '@/lib/admin-auth';
 
 interface Artifact {
     id: string;
@@ -102,28 +102,46 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
 
     useEffect(() => {
         let cancelled = false;
-        const token = getSessionToken();
-        const isAdminView = !!token;
-        setIsAdmin(isAdminView);
 
-        const fetchPromise = isAdminView
-            ? fetch(`${WORKER_URL.replace(/\/$/, '')}/api/artifacts/instant/list`, {
-                  headers: authHeaders(),
-                  credentials: 'include',
-              })
-            : fetch(`${ARTIFACTS_API}/api/list`, { cache: 'no-store' });
+        const load = async () => {
+            // Determine admin status the same robust way the /admin page does:
+            // /auth/me succeeds for EITHER a stored bearer token (sessionStorage)
+            // OR the admin_token cookie. The old check only read sessionStorage,
+            // which is tab-scoped — so opening /artifacts in a new tab (or after a
+            // browser restart) silently fell back to the public, private-less list.
+            let isAdminView = false;
+            try {
+                const meRes = await fetch(`${WORKER_URL.replace(/\/$/, '')}/auth/me`, {
+                    credentials: 'include',
+                    headers: authHeaders(),
+                });
+                isAdminView = meRes.ok;
+            } catch {
+                isAdminView = false;
+            }
+            if (cancelled) return;
+            setIsAdmin(isAdminView);
 
-        fetchPromise
-            .then(r => (r.ok ? r.json() : { artifacts: [] }))
-            .then(data => {
+            try {
+                const res = isAdminView
+                    ? await fetch(`${WORKER_URL.replace(/\/$/, '')}/api/artifacts/instant/list`, {
+                          headers: authHeaders(),
+                          credentials: 'include',
+                      })
+                    : await fetch(`${ARTIFACTS_API}/api/list`, { cache: 'no-store' });
+                const data = res.ok ? await res.json() : { artifacts: [] };
                 if (cancelled) return;
                 const items: Artifact[] = (data?.artifacts || []).map((a: Artifact) => ({
                     ...a,
                     source: 'dynamic' as const,
                 }));
                 setDynamicArtifacts(items);
-            })
-            .catch(() => {});
+            } catch {
+                // Network error — leave the (static) list as-is.
+            }
+        };
+
+        load();
         return () => {
             cancelled = true;
         };
