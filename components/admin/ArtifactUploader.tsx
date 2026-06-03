@@ -519,9 +519,9 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                 )}
 
                 {/* Desktop: upload form (left) and artifacts list (right) side by side. */}
-                <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
                 {/* Left column — upload */}
-                <div className="space-y-6">
+                <div className="space-y-6 min-w-0">
                 {/* Upload Form */}
                 <form onSubmit={handleUpload} className="space-y-4">
                     {/* Drop Zone */}
@@ -759,7 +759,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
 
                 </div>
                 {/* Right column — uploaded artifacts (with a divider on desktop) */}
-                <div className="space-y-3 lg:border-l lg:border-border/50 lg:pl-6">
+                <div className="space-y-3 min-w-0 lg:border-l lg:border-border/50 lg:pl-6">
                     <div className="flex items-center justify-between gap-3">
                         <h4 className="text-sm font-medium text-muted-foreground shrink-0">
                             Uploaded Artifacts
