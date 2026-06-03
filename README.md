@@ -55,7 +55,7 @@
 
 <div align="center">
 
-# 🌐 The Website
+# The Website
 
 **This profile lives in the same repo that powers [mncoleman.com](https://mncoleman.com)** — a modern, minimalist personal site featuring a blog, projects, resources, artifacts, and a professional resume, all powered by Notion CMS and Next.js.
 
