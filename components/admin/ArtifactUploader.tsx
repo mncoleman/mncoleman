@@ -512,6 +512,16 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                 <CardDescription>Upload files to the artifacts page. Files are committed to the repo and served statically.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+                {message && (
+                    <div className={`p-3 rounded text-sm ${message.type === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                        {message.text}
+                    </div>
+                )}
+
+                {/* Desktop: upload form (left) and artifacts list (right) side by side. */}
+                <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+                {/* Left column — upload */}
+                <div className="space-y-6">
                 {/* Upload Form */}
                 <form onSubmit={handleUpload} className="space-y-4">
                     {/* Drop Zone */}
@@ -747,13 +757,8 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                     </div>
                 )}
 
-                {message && (
-                    <div className={`p-3 rounded text-sm ${message.type === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                        {message.text}
-                    </div>
-                )}
-
-                {/* Existing Artifacts List */}
+                </div>
+                {/* Right column — uploaded artifacts */}
                 <div className="space-y-3">
                     <div className="flex items-center justify-between gap-3">
                         <h4 className="text-sm font-medium text-muted-foreground shrink-0">
@@ -1096,6 +1101,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                             })}
                         </div>
                     )}
+                </div>
                 </div>
             </CardContent>
         </Card>
