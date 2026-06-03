@@ -6,7 +6,7 @@
 <div align="center">
 
 <a href="https://mncoleman.com">
-  <img alt="Matthew Coleman" src="https://readme-typing-svg.demolab.com?font=Roboto&weight=600&size=28&duration=3200&pause=900&color=2DD4BF&center=true&vCenter=true&width=720&height=70&lines=Hi%2C+I'm+Matthew+Coleman+%F0%9F%91%8B;Technology+%26+AI+enthusiast;Rapid+development%2C+built+to+ship;Welcome+to+my+corner+of+the+internet" />
+  <img alt="Matthew Coleman" src="https://readme-typing-svg.demolab.com?font=Roboto&weight=600&size=28&duration=3200&pause=900&color=2DD4BF&center=true&vCenter=true&width=720&height=70&lines=Hi%2C+I'm+Matthew+Coleman+%F0%9F%91%8B;Technology+%26+AI+enthusiast;Welcome+to+my+corner+of+the+internet" />
 </a>
 
 <p>
