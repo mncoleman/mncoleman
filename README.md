@@ -23,11 +23,10 @@
 
 > Welcome! I'm **Matthew Coleman** — this is my small corner of the internet, where I collect my thoughts, projects, and experiences. I hope you enjoy your stay.
 
-- 🤖 Deeply passionate about **technology, AI, and the vast world of digital possibilities**
-- ⚡ I love **rapid development** — building and shipping real things fast, often with AI as a co-pilot (**Claude** & **Gemini**)
-- 🌐 I share thoughts, experiences, and technical knowledge over at **[mncoleman.com](https://mncoleman.com)**
-- 🧪 Lately playing with **WebGL / 3D**, motion design, and **Notion-powered** content pipelines
-- 💬 Ask me about **TypeScript**, the **React / Next.js** ecosystem, or building fast with AI
+- Deeply passionate about **technology, AI, and the vast world of digital possibilities**
+- I love **rapid development** — building and shipping real things fast, often with AI as a co-pilot (**Claude** & **Gemini**)
+- I share thoughts, experiences, and technical knowledge over at **[mncoleman.com](https://mncoleman.com)**
+- Lately playing with **WebGL / 3D**, motion design, and **Notion-powered** content pipelines
 
 ### 🧰 Tech I Reach For
 
