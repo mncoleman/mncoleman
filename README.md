@@ -1,10 +1,68 @@
+<!--
+  This repo (mncoleman/mncoleman) is BOTH my GitHub profile README and the
+  source for my website. Top half = about me. Bottom half = the website.
+-->
+
 <div align="center">
 
-# Matthew Coleman
+<a href="https://mncoleman.com">
+  <img alt="Matthew Coleman" src="https://readme-typing-svg.demolab.com?font=Roboto&weight=600&size=28&duration=3200&pause=900&color=2DD4BF&center=true&vCenter=true&width=720&height=70&lines=Hi%2C+I'm+Matthew+Coleman+%F0%9F%91%8B;Technology+%26+AI+enthusiast;Rapid+development%2C+built+to+ship;Welcome+to+my+corner+of+the+internet" />
+</a>
 
-### Personal Website
+<p>
+  <a href="https://mncoleman.com"><img alt="Website" src="https://img.shields.io/badge/Website-mncoleman.com-016b72?style=for-the-badge&logo=googlechrome&logoColor=white" /></a>
+  <a href="https://www.linkedin.com/in/matthew-coleman-15a66b233/"><img alt="LinkedIn" src="https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" /></a>
+  <a href="https://x.com/mtthwc003"><img alt="X" src="https://img.shields.io/badge/X-000000?style=for-the-badge&logo=x&logoColor=white" /></a>
+  <a href="https://www.instagram.com/mncoleman_/"><img alt="Instagram" src="https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white" /></a>
+  <img alt="Profile views" src="https://komarev.com/ghpvc/?username=mncoleman&style=for-the-badge&color=016b72&label=PROFILE+VIEWS" />
+</p>
 
-A modern, minimalist personal website featuring blog, projects, resources, artifacts, and professional resume—all powered by Notion CMS and Next.js.
+</div>
+
+## 👋 About Me
+
+> Welcome! I'm **Matthew Coleman** — this is my small corner of the internet, where I collect my thoughts, projects, and experiences. I hope you enjoy your stay.
+
+- 🤖 Deeply passionate about **technology, AI, and the vast world of digital possibilities**
+- ⚡ I love **rapid development** — building and shipping real things fast, often with AI as a co-pilot (**Claude** & **Gemini**)
+- 🌐 I share thoughts, experiences, and technical knowledge over at **[mncoleman.com](https://mncoleman.com)**
+- 🧪 Lately playing with **WebGL / 3D**, motion design, and **Notion-powered** content pipelines
+- 💬 Ask me about **TypeScript**, the **React / Next.js** ecosystem, or building fast with AI
+
+### 🧰 Tech I Reach For
+
+<div align="center">
+  <img alt="Tech stack" src="https://skillicons.dev/icons?i=ts,js,react,nextjs,tailwind,threejs,nodejs,cloudflare,git,github&perline=10" />
+</div>
+
+### 📊 GitHub Stats
+
+<div align="center">
+
+  <img alt="GitHub stats" src="https://github-profile-summary-cards.vercel.app/api/cards/stats?username=mncoleman&theme=github_dark" />
+
+  <br />
+
+  <img alt="Most-used languages" src="https://github-profile-summary-cards.vercel.app/api/cards/most-commit-language?username=mncoleman&theme=github_dark" />
+  <img alt="Repos per language" src="https://github-profile-summary-cards.vercel.app/api/cards/repos-per-language?username=mncoleman&theme=github_dark" />
+
+  <br />
+
+  <img alt="GitHub streak" src="https://streak-stats.demolab.com?user=mncoleman&hide_border=true&background=0D1117&ring=2DD4BF&fire=2DD4BF&currStreakLabel=2DD4BF&sideLabels=c9d1d9&dates=8B949E&currStreakNum=FFFFFF&sideNums=FFFFFF" />
+
+  <br />
+
+  <img width="98%" alt="Contribution graph" src="https://github-readme-activity-graph.vercel.app/graph?username=mncoleman&bg_color=0D1117&color=2DD4BF&line=016B72&point=FFFFFF&area=true&hide_border=true" />
+
+</div>
+
+---
+
+<div align="center">
+
+# 🌐 The Website
+
+**This profile lives in the same repo that powers [mncoleman.com](https://mncoleman.com)** — a modern, minimalist personal site featuring a blog, projects, resources, artifacts, and a professional resume, all powered by Notion CMS and Next.js.
 
 [![Deploy to GitHub Pages](https://github.com/mncoleman/mncoleman/actions/workflows/deploy.yml/badge.svg)](https://github.com/mncoleman/mncoleman/actions/workflows/deploy.yml)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
