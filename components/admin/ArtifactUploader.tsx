@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw, Zap, Globe, Copy, ExternalLink, Lock, Eye, EyeOff, AlertTriangle, Search } from 'lucide-react';
+import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw, Zap, Globe, Copy, ExternalLink, Lock, Eye, EyeOff, AlertTriangle, Search, ChevronDown, ChevronRight } from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
 
 type SourceFilter = 'all' | 'dynamic' | 'static';
@@ -126,6 +126,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
     const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('all');
     const [revealedPasswords, setRevealedPasswords] = useState<Set<string>>(new Set());
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
+    const [listCollapsed, setListCollapsed] = useState(false);
 
     const togglePasswordReveal = (id: string) => {
         setRevealedPasswords(prev => {
@@ -761,35 +762,45 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                 {/* Right column — uploaded artifacts (with a divider on desktop) */}
                 <div className="space-y-3 min-w-0 lg:border-l lg:border-border/50 lg:pl-6">
                     <div className="flex items-center justify-between gap-3">
-                        <h4 className="text-sm font-medium text-muted-foreground shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setListCollapsed((c) => !c)}
+                            aria-expanded={!listCollapsed}
+                            className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                        >
+                            {listCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                             Uploaded Artifacts
-                            {filtersActive && (
-                                <span className="ml-2 text-xs">
-                                    ({filteredArtifacts.length} of {artifacts.length})
+                            {(filtersActive || listCollapsed) && artifacts.length > 0 && (
+                                <span className="text-xs font-normal">
+                                    {filtersActive ? `(${filteredArtifacts.length} of ${artifacts.length})` : `(${artifacts.length})`}
                                 </span>
                             )}
-                        </h4>
-                        <div className="relative flex-1 max-w-xs">
-                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                            <Input
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Search artifacts…"
-                                className="h-8 text-xs pl-8 pr-7"
-                            />
-                            {searchQuery && (
-                                <button
-                                    type="button"
-                                    onClick={() => setSearchQuery('')}
-                                    aria-label="Clear search"
-                                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
-                                >
-                                    <X className="h-3 w-3" />
-                                </button>
-                            )}
-                        </div>
+                        </button>
+                        {!listCollapsed && (
+                            <div className="relative flex-1 max-w-xs">
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                                <Input
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search artifacts…"
+                                    className="h-8 text-xs pl-8 pr-7"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSearchQuery('')}
+                                        aria-label="Clear search"
+                                        className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
 
+                    {!listCollapsed && (
+                    <>
                     {/* Filters */}
                     {artifacts.length > 0 && (
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -1100,6 +1111,8 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                 );
                             })}
                         </div>
+                    )}
+                    </>
                     )}
                 </div>
                 </div>
