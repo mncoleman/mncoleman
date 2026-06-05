@@ -43,12 +43,21 @@ docker save artifacts:latest | gzip | \
 docker run -d \
     --name artifacts \
     --restart unless-stopped \
-    --memory=512m \
+    --memory=1g \
+    --memory-swap=2g \
     -p 127.0.0.1:7878:7878 \
     -e PUBLIC_BASE_URL=https://artifacts.mncoleman.com \
     -e JWT_SECRET="$(cat /home/ubuntu/.artifacts.jwt-secret)" \
+    -e CORS_ORIGINS=https://mncoleman.com,https://mncoleman.github.io,http://localhost:3000 \
+    -e MAX_UPLOAD_BYTES=104857600 \
     -v artifacts_data:/data \
     artifacts:latest
+
+# MAX_UPLOAD_BYTES=104857600 (100 MB) raises the upload ceiling from the 25 MB
+#   default. Uploads transit the Cloudflare Worker, which caps request bodies at
+#   ~100 MB on Free/Pro — going higher needs a CF plan upgrade.
+# The handler buffers each file in memory (formData -> arrayBuffer), so --memory
+#   is 1g to comfortably hold a ~100 MB upload (2-3x transient) plus OG render.
 
 # Add the caddyfile.snippet content to /etc/caddy/Caddyfile then:
 sudo systemctl reload caddy
