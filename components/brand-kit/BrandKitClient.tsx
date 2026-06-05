@@ -26,7 +26,6 @@ import GlassCube from '@/components/ui/glass-cube';
 import { BlurText } from '@/components/ui/blur-text';
 import { FallInText } from '@/components/ui/fall-in-text';
 import { TextType } from '@/components/ui/text-type';
-import { ArtifactDesignPopup } from '@/components/artifact-design-popup';
 
 
 const noScrollbarStyle: React.CSSProperties = {
@@ -532,30 +531,6 @@ function PromptingSection({ copyToClipboard, copiedColor }: { copyToClipboard: (
                     </Card>
                 ))}
             </div>
-
-            {/* Artifact Design System */}
-            <ArtifactDesignPopup
-                trigger={
-                    <Card className="border-border/40 bg-background/60 backdrop-blur-xl overflow-hidden cursor-pointer group hover:border-[#016b72]/30 transition-all duration-300">
-                        <CardHeader>
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <CardTitle className="text-lg group-hover:text-[#016b72] transition-colors">Artifact Design System</CardTitle>
-                                        <Badge className="bg-[#016b72]/10 text-[#016b72] border-[#016b72]/20 hover:bg-[#016b72]/10">Bonus</Badge>
-                                    </div>
-                                    <CardDescription>
-                                        A separate design system for self-contained HTML knowledge artifacts — cheatsheets, research libraries, and reference guides. Warm earthy palette with teal accents, sidebar navigation, and full dark mode.
-                                    </CardDescription>
-                                </div>
-                                <div className="shrink-0 p-2 rounded-lg bg-[#016b72]/10 group-hover:bg-[#016b72]/20 transition-colors">
-                                    <Palette className="h-5 w-5 text-[#016b72]" />
-                                </div>
-                            </div>
-                        </CardHeader>
-                    </Card>
-                }
-            />
 
             {/* Tools & Resources */}
             <Card className="border-border/40 bg-background/60 backdrop-blur-xl">
