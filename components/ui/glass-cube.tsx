@@ -30,6 +30,8 @@ export default function GlassCube({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const cubeRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef(0);
+  // Set by the main effect; lets the pulse trigger restart the (demand-driven) loop.
+  const kickRef = useRef<() => void>(() => {});
 
   const s = useRef({
     rx: 0,
@@ -51,12 +53,13 @@ export default function GlassCube({
     if (pulse && !s.current.hover) {
       s.current.pulseActive = true;
       s.current.pulsePhase = 0;
+      kickRef.current();
     }
   }, [pulse]);
 
-  // Generate depth slices
+  // Generate depth slices (fewer, lighter layers — was depth/3 ≈ 13 per card)
   const slices = useMemo(() => {
-    const count = Math.max(8, Math.round(depth / 3));
+    const count = Math.max(4, Math.round(depth / 8));
     const layers = [];
     for (let i = 0; i <= count; i++) {
       const z = (i / count) * depth;
@@ -75,27 +78,24 @@ export default function GlassCube({
       return;
     }
 
-    const onMove = (e: MouseEvent) => {
-      const rect = wrapper.getBoundingClientRect();
-      const nx = (e.clientX - rect.left) / rect.width;
-      const ny = (e.clientY - rect.top) / rect.height;
-      s.current.tRy = (nx - 0.5) * 2 * tiltMax;
-      s.current.tRx = -(ny - 0.5) * 2 * tiltMax;
-    };
+    // Position the cube once up front so it's correct before any frame runs.
+    if (cubeRef.current) cubeRef.current.style.transform = `translateZ(${-depth / 2}px)`;
 
-    const onEnter = () => {
-      s.current.hover = true;
-      s.current.pulseActive = false;
-    };
-    const onLeave = () => {
-      s.current.hover = false;
-      s.current.tRx = 0;
-      s.current.tRy = 0;
-    };
+    // offsetParent is null when this (or an ancestor) is display:none — e.g. the
+    // hidden layout on the other breakpoint — so those cubes never start a loop.
+    let onScreen = wrapper.offsetParent !== null;
+    let running = false;
 
-    wrapper.addEventListener('mousemove', onMove);
-    wrapper.addEventListener('mouseenter', onEnter);
-    wrapper.addEventListener('mouseleave', onLeave);
+    const hasWork = () => {
+      const st = s.current;
+      return (
+        st.wobbleActive ||
+        st.pulseActive ||
+        st.hover ||
+        Math.abs(st.rx - st.tRx) > 0.01 ||
+        Math.abs(st.ry - st.tRy) > 0.01
+      );
+    };
 
     const animate = () => {
       const st = s.current;
@@ -136,16 +136,64 @@ export default function GlassCube({
           `translateZ(${-depth / 2}px) rotateX(${st.rx}deg) rotateY(${st.ry}deg)`;
       }
 
-      frameRef.current = requestAnimationFrame(animate);
+      // Demand-driven: keep going only while there's motion left and we're visible.
+      if (onScreen && hasWork()) {
+        frameRef.current = requestAnimationFrame(animate);
+      } else {
+        running = false;
+      }
     };
 
-    frameRef.current = requestAnimationFrame(animate);
+    const kick = () => {
+      if (running || !onScreen) return;
+      running = true;
+      frameRef.current = requestAnimationFrame(animate);
+    };
+    kickRef.current = kick;
+
+    const onMove = (e: MouseEvent) => {
+      const rect = wrapper.getBoundingClientRect();
+      const nx = (e.clientX - rect.left) / rect.width;
+      const ny = (e.clientY - rect.top) / rect.height;
+      s.current.tRy = (nx - 0.5) * 2 * tiltMax;
+      s.current.tRx = -(ny - 0.5) * 2 * tiltMax;
+      kick();
+    };
+    const onEnter = () => {
+      s.current.hover = true;
+      s.current.pulseActive = false;
+      kick();
+    };
+    const onLeave = () => {
+      s.current.hover = false;
+      s.current.tRx = 0;
+      s.current.tRy = 0;
+      kick();
+    };
+
+    wrapper.addEventListener('mousemove', onMove);
+    wrapper.addEventListener('mouseenter', onEnter);
+    wrapper.addEventListener('mouseleave', onLeave);
+
+    // Pause/resume on visibility — covers display:none breakpoint toggles + scroll.
+    const io = new IntersectionObserver(
+      (entries) => {
+        onScreen = entries.some((e) => e.isIntersecting);
+        if (onScreen) kick();
+      },
+      { threshold: 0 }
+    );
+    io.observe(wrapper);
+
+    kick(); // start the initial load wobble (if visible)
 
     return () => {
       cancelAnimationFrame(frameRef.current);
       wrapper.removeEventListener('mousemove', onMove);
       wrapper.removeEventListener('mouseenter', onEnter);
       wrapper.removeEventListener('mouseleave', onLeave);
+      io.disconnect();
+      kickRef.current = () => {};
     };
   }, [tiltMax, depth]);
 
@@ -190,8 +238,8 @@ export default function GlassCube({
             borderRadius: `${r}px`,
             overflow: 'hidden',
             background: 'rgba(255, 255, 255, 0.03)',
-            backdropFilter: 'blur(12px) saturate(1.4)',
-            WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 255, 255, 0.10)',
             transform: `translateZ(${depth}px)`,
           }}

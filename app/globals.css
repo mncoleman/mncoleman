@@ -93,6 +93,25 @@
   }
 }
 
+/* Homepage layout toggle — both the desktop cube grid and the mobile stack are
+ * server-rendered (so the hero card text is the LCP element in static HTML);
+ * CSS shows the right one per device with no JS and no layout flash. Kept
+ * OUTSIDE @layer so these win over Tailwind's layered `flex` / `block` utilities. */
+.home-desktop {
+  display: none;
+}
+.home-mobile {
+  display: block;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .home-desktop {
+    display: flex;
+  }
+  .home-mobile {
+    display: none;
+  }
+}
+
 /* PWA safe area support for notch/status bar */
 @supports (padding-top: env(safe-area-inset-top)) {
   .pwa-safe-top {

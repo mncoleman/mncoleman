@@ -97,13 +97,10 @@ export default function DarkVeil({
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current as HTMLCanvasElement;
-    const parent = canvas.parentElement as HTMLElement;
 
-    const renderer = new Renderer({
-      dpr: Math.min(window.devicePixelRatio, 2),
-      canvas
-    });
+    const reduceMq = window.matchMedia('(prefers-reduced-motion: reduce)');
 
+    const renderer = new Renderer({ dpr: 1, canvas }); // real dpr is set in resize()
     const gl = renderer.gl;
     const geometry = new Triangle(gl);
 
@@ -124,11 +121,17 @@ export default function DarkVeil({
     const mesh = new Mesh(gl, { geometry, program });
 
     const resize = () => {
+      const mobile = window.matchMedia('(max-width: 768px)').matches;
+      const baseDpr = mobile ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+      const scale = mobile ? 0.5 : resolutionScale;
       const w = window.innerWidth;
       const h = window.innerHeight;
-      // Set internal rendering resolution
+      // Shrink the render buffer by `scale` (via dpr) while keeping the canvas
+      // full-viewport. uResolution scales with it, so the pattern composition is
+      // identical regardless of scale — it's purely a quality/perf knob.
+      renderer.dpr = baseDpr * scale;
       renderer.setSize(w, h);
-      program.uniforms.uResolution.value.set(w, h);
+      program.uniforms.uResolution.value.set(w * scale, h * scale);
     };
 
     window.addEventListener('resize', resize);
@@ -136,23 +139,63 @@ export default function DarkVeil({
 
     const start = performance.now();
     let frame = 0;
+    let running = false;
+    let onScreen = true;
 
-    const loop = () => {
+    const renderFrame = () => {
       program.uniforms.uTime.value = ((performance.now() - start) / 1000) * speed;
-      program.uniforms.uHueShift.value = hueShift;
-      program.uniforms.uNoise.value = noiseIntensity;
-      program.uniforms.uScan.value = scanlineIntensity;
-      program.uniforms.uScanFreq.value = scanlineFrequency;
-      program.uniforms.uWarp.value = warpAmount;
       renderer.render({ scene: mesh });
+    };
+    const loop = () => {
+      renderFrame();
       frame = requestAnimationFrame(loop);
     };
+    // Only run while motion is allowed, the tab is visible, and the canvas is on-screen.
+    const play = () => {
+      if (running || reduceMq.matches || document.hidden || !onScreen) return;
+      running = true;
+      frame = requestAnimationFrame(loop);
+    };
+    const pause = () => {
+      running = false;
+      cancelAnimationFrame(frame);
+    };
 
-    loop();
+    if (reduceMq.matches) {
+      renderFrame(); // one static frame — no animation loop
+    } else {
+      play();
+    }
+
+    const onVisibility = () => (document.hidden ? pause() : play());
+    document.addEventListener('visibilitychange', onVisibility);
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        onScreen = entries.some((e) => e.isIntersecting);
+        if (onScreen) play();
+        else pause();
+      },
+      { threshold: 0 }
+    );
+    io.observe(canvas);
+
+    const onReduceChange = () => {
+      if (reduceMq.matches) {
+        pause();
+        renderFrame();
+      } else {
+        play();
+      }
+    };
+    reduceMq.addEventListener('change', onReduceChange);
 
     return () => {
-      cancelAnimationFrame(frame);
+      pause();
       window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', onVisibility);
+      reduceMq.removeEventListener('change', onReduceChange);
+      io.disconnect();
     };
   }, [hueShift, noiseIntensity, scanlineIntensity, speed, scanlineFrequency, warpAmount, resolutionScale]);
   return (

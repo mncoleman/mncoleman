@@ -137,7 +137,15 @@ function DesktopGrid() {
   }, []);
 
   useEffect(() => {
+    // Only the desktop breakpoint shows this grid; skip the idle-pulse churn
+    // (and re-render storm) entirely on mobile / when motion is reduced / when
+    // the tab is hidden.
+    const desktopMq = window.matchMedia('(min-width: 768px) and (hover: hover) and (pointer: fine)');
+    const reduceMq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (!desktopMq.matches || reduceMq.matches) return;
+
     const interval = setInterval(() => {
+      if (document.hidden) return;
       const idle = Date.now() - lastInteraction.current;
       if (idle >= 3000) {
         setPulseCol(prev => {
@@ -157,7 +165,7 @@ function DesktopGrid() {
 
   return (
     <div
-      className="flex-1 flex items-center justify-center px-4 relative"
+      className="home-desktop flex-1 flex items-center justify-center px-4 relative"
       style={{ minHeight: 'calc(100dvh - 8rem)' }}
       onMouseMove={handleGridInteraction}
       onMouseDown={handleGridInteraction}
@@ -196,7 +204,7 @@ function MobileStack() {
 
   return (
     <div
-      className="flex-1 relative px-4 pb-16"
+      className="home-mobile flex-1 relative px-4 pb-16"
       style={{ paddingTop: `${24}px` }}
     >
       {bentoCards.map((card, i) => {
@@ -282,24 +290,16 @@ function MobileStack() {
 }
 
 export default function Home() {
-  const [mode, setMode] = useState<'desktop' | 'mobile' | null>(null);
-
-  useEffect(() => {
-    const check = () => {
-      const hasHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-      const isWide = window.innerWidth >= 768;
-      setMode(hasHover && isWide ? 'desktop' : 'mobile');
-    };
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-
+  // Both layouts are server-rendered and toggled by CSS (.home-desktop /
+  // .home-mobile in globals.css) so the hero card text is in the static HTML —
+  // no blank first paint, no JS-driven layout flash. The heavy client behaviour
+  // of the hidden layout stays inert (GlassCube rAF is IntersectionObserver-gated;
+  // the idle-pulse interval only runs on the desktop breakpoint).
   return (
     <>
       <DarkVeil hueShift={40} speed={0.5} resolutionScale={0.8} />
-      {mode === 'desktop' && <DesktopGrid />}
-      {mode === 'mobile' && <MobileStack />}
+      <DesktopGrid />
+      <MobileStack />
     </>
   );
 }
