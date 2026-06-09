@@ -14,11 +14,16 @@ interface AnimatedIconHandle {
 }
 
 import { motion } from 'motion/react';
-import DarkVeil from '@/components/ui/dark-veil';
+import dynamic from 'next/dynamic';
 import GlassCube from '@/components/ui/glass-cube';
-import ScrollFloat from '@/components/ScrollFloat';
 import { TransitionLink } from '@/components/transition-link';
 import { usePageTransition } from '@/components/transition-provider';
+
+// Heavy, purely-decorative libraries (OGL for Dark Veil, GSAP for ScrollFloat)
+// load after first paint and stay off the homepage's initial JS chunk. The
+// content cards remain server-rendered (see Home), so LCP is unaffected.
+const DarkVeil = dynamic(() => import('@/components/ui/dark-veil'), { ssr: false });
+const ScrollFloat = dynamic(() => import('@/components/ScrollFloat'), { ssr: false });
 
 const bentoCards = [
   {
