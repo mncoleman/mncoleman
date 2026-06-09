@@ -8,7 +8,7 @@
     "dev:artifacts": "tsx scripts/dev-artifacts-server.ts",
     "generate-search-index": "tsx scripts/generate-search-index.ts",
     "stamp-sw-version": "tsx scripts/stamp-sw-version.ts",
-    "build": "npm run generate-search-index && next build && npm run stamp-sw-version",
+    "build": "npm run generate-search-index && next build && tsx scripts/finalize-og-images.ts && npm run stamp-sw-version",
     "start": "next start",
     "lint": "eslint .",
     "export": "next build"

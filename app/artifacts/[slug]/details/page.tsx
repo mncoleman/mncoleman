@@ -43,18 +43,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     return {
         title: `${artifact.name} | Matthew Coleman`,
         description,
+        // og:image / twitter:image (summary_large_image) come from the
+        // co-located opengraph-image.tsx — generated per artifact at build.
         openGraph: {
             title: artifact.name,
             description,
             url,
             type: 'article',
-            images: ['/icon-512.png'],
-        },
-        twitter: {
-            card: 'summary',
-            title: artifact.name,
-            description,
-            images: ['/icon-512.png'],
         },
     };
 }

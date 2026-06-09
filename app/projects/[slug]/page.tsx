@@ -27,8 +27,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     return {
         title: `${project.name} | Projects | Matthew Coleman`,
         description,
-        openGraph: { title: project.name, description, url, type: 'article', images: ['/icon-512.png'] },
-        twitter: { card: 'summary', title: project.name, description, images: ['/icon-512.png'] },
+        // og:image / twitter:image come from the co-located opengraph-image.tsx.
+        openGraph: { title: project.name, description, url, type: 'article' },
     };
 }
 
