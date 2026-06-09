@@ -4,7 +4,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { PWAInstall } from '@/components/pwa-install';
 import Link from 'next/link';
-import { GoogleAnalytics } from '@next/third-parties/google';
+import Script from 'next/script';
 import { MobileNav } from '@/components/mobile-nav';
 import { HamburgerButton } from '@/components/hamburger-button';
 import CustomCursor from '@/components/ui/CustomCursor';
@@ -24,6 +24,9 @@ const roboto = localFont({
     { path: '../public/fonts/Roboto-Bold.woff2', weight: '700', style: 'normal' },
   ],
   display: 'swap',
+  // Don't High-priority-preload all 4 weights — they competed with FCP/LCP on
+  // slow connections. display:swap + next/font's size-adjusted fallback keep CLS ~0.
+  preload: false,
   variable: '--font-roboto',
 });
 
@@ -143,7 +146,20 @@ export default async function RootLayout({
           </ThemeWrapper>
         </ThemeProvider>
         {process.env.NEXT_PUBLIC_GA_ID && (
-          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+          <>
+            {/* Analytics is not needed for first paint — load it lazily (after the
+                page is idle) so its ~160 KB never competes with FCP/LCP. */}
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
+              strategy="lazyOnload"
+            />
+            <Script id="ga-init" strategy="lazyOnload">
+              {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}');`}
+            </Script>
+          </>
         )}
       </body>
     </html>

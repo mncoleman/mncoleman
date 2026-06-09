@@ -20,7 +20,6 @@
     "@mdx-js/loader": "^3.1.1",
     "@mdx-js/react": "^3.1.1",
     "@next/mdx": "^16.0.3",
-    "@next/third-parties": "^16.0.4",
     "@notionhq/client": "^2.3.0",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-separator": "^1.1.8",
@@ -57,5 +56,12 @@
     "shadcn": "^3.6.2",
     "tsx": "^4.19.0",
     "typescript": "5.9.3"
-  }
+  },
+  "browserslist": [
+    "chrome >= 109",
+    "edge >= 109",
+    "firefox >= 102",
+    "safari >= 15.4",
+    "ios_saf >= 15.4"
+  ]
 }
