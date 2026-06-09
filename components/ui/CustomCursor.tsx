@@ -7,10 +7,26 @@ const CustomCursor = () => {
     const cursorDotRef = useRef<HTMLDivElement>(null);
     const cursorRingRef = useRef<HTMLDivElement>(null);
     const [isVisible, setIsVisible] = useState(false);
+    // Only mount on hover-capable pointers AND when motion is allowed. Under
+    // prefers-reduced-motion we render nothing and let the native cursor show
+    // (the `cursor: none` override in globals.css is gated on no-preference).
+    const [enabled, setEnabled] = useState(false);
 
     useEffect(() => {
-        // Hide on touch devices or devices without hover
-        if (window.matchMedia("(any-hover: none)").matches) return;
+        const hoverMq = window.matchMedia("(hover: hover) and (pointer: fine)");
+        const motionMq = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const update = () => setEnabled(hoverMq.matches && !motionMq.matches);
+        update();
+        hoverMq.addEventListener("change", update);
+        motionMq.addEventListener("change", update);
+        return () => {
+            hoverMq.removeEventListener("change", update);
+            motionMq.removeEventListener("change", update);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!enabled) return;
 
         const dot = cursorDotRef.current;
         const ring = cursorRingRef.current;
@@ -77,7 +93,9 @@ const CustomCursor = () => {
             document.removeEventListener("mouseleave", onMouseLeave);
             cancelAnimationFrame(requestRef);
         };
-    }, [isVisible]);
+    }, [isVisible, enabled]);
+
+    if (!enabled) return null;
 
     return (
         <>

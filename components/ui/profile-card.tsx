@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useRef, useCallback, useMemo } from 'react';
-import Image from 'next/image';
 import { LinkedinIcon, type LinkedinIconHandle } from '@/components/ui/linkedin';
 import { InstagramIcon, type InstagramIconHandle } from '@/components/ui/instagram';
 import { GithubIcon, type GithubIconHandle } from '@/components/ui/github';
@@ -331,14 +330,18 @@ const ProfileCardComponent = ({
                     <div className="pc-inside">
                         <div className="pc-glare" />
                         <div className="pc-content pc-avatar-content">
-                            <Image
-                                className="avatar"
-                                src={avatarUrl}
-                                alt={`${name} avatar`}
-                                fill
-                                style={{ objectFit: 'cover' }}
-                                priority
-                            />
+                            <picture>
+                                <source srcSet={avatarUrl.replace(/\.(jpe?g|png)$/i, '.webp')} type="image/webp" />
+                                <img
+                                    className="avatar"
+                                    src={avatarUrl}
+                                    alt={`${name} avatar`}
+                                    fetchPriority="high"
+                                    decoding="async"
+                                    // Replicates next/image `fill` + objectFit so layout is unchanged.
+                                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                            </picture>
                             {showUserInfo && (
                                 <div className="pc-user-info">
                                     <div className="pc-social-icons">

@@ -69,6 +69,12 @@ export default function GlassCube({
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
 
+    // Reduced motion: render the cube flat & centered — no listeners, no rAF loop.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (cubeRef.current) cubeRef.current.style.transform = `translateZ(${-depth / 2}px)`;
+      return;
+    }
+
     const onMove = (e: MouseEvent) => {
       const rect = wrapper.getBoundingClientRect();
       const nx = (e.clientX - rect.left) / rect.width;

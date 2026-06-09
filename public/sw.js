@@ -38,24 +38,40 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - network first, fallback to cache
+// Fetch event - split strategy:
+//   • Immutable assets (content-hashed /_next/static/ chunks, fonts, images) → cache-first.
+//     GitHub Pages can't set `Cache-Control: immutable`, so the SW is the only lever; a new
+//     deploy bumps CACHE_NAME (stamp-sw-version.ts) so the `activate` cleanup still busts these.
+//   • Everything else (HTML / navigations) → network-first so content stays fresh.
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+
+  const url = new URL(event.request.url);
+  const immutable =
+    url.pathname.startsWith('/_next/static/') ||
+    /\.(?:woff2?|png|svg|ico|jpe?g|webp|avif)$/.test(url.pathname);
+
+  const cachePut = (response) => {
+    if (response && response.status === 200 && response.type === 'basic') {
+      const copy = response.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+    }
+    return response;
+  };
+
+  if (immutable) {
+    event.respondWith(
+      caches.match(event.request).then((cached) =>
+        cached || fetch(event.request).then(cachePut)
+      )
+    );
+    return;
+  }
+
+  // Network-first for HTML/navigations; fall back to cache when offline.
   event.respondWith(
     fetch(event.request)
-      .then((response) => {
-        // Only cache GET requests and successful responses
-        if (event.request.method === 'GET' && response && response.status === 200 && response.type === 'basic') {
-          // Clone the response before caching
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return response;
-      })
-      .catch(() => {
-        // If fetch fails, try cache
-        return caches.match(event.request);
-      })
+      .then(cachePut)
+      .catch(() => caches.match(event.request))
   );
 });
