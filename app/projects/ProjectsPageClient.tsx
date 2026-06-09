@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
+import Link from 'next/link';
 import { Calendar, Filter, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { CardActions } from '@/components/ui/card-actions';
 import { useToast } from '@/hooks/use-toast';
 import { PageEntrance } from '@/components/page-entrance';
 import { FolderCodeIcon, type FolderCodeIconHandle } from '@/components/ui/folder-code';
+import { slugify } from '@/lib/utils';
 
 interface Project {
     id: string;
@@ -35,10 +37,15 @@ function ProjectCard({
 
     return (
         <article
-            className="group relative flex flex-col h-full p-6 rounded-2xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/50 hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both overflow-hidden"
+            className="group relative flex flex-col h-full p-6 rounded-2xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/50 hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both overflow-hidden cursor-pointer"
             onMouseEnter={() => iconRef.current?.startAnimation()}
             onMouseLeave={() => iconRef.current?.stopAnimation()}
         >
+            <Link
+                href={`/projects/${slugify(project.name)}/`}
+                aria-label={`View details for ${project.name}`}
+                className="absolute inset-0 z-[1] rounded-2xl"
+            />
             <div className="flex justify-between items-start mb-4">
                 <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
                     <FolderCodeIcon ref={iconRef} size={20} />
@@ -83,6 +90,7 @@ function ProjectCard({
                 url={project.url}
                 title={project.name}
                 onToast={showToast}
+                className="relative z-10"
             />
 
             <div className="absolute bottom-0 left-0 right-0 h-1">

@@ -21,7 +21,7 @@ import { isValidSlug, suggestFromFilename } from './slugs';
 import { requireAuth } from './auth';
 import { renderOg } from './og';
 import { signSlugCookie, verifySlugCookie, cookieName, parseCookies } from './cookies';
-import { notFoundPage, passwordPromptPage } from './pages';
+import { notFoundPage, passwordPromptPage, artifactDetailsPage } from './pages';
 import { encryptPassword, decryptPassword } from './crypto';
 
 const STORAGE_ROOT = resolve(process.env.STORAGE_ROOT || '/srv/artifacts');
@@ -366,6 +366,37 @@ function isUnlocked(c: any, slug: string): boolean {
     const cookies = parseCookies(c.req.header('Cookie'));
     return verifySlugCookie(cookies[cookieName(slug)], slug);
 }
+
+// Shareable details / landing page for an instant artifact. Renders the artifact's
+// metadata + action buttons with the correct OG image, instead of opening the artifact.
+// Registered before /a/:slug — distinct path (two segments), but kept first for clarity.
+app.get('/a/:slug/details', async (c) => {
+    const slug = c.req.param('slug');
+    if (!isValidSlug(slug)) return new Response(notFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    const meta = await getMeta(slug);
+    if (!meta) return new Response(notFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+
+    const isPrivate = meta.visibility === 'private';
+    const normType = normalizeMimeType(meta.type);
+    const html = artifactDetailsPage({
+        slug,
+        name: meta.name,
+        description: meta.description,
+        type: normType,
+        size: meta.size,
+        uploadedAt: meta.uploadedAt,
+        publicBase: PUBLIC_BASE,
+        viewable: normType === 'text/html' || normType === 'application/pdf' || normType.startsWith('image/'),
+        isPrivate,
+    });
+    return new Response(html, {
+        headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': isPrivate ? 'no-store' : 'public, max-age=300',
+            ...(isPrivate ? { 'X-Robots-Tag': 'noindex' } : {}),
+        },
+    });
+});
 
 app.get('/a/:slug', async (c) => {
     const slug = c.req.param('slug');

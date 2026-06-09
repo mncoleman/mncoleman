@@ -42,6 +42,7 @@ export const viewport: Viewport = {
 const basePath = '';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://mncoleman.com'),
   title: 'Matthew Coleman',
   description: 'Personal website with blog, resources, and resume by Matthew Coleman',
   appleWebApp: {

@@ -210,3 +210,122 @@ export function passwordPromptPage({ slug, name, description, publicBase, error 
         </form>
     </div></body></html>`;
 }
+
+const detailsStyles = `
+    .card.details { text-align: left; max-width: 560px; }
+    .details h1 { font-size: 28px; margin-bottom: 10px; }
+    .details .desc { color: #9aa0a6; line-height: 1.6; margin: 0 0 16px; }
+    .details .meta { font-size: 13px; color: #6b7177; margin-bottom: 24px; letter-spacing: 0.01em; }
+    .details .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+    .details .actions .button { padding: 11px 18px; font-size: 14px; }
+    .button.accent { background: rgba(1,107,114,0.14); color: #2bb3bb; border: 1px solid rgba(1,107,114,0.45); }
+    .button.accent:hover { background: rgba(1,107,114,0.22); }
+    .details .note { font-size: 12px; color: #c9a227; margin: 0 0 16px; }
+    .details .back { display: inline-block; color: #9aa0a6; text-decoration: none; font-size: 13px; margin-top: 4px; }
+    .details .back:hover { color: #e5e5e5; }
+`;
+
+function detailsSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function detailsTypeLabel(type: string): string {
+    const labels: Record<string, string> = {
+        'text/html': 'HTML',
+        'application/pdf': 'PDF',
+        'image/png': 'PNG',
+        'image/jpeg': 'JPEG',
+        'image/gif': 'GIF',
+        'image/svg+xml': 'SVG',
+        'application/json': 'JSON',
+        'text/plain': 'Text',
+        'text/css': 'CSS',
+        'text/javascript': 'JavaScript',
+    };
+    return labels[type] || type.split('/').pop()?.toUpperCase() || 'File';
+}
+
+function detailsDate(iso: string): string {
+    try {
+        return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    } catch {
+        return '';
+    }
+}
+
+export interface ArtifactDetailsOptions {
+    slug: string;
+    name: string;
+    description?: string;
+    type: string; // normalized MIME type
+    size: number;
+    uploadedAt: string;
+    publicBase: string;
+    viewable: boolean;
+    isPrivate?: boolean;
+}
+
+/**
+ * Server-rendered "share page" for an instant artifact. Carries the correct
+ * OpenGraph image (the artifact's own /og/<slug>.png) so the link unfurls like
+ * the artifact itself, but lands the visitor on a details view instead of
+ * opening the artifact. "Copy link" copies the artifact URL; "Share page"
+ * copies this page's URL.
+ */
+/** Assert a URL is http(s) before it lands in an href/clipboard context (defense-in-depth vs javascript: URLs). */
+function ensureHttpUrl(url: string): string {
+    if (!/^https?:\/\//i.test(url)) throw new Error(`Refusing to render non-http(s) URL: ${url}`);
+    return url;
+}
+
+export function artifactDetailsPage(o: ArtifactDetailsOptions): string {
+    const base = o.publicBase.replace(/\/$/, '');
+    const artifactUrl = ensureHttpUrl(`${base}/a/${o.slug}`);
+    const downloadUrl = ensureHttpUrl(`${base}/raw/${o.slug}`);
+    const detailsUrl = ensureHttpUrl(`${base}/a/${o.slug}/details`);
+    const desc = o.description || `mncoleman Artifact: ${o.name}`;
+    const og = {
+        title: o.name,
+        description: desc,
+        image: `${base}/og/${o.slug}.png`,
+        url: detailsUrl,
+    };
+    const metaLine = [
+        detailsTypeLabel(o.type),
+        detailsSize(o.size),
+        o.uploadedAt ? `Added ${detailsDate(o.uploadedAt)}` : '',
+    ].filter(Boolean).join(' · ');
+
+    return `<!doctype html><html lang="en"><head>${baseHead(`${o.name} — details`, og)}<style>${detailsStyles}</style></head><body>
+    <div class="card details">
+        <div class="eyebrow">Artifact${o.isPrivate ? ' · Private' : ''}</div>
+        <h1>${escape(o.name)}</h1>
+        <p class="desc">${escape(desc)}</p>
+        <div class="meta">${escape(metaLine)}</div>
+        <div class="actions">
+            <a class="button" href="${escape(artifactUrl)}">${o.viewable ? 'Open' : 'Open file'}</a>
+            <a class="button secondary" href="${escape(downloadUrl)}">Download</a>
+            <button class="button secondary" type="button" data-copy="${escape(artifactUrl)}">Copy link</button>
+            <button class="button accent" type="button" data-copy="${escape(detailsUrl)}">Share page</button>
+        </div>
+        ${o.isPrivate ? `<p class="note">This artifact is password-protected — opening it will ask for the password.</p>` : ''}
+        <a class="back" href="https://mncoleman.com/artifacts/">← All artifacts</a>
+    </div>
+    <script>
+    document.querySelectorAll('[data-copy]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var url = btn.getAttribute('data-copy');
+            var original = btn.textContent;
+            function done() { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = original; }, 1500); }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(done).catch(function () { window.prompt('Copy link:', url); });
+            } else {
+                window.prompt('Copy link:', url);
+            }
+        });
+    });
+    </script>
+    </body></html>`;
+}

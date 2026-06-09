@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { artifactSlug } from './utils';
 
 export interface Artifact {
     id: string;
@@ -50,4 +51,25 @@ export function formatFileSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function isViewableInBrowser(type: string): boolean {
+    const t = (type || '').split(';')[0].trim().toLowerCase();
+    return t === 'text/html' || t === 'application/pdf' || t.startsWith('image/');
+}
+
+/**
+ * Unique details-page slugs for every static artifact in the manifest.
+ * Used by generateStaticParams so each static artifact gets a pre-built
+ * /artifacts/[slug]/details/ page.
+ */
+export function getStaticArtifactSlugs(): string[] {
+    const seen = new Set<string>();
+    for (const a of getArtifacts()) seen.add(artifactSlug(a));
+    return Array.from(seen);
+}
+
+/** Look up a static artifact by its details-page slug. */
+export function getStaticArtifactBySlug(slug: string): Artifact | null {
+    return getArtifacts().find(a => artifactSlug(a) === slug) || null;
 }

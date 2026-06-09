@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import Link from 'next/link';
 import { FileText, Filter, X, ExternalLink, Download, File, Image, Code, FileType, Palette, Zap, Lock, Copy, Check, Eye, EyeOff } from 'lucide-react';
 import { PageEntrance } from '@/components/page-entrance';
 import { ArtifactDesignPopup } from '@/components/artifact-design-popup';
 import { formatDistanceToNow } from 'date-fns';
 import { authHeaders } from '@/lib/admin-auth';
+import { artifactSlug } from '@/lib/utils';
 
 interface Artifact {
     id: string;
@@ -245,12 +247,32 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
                         const artifactUrl = artifact.url || `/artifacts/${artifact.filename}`;
                         const downloadUrl = artifact.downloadUrl || artifactUrl;
                         const isDynamic = artifact.source === 'dynamic';
+                        // Whole-card click → details page. Instant artifacts get a live,
+                        // OG-correct details page on the artifact server; static ones get a
+                        // pre-built page on this site. The action buttons below sit above this
+                        // overlay (z-10) so they keep their own behaviour.
+                        const detailsHref = isDynamic
+                            ? `${(artifact.url || `${ARTIFACTS_API}/a/${artifact.id}`).replace(/\/$/, '')}/details`
+                            : `/artifacts/${artifactSlug(artifact)}/details/`;
 
                         return (
                             <article
                                 key={artifact.id}
-                                className="group relative flex flex-col h-full p-6 rounded-2xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/50 hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both overflow-hidden"
+                                className="group relative flex flex-col h-full p-6 rounded-2xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/50 hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both overflow-hidden cursor-pointer"
                             >
+                                {isDynamic ? (
+                                    <a
+                                        href={detailsHref}
+                                        aria-label={`View details for ${artifact.name}`}
+                                        className="absolute inset-0 z-[1] rounded-2xl"
+                                    />
+                                ) : (
+                                    <Link
+                                        href={detailsHref}
+                                        aria-label={`View details for ${artifact.name}`}
+                                        className="absolute inset-0 z-[1] rounded-2xl"
+                                    />
+                                )}
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
                                         <IconComponent className="h-5 w-5" />
@@ -298,7 +320,7 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
                                 </div>
 
                                 {isAdmin && artifact.visibility === 'private' && (
-                                    <div className="flex items-center gap-1.5 mb-4 text-xs">
+                                    <div className="relative z-10 flex items-center gap-1.5 mb-4 text-xs">
                                         <Lock className="h-3 w-3 text-amber-500 shrink-0" />
                                         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">PW:</span>
                                         {artifact.password ? (
@@ -343,7 +365,7 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
                                     </div>
                                 )}
 
-                                <div className="flex gap-2 pt-4 mt-auto border-t border-border/30">
+                                <div className="relative z-10 flex gap-2 pt-4 mt-auto border-t border-border/30">
                                     {viewable && (
                                         <a
                                             href={artifactUrl}
