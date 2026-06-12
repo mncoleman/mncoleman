@@ -218,62 +218,14 @@ footer em{color:var(--color-primary);font-style:italic}
   .stats{gap:1.5rem}
   .argument-card{padding:1.1rem 1rem}
 }
+.back-home{display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;margin-bottom:1rem;border:1px solid rgba(128,128,128,.32);border-radius:.5rem;background:rgba(128,128,128,.08);color:inherit;font-size:.78rem;font-weight:600;letter-spacing:.01em;text-decoration:none;opacity:.82;transition:opacity .15s ease,background .15s ease}
+.back-home:hover{opacity:1;background:rgba(128,128,128,.16)}
+.back-home svg{width:14px;height:14px;flex-shrink:0}
 </style>
 </head>
 <body>
 
-<a href="https://mncoleman.com/artifacts/" class="go-home-btn" id="goHomeBtn" aria-label="Back to mncoleman.com artifacts">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12 12 3l9 9"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
-  <span>Go Home</span>
-</a>
-<style>
-.go-home-btn{position:fixed;bottom:16px;right:16px;z-index:9999;display:inline-flex;align-items:center;gap:.4rem;padding:.5rem .85rem;border-radius:9999px;background:rgba(255,255,255,.9);color:#1a1915;border:1px solid rgba(0,0,0,.12);font:500 12.5px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;text-decoration:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 14px rgba(0,0,0,.15);transition:transform 150ms ease,box-shadow 150ms ease,background 150ms ease,opacity 200ms ease;-webkit-tap-highlight-color:transparent;opacity:0;pointer-events:none}
-.go-home-btn.gh-ready{opacity:1;pointer-events:auto}
-.go-home-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.2);text-decoration:none;background:rgba(255,255,255,.98)}
-.go-home-btn:focus-visible{outline:2px solid #016b72;outline-offset:2px}
-@media (prefers-color-scheme: dark){.go-home-btn{background:rgba(28,26,23,.88);color:#cccac6;border-color:rgba(255,255,255,.12);box-shadow:0 4px 14px rgba(0,0,0,.45)}.go-home-btn:hover{background:rgba(40,38,35,.97)}}
-[data-theme="dark"] .go-home-btn{background:rgba(28,26,23,.88);color:#cccac6;border-color:rgba(255,255,255,.12);box-shadow:0 4px 14px rgba(0,0,0,.45)}
-[data-theme="dark"] .go-home-btn:hover{background:rgba(40,38,35,.97)}
-[data-theme="light"] .go-home-btn{background:rgba(255,255,255,.9);color:#1a1915;border-color:rgba(0,0,0,.12);box-shadow:0 4px 14px rgba(0,0,0,.15)}
-@media (max-width:600px){.go-home-btn{padding:.55rem;border-radius:50%}.go-home-btn span{display:none}}
-</style>
-<script>
-(function(){
-  var btn=document.getElementById('goHomeBtn');if(!btn)return;
-  var EDGE=16,PROBE=30;
-  function score(x,y){
-    var prev=btn.style.visibility;btn.style.visibility='hidden';
-    var el=document.elementFromPoint(x,y);
-    btn.style.visibility=prev;
-    if(!el||el===document.body||el===document.documentElement)return 0;
-    var tag=el.tagName.toLowerCase();
-    if(['button','input','select','textarea','svg','img'].indexOf(tag)>=0)return 100;
-    if(tag==='a'&&el!==btn)return 95;
-    if(el.closest('header,nav,aside,[role=banner],[role=navigation]'))return 90;
-    if(el.closest('button,a:not(.go-home-btn),input,label'))return 85;
-    var cs=getComputedStyle(el);
-    if(cs.position==='fixed'||cs.position==='sticky')return 70;
-    return 20;
-  }
-  function place(){
-    var w=window.innerWidth,h=window.innerHeight,P=PROBE;
-    var corners=[
-      {score:score(w-P,h-P),css:{bottom:EDGE+'px',right:EDGE+'px',top:'auto',left:'auto'},pref:0},
-      {score:score(P,h-P),css:{bottom:EDGE+'px',left:EDGE+'px',top:'auto',right:'auto'},pref:1},
-      {score:score(w-P,P),css:{top:EDGE+'px',right:EDGE+'px',bottom:'auto',left:'auto'},pref:2},
-      {score:score(P,P),css:{top:EDGE+'px',left:EDGE+'px',bottom:'auto',right:'auto'},pref:3}
-    ];
-    corners.sort(function(a,b){return (a.score-b.score)||(a.pref-b.pref);});
-    var best=corners[0].css;
-    btn.style.top=best.top;btn.style.right=best.right;btn.style.bottom=best.bottom;btn.style.left=best.left;
-    btn.classList.add('gh-ready');
-  }
-  function init(){setTimeout(place,80);}
-  if(document.readyState==='complete')init();
-  else window.addEventListener('load',init);
-  var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(place,250);});
-})();
-</script>
+
 
 <header class="site-header">
 <div class="header-inner">
@@ -334,6 +286,7 @@ footer em{color:var(--color-primary);font-style:italic}
 <div class="main-layout">
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <aside class="sidebar" id="sidebar">
+  <a class="back-home" href="https://mncoleman.com/artifacts/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>Back to Artifacts</a>
   <div class="sidebar-header">
     <span class="sidebar-header-title">Navigation</span>
     <button class="sidebar-close" id="sidebarClose" aria-label="Close navigation">
