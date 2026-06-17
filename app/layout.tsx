@@ -137,6 +137,15 @@ export default async function RootLayout({
                   <div>
                     © 2003-{new Date().getFullYear()} Matthew Coleman. All rights reserved.
                   </div>
+                  <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/70">
+                    <Link href="/privacy" className="hover:text-foreground underline-offset-4 hover:underline transition-colors">
+                      Privacy Policy
+                    </Link>
+                    <span aria-hidden="true">·</span>
+                    <Link href="/terms" className="hover:text-foreground underline-offset-4 hover:underline transition-colors">
+                      Terms of Service
+                    </Link>
+                  </div>
                   <FooterButtons />
                 </div>
               </footer>
