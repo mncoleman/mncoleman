@@ -170,6 +170,18 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
 /* Divider */
 .sec-divider{border:none;border-top:2px solid var(--divider);margin:4rem 0 3rem}
 
+/* Collapsible Vim block */
+.vim-collapse{border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);overflow:hidden}
+.vim-collapse>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:.75rem;padding:1.1rem 1.25rem;font-size:var(--text-lg);font-weight:600;color:var(--text);letter-spacing:-.02em;user-select:none}
+.vim-collapse>summary::-webkit-details-marker{display:none}
+.vim-collapse>summary .vim-chev{flex-shrink:0;transition:transform var(--trans);color:var(--purple)}
+.vim-collapse[open]>summary .vim-chev{transform:rotate(90deg)}
+.vim-collapse>summary .vim-badge{margin-left:auto;font-size:10px;font-weight:600;padding:3px 10px;border-radius:var(--radius-full);text-transform:uppercase;letter-spacing:.05em;background:var(--purple-bg);color:var(--purple);white-space:nowrap}
+.vim-collapse>summary:hover{background:var(--surface-dyn)}
+.vim-collapse .vim-inner{padding:1.75rem 1.25rem .5rem;border-top:1px solid var(--divider)}
+.vim-collapse:not([open]) > .vim-inner{display:none}
+.vim-collapse .vim-inner .sec{margin-bottom:2.5rem}
+
 /* Footer */
 .pg-foot{margin-top:4rem;padding-top:2rem;border-top:1px solid var(--divider);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
 .pg-foot p{font-size:var(--text-xs);color:var(--text-faint)}
@@ -224,32 +236,32 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
     <a href="#session" class="nav-a" data-sec="session">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
       Session
-      <span class="nav-chip nc-g">7</span>
+      <span class="nav-chip nc-g">8</span>
     </a>
     <a href="#context" class="nav-a" data-sec="context">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       Context &amp; Usage
-      <span class="nav-chip nc-g">5</span>
+      <span class="nav-chip nc-g">7</span>
     </a>
     <a href="#model" class="nav-a" data-sec="model">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
       Model &amp; Output
-      <span class="nav-chip nc-g">5</span>
+      <span class="nav-chip nc-g">6</span>
     </a>
     <a href="#config" class="nav-a" data-sec="config">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Configuration
-      <span class="nav-chip nc-o">11</span>
+      <span class="nav-chip nc-o">12</span>
     </a>
     <a href="#tools" class="nav-a" data-sec="tools">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
       Tools &amp; Integrations
-      <span class="nav-chip nc-o">7</span>
+      <span class="nav-chip nc-o">13</span>
     </a>
     <a href="#code" class="nav-a" data-sec="code">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
       Code &amp; Review
-      <span class="nav-chip nc-g">5</span>
+      <span class="nav-chip nc-g">12</span>
     </a>
     <a href="#sharing" class="nav-a" data-sec="sharing">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -259,7 +271,7 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
     <a href="#misc" class="nav-a" data-sec="misc">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       Miscellaneous
-      <span class="nav-chip nc-g">13</span>
+      <span class="nav-chip nc-g">21</span>
     </a>
     <span class="nav-label" style="margin-top:.5rem">Tips &amp; Concepts</span>
     <a href="#tips-plugins" class="nav-a" data-sec="tips-plugins">
@@ -281,17 +293,17 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
     <a href="#vim-modes" class="nav-a" data-sec="vim-modes">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
       Mode Switching
-      <span class="nav-chip nc-p">7</span>
+      <span class="nav-chip nc-p">9</span>
     </a>
     <a href="#vim-nav" class="nav-a" data-sec="vim-nav">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg>
       Navigation
-      <span class="nav-chip nc-p">16</span>
+      <span class="nav-chip nc-p">19</span>
     </a>
     <a href="#vim-edit" class="nav-a" data-sec="vim-edit">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Editing
-      <span class="nav-chip nc-p">16</span>
+      <span class="nav-chip nc-p">22</span>
     </a>
     <a href="#vim-obj" class="nav-a" data-sec="vim-obj">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
@@ -305,7 +317,7 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
     </a>
   </div>
   <div class="sb-foot">
-    <span class="sb-meta">v2.0 &middot; 2026</span>
+    <span class="sb-meta">v3.0 &middot; CC 2.1.183</span>
     <button class="theme-btn" data-theme-toggle aria-label="Toggle theme">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
@@ -315,7 +327,7 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
 <main class="main" id="main">
   <header class="pg-head">
     <h1 class="pg-title"><em>Claude Code</em><br>Reference</h1>
-    <p class="pg-desc">Slash commands and Vim mode guide for the Claude Code CLI. Every command in one searchable reference.</p>
+    <p class="pg-desc">Slash commands and Vim mode guide for the Claude Code CLI. Every command in one searchable reference &mdash; validated against Claude Code v2.1.183.</p>
     <div class="pg-chips">
       <span class="chip" style="color:var(--green)"><span class="chip-dot" style="background:var(--green)"></span>Slash Command</span>
       <span class="chip" style="color:var(--purple)"><span class="chip-dot" style="background:var(--purple)"></span>Vim Binding</span>
@@ -331,45 +343,49 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
 <!-- ═══════════════════════════════════════════ -->
 
 <section id="session" class="sec">
-  <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title">Session Management</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">7 cmds</span></div>
+  <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title">Session Management</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">8 cmds</span></div>
   <div class="grid two">
-    <article class="card"><div class="card-head"><span class="card-title">Clear conversation</span><span class="cmd-tag">/clear</span></div><div class="card-body"><p class="desc">Wipes conversation history and frees context window space so you can start fresh without exiting.</p><p class="aliases">alias: /reset</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Compact conversation</span><span class="cmd-tag">/compact [focus]</span></div><div class="card-body"><p class="desc">Compresses the conversation into a summary to reclaim context space. Optional focus argument guides what gets preserved.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Resume session</span><span class="cmd-tag">/resume [session]</span></div><div class="card-body"><p class="desc">Picks up a previous conversation by session ID or name, or opens an interactive picker.</p><p class="aliases">alias: /continue</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Fork conversation</span><span class="cmd-tag">/fork [name]</span></div><div class="card-body"><p class="desc">Creates a branching copy at the current point to explore a different direction without losing the original.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Rename session</span><span class="cmd-tag">/rename [name]</span></div><div class="card-body"><p class="desc">Gives the session a custom name, or auto-generates one from conversation history.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Rewind</span><span class="cmd-tag">/rewind</span></div><div class="card-body"><p class="desc">Rolls back conversation and optionally code to a previous checkpoint. Useful for undoing a wrong turn.</p><p class="aliases">alias: /checkpoint</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Exit CLI</span><span class="cmd-tag">/exit</span></div><div class="card-body"><p class="desc">Closes the Claude Code session and returns you to your shell.</p><p class="aliases">alias: /quit</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Clear conversation</span><span class="cmd-tag">/clear</span></div><div class="card-body"><p class="desc">Starts a new conversation with empty context; the previous one stays available in <code>/resume</code>. Pass a name to label it.</p><p class="aliases">aliases: /reset /new</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Compact conversation</span><span class="cmd-tag">/compact [instructions]</span></div><div class="card-body"><p class="desc">Compresses the conversation into a summary to reclaim context space. Optional instructions guide what gets preserved.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Resume session</span><span class="cmd-tag">/resume [session]</span></div><div class="card-body"><p class="desc">Picks up a previous conversation by session ID or name, or opens a picker. Background sessions appear marked <code>bg</code>.</p><p class="aliases">alias: /continue</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Branch conversation</span><span class="cmd-tag">/branch [name]</span></div><div class="card-body"><p class="desc">Branches the conversation here so you can try a different direction; switches you in and keeps the original, returnable via <code>/resume</code>.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Fork to subagent</span><span class="cmd-tag">/fork &lt;directive&gt;</span></div><div class="card-body"><p class="desc">Spawns a forked subagent that inherits the full conversation and works on the directive in the background while you keep going; its result returns when done. <strong>Redefined in v2.1.161</strong> (was an alias for <code>/branch</code>).</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Rename session</span><span class="cmd-tag">/rename [name]</span></div><div class="card-body"><p class="desc">Gives the session a custom name shown on the prompt bar, or auto-generates one from conversation history.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Rewind</span><span class="cmd-tag">/rewind</span></div><div class="card-body"><p class="desc">Rolls conversation and/or code back to a previous checkpoint, or summarizes from a selected message.</p><p class="aliases">aliases: /checkpoint /undo</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Exit CLI</span><span class="cmd-tag">/exit</span></div><div class="card-body"><p class="desc">Closes the session and returns you to your shell. In an attached background session, detaches and keeps it running.</p><p class="aliases">alias: /quit</p></div></article>
   </div>
 </section>
 
 <section id="context" class="sec">
-  <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title">Context &amp; Usage</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">5 cmds</span></div>
+  <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title">Context &amp; Usage</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">7 cmds</span></div>
   <div class="grid two">
-    <article class="card"><div class="card-head"><span class="card-title">Context window</span><span class="cmd-tag">/context</span></div><div class="card-body"><p class="desc">Displays a colored grid visualization of context window consumption so you know when to compact.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Token cost</span><span class="cmd-tag">/cost</span></div><div class="card-body"><p class="desc">Shows token usage breakdown: input tokens, output tokens, and cache hits for the current session.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Plan usage</span><span class="cmd-tag">/usage</span></div><div class="card-body"><p class="desc">Displays current plan limits and rate-limit status to see remaining capacity.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Usage stats</span><span class="cmd-tag">/stats</span></div><div class="card-body"><p class="desc">Dashboard of daily usage patterns, session history, streaks, and model preferences over time.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Extra usage</span><span class="cmd-tag">/extra-usage</span></div><div class="card-body"><p class="desc">Configures overflow usage so Claude keeps working when you hit rate limits instead of stopping.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Context window</span><span class="cmd-tag">/context [all]</span></div><div class="card-body"><p class="desc">Displays a colored grid of context-window consumption with optimization hints. Pass <code>all</code> to expand the per-item breakdown.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Plan usage</span><span class="cmd-tag">/usage</span></div><div class="card-body"><p class="desc">Shows session cost plus plan limits and activity stats; on paid plans, breaks usage down by skill, subagent, plugin, and MCP server.</p><p class="aliases">aliases: /cost /stats</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Token cost</span><span class="cmd-tag">/cost</span></div><div class="card-body"><p class="desc">Opens usage focused on session cost &mdash; input/output tokens and cache hits. Alias for <code>/usage</code>.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Usage stats</span><span class="cmd-tag">/stats</span></div><div class="card-body"><p class="desc">Opens usage on the Stats tab &mdash; daily patterns, session history, and model preferences. Alias for <code>/usage</code>.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Usage credits</span><span class="cmd-tag">/usage-credits</span></div><div class="card-body"><p class="desc">Configures usage credits so Claude keeps working after you hit a limit. <strong>Renamed</strong> from <code>/extra-usage</code>.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Side question</span><span class="cmd-tag">/btw &lt;question&gt;</span></div><div class="card-body"><p class="desc">Asks a quick question with full visibility into the session, answered in a dismissible overlay without adding to history. Works while Claude is busy.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Session recap</span><span class="cmd-tag">/recap</span></div><div class="card-body"><p class="desc">Generates a one-line summary of the session so far on demand.</p></div></article>
   </div>
 </section>
 
 <section id="model" class="sec">
-  <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title">Model &amp; Output</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">5 cmds</span></div>
+  <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title">Model &amp; Output</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">6 cmds</span></div>
   <div class="grid two">
-    <article class="card"><div class="card-head"><span class="card-title">Switch model</span><span class="cmd-tag">/model [model]</span></div><div class="card-body"><p class="desc">Switches the active model mid-session (e.g. Opus to Sonnet) and lets you adjust effort level.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Switch model</span><span class="cmd-tag">/model [model]</span></div><div class="card-body"><p class="desc">Switches the active model and saves it as the default for new sessions; use arrow keys to adjust effort, or press <kbd>s</kbd> for this session only.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Effort level</span><span class="cmd-tag">/effort [level|auto]</span></div><div class="card-body"><p class="desc">Sets reasoning effort: <code>low</code>, <code>medium</code>, <code>high</code>, <code>xhigh</code>, <code>max</code>, or <code>ultracode</code> (max and ultracode are session-only). <code>auto</code> resets to the model default.</p></div></article>
     <article class="card"><div class="card-head"><span class="card-title">Fast mode</span><span class="cmd-tag">/fast [on|off]</span></div><div class="card-body"><p class="desc">Toggles fast mode: same model, optimized for faster output at the cost of some thoroughness.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Output style</span><span class="cmd-tag">/output-style</span></div><div class="card-body"><p class="desc">Switches between output styles. <strong>Deprecated</strong> -- use <code>/config</code> instead. Output style is now fixed at session start for better prompt caching.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Voice input</span><span class="cmd-tag">/voice</span></div><div class="card-body"><p class="desc">Toggles voice input mode for dictating prompts instead of typing. Shows your dictation language on enable.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Status dialog</span><span class="cmd-tag">/status</span></div><div class="card-body"><p class="desc">Opens a status overlay showing session info, model, context usage, and config. Works even while Claude is responding.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Advisor</span><span class="cmd-tag">/advisor [model|off]</span></div><div class="card-body"><p class="desc">Enables or disables the advisor, which consults a second model (<code>opus</code>, <code>sonnet</code>, or <code>fable</code>) for guidance at key moments. (v2.1.98+)</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Voice input</span><span class="cmd-tag">/voice [hold|tap|off]</span></div><div class="card-body"><p class="desc">Toggles voice dictation for prompts; hold-to-record by default, or <code>/voice tap</code> for tap-to-toggle. Requires a Claude.ai account.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Status dialog</span><span class="cmd-tag">/status</span></div><div class="card-body"><p class="desc">Opens the Settings Status tab &mdash; version, model, account, and connectivity. Works even while Claude is responding.</p></div></article>
   </div>
 </section>
 
 <section id="config" class="sec">
-  <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title">Configuration</h2><span class="sec-badge" style="background:var(--orange-bg);color:var(--orange)">11 cmds</span></div>
+  <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title">Configuration</h2><span class="sec-badge" style="background:var(--orange-bg);color:var(--orange)">12 cmds</span></div>
   <div class="grid two">
-    <article class="card"><div class="card-head"><span class="card-title">Settings UI</span><span class="cmd-tag">/config</span></div><div class="card-body"><p class="desc">Opens the interactive settings UI to configure all Claude Code options in one place.</p><p class="aliases">alias: /settings</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Permissions</span><span class="cmd-tag">/permissions</span></div><div class="card-body"><p class="desc">Shows and edits which tools run automatically vs. requiring approval each time.</p><p class="aliases">alias: /allowed-tools</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Settings UI</span><span class="cmd-tag">/config [key=value]</span></div><div class="card-body"><p class="desc">Opens the interactive settings UI, or set a value directly (e.g. <code>/config thinking=false</code>). Run <code>/config help</code> to list keys.</p><p class="aliases">alias: /settings</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Permissions</span><span class="cmd-tag">/permissions</span></div><div class="card-body"><p class="desc">Manages allow / ask / deny rules for tools by scope, plus working directories and recent auto-mode denials.</p><p class="aliases">alias: /allowed-tools</p></div></article>
     <article class="card"><div class="card-head"><span class="card-title">Hooks</span><span class="cmd-tag">/hooks</span></div><div class="card-body"><p class="desc">Manages shell commands that run automatically in response to tool events (pre/post hooks).</p></div></article>
     <article class="card"><div class="card-head"><span class="card-title">Memory</span><span class="cmd-tag">/memory</span></div><div class="card-body"><p class="desc">Opens CLAUDE.md memory files for editing and manages auto-memory settings.</p></div></article>
     <article class="card"><div class="card-head"><span class="card-title">Init project</span><span class="cmd-tag">/init</span></div><div class="card-body"><p class="desc">Creates a CLAUDE.md file in the project root with starter instructions tailored to your codebase.</p></div></article>
@@ -379,65 +395,92 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
     <article class="card"><div class="card-head"><span class="card-title">Terminal setup</span><span class="cmd-tag">/terminal-setup</span></div><div class="card-body"><p class="desc">Configures terminal keybindings for Shift+Enter multi-line input and other shortcuts.</p></div></article>
     <article class="card"><div class="card-head"><span class="card-title">Sandbox</span><span class="cmd-tag">/sandbox</span></div><div class="card-body"><p class="desc">Toggles sandboxed execution mode that restricts file system and network access.</p></div></article>
     <article class="card"><div class="card-head"><span class="card-title">Privacy</span><span class="cmd-tag">/privacy-settings</span></div><div class="card-body"><p class="desc">View and update data privacy preferences (Pro and Max subscribers).</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Fewer prompts</span><span class="cmd-tag">/fewer-permission-prompts</span></div><div class="card-body"><p class="desc"><strong>[Skill]</strong> Scans your transcripts for common read-only Bash/MCP calls and adds an allowlist to project <code>.claude/settings.json</code> to cut permission prompts.</p></div></article>
   </div>
 </section>
 
 <section id="tools" class="sec">
-  <div class="sec-head"><span class="sec-num">05</span><h2 class="sec-title">Tools &amp; Integrations</h2><span class="sec-badge" style="background:var(--orange-bg);color:var(--orange)">7 cmds</span></div>
+  <div class="sec-head"><span class="sec-num">05</span><h2 class="sec-title">Tools &amp; Integrations</h2><span class="sec-badge" style="background:var(--orange-bg);color:var(--orange)">13 cmds</span></div>
   <div class="grid two">
-    <article class="card"><div class="card-head"><span class="card-title">MCP servers</span><span class="cmd-tag">/mcp</span></div><div class="card-body"><p class="desc">Manages Model Context Protocol server connections and OAuth for external tool integrations.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Plugins</span><span class="cmd-tag">/plugin</span></div><div class="card-body"><p class="desc">Installs, removes, and manages plugins that extend Claude Code with custom capabilities.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Reload plugins</span><span class="cmd-tag">/reload-plugins</span></div><div class="card-body"><p class="desc">Hot-reloads all active plugins to pick up code changes without restarting the session.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Skills</span><span class="cmd-tag">/skills</span></div><div class="card-body"><p class="desc">Lists all available skills (custom slash commands) configured for your project or globally.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Agents</span><span class="cmd-tag">/agents</span></div><div class="card-body"><p class="desc">Manages agent configurations that define specialized sub-agents with their own tools and instructions.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">IDE integration</span><span class="cmd-tag">/ide</span></div><div class="card-body"><p class="desc">Shows IDE integration status and connects to editors like VS Code or Cursor.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Chrome</span><span class="cmd-tag">/chrome</span></div><div class="card-body"><p class="desc">Configures Chrome integration for browser-based workflows and debugging.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">MCP servers</span><span class="cmd-tag">/mcp</span></div><div class="card-body"><p class="desc">Manages MCP server connections and OAuth; reconnect a server, or enable/disable one or <code>all</code> without opening the dialog.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Plugins</span><span class="cmd-tag">/plugin [subcommand]</span></div><div class="card-body"><p class="desc">Installs, removes, and manages plugins. Pass <code>list</code>, <code>install</code>, <code>enable</code>, or <code>disable</code> to act directly.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Reload plugins</span><span class="cmd-tag">/reload-plugins [--force]</span></div><div class="card-body"><p class="desc">Hot-reloads active plugins &mdash; skills, agents, hooks, plugin MCP/LSP servers &mdash; without restarting.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Reload skills</span><span class="cmd-tag">/reload-skills</span></div><div class="card-body"><p class="desc">Re-scans skill and command directories so files added or changed on disk become available mid-session. (v2.1.152+)</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Skills</span><span class="cmd-tag">/skills</span></div><div class="card-body"><p class="desc">Lists available skills; press <kbd>t</kbd> to sort by token count, <kbd>Space</kbd> to hide a skill. Plugin skills appear here too.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Agents</span><span class="cmd-tag">/agents</span></div><div class="card-body"><p class="desc">Manages subagent configurations &mdash; specialized agents with their own tools, model, and instructions.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">IDE integration</span><span class="cmd-tag">/ide</span></div><div class="card-body"><p class="desc">Manages IDE integrations and shows connection status (VS Code, Cursor, JetBrains).</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Chrome</span><span class="cmd-tag">/chrome</span></div><div class="card-body"><p class="desc">Configures the Claude in Chrome integration for browser-based workflows and debugging.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Schedule</span><span class="cmd-tag">/schedule [description]</span></div><div class="card-body"><p class="desc">Creates, lists, or runs routines that execute on Anthropic-managed cloud infrastructure, set up conversationally.</p><p class="aliases">alias: /routines</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Loop</span><span class="cmd-tag">/loop [interval] [prompt]</span></div><div class="card-body"><p class="desc"><strong>[Skill]</strong> Runs a prompt repeatedly while the session stays open; omit the interval and Claude self-paces between iterations.</p><p class="aliases">alias: /proactive</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Claude API reference</span><span class="cmd-tag">/claude-api [migrate]</span></div><div class="card-body"><p class="desc"><strong>[Skill]</strong> Loads Claude API / Agent SDK reference for your language; <code>migrate</code> upgrades existing API code to a newer model.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Deep research</span><span class="cmd-tag">/deep-research &lt;question&gt;</span></div><div class="card-body"><p class="desc"><strong>[Workflow]</strong> Fans out web searches, fetches and cross-checks sources, and synthesizes a cited report.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Workflows</span><span class="cmd-tag">/workflows</span></div><div class="card-body"><p class="desc">Opens the workflow progress view to watch, pause, resume, or save running and completed workflows.</p></div></article>
   </div>
 </section>
 
 <section id="code" class="sec">
-  <div class="sec-head"><span class="sec-num">06</span><h2 class="sec-title">Code &amp; Review</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">5 cmds</span></div>
+  <div class="sec-head"><span class="sec-num">06</span><h2 class="sec-title">Code &amp; Review</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">12 cmds</span></div>
   <div class="grid two">
-    <article class="card"><div class="card-head"><span class="card-title">View diff</span><span class="cmd-tag">/diff</span></div><div class="card-body"><p class="desc">Interactive diff viewer showing all uncommitted changes and per-turn diffs.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">PR review</span><span class="cmd-tag">/review</span></div><div class="card-body"><p class="desc">Comprehensive pull request review checking code quality, correctness, security, and test coverage.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Security review</span><span class="cmd-tag">/security-review</span></div><div class="card-body"><p class="desc">Scans pending changes specifically for security vulnerabilities and unsafe patterns.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">PR comments</span><span class="cmd-tag">/pr-comments [PR]</span></div><div class="card-body"><p class="desc">Fetches and displays all comments from a GitHub pull request in the terminal.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Plan mode</span><span class="cmd-tag">/plan</span></div><div class="card-body"><p class="desc">Enters plan mode: Claude explores the codebase and designs an approach for your approval before writing code.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">View diff</span><span class="cmd-tag">/diff</span></div><div class="card-body"><p class="desc">Interactive diff viewer for uncommitted changes and per-turn diffs; arrows switch between the git diff and individual turns.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Plan mode</span><span class="cmd-tag">/plan [description]</span></div><div class="card-body"><p class="desc">Enters plan mode &mdash; Claude explores and designs an approach for approval before editing. Pass a task to start immediately.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Code review</span><span class="cmd-tag">/code-review [level] [--fix]</span></div><div class="card-body"><p class="desc"><strong>[Skill]</strong> Reviews the diff for correctness bugs and cleanups; <code>--fix</code> applies findings, <code>--comment</code> posts inline PR comments, <code>ultra</code> runs a deep cloud review.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">PR review</span><span class="cmd-tag">/review [PR]</span></div><div class="card-body"><p class="desc">Reviews a pull request locally in the current session.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Security review</span><span class="cmd-tag">/security-review</span></div><div class="card-body"><p class="desc">Scans pending changes on the branch for security vulnerabilities &mdash; injection, auth issues, and data exposure.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Simplify</span><span class="cmd-tag">/simplify [target]</span></div><div class="card-body"><p class="desc"><strong>[Skill]</strong> Four parallel agents review for reuse, simplification, efficiency, and abstraction, and apply cleanup fixes (no bug-hunting). (v2.1.154+)</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Ultra review</span><span class="cmd-tag">/ultrareview [PR]</span></div><div class="card-body"><p class="desc">Runs a deep, multi-agent code review in a cloud sandbox. Preferred form is <code>/code-review ultra</code>; <code>/ultrareview</code> is an alias.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Ultra plan</span><span class="cmd-tag">/ultraplan &lt;prompt&gt;</span></div><div class="card-body"><p class="desc">Drafts a plan in an ultraplan session you review in the browser, then executes remotely or sends it back to your terminal.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Batch changes</span><span class="cmd-tag">/batch &lt;instruction&gt;</span></div><div class="card-body"><p class="desc"><strong>[Skill]</strong> Decomposes a codebase-wide change into 5&ndash;30 units, runs one background subagent per unit in its own git worktree, and opens a PR each. Requires git.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Run app</span><span class="cmd-tag">/run</span></div><div class="card-body"><p class="desc"><strong>[Skill]</strong> Launches and drives your project's app to see a change working in the running app, not just tests. (v2.1.145+)</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Verify change</span><span class="cmd-tag">/verify</span></div><div class="card-body"><p class="desc"><strong>[Skill]</strong> Confirms a change works by building and running the app and observing the result, rather than relying on tests. (v2.1.145+)</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Auto-fix PR</span><span class="cmd-tag">/autofix-pr [prompt]</span></div><div class="card-body"><p class="desc">Spawns a web session that watches the current branch's PR and pushes fixes when CI fails or reviewers comment. Requires <code>gh</code>.</p></div></article>
   </div>
 </section>
 
 <section id="sharing" class="sec">
   <div class="sec-head"><span class="sec-num">07</span><h2 class="sec-title">Sharing &amp; Account</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">11 cmds</span></div>
   <div class="grid two">
-    <article class="card"><div class="card-head"><span class="card-title">Copy response</span><span class="cmd-tag">/copy</span></div><div class="card-body"><p class="desc">Copies Claude's last response to clipboard, with an interactive picker for multiple code blocks.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Export conversation</span><span class="cmd-tag">/export [file]</span></div><div class="card-body"><p class="desc">Exports the full conversation as plain text to clipboard or a specified file.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Remote control</span><span class="cmd-tag">/remote-control</span></div><div class="card-body"><p class="desc">Makes your terminal session controllable from claude.ai to switch to the web interface mid-conversation.</p><p class="aliases">alias: /rc</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Remote environment</span><span class="cmd-tag">/remote-env</span></div><div class="card-body"><p class="desc">Configures the default remote environment for teleporting sessions to cloud dev machines.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Teleport session</span><span class="cmd-tag">/teleport</span></div><div class="card-body"><p class="desc">Resumes the current session on a remote cloud environment. Available for claude.ai subscribers.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Desktop app</span><span class="cmd-tag">/desktop</span></div><div class="card-body"><p class="desc">Transfers your CLI session to the Claude Code desktop app on macOS or Windows.</p><p class="aliases">alias: /app</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Copy response</span><span class="cmd-tag">/copy [N]</span></div><div class="card-body"><p class="desc">Copies Claude's last response to clipboard; pass <code>N</code> for an earlier one, or pick individual code blocks (press <kbd>w</kbd> to write to a file).</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Export conversation</span><span class="cmd-tag">/export [filename]</span></div><div class="card-body"><p class="desc">Exports the full conversation as plain text to clipboard or a specified file.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Remote control</span><span class="cmd-tag">/remote-control</span></div><div class="card-body"><p class="desc">Makes this session controllable from claude.ai so you can continue it from another device.</p><p class="aliases">alias: /rc</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Remote environment</span><span class="cmd-tag">/remote-env</span></div><div class="card-body"><p class="desc">Chooses the default cloud-agent environment for teleporting sessions to cloud dev machines.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Teleport session</span><span class="cmd-tag">/teleport</span></div><div class="card-body"><p class="desc">Pulls a Claude Code on the web session into this terminal &mdash; picks a session, fetches its branch and conversation. Subscription required.</p><p class="aliases">alias: /tp</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Web setup</span><span class="cmd-tag">/web-setup</span></div><div class="card-body"><p class="desc">Connects your GitHub account to Claude Code on the web using your local <code>gh</code> credentials.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Desktop app</span><span class="cmd-tag">/desktop</span></div><div class="card-body"><p class="desc">Continues the current session in the Claude Code desktop app (macOS/Windows, subscription).</p><p class="aliases">alias: /app</p></div></article>
     <article class="card"><div class="card-head"><span class="card-title">Login</span><span class="cmd-tag">/login</span></div><div class="card-body"><p class="desc">Signs in to your Anthropic account to authenticate Claude Code.</p></div></article>
     <article class="card"><div class="card-head"><span class="card-title">Logout</span><span class="cmd-tag">/logout</span></div><div class="card-body"><p class="desc">Signs out and clears stored credentials from this machine.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Upgrade plan</span><span class="cmd-tag">/upgrade</span></div><div class="card-body"><p class="desc">Opens the Anthropic upgrade page to switch to a higher plan tier.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Share passes</span><span class="cmd-tag">/passes</span></div><div class="card-body"><p class="desc">Share a free week of Claude Code with friends through a referral link.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Upgrade plan</span><span class="cmd-tag">/upgrade</span></div><div class="card-body"><p class="desc">Opens the upgrade page to switch to a higher plan tier. Shown on Pro and Max plans.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Share passes</span><span class="cmd-tag">/passes</span></div><div class="card-body"><p class="desc">Shares a free week of Claude Code with friends through a referral link. Shown if your account is eligible.</p></div></article>
   </div>
 </section>
 
 <section id="misc" class="sec">
-  <div class="sec-head"><span class="sec-num">08</span><h2 class="sec-title">Miscellaneous</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">13 cmds</span></div>
+  <div class="sec-head"><span class="sec-num">08</span><h2 class="sec-title">Miscellaneous</h2><span class="sec-badge" style="background:var(--green-bg);color:var(--green)">21 cmds</span></div>
   <div class="grid two">
     <article class="card"><div class="card-head"><span class="card-title">Help</span><span class="cmd-tag">/help</span></div><div class="card-body"><p class="desc">Overview of available commands, usage tips, and documentation links.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Diagnostics</span><span class="cmd-tag">/doctor</span></div><div class="card-body"><p class="desc">Runs a diagnostic check verifying settings, permissions, and connectivity are healthy.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Debug mode</span><span class="cmd-tag">/debug</span></div><div class="card-body"><p class="desc">Toggles debug logging on mid-session for troubleshooting. Debug logs are not written by default.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">TODOs</span><span class="cmd-tag">/todos</span></div><div class="card-body"><p class="desc">Lists and manages TODO items tracked in the current session.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Feedback</span><span class="cmd-tag">/feedback</span></div><div class="card-body"><p class="desc">Submits a bug report or feature request directly to the Claude Code team.</p><p class="aliases">alias: /bug</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Release notes</span><span class="cmd-tag">/release-notes</span></div><div class="card-body"><p class="desc">Displays the full changelog of recent Claude Code updates.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Insights</span><span class="cmd-tag">/insights</span></div><div class="card-body"><p class="desc">Analytical report of usage patterns, productivity metrics, and session trends.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Background tasks</span><span class="cmd-tag">/tasks</span></div><div class="card-body"><p class="desc">Lists and manages background tasks like running agents or async shell commands.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Diagnostics</span><span class="cmd-tag">/doctor</span></div><div class="card-body"><p class="desc">Diagnoses your install and settings; press <kbd>f</kbd> to have Claude fix any reported issues.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Debug mode</span><span class="cmd-tag">/debug [description]</span></div><div class="card-body"><p class="desc"><strong>[Skill]</strong> Enables debug logging mid-session and troubleshoots by reading the session debug log. Off by default unless you started with <code>--debug</code>.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Background session</span><span class="cmd-tag">/background [prompt]</span></div><div class="card-body"><p class="desc">Detaches the current session to run as a background agent and frees this terminal. Pass a prompt to send one more instruction first.</p><p class="aliases">alias: /bg</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Stop session</span><span class="cmd-tag">/stop</span></div><div class="card-body"><p class="desc">Stops the current background session; the transcript and any worktree are kept. Only available while attached.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Background tasks</span><span class="cmd-tag">/tasks</span></div><div class="card-body"><p class="desc">Views and manages everything running in the background &mdash; agents and async shell commands.</p><p class="aliases">alias: /bashes</p></div></article>
     <article class="card"><div class="card-head"><span class="card-title">Add directory</span><span class="cmd-tag">/add-dir &lt;path&gt;</span></div><div class="card-body"><p class="desc">Adds an additional working directory so Claude can access files outside the launch directory.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Change directory</span><span class="cmd-tag">/cd &lt;path&gt;</span></div><div class="card-body"><p class="desc">Moves this session to a new working directory, preserving the prompt cache by appending the new <code>CLAUDE.md</code>. (v2.1.169+)</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Focus view</span><span class="cmd-tag">/focus</span></div><div class="card-body"><p class="desc">Toggles focus view &mdash; only your last prompt, a one-line tool summary with diffstats, and the final response. Fullscreen only.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Terminal renderer</span><span class="cmd-tag">/tui [default|fullscreen]</span></div><div class="card-body"><p class="desc">Sets the terminal UI renderer and relaunches into it with your conversation intact. <code>fullscreen</code> enables the alt-screen renderer.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Prompt color</span><span class="cmd-tag">/color [color|default]</span></div><div class="card-body"><p class="desc">Sets the prompt-bar color for the session; run with no argument for a random color.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Insights</span><span class="cmd-tag">/insights</span></div><div class="card-body"><p class="desc">Generates a report on your sessions &mdash; project areas, interaction patterns, and friction points.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Team onboarding</span><span class="cmd-tag">/team-onboarding</span></div><div class="card-body"><p class="desc">Generates a team onboarding guide from your last 30 days of usage that a teammate can paste in to get set up.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Powerup</span><span class="cmd-tag">/powerup</span></div><div class="card-body"><p class="desc">Discovers Claude Code features through quick interactive lessons with animated demos.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Radio</span><span class="cmd-tag">/radio</span></div><div class="card-body"><p class="desc">Opens Claude FM lo-fi radio in your browser; prints the stream URL when no browser is available.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Feedback</span><span class="cmd-tag">/feedback [report]</span></div><div class="card-body"><p class="desc">Submits feedback, reports a bug, or shares your conversation with session context.</p><p class="aliases">aliases: /bug /share</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Release notes</span><span class="cmd-tag">/release-notes</span></div><div class="card-body"><p class="desc">Views the changelog in an interactive version picker.</p></div></article>
     <article class="card"><div class="card-head"><span class="card-title">GitHub app</span><span class="cmd-tag">/install-github-app</span></div><div class="card-body"><p class="desc">Sets up the Claude GitHub Actions app for CI/CD integration and automated code review.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Slack app</span><span class="cmd-tag">/install-slack-app</span></div><div class="card-body"><p class="desc">Installs the Claude Slack app to interact with Claude from Slack channels.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Slack app</span><span class="cmd-tag">/install-slack-app</span></div><div class="card-body"><p class="desc">Installs the Claude Slack app via OAuth to interact with Claude from Slack channels.</p></div></article>
     <article class="card"><div class="card-head"><span class="card-title">Stickers</span><span class="cmd-tag">/stickers</span></div><div class="card-body"><p class="desc">Order physical Claude Code stickers for your laptop or workspace.</p></div></article>
     <article class="card"><div class="card-head"><span class="card-title">Mobile app</span><span class="cmd-tag">/mobile</span></div><div class="card-body"><p class="desc">Displays a QR code to download the Claude mobile app.</p><p class="aliases">aliases: /ios /android</p></div></article>
+  </div>
+  <div class="tip-box" style="margin-top:1.25rem">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span><strong>Recently removed or renamed:</strong> <code>/pr-comments</code> (removed v2.1.91 &mdash; ask Claude or use <code>/review</code>) &middot; <code>/todos</code> (gone &mdash; use <code>/tasks</code> and <kbd>Ctrl</kbd>+<kbd>T</kbd>) &middot; <code>/output-style</code> (folded into <code>/config</code>) &middot; <code>/extra-usage</code> &rarr; <code>/usage-credits</code> &middot; <code>/vim</code> (removed v2.1.92 &mdash; use <code>/config</code> &rarr; Editor mode).</span>
   </div>
 </section>
 
@@ -455,25 +498,25 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
   <div class="sec-head"><span class="sec-num">09</span><h2 class="sec-title">Plugins</h2><span class="sec-badge" style="background:var(--orange-bg);color:var(--orange)">Guide</span></div>
   <p class="sec-intro">Plugins extend Claude Code with custom slash commands, agents, MCP servers, and hooks. They're distributed as directories with a <code>plugin.json</code> manifest.</p>
   <div class="grid two">
-    <article class="card"><div class="card-head"><span class="card-title">Install a plugin</span></div><div class="card-body"><p class="desc">Use <code>/plugin</code> to browse the plugin marketplace, or install from a local directory or Git URL. Plugins can also be loaded via <code>--plugin-dir</code> on the CLI.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Plugin structure</span></div><div class="card-body"><p class="desc">A plugin is a directory containing <code>plugin.json</code> (manifest with name, description, version), plus optional <code>commands/</code>, <code>agents/</code>, and <code>hooks/</code> folders. Each command is a Markdown file with YAML frontmatter.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Hot reload</span></div><div class="card-body"><p class="desc">After editing plugin files, run <code>/reload-plugins</code> to pick up changes without restarting your session. Great for development.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Plugin MCP servers</span></div><div class="card-body"><p class="desc">Plugins can bundle their own MCP servers. If a plugin's server duplicates one you've already configured, the duplicate is automatically suppressed.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Managing plugins</span></div><div class="card-body"><p class="desc">View installed plugins with <code>/plugin</code>. Remove with the plugin menu. Use <code>--plugin-dir</code> (repeatable) to load plugins from custom directories.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Creating a plugin</span></div><div class="card-body"><p class="desc">Use the community <code>/create-plugin</code> command for a guided workflow, or manually create the directory structure. Plugins can include custom agents with their own tools and instructions.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Install a plugin</span></div><div class="card-body"><p class="desc">Use <code>/plugin</code> to browse marketplaces and install, enable, or disable plugins. For local development, load a directory with <code>--plugin-dir</code> (repeatable) or a hosted <code>.zip</code> with <code>--plugin-url</code>.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Plugin structure</span></div><div class="card-body"><p class="desc">The manifest lives at <code>.claude-plugin/plugin.json</code> (name, description, version). Everything else &mdash; <code>skills/</code>, <code>commands/</code>, <code>agents/</code>, <code>hooks/</code>, <code>.mcp.json</code>, <code>.lsp.json</code> &mdash; sits at the <strong>plugin root</strong>, not inside <code>.claude-plugin/</code>.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Hot reload</span></div><div class="card-body"><p class="desc">After editing plugin files, run <code>/reload-plugins</code> to reload skills, agents, hooks, and plugin MCP/LSP servers without restarting. Pass <code>--force</code> if the reload would invalidate the prompt cache.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Marketplaces</span></div><div class="card-body"><p class="desc">Anthropic runs two public marketplaces: <code>claude-plugins-official</code> (curated, auto-registered) and the community catalog, added with <code>/plugin marketplace add anthropics/claude-plugins-community</code> and installed from as <code>@claude-community</code>.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Plugin MCP servers</span></div><div class="card-body"><p class="desc">Plugins bundle MCP servers via a root <code>.mcp.json</code> (or inline in <code>plugin.json</code>). Plugin skills are namespaced as <code>/plugin-name:skill</code> so they never collide with your own.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Creating a plugin</span></div><div class="card-body"><p class="desc">Run <code>claude plugin init &lt;name&gt;</code> to scaffold a manifest and starter skill, then <code>claude plugin validate</code> before sharing. Or convert an existing <code>.claude/</code> setup into a plugin directory.</p></div></article>
   </div>
 </section>
 
 <section id="tips-skills" class="sec">
   <div class="sec-head"><span class="sec-num">10</span><h2 class="sec-title">Skills (Custom Slash Commands)</h2><span class="sec-badge" style="background:var(--orange-bg);color:var(--orange)">Guide</span></div>
-  <p class="sec-intro">Skills are custom slash commands defined as Markdown files with YAML frontmatter. They appear alongside built-in commands when you type <code>/</code>.</p>
+  <p class="sec-intro">A skill is a folder with a <code>SKILL.md</code> file; the folder name becomes the command. <strong>Custom commands are now merged into skills</strong> &mdash; a <code>.claude/commands/deploy.md</code> file and a <code>.claude/skills/deploy/SKILL.md</code> both create <code>/deploy</code> and work the same way.</p>
   <div class="grid two">
-    <article class="card"><div class="card-head"><span class="card-title">Where to define skills</span></div><div class="card-body"><p class="desc">Skills live in <code>.claude/skills/</code> directories. Global skills go in <code>~/.claude/skills/</code>. Project skills go in <code>.claude/skills/</code> at the repo root. Each skill is a folder with a <code>SKILL.md</code> file inside.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Skill frontmatter</span></div><div class="card-body"><p class="desc">YAML frontmatter defines the skill's name, description, whether it's user-invocable, allowed tools, and optional model override. The Markdown body is the prompt Claude receives when the skill is invoked.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">User-invocable vs auto</span></div><div class="card-body"><p class="desc">Set <code>user-invocable: true</code> in frontmatter to make a skill appear in the <code>/</code> menu. Skills without this flag can still be invoked programmatically by Claude via the Skill tool.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Tool restrictions</span></div><div class="card-body"><p class="desc">Use <code>allowed-tools:</code> in frontmatter to restrict which tools a skill can access. This provides sandboxing for skills that shouldn't have full tool access.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Model override</span></div><div class="card-body"><p class="desc">Add <code>model: haiku</code> (or <code>sonnet</code>, <code>opus</code>) in frontmatter to force a specific model when the skill runs, regardless of the session's current model.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Listing skills</span></div><div class="card-body"><p class="desc">Use <code>/skills</code> to see all available skills, or just type <code>/</code> and start filtering. Skills from plugins also appear here.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Where skills live</span></div><div class="card-body"><p class="desc">Personal skills go in <code>~/.claude/skills/&lt;name&gt;/SKILL.md</code> (all projects); project skills in <code>.claude/skills/&lt;name&gt;/SKILL.md</code> (this repo). Enterprise &gt; personal &gt; project on name clashes.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Skill frontmatter</span></div><div class="card-body"><p class="desc">Only <code>description</code> is recommended &mdash; Claude uses it to decide when to load the skill. Optional fields include <code>name</code>, <code>allowed-tools</code>, <code>model</code>, <code>effort</code>, <code>argument-hint</code>, and <code>paths</code>. The Markdown body is the prompt.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Who can invoke it</span></div><div class="card-body"><p class="desc">By default both you and Claude can invoke any skill. Set <code>disable-model-invocation: true</code> so only you can run it (good for <code>/deploy</code>), or <code>user-invocable: false</code> to hide it from the <code>/</code> menu so only Claude loads it.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Tool restrictions</span></div><div class="card-body"><p class="desc"><code>allowed-tools</code> grants tools without a permission prompt while the skill is active; <code>disallowed-tools</code> removes tools from Claude's pool &mdash; useful for autonomous loops that should never call <code>AskUserQuestion</code>.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Dynamic context</span></div><div class="card-body"><p class="desc">A <code>!`command`</code> line runs a shell command and inlines its output before Claude sees the skill, so <code>!`git diff HEAD`</code> arrives with the live diff already filled in. <code>$ARGUMENTS</code> (or <code>$0</code>, <code>$1</code>) captures input.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Listing &amp; reloading</span></div><div class="card-body"><p class="desc">Use <code>/skills</code> to see everything, or type <code>/</code> and filter. Edits to <code>SKILL.md</code> apply live; new top-level skill directories need a restart, or <code>/reload-skills</code> to re-scan.</p></div></article>
   </div>
 </section>
 
@@ -481,12 +524,12 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
   <div class="sec-head"><span class="sec-num">11</span><h2 class="sec-title">MCP Servers</h2><span class="sec-badge" style="background:var(--orange-bg);color:var(--orange)">Guide</span></div>
   <p class="sec-intro">MCP (Model Context Protocol) servers give Claude access to external tools, APIs, and data sources. They run as separate processes and communicate via stdio or HTTP.</p>
   <div class="grid two">
-    <article class="card"><div class="card-head"><span class="card-title">Adding an MCP server</span></div><div class="card-body"><p class="desc">Use <code>claude mcp add &lt;name&gt; -- &lt;command&gt;</code> from the CLI. For example: <code>claude mcp add github -- npx @anthropic-ai/mcp-server-github</code>. Servers can also be added via <code>/mcp</code> in-session.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Configuration scopes</span></div><div class="card-body"><p class="desc">Add with <code>-s user</code> for global (all projects), <code>-s project</code> for repo-specific, or via org-managed connectors. Config is stored in <code>~/.claude/settings.json</code> or <code>.claude/settings.json</code>.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">OAuth servers</span></div><div class="card-body"><p class="desc">Some MCP servers (like Slack) use OAuth. Use <code>--client-id</code> and <code>--client-secret</code> with <code>claude mcp add</code> for servers that don't support Dynamic Client Registration.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Managing servers</span></div><div class="card-body"><p class="desc">Use <code>claude mcp list</code> to see configured servers, <code>claude mcp remove &lt;name&gt;</code> to delete one, or <code>/mcp</code> in-session for an interactive view with connection status.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Deferred tool loading</span></div><div class="card-body"><p class="desc">MCP tools are loaded on-demand to save context. Claude uses <code>ToolSearch</code> to fetch tool schemas before calling them. This means MCP servers with many tools don't bloat the context window.</p></div></article>
-    <article class="card"><div class="card-head"><span class="card-title">Troubleshooting</span></div><div class="card-body"><p class="desc">If an MCP server isn't connecting, check <code>/mcp</code> for status. Common issues: missing Node.js/Python, wrong path, or the server needs environment variables set via <code>-e KEY=VALUE</code>.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Add a remote (HTTP) server</span></div><div class="card-body"><p class="desc">HTTP is preferred for hosted services: <code>claude mcp add --transport http notion https://mcp.notion.com/mcp</code>. Add <code>--header "Authorization: Bearer …"</code> for token auth. SSE and WebSocket transports also exist.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Add a local (stdio) server</span></div><div class="card-body"><p class="desc">Run a local process, separating server args with <code>--</code>: <code>claude mcp add --env KEY=val airtable -- npx -y airtable-mcp-server</code>. Everything after <code>--</code> is passed to the server untouched.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Configuration scopes</span></div><div class="card-body"><p class="desc"><code>--scope local</code> (default) is just you in this project; <code>--scope project</code> is shared via a <code>.mcp.json</code> file in the repo; <code>--scope user</code> is you across all projects.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">OAuth &amp; approval</span></div><div class="card-body"><p class="desc">For OAuth servers, add the URL then run <code>/mcp</code> in-session to authenticate in the browser. Project-scoped servers from <code>.mcp.json</code> show as <code>⏸ Pending approval</code> until you approve them once.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Managing servers</span></div><div class="card-body"><p class="desc">Use <code>claude mcp list</code> to see servers, <code>claude mcp get &lt;name&gt;</code> for details, <code>claude mcp remove &lt;name&gt;</code> to delete, or <code>/mcp</code> in-session for status and tool counts.</p></div></article>
+    <article class="card"><div class="card-head"><span class="card-title">Tool search (deferred loading)</span></div><div class="card-body"><p class="desc">With tool search on (the default), MCP tool schemas load on demand via the <code>ToolSearch</code> tool, so servers with many tools don't bloat the context window. Troubleshoot connections in <code>/mcp</code>; pass env vars with <code>--env KEY=value</code>.</p></div></article>
   </div>
 </section>
 
@@ -496,6 +539,14 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
 
 <hr class="sec-divider">
 
+<details class="vim-collapse" id="vim">
+  <summary>
+    <svg class="vim-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    Vim Mode &mdash; keyboard editing for the prompt
+    <span class="vim-badge">Optional &middot; click to expand</span>
+  </summary>
+  <div class="vim-inner">
+
 <section id="vim-modes" class="sec">
   <div class="sec-head"><span class="sec-num">12</span><h2 class="sec-title">Vim Mode -- Mode Switching</h2><span class="sec-badge" style="background:var(--purple-bg);color:var(--purple)">Vim</span></div>
   <p class="sec-intro">Enable via <code>/config</code> &rarr; Editor mode. The <code>/vim</code> slash command was removed in v2.1.92 -- use the config menu instead.</p>
@@ -504,13 +555,15 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
       <table class="vim-table">
         <thead><tr><th>Key</th><th>Action</th><th>From</th></tr></thead>
         <tbody>
-          <tr><td><kbd>Esc</kbd></td><td>Enter NORMAL mode</td><td>INSERT</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Enter NORMAL mode</td><td>INSERT, VISUAL</td></tr>
           <tr><td><kbd>i</kbd></td><td>Insert before cursor</td><td>NORMAL</td></tr>
           <tr><td><kbd>I</kbd></td><td>Insert at beginning of line</td><td>NORMAL</td></tr>
           <tr><td><kbd>a</kbd></td><td>Insert after cursor</td><td>NORMAL</td></tr>
           <tr><td><kbd>A</kbd></td><td>Insert at end of line</td><td>NORMAL</td></tr>
           <tr><td><kbd>o</kbd></td><td>Open new line below</td><td>NORMAL</td></tr>
           <tr><td><kbd>O</kbd></td><td>Open new line above</td><td>NORMAL</td></tr>
+          <tr><td><kbd>v</kbd></td><td>Start character-wise VISUAL selection</td><td>NORMAL</td></tr>
+          <tr><td><kbd>V</kbd></td><td>Start line-wise VISUAL selection</td><td>NORMAL</td></tr>
         </tbody>
       </table>
     </div></article>
@@ -528,6 +581,7 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
           <tr><td><kbd>j</kbd></td><td>Move down</td></tr>
           <tr><td><kbd>k</kbd></td><td>Move up</td></tr>
           <tr><td><kbd>l</kbd></td><td>Move right</td></tr>
+          <tr><td><kbd>Space</kbd></td><td>Move right</td></tr>
         </tbody>
       </table>
     </div></article>
@@ -553,7 +607,7 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
           <tr><td><kbd>f</kbd>{char}</td><td>Jump to next occurrence of character</td></tr>
           <tr><td><kbd>F</kbd>{char}</td><td>Jump to previous occurrence of character</td></tr>
           <tr><td><kbd>t</kbd>{char}</td><td>Jump to just before next occurrence</td></tr>
-          <tr><td><kbd>T</kbd>{char}</td><td>Jump to just before previous occurrence</td></tr>
+          <tr><td><kbd>T</kbd>{char}</td><td>Jump to just after previous occurrence</td></tr>
           <tr><td><kbd>;</kbd></td><td>Repeat last f/F/t/T</td></tr>
           <tr><td><kbd>,</kbd></td><td>Repeat last f/F/t/T in reverse</td></tr>
         </tbody>
@@ -603,6 +657,7 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
           <tr><td><kbd>&gt;&gt;</kbd></td><td>Indent line</td></tr>
           <tr><td><kbd>&lt;&lt;</kbd></td><td>Dedent line</td></tr>
           <tr><td><kbd>J</kbd></td><td>Join current line with next</td></tr>
+          <tr><td><kbd>u</kbd></td><td>Undo last edit</td></tr>
           <tr><td><kbd>.</kbd></td><td>Repeat last change</td></tr>
         </tbody>
       </table>
@@ -612,7 +667,7 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
 
 <section id="vim-obj" class="sec">
   <div class="sec-head"><span class="sec-num">15</span><h2 class="sec-title">Vim -- Text Objects</h2><span class="sec-badge" style="background:var(--purple-bg);color:var(--purple)">Vim</span></div>
-  <p class="sec-intro">Use with operators: <code>d</code> (delete), <code>c</code> (change), <code>y</code> (yank). Example: <code>ci"</code> = change inside quotes.</p>
+  <p class="sec-intro">Use with operators: <code>d</code> (delete), <code>c</code> (change), <code>y</code> (yank). Example: <code>ci"</code> = change inside quotes. They also work after <kbd>v</kbd>/<kbd>V</kbd> to extend a VISUAL selection.</p>
   <div class="grid">
     <article class="card"><div class="card-body">
       <table class="vim-table">
@@ -637,12 +692,12 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
   <div class="grid">
     <article class="card"><div class="card-body">
       <ul class="unsup-grid">
-        <li>Visual mode (v, V, Ctrl+V)</li>
-        <li>Undo / Redo (u, Ctrl+R)</li>
+        <li>Block-wise VISUAL (Ctrl+V)</li>
+        <li>Redo (Ctrl+R is history search)</li>
         <li>Macros (q, @)</li>
         <li>Marks (m, ')</li>
         <li>Named registers</li>
-        <li>Search (/, ?)</li>
+        <li>Vim search (/pattern, ?)</li>
         <li>Substitute (:s)</li>
         <li>Ex commands (:w, :q)</li>
         <li>Page navigation (Ctrl+D/U)</li>
@@ -652,12 +707,15 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
   </div>
   <div class="tip-box" style="margin-top:1rem">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    <span><strong>Vim mode notes:</strong> <kbd>Esc</kbd> switches to NORMAL -- it does not cancel input. Most <kbd>Ctrl</kbd>+key shortcuts pass through regardless of mode. In NORMAL, <kbd>?</kbd> opens the help menu. Use <code>/rewind</code> instead of <kbd>u</kbd> for undo -- it rolls back both conversation and code. Enable vim mode via <code>/config</code> &rarr; Editor mode.</span>
+    <span><strong>Vim mode notes:</strong> <kbd>Esc</kbd> switches INSERT/VISUAL to NORMAL -- it doesn't cancel input editing (double-<kbd>Esc</kbd> on an empty prompt opens the rewind menu). VISUAL mode (<kbd>v</kbd>, <kbd>V</kbd>) <em>is</em> supported -- only block-wise <kbd>Ctrl</kbd>+<kbd>V</kbd> isn't; in VISUAL, operators (<kbd>d</kbd>, <kbd>y</kbd>, <kbd>c</kbd>, <kbd>&gt;</kbd>) act on the selection. <kbd>u</kbd> undoes your last edit; <code>/rewind</code> is separate and rolls conversation and code back to a checkpoint. Enable vim via <code>/config</code> &rarr; Editor mode.</span>
   </div>
 </section>
 
+  </div>
+</details>
+
   <footer class="pg-foot">
-    <p>Claude Code Reference &middot; Redesigned 2026</p>
+    <p>Claude Code Reference &middot; Validated against v2.1.183</p>
     <p>Slash commands &middot; Vim mode guide</p>
   </footer>
 </main>
@@ -678,10 +736,11 @@ kbd{font-family:var(--font-mono);font-size:.8em;background:var(--surface-off);co
   var sections=document.querySelectorAll('section[id]'),navLinks=document.querySelectorAll('.nav-a[data-sec]');
   var obs=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){navLinks.forEach(function(a){a.classList.remove('active');});var a=document.querySelector('.nav-a[data-sec="'+e.target.id+'"]');if(a){a.classList.add('active');a.scrollIntoView({block:'nearest'});}}});},{rootMargin:'-20% 0px -70% 0px'});
   sections.forEach(function(s){obs.observe(s);});
-  // Close sidebar on nav click (mobile)
-  navLinks.forEach(function(a){a.addEventListener('click',function(){if(window.innerWidth<=768){sidebar.classList.remove('open');overlay.classList.remove('vis');}});});
+  // Expand the collapsed Vim block when its nav links are used; close sidebar on nav click (mobile)
+  var vimBlock=document.getElementById('vim');
+  navLinks.forEach(function(a){a.addEventListener('click',function(ev){var sec=a.getAttribute('data-sec');if(vimBlock&&sec&&sec.indexOf('vim')===0){ev.preventDefault();vimBlock.open=true;var t=document.getElementById(sec);requestAnimationFrame(function(){if(t)t.scrollIntoView({behavior:'instant',block:'start'});if(history.replaceState)history.replaceState(null,'','#'+sec);});}if(window.innerWidth<=768){sidebar.classList.remove('open');overlay.classList.remove('vis');}});});
   var si=document.getElementById('search');
-  if(si)si.addEventListener('input',function(){var q=this.value.toLowerCase().trim();document.querySelectorAll('.card').forEach(function(c){if(!q){c.style.display='';return;}c.style.display=c.textContent.toLowerCase().includes(q)?'':'none';});});
+  if(si)si.addEventListener('input',function(){var q=this.value.toLowerCase().trim();if(q&&vimBlock){vimBlock.open=true;}document.querySelectorAll('.card').forEach(function(c){if(!q){c.style.display='';return;}c.style.display=c.textContent.toLowerCase().includes(q)?'':'none';});});
 })();
 </script>
 </body>
