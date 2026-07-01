@@ -42,7 +42,7 @@ function chooseTitleSize(title: string): number {
     return 44;
 }
 
-export async function renderOg(title: string): Promise<Buffer> {
+export async function renderOg(title: string, eyebrowLabel: string = 'mncoleman Artifact:'): Promise<Buffer> {
     const fonts = await loadFonts();
 
     const svg = await satori(
@@ -80,7 +80,7 @@ export async function renderOg(title: string): Promise<Buffer> {
                                         opacity: 0.75,
                                         letterSpacing: '-0.01em',
                                     },
-                                    children: 'mncoleman Artifact:',
+                                    children: eyebrowLabel,
                                 },
                             },
                             {

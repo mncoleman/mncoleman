@@ -14,6 +14,13 @@ Tiny Bun + Hono service that hosts uploaded HTML/PDF/image artifacts at
 | `GET`  | `/a/:slug`          | —      | Public view. HTML gets OG meta injected.     |
 | `GET`  | `/raw/:slug`        | —      | Force-download the underlying file.          |
 | `GET`  | `/og/:slug.png`     | —      | Cached OG image (1200x630, branded).         |
+| `GET`  | `/api/library/list` | —      | Public list of "A"I library items (prompts + skills), full content included. |
+| `POST` | `/api/library`      | Bearer | Create a prompt or skill. JSON body, `kind: 'prompt'\|'skill'`. |
+| `PATCH`| `/api/library/:slug`| Bearer | Partial update of a library item.            |
+| `DELETE`| `/api/library/:slug`| Bearer | Remove a library item.                      |
+| `GET`  | `/library/:slug`    | —      | Public details/share page (server-rendered). |
+| `GET`  | `/raw/library/:slug.txt\|.md\|.zip` | — | Download — prompts as `.txt`/`.md`, skills as `.zip`. |
+| `GET`  | `/og/library/:slug.png` | —  | Cached OG image for a library item.          |
 
 ## Local dev
 
@@ -39,6 +46,9 @@ docker save artifacts:latest | gzip | \
     ssh -i ~/Desktop/SSH\ Info/ssh-key-2025-06-27.key ubuntu@161.153.110.196 \
     'gunzip | docker load'
 
+# On the ARM box (one-time, before the first run with library support):
+mkdir -p /srv/library
+
 # On the ARM box:
 docker run -d \
     --name artifacts \
@@ -50,8 +60,14 @@ docker run -d \
     -e JWT_SECRET="$(cat /home/ubuntu/.artifacts.jwt-secret)" \
     -e CORS_ORIGINS=https://mncoleman.com,https://mncoleman.github.io,http://localhost:3000 \
     -e MAX_UPLOAD_BYTES=104857600 \
+    -e LIBRARY_ROOT=/library \
     -v artifacts_data:/data \
+    -v /srv/library:/library \
     artifacts:latest
+
+# /srv/library is a bind mount (not a named volume) so the host-side private MCP
+#   server can read prompt/skill files directly off the filesystem with no extra
+#   plumbing — see the "A"I library MCP addendum.
 
 # MAX_UPLOAD_BYTES=104857600 (100 MB) raises the upload ceiling from the 25 MB
 #   default. Uploads transit the Cloudflare Worker, which caps request bodies at
@@ -85,3 +101,23 @@ Generate the shared secret with `openssl rand -hex 32`, then:
 
 Single Docker volume `artifacts_data`. Fully portable — `docker run` with the
 same volume on a fresh container preserves all state.
+
+### "A"I library layout
+
+```
+/library/<slug>/
+    meta.json              # kind, name, description (skills only), timestamps
+    og.png                 # cached share image
+
+    prompt.md              # prompt-kind only: raw prompt text
+
+    SKILL.md               # skill-kind only: server-assembled frontmatter + body
+    scripts/*               #   optional, admin-authored
+    references/*
+    assets/*
+    skill.zip              # cached zip (`<slug>/SKILL.md` as the zip root entry)
+```
+
+Bind-mounted at `/srv/library` on the host (not a named volume) so the private
+MCP server running directly on the ARM box can read it without going through
+this service.

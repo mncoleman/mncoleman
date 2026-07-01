@@ -365,6 +365,88 @@ export default {
                 });
             }
 
+            // "A"I library item create: JSON body forwarded directly — no multipart/duplex
+            // streaming needed here, these are small text payloads, not files.
+            if (url.pathname === '/api/library' && request.method === 'POST') {
+                if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
+                    return new Response(
+                        JSON.stringify({ error: 'Library service not configured' }),
+                        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                    );
+                }
+                const jwt = await signArtifactsJwt(
+                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'library-create' },
+                    env.ARTIFACTS_JWT_SECRET
+                );
+                const bodyText = await request.text();
+                const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/library`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+                    body: bodyText,
+                });
+                const text = await upstream.text();
+                return new Response(text, {
+                    status: upstream.status,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+            }
+
+            // "A"I library item edit: JSON body forwarded directly.
+            if (url.pathname.startsWith('/api/library/') && request.method === 'PATCH') {
+                if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
+                    return new Response(
+                        JSON.stringify({ error: 'Library service not configured' }),
+                        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                    );
+                }
+                const slug = decodeURIComponent(url.pathname.split('/').pop() || '');
+                if (!/^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?$/.test(slug)) {
+                    return new Response(JSON.stringify({ error: 'invalid slug' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+                const jwt = await signArtifactsJwt(
+                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'library-edit' },
+                    env.ARTIFACTS_JWT_SECRET
+                );
+                const bodyText = await request.text();
+                const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/library/${encodeURIComponent(slug)}`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+                    body: bodyText,
+                });
+                const text = await upstream.text();
+                return new Response(text, {
+                    status: upstream.status,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+            }
+
+            // "A"I library item delete.
+            if (url.pathname.startsWith('/api/library/') && request.method === 'DELETE') {
+                if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
+                    return new Response(
+                        JSON.stringify({ error: 'Library service not configured' }),
+                        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                    );
+                }
+                const slug = decodeURIComponent(url.pathname.split('/').pop() || '');
+                if (!/^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?$/.test(slug)) {
+                    return new Response(JSON.stringify({ error: 'invalid slug' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+                const jwt = await signArtifactsJwt(
+                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'library-delete' },
+                    env.ARTIFACTS_JWT_SECRET
+                );
+                const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/library/${encodeURIComponent(slug)}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${jwt}` },
+                });
+                const text = await upstream.text();
+                return new Response(text, {
+                    status: upstream.status,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+            }
+
             // Artifacts Management Endpoints
             if (url.pathname === '/api/artifacts') {
                 if (request.method === 'GET') {

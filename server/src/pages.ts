@@ -82,7 +82,7 @@ const baseStyles = `
     }
 `;
 
-const baseHead = (title: string, og?: { title: string; description: string; image: string; url: string }) => `
+export const baseHead = (title: string, og?: { title: string; description: string; image: string; url: string }) => `
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${escape(title)}</title>
@@ -100,7 +100,7 @@ const baseHead = (title: string, og?: { title: string; description: string; imag
     <style>${baseStyles}</style>
 `;
 
-function escape(s: string): string {
+export function escape(s: string): string {
     return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
 
@@ -211,7 +211,7 @@ export function passwordPromptPage({ slug, name, description, publicBase, error 
     </div></body></html>`;
 }
 
-const detailsStyles = `
+export const detailsStyles = `
     .card.details { text-align: left; max-width: 560px; }
     .details h1 { font-size: 28px; margin-bottom: 10px; }
     .details .desc { color: #9aa0a6; line-height: 1.6; margin: 0 0 16px; }
@@ -247,7 +247,7 @@ function detailsTypeLabel(type: string): string {
     return labels[type] || type.split('/').pop()?.toUpperCase() || 'File';
 }
 
-function detailsDate(iso: string): string {
+export function detailsDate(iso: string): string {
     try {
         return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     } catch {
@@ -275,7 +275,7 @@ export interface ArtifactDetailsOptions {
  * copies this page's URL.
  */
 /** Assert a URL is http(s) before it lands in an href/clipboard context (defense-in-depth vs javascript: URLs). */
-function ensureHttpUrl(url: string): string {
+export function ensureHttpUrl(url: string): string {
     if (!/^https?:\/\//i.test(url)) throw new Error(`Refusing to render non-http(s) URL: ${url}`);
     return url;
 }

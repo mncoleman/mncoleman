@@ -42,6 +42,9 @@ export function KeyBindings() {
                 case 'T':
                     router.push('/artifacts');
                     break;
+                case 'I':
+                    router.push('/ai');
+                    break;
                 case 'K':
                     router.push('/brand-kit');
                     break;
