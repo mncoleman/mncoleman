@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
     Loader2, MessageSquareText, PackageOpen, Plus, Trash2, Pencil, X, Check,
-    Copy, ExternalLink, AlertTriangle,
+    Copy, ExternalLink, AlertTriangle, Upload,
 } from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
 
@@ -70,6 +70,57 @@ function emptyResourceRow(): ResourceRow {
     return { folder: 'references', filename: '', content: '' };
 }
 
+// Gates the file picker to text/code content — uploading a binary file here
+// would silently corrupt it, since resources are stored as plain UTF-8 text.
+const TEXT_EXTENSIONS = new Set([
+    'md', 'txt', 'json', 'js', 'jsx', 'ts', 'tsx', 'py', 'sh', 'bash', 'zsh',
+    'yml', 'yaml', 'toml', 'css', 'scss', 'html', 'xml', 'csv', 'rb', 'go',
+    'rs', 'java', 'c', 'h', 'cpp', 'hpp', 'php', 'sql', 'env', 'ini', 'conf',
+    'cfg', 'lock', 'log', 'svg',
+]);
+const SCRIPT_EXTENSIONS = new Set(['sh', 'bash', 'zsh', 'py', 'js', 'ts', 'rb', 'go', 'rs', 'php']);
+const DOC_EXTENSIONS = new Set(['md', 'txt']);
+
+function extOf(filename: string): string {
+    const m = filename.match(/\.([a-zA-Z0-9]+)$/);
+    return m ? m[1].toLowerCase() : '';
+}
+
+function looksLikeText(file: globalThis.File): boolean {
+    const ext = extOf(file.name);
+    if (TEXT_EXTENSIONS.has(ext)) return true;
+    if (file.type.startsWith('text/')) return true;
+    // No extension + no reported MIME — e.g. "Dockerfile", "Makefile".
+    return !ext && !file.type;
+}
+
+function suggestResourceFolder(filename: string): ResourceFolder {
+    const ext = extOf(filename);
+    if (SCRIPT_EXTENSIONS.has(ext)) return 'scripts';
+    if (DOC_EXTENSIONS.has(ext)) return 'references';
+    return 'assets';
+}
+
+/** Reads an uploaded file as text, rejecting anything that isn't text/code —
+ *  including a belt-and-suspenders binary sniff (NUL byte) after reading, since
+ *  extension/MIME checks alone can't catch every mislabeled binary file. */
+async function readUploadedTextFile(file: globalThis.File): Promise<string> {
+    const MAX_BYTES = 5 * 1024 * 1024; // matches the server's per-resource cap
+    if (file.size > MAX_BYTES) {
+        throw new Error(`"${file.name}" is too large (max 5MB per resource file).`);
+    }
+    if (!looksLikeText(file)) {
+        throw new Error(`"${file.name}" doesn't look like a text/code file — only text-based resources are supported here.`);
+    }
+    const text = await file.text();
+    if (text.includes(String.fromCharCode(0))) {
+        throw new Error(`"${file.name}" appears to be a binary file — only text-based resources are supported here.`);
+    }
+    return text;
+}
+
+const TEXT_UPLOAD_ACCEPT = Array.from(TEXT_EXTENSIONS).map((e) => `.${e}`).concat('text/*').join(',');
+
 function ResourceRowsEditor({
     rows,
     onChange,
@@ -77,11 +128,30 @@ function ResourceRowsEditor({
     rows: ResourceRow[];
     onChange: (rows: ResourceRow[]) => void;
 }) {
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     const update = (index: number, patch: Partial<ResourceRow>) => {
         onChange(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
     };
     const remove = (index: number) => onChange(rows.filter((_, i) => i !== index));
     const add = () => onChange([...rows, emptyResourceRow()]);
+
+    const handleFilesSelected = async (fileList: FileList | null) => {
+        if (!fileList || fileList.length === 0) return;
+        setUploadError(null);
+        const newRows: ResourceRow[] = [];
+        for (const file of Array.from(fileList)) {
+            try {
+                const content = await readUploadedTextFile(file);
+                const filename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200);
+                newRows.push({ folder: suggestResourceFolder(file.name), filename, content });
+            } catch (e: any) {
+                setUploadError(e.message);
+            }
+        }
+        if (newRows.length > 0) onChange([...rows, ...newRows]);
+    };
 
     return (
         <div className="space-y-3">
@@ -89,10 +159,27 @@ function ResourceRowsEditor({
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">
                     Resources (scripts / references / assets)
                 </Label>
-                <Button type="button" size="sm" variant="outline" onClick={add} className="h-7 gap-1">
-                    <Plus className="h-3 w-3" /> Add file
-                </Button>
+                <div className="flex items-center gap-2">
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept={TEXT_UPLOAD_ACCEPT}
+                        onChange={(e) => {
+                            handleFilesSelected(e.target.files);
+                            e.target.value = '';
+                        }}
+                        className="hidden"
+                    />
+                    <Button type="button" size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} className="h-7 gap-1">
+                        <Upload className="h-3 w-3" /> Upload file
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={add} className="h-7 gap-1">
+                        <Plus className="h-3 w-3" /> Add file
+                    </Button>
+                </div>
             </div>
+            {uploadError && <p className="text-xs text-destructive">{uploadError}</p>}
             {rows.length === 0 && (
                 <p className="text-xs text-muted-foreground">No sub-resources yet — optional.</p>
             )}
@@ -162,6 +249,7 @@ export function LibraryManager({ workerUrl }: LibraryManagerProps) {
     const [deleting, setDeleting] = useState<string | null>(null);
     const [pendingDelete, setPendingDelete] = useState<LibraryItem | null>(null);
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
+    const [slugTouched, setSlugTouched] = useState(false);
 
     const fetchItems = useCallback(async () => {
         setLoadingList(true);
@@ -192,12 +280,13 @@ export function LibraryManager({ workerUrl }: LibraryManagerProps) {
 
     const handleNameChange = (v: string) => {
         setName(v);
-        if (!slug) setSlug(suggestSlug(v));
+        if (!slugTouched) setSlug(suggestSlug(v));
     };
 
     const resetForm = () => {
         setName('');
         setSlug('');
+        setSlugTouched(false);
         setPromptText('');
         setDescription('');
         setSkillBodyMd('');
@@ -424,7 +513,10 @@ export function LibraryManager({ workerUrl }: LibraryManagerProps) {
                         <Input
                             id="library-slug"
                             value={slug}
-                            onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                            onChange={(e) => {
+                                setSlugTouched(true);
+                                setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
+                            }}
                             placeholder="my-prompt-name"
                             className="font-mono"
                             maxLength={60}
