@@ -94,6 +94,10 @@ export default function DarkVeil({
   warpAmount = 0,
   resolutionScale = 1
 }: Props) {
+  // Dev escape hatch: `npm run dev:lite` sets NEXT_PUBLIC_DISABLE_DARKVEIL=1 so
+  // only the globe's single WebGL context runs — keeps the dev server light on
+  // RAM. Build-time constant, so the early return is order-stable for hooks.
+  if (process.env.NEXT_PUBLIC_DISABLE_DARKVEIL === '1') return null;
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current as HTMLCanvasElement;

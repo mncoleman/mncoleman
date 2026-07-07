@@ -13,8 +13,10 @@ import {
     MessageSquareCode,
     ClipboardCheck,
     Github,
-    ExternalLink
+    ExternalLink,
+    Globe2
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { gsap } from 'gsap';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +36,122 @@ const noScrollbarStyle: React.CSSProperties = {
     msOverflowStyle: 'none',
     WebkitOverflowScrolling: 'touch',
 };
+
+const VisitorGlobeDemo = dynamic(() => import('@/components/visitor-globe/VisitorGlobe'), { ssr: false });
+
+const GLOBE_DEMO_PINS = [
+    { id: 'g1', lat: 40.71, lng: -74.0, place_label: 'New York', country: 'US', name: null, food: null, song: null, fact: null, created_at: 0 },
+    { id: 'g2', lat: 51.51, lng: -0.13, place_label: 'London', country: 'UK', name: null, food: null, song: null, fact: null, created_at: 0 },
+    { id: 'g3', lat: 35.68, lng: 139.65, place_label: 'Tokyo', country: 'JP', name: null, food: null, song: null, fact: null, created_at: 0 },
+    { id: 'g4', lat: -33.87, lng: 151.21, place_label: 'Sydney', country: 'AU', name: null, food: null, song: null, fact: null, created_at: 0 },
+    { id: 'g5', lat: -23.55, lng: -46.63, place_label: 'São Paulo', country: 'BR', name: null, food: null, song: null, fact: null, created_at: 0 },
+];
+
+const globePalette = [
+    { name: 'Globe Base', hex: '#1C1C21', rgb: '0.11, 0.11, 0.13', usage: 'Sphere surface · baseColor' },
+    { name: 'Globe Glow', hex: '#292B38', rgb: '0.16, 0.17, 0.22', usage: 'Atmosphere halo · glowColor' },
+    { name: 'Pin Ping', hex: '#4F7CFF', rgb: '0.31, 0.49, 1.0', usage: 'Visitor pins · pulse marker' },
+];
+
+function GlobeShowcase({ copyToClipboard, copiedColor }: { copyToClipboard: (text: string, label: string) => void; copiedColor: string | null }) {
+    return (
+        <div className="space-y-8">
+            <Card className="border-border/40 bg-background/60 backdrop-blur-xl overflow-hidden group">
+                <CardHeader>
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                            <Globe2 className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-2xl">The Visitor Globe</CardTitle>
+                            <CardDescription>A minimalist dark globe (cobe) with branded, pulsing visitor pins.</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid md:grid-cols-2 gap-8 items-center">
+                        <div className="relative mx-auto w-full max-w-[300px] aspect-square">
+                            <VisitorGlobeDemo pins={GLOBE_DEMO_PINS} className="h-full w-full" />
+                        </div>
+                        <div className="space-y-3 text-sm text-muted-foreground">
+                            <p>A single-draw-call WebGL globe, dark and dotted by default. Each visitor location is a bright &ldquo;location ping&rdquo; with sonar pulse rings. Grab to spin, hover a pin for its name, click it for details.</p>
+                            <ul className="space-y-1.5">
+                                <li className="flex gap-2"><span className="text-primary">&bull;</span> Monochrome globe, electric-blue pins — one intentional accent.</li>
+                                <li className="flex gap-2"><span className="text-primary">&bull;</span> Self-driven rAF, gated on visibility + reduced-motion.</li>
+                                <li className="flex gap-2"><span className="text-primary">&bull;</span> Pins locked to the sphere via cobe&rsquo;s exact projection.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h4 className="mt-8 mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Globe palette</h4>
+                    <div className="grid sm:grid-cols-3 gap-4">
+                        {globePalette.map((c) => (
+                            <div
+                                key={c.name}
+                                onClick={() => copyToClipboard(c.hex, c.name)}
+                                className="cursor-pointer rounded-2xl border border-border/40 p-3 hover:scale-[1.02] transition-transform"
+                            >
+                                <div className="h-16 rounded-xl border border-white/10" style={{ backgroundColor: c.hex }} />
+                                <div className="mt-2 flex items-center justify-between">
+                                    <span className="text-sm font-medium">{c.name}</span>
+                                    {copiedColor === c.name ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3 opacity-40" />}
+                                </div>
+                                <div className="text-xs font-mono text-muted-foreground">{c.hex}</div>
+                                <div className="text-[11px] text-muted-foreground/70">rgb({c.rgb}) · {c.usage}</div>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="grid md:grid-cols-2 gap-6">
+                <Card className="border-border/40 bg-background/60 backdrop-blur-xl">
+                    <CardHeader>
+                        <CardTitle className="text-lg">Glass dialog surface</CardTitle>
+                        <CardDescription>
+                            The <code className="text-xs">.glass-panel</code> utility — frosted, theme-aware, with a solid reduced-transparency fallback.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="glass-panel p-5">
+                            <h5 className="font-bold">Where are you from?</h5>
+                            <p className="text-sm text-muted-foreground mb-3">Drop a pin on the globe and say hello. 🌍</p>
+                            <div className="h-9 rounded-md border border-input bg-transparent flex items-center px-3 text-sm text-muted-foreground">
+                                Country, city, or full address…
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-border/40 bg-background/60 backdrop-blur-xl">
+                    <CardHeader>
+                        <CardTitle className="text-lg">Branded mini-captcha</CardTitle>
+                        <CardDescription>Server-signed puzzles — human-friendly, lightly humorous, spam-slowing.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="rounded-lg border border-border/40 bg-background/30 p-3">
+                            <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                <span className="inline-flex h-4 w-4 items-center justify-center rounded-sm bg-primary/15 text-[10px] text-primary">?</span>
+                                Quick human check
+                            </div>
+                            <p className="mb-2 text-sm">Which one is NOT a real animal?</p>
+                            <div className="flex flex-wrap gap-2">
+                                {['Cat', 'Dog', 'Sasquatch'].map((o, i) => (
+                                    <span
+                                        key={o}
+                                        className={`rounded-md border px-3 py-1.5 text-sm ${i === 2 ? 'border-primary bg-primary/15 text-foreground' : 'border-border/50'}`}
+                                    >
+                                        {o}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
+}
 
 const STACK_CARDS = ['Hero', 'Blog', 'Resources', 'Resume'];
 
@@ -763,7 +881,7 @@ export default function BrandKitClient() {
             </Card>
 
             <Tabs defaultValue="colors" className="w-full">
-                <TabsList className="grid w-full h-auto grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 bg-muted/50 p-1 rounded-2xl xl:rounded-full border border-border/40">
+                <TabsList className="grid w-full h-auto grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 bg-muted/50 p-1 rounded-2xl xl:rounded-full border border-border/40">
                     <TabsTrigger value="colors" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                         <Palette className="h-4 w-4 mr-2" />
                         Colors
@@ -787,6 +905,10 @@ export default function BrandKitClient() {
                     <TabsTrigger value="prompting" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                         <MessageSquareCode className="h-4 w-4 mr-2" />
                         Prompting
+                    </TabsTrigger>
+                    <TabsTrigger value="globe" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                        <Globe2 className="h-4 w-4 mr-2" />
+                        Globe
                     </TabsTrigger>
                 </TabsList>
 
@@ -1120,6 +1242,10 @@ export default function BrandKitClient() {
 
                 <TabsContent value="prompting" className="mt-8">
                     <PromptingSection copyToClipboard={copyToClipboard} copiedColor={copiedColor} />
+                </TabsContent>
+
+                <TabsContent value="globe" className="mt-8">
+                    <GlobeShowcase copyToClipboard={copyToClipboard} copiedColor={copiedColor} />
                 </TabsContent>
             </Tabs>
         </div>

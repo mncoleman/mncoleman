@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronDown } from 'lucide-react';
 import { UserIcon } from '@/components/ui/user';
 import { FolderCodeIcon } from '@/components/ui/folder-code';
 import { SquarePenIcon } from '@/components/ui/square-pen';
@@ -24,6 +24,11 @@ import { usePageTransition } from '@/components/transition-provider';
 // content cards remain server-rendered (see Home), so LCP is unaffected.
 const DarkVeil = dynamic(() => import('@/components/ui/dark-veil'), { ssr: false });
 const ScrollFloat = dynamic(() => import('@/components/ScrollFloat'), { ssr: false });
+// The visitor globe holds its own WebGL context (cobe) + fetches live pins, so it
+// is client-only and lazy — it never touches the homepage's initial JS or LCP.
+const VisitorSection = dynamic(() => import('@/components/visitor-globe/VisitorSection'), {
+  ssr: false,
+});
 
 const bentoCards = [
   {
@@ -189,6 +194,16 @@ function DesktopGrid() {
           ))}
         </div>
       </div>
+
+      {/* Gentle scroll cue hinting at the visitor globe below the cards. */}
+      <button
+        type="button"
+        onClick={() => document.getElementById('visitor-globe')?.scrollIntoView({ behavior: 'smooth' })}
+        aria-label="Scroll down to the visitor globe"
+        className="vg-scroll-cue absolute bottom-8 left-1/2 z-10 text-muted-foreground/50 hover:text-foreground transition-colors"
+      >
+        <ChevronDown className="h-8 w-8" strokeWidth={1.5} />
+      </button>
     </div>
   );
 }
@@ -305,6 +320,7 @@ export default function Home() {
       <DarkVeil hueShift={40} speed={0.5} resolutionScale={0.8} />
       <DesktopGrid />
       <MobileStack />
+      <VisitorSection />
     </>
   );
 }

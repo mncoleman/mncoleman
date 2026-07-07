@@ -18,5 +18,11 @@ artifacts.mncoleman.com {
         Access-Control-Expose-Headers "X-Artifact-Slug"
     }
 
-    reverse_proxy 127.0.0.1:7878
+    reverse_proxy 127.0.0.1:7878 {
+        # Real client IP for the visitor globe's rate-limiting / dedup. Caddy is the
+        # direct edge here (no Cloudflare proxy), so {remote_host} is the true client
+        # socket peer — immune to X-Forwarded-For spoofing. The Bun service reads
+        # X-Real-IP first (see server/src/bot-defense.ts clientIp()).
+        header_up X-Real-IP {remote_host}
+    }
 }

@@ -49,6 +49,30 @@ import {
 } from './library-storage';
 import { buildSkillZip } from './library-zip';
 import { libraryDetailsPage } from './library-pages';
+import {
+    listVisiblePins,
+    insertVisitor,
+    countByIpSince,
+    hasNearbyPinFromIp,
+    setVisitorStatus,
+    deleteVisitor,
+    listAllForAdmin,
+    burnNonce,
+    sweepExpiredNonces,
+} from './visitors-db';
+import {
+    clientIp,
+    hashIp,
+    issueToken,
+    verifyToken,
+    tooFast,
+    rateLimit,
+    pickPuzzle,
+    verifyCaptcha,
+    HONEYPOT_FIELD,
+} from './bot-defense';
+import { moderateFields } from './moderation';
+import { geocodeAutocomplete } from './geocode';
 
 const STORAGE_ROOT = resolve(process.env.STORAGE_ROOT || '/srv/artifacts');
 const RESERVED_FILENAMES = new Set(['..', '.', 'meta.json', 'og.png', '']);
@@ -877,6 +901,160 @@ app.get('/library/:slug', async (c) => {
         },
     });
 });
+
+// ── Visitor globe ("Where are you from?") ────────────────────────────────────
+// Public guestbook: anyone can list pins and submit their location. Writes hit
+// this Bun service directly (like the public read /api/list) — the Worker's
+// admin+CSRF gate is bypassed on purpose. Every abuse control lives here.
+
+const VDAY_MS = 24 * 60 * 60 * 1000;
+const V_MAX_PER_IP_DAY = 50; // generous flood ceiling, NOT a per-person cap
+const clipStr = (s: unknown, n: number): string | null => {
+    if (typeof s !== 'string') return null;
+    const t = s.trim().slice(0, n);
+    return t || null;
+};
+
+app.get('/api/visitors', (c) => {
+    const pins = listVisiblePins();
+    const body = JSON.stringify({ pins });
+    const etag = `W/"visitors-${pins.length}-${pins[0]?.created_at ?? 0}"`;
+    if (c.req.header('If-None-Match') === etag) {
+        return new Response(null, { status: 304, headers: { ETag: etag } });
+    }
+    return new Response(body, {
+        headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=30, stale-while-revalidate=60',
+            ETag: etag,
+        },
+    });
+});
+
+// Issue a submission token + a branded mini-captcha (answer signed + nonce-bound).
+app.get('/api/visitors/challenge', (c) => {
+    const ipHash = hashIp(clientIp(c));
+    if (!rateLimit(`challenge:${ipHash}`, 40, 5 * 60 * 1000)) {
+        return c.json({ error: 'Too many attempts — give it a moment.' }, 429);
+    }
+    const t = issueToken();
+    const { puzzle, sig } = pickPuzzle(t.nonce);
+    sweepExpiredNonces(); // opportunistic cleanup
+    return c.json({ token: t.token, captcha: puzzle, captchaSig: sig, honeypotField: HONEYPOT_FIELD });
+});
+
+// Geoapify autocomplete proxy (API key stays server-side).
+app.get('/api/geocode', async (c) => {
+    const ipHash = hashIp(clientIp(c));
+    if (!rateLimit(`geocode:${ipHash}`, 60, 60 * 1000)) {
+        return c.json({ error: 'Too many searches — slow down a touch.' }, 429);
+    }
+    const q = (c.req.query('q') || '').trim();
+    if (q.length < 2) return c.json({ results: [] });
+    const limit = Math.min(Math.max(Number(c.req.query('limit')) || 5, 1), 10);
+    const results = await geocodeAutocomplete(q, limit);
+    return c.json({ results });
+});
+
+// Submit a pin — full validation pipeline (cheap checks first, DB writes last).
+app.post('/api/visitors', async (c) => {
+    const ipHash = hashIp(clientIp(c));
+    if (!rateLimit(`submit:${ipHash}`, 10, 10 * 60 * 1000)) {
+        return c.json({ error: "That's a lot of pins at once — try again shortly." }, 429);
+    }
+
+    let body: Record<string, unknown>;
+    try {
+        body = (await c.req.json()) as Record<string, unknown>;
+    } catch {
+        return c.json({ error: 'Invalid submission.' }, 400);
+    }
+
+    // 1) Honeypot: real users never fill this. Fake success so bots don't learn.
+    const hp = body[HONEYPOT_FIELD];
+    if (typeof hp === 'string' && hp.trim() !== '') {
+        return c.json({ ok: true }, 200);
+    }
+
+    // 2) Signed single-use token + too-fast timing.
+    const v = verifyToken(body.token as string | undefined);
+    if (!v.ok) return c.json({ error: 'Please reload the page and try again.' }, 400);
+    if (tooFast(v.issuedAt!)) {
+        return c.json({ error: 'Whoa, speedy! Take a breath and submit again.' }, 400);
+    }
+
+    // 3) Branded mini-captcha.
+    if (!verifyCaptcha(v.nonce!, String(body.captchaId ?? ''), String(body.captchaSig ?? ''), String(body.captchaAnswer ?? ''))) {
+        return c.json({ error: 'That puzzle answer was a little off — try the next one.' }, 400);
+    }
+
+    // 4) Burn the nonce (single use) before doing any real work.
+    if (!burnNonce(v.nonce!, v.exp!)) {
+        return c.json({ error: 'This submission was already used — reload to try again.' }, 409);
+    }
+
+    // 5) Payload validation.
+    const lat = Number(body.lat);
+    const lng = Number(body.lng);
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180) {
+        return c.json({ error: 'Pick a location from the search first.' }, 400);
+    }
+    const place_label = clipStr(body.place_label, 200);
+    if (!place_label) return c.json({ error: 'Pick a location from the search first.' }, 400);
+
+    const name = clipStr(body.name, 80);
+    const food = clipStr(body.food, 80);
+    const song = clipStr(body.song, 120);
+    const fact = clipStr(body.fact, 200);
+
+    // 6) Flood ceiling + same-spot dedup (both keyed on the hashed IP).
+    if (countByIpSince(ipHash, Date.now() - VDAY_MS) >= V_MAX_PER_IP_DAY) {
+        return c.json({ error: 'Lots of pins from your network today — try again tomorrow.' }, 429);
+    }
+    if (hasNearbyPinFromIp(ipHash, lat, lng, Date.now() - VDAY_MS)) {
+        return c.json({ error: "Looks like you've already pinned near here recently!" }, 409);
+    }
+
+    // 7) Profanity / inappropriate content (server-side, never trust the client).
+    const mod = moderateFields({ name, food, song, fact, place_label });
+    if (!mod.clean) {
+        return c.json({ error: "Let's keep it friendly — please tweak that and resubmit.", field: mod.field }, 422);
+    }
+
+    // 8) Insert + return the created pin (client optimistically drops it).
+    const pin = insertVisitor({
+        lat,
+        lng,
+        place_label,
+        country: clipStr(body.country, 80),
+        precision: clipStr(body.precision, 20),
+        name,
+        food,
+        song,
+        fact,
+        ip_hash: ipHash,
+    });
+    return c.json({ ok: true, pin }, 201);
+});
+
+// Admin moderation — authed via the Worker-minted JWT (same as artifacts/library).
+app.get('/api/admin/visitors', requireAuth, (c) => c.json({ pins: listAllForAdmin() }));
+
+app.patch('/api/admin/visitors/:id', requireAuth, async (c) => {
+    const id = c.req.param('id');
+    let body: { status?: string };
+    try {
+        body = (await c.req.json()) as { status?: string };
+    } catch {
+        return c.json({ error: 'invalid body' }, 400);
+    }
+    if (body.status !== 'visible' && body.status !== 'hidden') {
+        return c.json({ error: 'status must be visible|hidden' }, 400);
+    }
+    return c.json({ ok: setVisitorStatus(id, body.status) });
+});
+
+app.delete('/api/admin/visitors/:id', requireAuth, (c) => c.json({ ok: deleteVisitor(c.req.param('id')) }));
 
 // Favicon: redirect to mncoleman.com's so artifact pages and direct visits look on-brand.
 app.get('/favicon.ico', (c) => c.redirect(SITE_FAVICON_ICO, 302));

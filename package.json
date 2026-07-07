@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "next dev",
+    "dev": "NODE_OPTIONS='--max-old-space-size=3072' next dev",
+    "dev:lite": "NEXT_PUBLIC_DISABLE_DARKVEIL=1 NODE_OPTIONS='--max-old-space-size=2560' next dev",
     "dev:artifacts": "tsx scripts/dev-artifacts-server.ts",
     "generate-search-index": "tsx scripts/generate-search-index.ts",
     "stamp-sw-version": "tsx scripts/stamp-sw-version.ts",
@@ -32,6 +33,7 @@
     "autoprefixer": "^10.4.22",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cobe": "^2.0.1",
     "date-fns": "^4.1.0",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.3",

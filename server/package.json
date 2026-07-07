@@ -12,6 +12,7 @@
         "fflate": "^0.8.2",
         "hono": "^4.12.0",
         "jose": "^6.2.0",
+        "obscenity": "^0.4.6",
         "satori": "^0.26.0"
     },
     "devDependencies": {

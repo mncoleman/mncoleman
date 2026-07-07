@@ -121,3 +121,209 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* Frosted glass for floating surfaces over the Dark Veil / globe (the
+ * "Where are you from?" dialog, the autocomplete dropdown, the pin callout).
+ * Theme-aware via the HSL vars; kept in @layer components so Tailwind radius /
+ * padding utilities on the same element still override it. */
+@layer components {
+  .glass-panel {
+    border-radius: 1rem;
+    border: 1px solid hsl(var(--border) / 0.35);
+    background: hsl(var(--background) / 0.6);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    backdrop-filter: blur(20px) saturate(1.5);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+}
+
+/* Accessibility: reduced-transparency users get a solid surface. Unlayered so it
+ * wins over the layered rule above. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-panel {
+    background: hsl(var(--background));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ── Visitor globe pins: branded "location ping" with sonar pulse rings ──
+ * The .vg-pin wrapper is positioned each frame by JS (cobe's exact projection);
+ * children are centred on its origin. */
+.vg-pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  will-change: transform, opacity;
+}
+.vg-pin-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  background: radial-gradient(circle at 50% 40%, #ffffff 0%, #7ea6ff 45%, #2f5cff 100%);
+  box-shadow: 0 0 8px 1px rgba(79, 124, 255, 0.85);
+  transition: width 0.18s ease, height 0.18s ease, box-shadow 0.18s ease;
+  pointer-events: none; /* let hover/click fall through to .vg-pin-hit beneath */
+}
+.vg-pin-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  border: 2px solid rgba(79, 124, 255, 0.55);
+  transform: translate(-50%, -50%) scale(0.5);
+  animation: vg-ping 2.6s cubic-bezier(0, 0.2, 0.35, 1) infinite;
+  pointer-events: none; /* decorative — clicks pass through to .vg-pin-hit */
+}
+.vg-pin-ring--2 {
+  animation-delay: 1.3s;
+}
+.vg-pin-hit {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.vg-pin-hit:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: 9999px;
+}
+.vg-pin--focused .vg-pin-dot {
+  width: 14px;
+  height: 14px;
+  box-shadow: 0 0 14px 3px rgba(79, 124, 255, 1);
+}
+.vg-pin-hit:hover ~ .vg-pin-dot,
+.vg-pin-hit:focus-visible ~ .vg-pin-dot {
+  width: 13px;
+  height: 13px;
+}
+@keyframes vg-ping {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0.7;
+  }
+  70% {
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3.2);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vg-pin-ring {
+    animation: none;
+    opacity: 0.3;
+  }
+}
+
+/* ── Visitor name wheel: infinite, scrollbar-less, 3D size-morphing list ── */
+.vg-wheel {
+  overflow-y: scroll;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior: contain;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 24%, #000 76%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 24%, #000 76%, transparent 100%);
+}
+.vg-wheel::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.vg-wheel-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 1px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transform-origin: center center;
+  will-change: transform, opacity;
+}
+.vg-wheel-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.15;
+  color: hsl(var(--foreground));
+  white-space: nowrap;
+}
+.vg-wheel-place {
+  font-size: 0.7rem;
+  line-height: 1.1;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+.vg-wheel-item--focused .vg-wheel-name {
+  color: hsl(var(--primary));
+}
+
+/* Pin hover tooltip (name + location). Positioned each frame by JS; centred
+ * above the pin via the trailing translate(-50%,-100%). */
+.vg-pin-tip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 5px 11px;
+  border-radius: 10px;
+  pointer-events: none;
+  white-space: nowrap;
+  transition: opacity 0.14s ease;
+  z-index: 3000;
+}
+.vg-pin-tip-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: hsl(var(--foreground));
+}
+.vg-pin-tip-place {
+  font-size: 0.68rem;
+  line-height: 1.1;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Bobbing scroll-down cue beneath the glass cards (desktop). */
+.vg-scroll-cue {
+  transform: translateX(-50%);
+  animation: vg-bob 1.9s ease-in-out infinite;
+}
+@keyframes vg-bob {
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+  50% {
+    transform: translate(-50%, 9px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vg-scroll-cue {
+    animation: none;
+  }
+}
