@@ -5,17 +5,19 @@ import { cn } from '@/lib/utils';
 import type { Pin } from './visitor-api';
 
 /**
- * Vertical, scrollbar-less, INFINITE-looping list of visitor names that morphs
- * item size/opacity/tilt by distance from centre to feel 3D (like an iOS picker
- * wheel). Auto-scrolls slowly; pauses on interaction; click a name to fly the
- * globe there. Positions are computed from real layout each frame, so it stays
- * correct at any width. Gated on visibility + reduced-motion.
+ * Vertical, scrollbar-less list of visitor names that morphs item size/opacity/
+ * tilt by distance from centre to feel 3D (like an iOS picker wheel).
+ *
+ * With ≥5 visitors it becomes an INFINITE auto-scrolling loop (the list is
+ * tripled for a seamless wrap). With fewer than 5, it shows each visitor exactly
+ * ONCE, centred and static — so a single visitor never appears as several copies.
+ * Gated on visibility + reduced-motion.
  */
 
 const ITEM_H = 44;
 const VISIBLE = 5;
 const CONTAINER_H = ITEM_H * VISIBLE;
-const COPIES = 3; // enough duplicates for a seamless wrap
+const COPIES = 3;
 
 interface Props {
     pins: Pin[];
@@ -26,14 +28,15 @@ interface Props {
 
 export default function VisitorWheel({ pins, focusedId, onSelect, className }: Props) {
     const scrollRef = useRef<HTMLDivElement>(null);
-    const nRef = useRef(pins.length);
-    nRef.current = pins.length;
+    const useLoop = pins.length >= VISIBLE;
 
     useEffect(() => {
         const el = scrollRef.current;
-        if (!el || nRef.current === 0) return;
-        const listH = nRef.current * ITEM_H;
-        el.scrollTop = listH; // start in the middle copy
+        const n = pins.length;
+        if (!el || n === 0) return;
+        const loop = n >= VISIBLE;
+        const listH = n * ITEM_H;
+        if (loop) el.scrollTop = listH; // start in the middle copy
 
         let interacting = false;
         let lastInteract = 0;
@@ -43,7 +46,7 @@ export default function VisitorWheel({ pins, focusedId, onSelect, className }: P
         let onscreen = true;
         let pageVisible = true;
         const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const AUTO = reduce ? 0 : 0.35; // px/frame
+        const AUTO = reduce || !loop ? 0 : 0.35; // px/frame
 
         const morph = () => {
             const rect = el.getBoundingClientRect();
@@ -62,6 +65,7 @@ export default function VisitorWheel({ pins, focusedId, onSelect, className }: P
         };
 
         const wrap = () => {
+            if (!loop) return;
             if (el.scrollTop >= listH * 2) el.scrollTop -= listH;
             else if (el.scrollTop < listH) el.scrollTop += listH;
         };
@@ -145,24 +149,39 @@ export default function VisitorWheel({ pins, focusedId, onSelect, className }: P
             io.disconnect();
             document.removeEventListener('visibilitychange', onVis);
         };
-        // Re-init when the number of pins changes (list height depends on it).
+        // Re-init when the number of pins changes (list height / loop mode depends on it).
     }, [pins.length]);
 
     if (pins.length === 0) return null;
 
-    // Duplicate the list COPIES times for a seamless infinite wrap.
+    // Only duplicate for the seamless infinite wrap when there are enough distinct
+    // visitors (≥5); otherwise show each exactly once so nobody appears repeated.
     const loop: { p: Pin; key: string }[] = [];
-    for (let c = 0; c < COPIES; c++) for (const p of pins) loop.push({ p, key: `${c}-${p.id}` });
+    if (useLoop) {
+        for (let c = 0; c < COPIES; c++) for (const p of pins) loop.push({ p, key: `${c}-${p.id}` });
+    } else {
+        for (const p of pins) loop.push({ p, key: p.id });
+    }
 
     return (
         <div className={className}>
-            <div ref={scrollRef} className="vg-wheel" style={{ height: CONTAINER_H }} aria-label="Recent visitors">
+            <div
+                ref={scrollRef}
+                className="vg-wheel"
+                style={{
+                    height: CONTAINER_H,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: useLoop ? 'flex-start' : 'center',
+                }}
+                aria-label="Recent visitors"
+            >
                 {loop.map(({ p, key }) => (
                     <button
                         key={key}
                         type="button"
                         className={cn('vg-wheel-item', p.id === focusedId && 'vg-wheel-item--focused')}
-                        style={{ height: ITEM_H }}
+                        style={{ height: ITEM_H, flex: '0 0 auto' }}
                         onClick={() => onSelect(p.id)}
                         title={p.place_label}
                     >

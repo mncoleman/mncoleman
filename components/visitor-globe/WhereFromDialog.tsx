@@ -95,20 +95,6 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
         setError(null);
     };
 
-    const reset = () => {
-        setQuery('');
-        setResults([]);
-        setSelected(null);
-        setName('');
-        setFood('');
-        setSong('');
-        setFact('');
-        setShowOptional(false);
-        setDone(null);
-        setError(null);
-        loadChallenge();
-    };
-
     const submit = async () => {
         if (!selected) {
             setError('Search for and pick a location first.');
@@ -167,9 +153,6 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
                         <span className="text-foreground font-medium">{done.place_label}</span>. Your pin is
                         live on the globe.
                     </p>
-                    <Button variant="outline" size="sm" onClick={reset} className="mt-1">
-                        Add another
-                    </Button>
                 </div>
             </div>
         );
@@ -226,7 +209,7 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
                 </div>
 
                 {showResults && results.length > 0 && (
-                    <ul className="glass-panel absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg p-1 text-sm shadow-xl">
+                    <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-border/60 bg-popover p-1 text-sm shadow-2xl">
                         {results.map((r, i) => (
                             <li key={`${r.lat},${r.lng},${i}`}>
                                 <button
