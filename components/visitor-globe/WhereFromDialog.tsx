@@ -62,10 +62,14 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
 
     // Debounced Geoapify autocomplete.
     useEffect(() => {
-        if (selected && query === selected.label) return; // don't re-search a picked value
+        if (selected && query === selected.label) {
+            setSearching(false);
+            return; // don't re-search a picked value
+        }
         if (query.trim().length < 2) {
             setResults([]);
             setShowResults(false);
+            setSearching(false);
             return;
         }
         const ctrl = new AbortController();
@@ -73,12 +77,15 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
         const t = setTimeout(async () => {
             try {
                 const r = await geocode(query.trim(), ctrl.signal);
+                if (ctrl.signal.aborted) return;
                 setResults(r);
                 setShowResults(true);
             } catch {
                 /* aborted / ignored */
             } finally {
-                setSearching(false);
+                // Only clear if THIS request is still the current one — a superseded
+                // (aborted) request must not flip the spinner off for the new search.
+                if (!ctrl.signal.aborted) setSearching(false);
             }
         }, 320);
         return () => {
