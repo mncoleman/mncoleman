@@ -266,6 +266,18 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
                         </div>
                     </div>
                     <div>
+                        <Label htmlFor="vg-quote" className="mb-1 block text-xs text-muted-foreground">
+                            Favorite quote
+                        </Label>
+                        <Input
+                            id="vg-quote"
+                            value={quote}
+                            onChange={(e) => setQuote(e.target.value)}
+                            maxLength={200}
+                            placeholder="A line you live by…"
+                        />
+                    </div>
+                    <div>
                         <Label htmlFor="vg-fact" className="mb-1 block text-xs text-muted-foreground">
                             A random fact about you
                         </Label>
@@ -280,18 +292,6 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
                         <div className="mt-1 text-right text-[11px] text-muted-foreground/70">
                             {fact.length}/{FACT_MAX}
                         </div>
-                    </div>
-                    <div>
-                        <Label htmlFor="vg-quote" className="mb-1 block text-xs text-muted-foreground">
-                            Favorite quote
-                        </Label>
-                        <Input
-                            id="vg-quote"
-                            value={quote}
-                            onChange={(e) => setQuote(e.target.value)}
-                            maxLength={200}
-                            placeholder="A line you live by…"
-                        />
                     </div>
                 </div>
             )}
