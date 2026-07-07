@@ -45,7 +45,7 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
 
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [done, setDone] = useState<Pin | null>(null);
+    const [submittedPlace, setSubmittedPlace] = useState<string | null>(null);
 
     const loadChallenge = () => {
         fetchChallenge()
@@ -58,6 +58,17 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
 
     useEffect(() => {
         loadChallenge();
+        // Remember (per-browser) that this visitor already dropped a pin, so a
+        // refresh shows the "you're on the map" state instead of a fresh form.
+        try {
+            const raw = localStorage.getItem('vg-visitor-submitted');
+            if (raw) {
+                const parsed = JSON.parse(raw) as { place?: string };
+                if (parsed?.place) setSubmittedPlace(parsed.place);
+            }
+        } catch {
+            /* ignore */
+        }
     }, []);
 
     // Debounced Geoapify autocomplete.
@@ -140,7 +151,15 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
         setSubmitting(false);
 
         if (res.ok && res.pin) {
-            setDone(res.pin);
+            setSubmittedPlace(res.pin.place_label);
+            try {
+                localStorage.setItem(
+                    'vg-visitor-submitted',
+                    JSON.stringify({ place: res.pin.place_label, at: Date.now() })
+                );
+            } catch {
+                /* ignore */
+            }
             onSubmitted(res.pin);
             return;
         }
@@ -149,7 +168,7 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
         loadChallenge();
     };
 
-    if (done) {
+    if (submittedPlace) {
         return (
             <div className={cn('glass-panel p-6', className)}>
                 <div className="flex flex-col items-center text-center gap-3 py-4">
@@ -159,7 +178,7 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
                     <h3 className="text-lg font-bold">You&apos;re on the map! 📍</h3>
                     <p className="text-sm text-muted-foreground">
                         Thanks for saying hi from{' '}
-                        <span className="text-foreground font-medium">{done.place_label}</span>. Your pin is
+                        <span className="text-foreground font-medium">{submittedPlace}</span>. Your pin is
                         live on the globe.
                     </p>
                 </div>
