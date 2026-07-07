@@ -37,6 +37,7 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
     const [food, setFood] = useState('');
     const [song, setSong] = useState('');
     const [fact, setFact] = useState('');
+    const [quote, setQuote] = useState('');
 
     const [challenge, setChallenge] = useState<Challenge | null>(null);
     const [captchaAnswer, setCaptchaAnswer] = useState('');
@@ -127,6 +128,7 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
             food: food.trim() || undefined,
             song: song.trim() || undefined,
             fact: fact.trim() || undefined,
+            quote: quote.trim() || undefined,
         });
         setSubmitting(false);
 
@@ -201,7 +203,9 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
                         data-form-type="other"
                     />
                     {searching && (
-                        <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </span>
                     )}
                     {!searching && selected && (
                         <Check className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
@@ -276,6 +280,18 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
                         <div className="mt-1 text-right text-[11px] text-muted-foreground/70">
                             {fact.length}/{FACT_MAX}
                         </div>
+                    </div>
+                    <div>
+                        <Label htmlFor="vg-quote" className="mb-1 block text-xs text-muted-foreground">
+                            Favorite quote
+                        </Label>
+                        <Input
+                            id="vg-quote"
+                            value={quote}
+                            onChange={(e) => setQuote(e.target.value)}
+                            maxLength={200}
+                            placeholder="A line you live by…"
+                        />
                     </div>
                 </div>
             )}

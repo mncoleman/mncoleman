@@ -17,6 +17,7 @@ export interface Pin {
     food: string | null;
     song: string | null;
     fact: string | null;
+    quote: string | null;
     created_at: number;
 }
 
@@ -53,6 +54,7 @@ export interface SubmitPayload {
     food?: string;
     song?: string;
     fact?: string;
+    quote?: string;
 }
 
 export interface SubmitResult {
@@ -112,6 +114,7 @@ export async function submitPin(p: SubmitPayload): Promise<SubmitResult> {
         food: p.food,
         song: p.song,
         fact: p.fact,
+        quote: p.quote,
     };
     const res = await fetch(`${API_BASE}/api/visitors`, {
         method: 'POST',

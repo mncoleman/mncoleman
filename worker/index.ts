@@ -447,6 +447,43 @@ export default {
                 });
             }
 
+            // Visitor globe: list all pins (incl. hidden) for the admin panel.
+            if (url.pathname === '/api/admin/visitors' && request.method === 'GET') {
+                if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
+                    return new Response(JSON.stringify({ error: 'Visitor service not configured' }), { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+                const jwt = await signArtifactsJwt(
+                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'visitors-list' },
+                    env.ARTIFACTS_JWT_SECRET
+                );
+                const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/admin/visitors`, {
+                    headers: { 'Authorization': `Bearer ${jwt}` },
+                });
+                const text = await upstream.text();
+                return new Response(text, { status: upstream.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            }
+
+            // Visitor globe: delete a pin.
+            if (url.pathname.startsWith('/api/admin/visitors/') && request.method === 'DELETE') {
+                if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
+                    return new Response(JSON.stringify({ error: 'Visitor service not configured' }), { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+                const id = decodeURIComponent(url.pathname.split('/').pop() || '');
+                if (!/^[a-f0-9-]{8,64}$/i.test(id)) {
+                    return new Response(JSON.stringify({ error: 'invalid id' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+                const jwt = await signArtifactsJwt(
+                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'visitors-delete' },
+                    env.ARTIFACTS_JWT_SECRET
+                );
+                const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/admin/visitors/${encodeURIComponent(id)}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${jwt}` },
+                });
+                const text = await upstream.text();
+                return new Response(text, { status: upstream.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            }
+
             // Artifacts Management Endpoints
             if (url.pathname === '/api/artifacts') {
                 if (request.method === 'GET') {

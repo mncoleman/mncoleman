@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Globe2, Users, MapPin, Utensils, Music, X } from 'lucide-react';
+import { Users, MapPin, Utensils, Music, X, Sparkles } from 'lucide-react';
 import VisitorGlobe from './VisitorGlobe';
 import VisitorWheel from './VisitorWheel';
 import WhereFromDialog from './WhereFromDialog';
@@ -43,8 +43,7 @@ export default function VisitorSection() {
         <section id="visitor-globe" className="relative z-10 px-4 py-16 md:py-24">
             <div className="mx-auto w-full max-w-5xl">
                 <div className="mb-8 text-center">
-                    <h2 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center justify-center gap-2">
-                        <Globe2 className="h-6 w-6 text-primary" />
+                    <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
                         Where&apos;s everyone from?
                     </h2>
                     <p className="mt-2 text-sm text-muted-foreground flex items-center justify-center gap-1.5">
@@ -83,19 +82,29 @@ export default function VisitorSection() {
                                         {focused.name || 'A friendly visitor'}
                                     </div>
                                     <div className="text-xs text-muted-foreground">{focused.place_label}</div>
-                                    {(focused.food || focused.song || focused.fact) && (
-                                        <div className="mt-2 space-y-1 text-xs">
+                                    {(focused.food || focused.song || focused.fact || focused.quote) && (
+                                        <div className="mt-2 space-y-1.5 text-xs">
                                             {focused.food && (
                                                 <div className="flex items-center gap-1.5">
-                                                    <Utensils className="h-3 w-3 text-muted-foreground" /> {focused.food}
+                                                    <Utensils className="h-3 w-3 shrink-0 text-muted-foreground" /> {focused.food}
                                                 </div>
                                             )}
                                             {focused.song && (
                                                 <div className="flex items-center gap-1.5">
-                                                    <Music className="h-3 w-3 text-muted-foreground" /> {focused.song}
+                                                    <Music className="h-3 w-3 shrink-0 text-muted-foreground" /> {focused.song}
                                                 </div>
                                             )}
-                                            {focused.fact && <p className="italic text-muted-foreground">“{focused.fact}”</p>}
+                                            {focused.fact && (
+                                                <div className="flex items-start gap-1.5">
+                                                    <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
+                                                    <span>{focused.fact}</span>
+                                                </div>
+                                            )}
+                                            {focused.quote && (
+                                                <p className="mt-0.5 border-l-2 border-primary/40 pl-2 italic text-muted-foreground">
+                                                    &ldquo;{focused.quote}&rdquo;
+                                                </p>
+                                            )}
                                         </div>
                                     )}
                                 </div>

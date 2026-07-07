@@ -63,12 +63,17 @@ export default function VisitorGlobe({ pins, focusedId, className, onSelect, onU
     const pinsRef = useRef<Pin[]>(pins);
     const focusedRef = useRef<string | null | undefined>(focusedId);
     const onInteractRef = useRef<(() => void) | undefined>(onUserInteract);
-    pinsRef.current = pins;
-    onInteractRef.current = onUserInteract;
 
     const [hoveredId, setHoveredId] = useState<string | null>(null);
     const hoveredIdRef = useRef<string | null>(null);
-    hoveredIdRef.current = hoveredId;
+
+    // Keep refs synced to the latest props/state without writing during render
+    // (the rAF loop reads these each frame).
+    useEffect(() => {
+        pinsRef.current = pins;
+        onInteractRef.current = onUserInteract;
+        hoveredIdRef.current = hoveredId;
+    });
 
     const st = useRef({
         phi: 0,

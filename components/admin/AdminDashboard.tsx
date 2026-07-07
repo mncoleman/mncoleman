@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, LogOut } from 'lucide-react';
 import { ArtifactUploader } from './ArtifactUploader';
 import { LibraryManager } from './LibraryManager';
+import { VisitorManager } from './VisitorManager';
 import { UserManagement } from './UserManagement';
 import { authHeaders } from '@/lib/admin-auth';
 
@@ -75,6 +76,7 @@ export function AdminDashboard({ user, workerUrl, onLogout }: AdminDashboardProp
 
             <ArtifactUploader workerUrl={workerUrl} />
             <LibraryManager workerUrl={workerUrl} />
+            <VisitorManager workerUrl={workerUrl} />
 
             {user?.role === 'super_admin' && (
                 <div className="mt-6">

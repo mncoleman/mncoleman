@@ -36,6 +36,7 @@ function db(): Database {
             food        TEXT,
             song        TEXT,
             fact        TEXT,
+            quote       TEXT,
             ip_hash     TEXT NOT NULL,
             created_at  INTEGER NOT NULL,
             status      TEXT NOT NULL DEFAULT 'visible'
@@ -43,6 +44,12 @@ function db(): Database {
     `);
     d.exec(`CREATE INDEX IF NOT EXISTS idx_visitors_created ON visitors(created_at);`);
     d.exec(`CREATE INDEX IF NOT EXISTS idx_visitors_iphash ON visitors(ip_hash);`);
+    // Migrations: add columns to a pre-existing table (throws + ignored if present).
+    try {
+        d.exec(`ALTER TABLE visitors ADD COLUMN quote TEXT`);
+    } catch {
+        /* column already exists */
+    }
     // Single-use submission-token nonces (burned on POST to block replay).
     d.exec(`
         CREATE TABLE IF NOT EXISTS used_nonces (
@@ -64,6 +71,7 @@ export interface VisitorInput {
     food?: string | null;
     song?: string | null;
     fact?: string | null;
+    quote?: string | null;
     ip_hash: string;
 }
 
@@ -77,6 +85,7 @@ export interface PublicPin {
     food: string | null;
     song: string | null;
     fact: string | null;
+    quote: string | null;
     created_at: number;
 }
 
@@ -85,7 +94,7 @@ const PIN_LIMIT = 5000;
 export function listVisiblePins(): PublicPin[] {
     const rows = db()
         .query(
-            `SELECT id, lat, lng, place_label, country, name, food, song, fact, created_at
+            `SELECT id, lat, lng, place_label, country, name, food, song, fact, quote, created_at
                FROM visitors WHERE status = 'visible'
                ORDER BY created_at DESC LIMIT ?`
         )
@@ -99,9 +108,9 @@ export function insertVisitor(v: VisitorInput): PublicPin {
     db()
         .query(
             `INSERT INTO visitors
-                (id, lat, lng, place_label, country, precision, name, food, song, fact, ip_hash, created_at, status)
+                (id, lat, lng, place_label, country, precision, name, food, song, fact, quote, ip_hash, created_at, status)
              VALUES
-                ($id, $lat, $lng, $place_label, $country, $precision, $name, $food, $song, $fact, $ip_hash, $created_at, 'visible')`
+                ($id, $lat, $lng, $place_label, $country, $precision, $name, $food, $song, $fact, $quote, $ip_hash, $created_at, 'visible')`
         )
         .run({
             $id: id,
@@ -114,6 +123,7 @@ export function insertVisitor(v: VisitorInput): PublicPin {
             $food: v.food ?? null,
             $song: v.song ?? null,
             $fact: v.fact ?? null,
+            $quote: v.quote ?? null,
             $ip_hash: v.ip_hash,
             $created_at: created_at,
         });
@@ -127,6 +137,7 @@ export function insertVisitor(v: VisitorInput): PublicPin {
         food: v.food ?? null,
         song: v.song ?? null,
         fact: v.fact ?? null,
+        quote: v.quote ?? null,
         created_at,
     };
 }
@@ -185,7 +196,7 @@ export interface AdminPin extends PublicPin {
 export function listAllForAdmin(): AdminPin[] {
     return db()
         .query(
-            `SELECT id, lat, lng, place_label, country, precision, name, food, song, fact, created_at, status
+            `SELECT id, lat, lng, place_label, country, precision, name, food, song, fact, quote, created_at, status
                FROM visitors ORDER BY created_at DESC LIMIT ?`
         )
         .all(PIN_LIMIT) as AdminPin[];

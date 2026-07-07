@@ -1006,6 +1006,7 @@ app.post('/api/visitors', async (c) => {
     const food = clipStr(body.food, 80);
     const song = clipStr(body.song, 120);
     const fact = clipStr(body.fact, 200);
+    const quote = clipStr(body.quote, 200);
 
     // 6) Flood ceiling + same-spot dedup (both keyed on the hashed IP).
     if (countByIpSince(ipHash, Date.now() - VDAY_MS) >= V_MAX_PER_IP_DAY) {
@@ -1016,7 +1017,7 @@ app.post('/api/visitors', async (c) => {
     }
 
     // 7) Profanity / inappropriate content (server-side, never trust the client).
-    const mod = moderateFields({ name, food, song, fact, place_label });
+    const mod = moderateFields({ name, food, song, fact, quote, place_label });
     if (!mod.clean) {
         return c.json({ error: "Let's keep it friendly — please tweak that and resubmit.", field: mod.field }, 422);
     }
@@ -1032,6 +1033,7 @@ app.post('/api/visitors', async (c) => {
         food,
         song,
         fact,
+        quote,
         ip_hash: ipHash,
     });
     return c.json({ ok: true, pin }, 201);

@@ -40,11 +40,11 @@ const noScrollbarStyle: React.CSSProperties = {
 const VisitorGlobeDemo = dynamic(() => import('@/components/visitor-globe/VisitorGlobe'), { ssr: false });
 
 const GLOBE_DEMO_PINS = [
-    { id: 'g1', lat: 40.71, lng: -74.0, place_label: 'New York', country: 'US', name: null, food: null, song: null, fact: null, created_at: 0 },
-    { id: 'g2', lat: 51.51, lng: -0.13, place_label: 'London', country: 'UK', name: null, food: null, song: null, fact: null, created_at: 0 },
-    { id: 'g3', lat: 35.68, lng: 139.65, place_label: 'Tokyo', country: 'JP', name: null, food: null, song: null, fact: null, created_at: 0 },
-    { id: 'g4', lat: -33.87, lng: 151.21, place_label: 'Sydney', country: 'AU', name: null, food: null, song: null, fact: null, created_at: 0 },
-    { id: 'g5', lat: -23.55, lng: -46.63, place_label: 'São Paulo', country: 'BR', name: null, food: null, song: null, fact: null, created_at: 0 },
+    { id: 'g1', lat: 40.71, lng: -74.0, place_label: 'New York', country: 'US', name: null, food: null, song: null, fact: null, quote: null, created_at: 0 },
+    { id: 'g2', lat: 51.51, lng: -0.13, place_label: 'London', country: 'UK', name: null, food: null, song: null, fact: null, quote: null, created_at: 0 },
+    { id: 'g3', lat: 35.68, lng: 139.65, place_label: 'Tokyo', country: 'JP', name: null, food: null, song: null, fact: null, quote: null, created_at: 0 },
+    { id: 'g4', lat: -33.87, lng: 151.21, place_label: 'Sydney', country: 'AU', name: null, food: null, song: null, fact: null, quote: null, created_at: 0 },
+    { id: 'g5', lat: -23.55, lng: -46.63, place_label: 'São Paulo', country: 'BR', name: null, food: null, song: null, fact: null, quote: null, created_at: 0 },
 ];
 
 const globePalette = [

@@ -210,7 +210,8 @@
 .pc-details h3 {
     font-weight: 600;
     margin: 0;
-    font-size: min(5svh, 3em);
+    font-size: min(3.2svh, 1.85em);
+    white-space: nowrap;
     margin: 0;
     background-image: linear-gradient(to bottom, #fff, #6f6fbe);
     background-size: 1em 1.5em;
@@ -255,7 +256,7 @@
     }
 
     .pc-details h3 {
-        font-size: min(4svh, 2.5em);
+        font-size: min(2.8svh, 1.6em);
     }
 
     .pc-details p {
@@ -288,7 +289,7 @@
     }
 
     .pc-details h3 {
-        font-size: min(3.5svh, 2em);
+        font-size: min(2.6svh, 1.5em);
     }
 
     .pc-details p {
