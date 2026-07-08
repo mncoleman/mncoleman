@@ -57,7 +57,7 @@ export default function AboutPage() {
               enableMobileTilt={true}
               linkedinUrl="https://www.linkedin.com/in/matthew-coleman-15a66b233/"
               instagramUrl="https://www.instagram.com/mncoleman_/"
-              xUrl="https://x.com/mtthwc003"
+              xUrl="https://x.com/mncoleman_"
               githubUrl="https://github.com/mncoleman"
               className="w-full"
             />
@@ -124,7 +124,7 @@ export default function AboutPage() {
             enableMobileTilt={true}
             linkedinUrl="https://www.linkedin.com/in/matthew-coleman-15a66b233/"
             instagramUrl="https://www.instagram.com/mncoleman_/"
-            xUrl="https://x.com/mtthwc003"
+            xUrl="https://x.com/mncoleman_"
             githubUrl="https://github.com/mncoleman"
           />
         </div>

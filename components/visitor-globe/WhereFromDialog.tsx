@@ -313,7 +313,7 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
                             onChange={(e) => setFact(e.target.value.slice(0, FACT_MAX))}
                             maxLength={FACT_MAX}
                             rows={2}
-                            placeholder="Surprise us with something fun about you."
+                            placeholder="Something fun about you."
                         />
                         <div className="mt-1 text-right text-[11px] text-muted-foreground/70">
                             {fact.length}/{FACT_MAX}
