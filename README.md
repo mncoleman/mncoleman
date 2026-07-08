@@ -38,12 +38,12 @@
 
 <div align="center">
 
-  <img alt="GitHub stats" src="https://github-profile-summary-cards.vercel.app/api/cards/stats?username=mncoleman&theme=github_dark" />
+  <img alt="GitHub stats" src="./profile-summary-card-output/github_dark/3-stats.svg" />
 
   <br />
 
-  <img alt="Most-used languages" src="https://github-profile-summary-cards.vercel.app/api/cards/most-commit-language?username=mncoleman&theme=github_dark" />
-  <img alt="Repos per language" src="https://github-profile-summary-cards.vercel.app/api/cards/repos-per-language?username=mncoleman&theme=github_dark" />
+  <img alt="Most-used languages" src="./profile-summary-card-output/github_dark/2-most-commit-language.svg" />
+  <img alt="Repos per language" src="./profile-summary-card-output/github_dark/1-repos-per-language.svg" />
 
   <br />
 
