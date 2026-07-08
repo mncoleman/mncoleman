@@ -19,16 +19,16 @@
 
 </div>
 
-## 👋 About Me
+## About Me
 
 > Welcome! I'm **Matthew Coleman** — this is my small corner of the internet, where I collect my thoughts, projects, and experiences. I hope you enjoy your stay.
 
 - Deeply passionate about **technology, AI, and the vast world of digital possibilities**
-- I love **rapid development** — building and shipping real things fast, often with AI as a co-pilot (**Claude** & **Gemini**)
+- I love **rapid development** — building and shipping real things fast, often with AI as a co-pilot (**Claude**)
 - I share thoughts, experiences, and technical knowledge over at **[mncoleman.com](https://mncoleman.com)**
 - Lately playing with **WebGL / 3D**, motion design, and **Notion-powered** content pipelines
 
-### 🧰 Tech I Reach For
+### Tech I Reach For
 
 <div align="center">
   <img alt="Tech stack" src="https://skillicons.dev/icons?i=ts,js,react,nextjs,tailwind,threejs,nodejs,cloudflare,git,github&perline=10" />
@@ -55,9 +55,9 @@
 
 <div align="center">
 
-# The Website
+# My Website
 
-**This profile lives in the same repo that powers [mncoleman.com](https://mncoleman.com)** — a modern, minimalist personal site featuring a blog, projects, resources, artifacts, and a professional resume, all powered by Notion CMS and Next.js.
+**This profile lives in the same repo that powers [mncoleman.com](https://mncoleman.com)** — a modern, minimalist personal site featuring a blog, projects, resources, AI prompts & skills, artifacts, and a professional resume, all powered by Notion CMS and Next.js.
 
 [![Deploy to GitHub Pages](https://github.com/mncoleman/mncoleman/actions/workflows/deploy.yml/badge.svg)](https://github.com/mncoleman/mncoleman/actions/workflows/deploy.yml)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
@@ -71,13 +71,13 @@
 
 ---
 
-## ✨ Features
+## Features
 
 <table>
 <tr>
 <td width="50%">
 
-### 🎨 Design & UX
+### Design & UX
 
 - **WebGL Background** - Animated Dark Veil effect (OGL)
 - **3D Glass Cubes** - Interactive bento grid on desktop (Three.js / R3F)
@@ -107,22 +107,22 @@
 </tr>
 </table>
 
-### 📦 Content Management & Admin
+### Content Management & Admin
 
 | Feature | Description |
 |---------|-------------|
-| 📝 **Blog** | Notion-powered blog with markdown rendering & tag filtering |
-| 🛠️ **Projects** | Notion-powered portfolio of things I've made |
-| 🔗 **Resources** | Curated link library grouped by multi-select categories |
-| 📄 **Resume** | Professional CV rendered from a Notion page |
-| 📎 **Artifacts** | Static-file gallery (HTML/PDF/images) served from `/public/artifacts` |
-| 🎨 **Brand Kit** | Public brand assets and style reference page |
-| ⭐ **Featured Posts** | Pin important content to the top of the blog |
-| 🏷️ **Smart Tags** | Auto-extracted tag filtering system |
-| 🔐 **Secure Admin** | Telegram-authenticated dashboard backed by a Cloudflare Worker |
-| 🔄 **Content Sync** | Trigger rebuilds, edit "About Me", manage users & artifacts |
+| **Blog** | Notion-powered blog with markdown rendering & tag filtering |
+| **Projects** | Notion-powered portfolio of things I've made |
+| **Resources** | Curated link library grouped by multi-select categories |
+| **Resume** | Professional CV rendered from a Notion page |
+| **Artifacts** | Static-file gallery (HTML/PDF/images) served from `/public/artifacts` |
+| **Brand Kit** | Public brand assets and style reference page |
+| **Featured Posts** | Pin important content to the top of the blog |
+| **Smart Tags** | Auto-extracted tag filtering system |
+| **Secure Admin** | Telegram-authenticated dashboard backed by a Cloudflare Worker |
+| **Content Sync** | Trigger rebuilds, edit "About Me", manage users & artifacts |
 
-## 🔐 Admin Dashboard
+## Admin Dashboard
 
 The site features a secure, hidden admin dashboard for managing content and deployments:
 
@@ -139,7 +139,7 @@ The admin auth flow is handled by a Cloudflare Worker (`worker/index.ts`).
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -168,7 +168,7 @@ Visit [http://localhost:3000](http://localhost:3000) to see your site.
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -195,7 +195,7 @@ gracefully falls back to sample content so local development still works.
 
 ### Notion CMS Template (Quick Start)
 
-**🎯 Use the pre-configured template to get started instantly:**
+**Use the pre-configured template to get started instantly:**
 
 [![Duplicate Notion Template](https://img.shields.io/badge/Duplicate-Notion%20Template-black?logo=notion)](https://matthewcoleman.notion.site/Personal-Site-CMS-Template-2eac6cc793dc80789468f171f49604f3)
 
@@ -237,7 +237,7 @@ If you prefer to set up manually:
 
 ---
 
-## 🏗️ Tech Stack
+## Tech Stack
 
 <table>
 <tr>
@@ -281,7 +281,7 @@ If you prefer to set up manually:
 
 ---
 
-## 🔧 How It Works: Notion CMS + Static Site Architecture
+## How It Works: Notion CMS + Static Site Architecture
 
 This site uses a unique architecture that combines **Notion's powerful CMS** with **100% static hosting** on GitHub Pages. Here's how it works:
 
@@ -304,12 +304,12 @@ Unlike traditional CMS platforms that require a server to fetch content on every
 
 | Benefit | Description |
 |---------|-------------|
-| 🚀 **Lightning Fast** | No API calls at runtime - all content is pre-rendered as HTML |
-| 💰 **Zero Cost Hosting** | Static files hosted free on GitHub Pages |
-| 🔒 **Secure** | No server to hack, no databases to breach |
-| 📝 **Easy Content Management** | Write in Notion's beautiful editor with rich formatting |
-| 🌍 **Global CDN** | GitHub Pages automatically distributes your site globally |
-| 📱 **Works Offline** | PWA-ready static files can be cached for offline use |
+| **Lightning Fast** | No API calls at runtime - all content is pre-rendered as HTML |
+| **Zero Cost Hosting** | Static files hosted free on GitHub Pages |
+| **Secure** | No server to hack, no databases to breach |
+| **Easy Content Management** | Write in Notion's beautiful editor with rich formatting |
+| **Global CDN** | GitHub Pages automatically distributes your site globally |
+| **Works Offline** | PWA-ready static files can be cached for offline use |
 
 ### How Content Updates Work
 
@@ -411,15 +411,15 @@ User Request → CDN → Serve Pre-rendered HTML → Done
 
 **Limitations:**
 
-- ⏱️ Content updates require rebuild (~1-2 minutes)
-- 🔄 Not real-time (scheduled or manual deploys)
-- 📊 Build-time only (can't fetch data from browsers)
+- Content updates require rebuild (~1-2 minutes)
+- Not real-time (scheduled or manual deploys)
+- Build-time only (can't fetch data from browsers)
 
 For most blogs and portfolios, these trade-offs are worth it for the **speed, cost savings, and security benefits**.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 mncoleman/
@@ -496,7 +496,7 @@ mncoleman/
 
 ---
 
-## 🎨 Customization
+## Customization
 
 ### Bento Grid Layout
 
@@ -562,7 +562,7 @@ npx shadcn@latest add @react-bits/avatar
 
 ---
 
-## 📝 Content Management
+## Content Management
 
 ### Writing Blog Posts
 
@@ -605,7 +605,7 @@ Edit your Notion resume page directly. Content converts to markdown automaticall
 
 ---
 
-## 🚢 Deployment
+## Deployment
 
 ### GitHub Pages Deployment
 
@@ -635,10 +635,10 @@ Push to `main` branch or trigger manually from Actions tab.
 
 ### Deployment Triggers
 
-- ✅ **Push to main** - Automatic on every commit
-- ⏰ **Daily rebuild** - 6:00 AM UTC (keeps Notion content fresh)
-- 🔘 **Manual dispatch** - Trigger from the GitHub Actions tab
-- 📡 **Repository dispatch** - `admin_trigger`, `rebuild_site`, `sync_notion`,
+- **Push to main** - Automatic on every commit
+- **Daily rebuild** - 6:00 AM UTC (keeps Notion content fresh)
+- **Manual dispatch** - Trigger from the GitHub Actions tab
+- **Repository dispatch** - `admin_trigger`, `rebuild_site`, `sync_notion`,
   and `content_update` events from the admin worker
 
 ### Build Process
@@ -656,7 +656,7 @@ The site is hosted on a custom domain at <https://mncoleman.com>
 
 ---
 
-## 📊 Available Scripts
+## Available Scripts
 
 | Command | Description |
 |---------|-------------|
@@ -670,7 +670,7 @@ The site is hosted on a custom domain at <https://mncoleman.com>
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 <details>
 <summary><strong>Posts not appearing on the site</strong></summary>
@@ -727,7 +727,7 @@ The site is hosted on a custom domain at <https://mncoleman.com>
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 - **[CLAUDE.md](./CLAUDE.md)** - Project guide, architecture, and Notion schema reference
 - **[ADMIN_SETUP.md](./ADMIN_SETUP.md)** - Admin Dashboard & Telegram Auth setup
@@ -735,7 +735,7 @@ The site is hosted on a custom domain at <https://mncoleman.com>
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Feel free to:
 
@@ -747,14 +747,14 @@ Contributions are welcome! Feel free to:
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the **ISC License** as declared in
 [`package.json`](./package.json).
 
 ---
 
-## 👤 Author
+## Author
 
 **Matthew Coleman**
 
@@ -763,7 +763,7 @@ This project is licensed under the **ISC License** as declared in
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [Next.js](https://nextjs.org/) - React framework
 - [Notion](https://notion.so/) - Content management system
@@ -773,11 +773,3 @@ This project is licensed under the **ISC License** as declared in
 - [Tailwind CSS](https://tailwindcss.com/) - Styling framework
 
 ---
-
-<div align="center">
-
-**Built with ❤️ using Next.js, TypeScript, Tailwind CSS, and Notion**
-
-⭐ Star this repo if you find it helpful!
-
-</div>
