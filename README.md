@@ -34,7 +34,7 @@
   <img alt="Tech stack" src="https://skillicons.dev/icons?i=ts,js,react,nextjs,tailwind,threejs,nodejs,cloudflare,git,github&perline=10" />
 </div>
 
-### 📊 GitHub Stats
+### GitHub Stats
 
 <div align="center">
 
@@ -92,7 +92,7 @@
 </td>
 <td width="50%">
 
-### ⚡ Performance & Tech
+### Performance & Tech
 
 - **Static Generation** - Lightning-fast pre-rendered pages
 - **Global Search** - Pre-built search index with `Cmd/Ctrl+K`
