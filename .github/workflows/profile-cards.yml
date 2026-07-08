@@ -1,0 +1,29 @@
+name: GitHub Profile Summary Cards
+
+# Pre-renders the GitHub stats cards into committed SVGs under
+# profile-summary-card-output/ so the profile README never depends on the
+# flaky github-profile-summary-cards.vercel.app service being warm when
+# GitHub's camo image proxy fetches it. Refreshes daily.
+
+on:
+  schedule:
+    - cron: "0 5 * * *" # 05:00 UTC daily (before the 06:00 site rebuild)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: generate-github-profile-summary-cards
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vn7n24fzkq/github-profile-summary-cards@release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          USERNAME: ${{ github.repository_owner }}
+          BRANCH_NAME: "main"
+          UTC_OFFSET: "-7"
+          AUTO_PUSH: true
