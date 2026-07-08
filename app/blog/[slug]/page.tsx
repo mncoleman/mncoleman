@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getPostBySlug, getAllPosts } from '@/lib/blog';
 import { ArrowLeft } from 'lucide-react';
@@ -5,12 +6,36 @@ import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+export const dynamicParams = false;
 
 export async function generateStaticParams() {
   const posts = await getAllPosts();
   return posts.map((post) => ({
     slug: post.slug,
   }));
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await getPostBySlug(slug);
+  if (!post) return { title: 'Post not found | Matthew Coleman' };
+
+  const description = post.excerpt || `Blog post: ${post.title}`;
+  const url = `/blog/${slug}/`;
+  return {
+    title: `${post.title} | Blog | Matthew Coleman`,
+    description,
+    alternates: { canonical: url },
+    // og:image / twitter:image come from the co-located opengraph-image.tsx.
+    openGraph: {
+      title: post.title,
+      description,
+      url,
+      type: 'article',
+      publishedTime: post.date,
+      tags: post.tags,
+    },
+  };
 }
 
 export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {

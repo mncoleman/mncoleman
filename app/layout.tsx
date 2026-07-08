@@ -48,6 +48,17 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://mncoleman.com'),
   title: 'Matthew Coleman',
   description: 'Personal website with blog, resources, and resume by Matthew Coleman',
+  openGraph: {
+    type: 'website',
+    siteName: 'Matthew Coleman',
+    title: 'Matthew Coleman',
+    description: 'Personal website with blog, resources, and resume by Matthew Coleman',
+    url: '/',
+    // Default card comes from app/opengraph-image.tsx; per-page routes override it.
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
