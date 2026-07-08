@@ -12,7 +12,7 @@
 <p>
   <a href="https://mncoleman.com"><img alt="Website" src="https://img.shields.io/badge/Website-mncoleman.com-016b72?style=for-the-badge&logo=googlechrome&logoColor=white" /></a>
   <a href="https://www.linkedin.com/in/matthew-coleman-15a66b233/"><img alt="LinkedIn" src="https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" /></a>
-  <a href="https://x.com/mtthwc003"><img alt="X" src="https://img.shields.io/badge/X-000000?style=for-the-badge&logo=x&logoColor=white" /></a>
+  <a href="https://x.com/mncoleman_"><img alt="X" src="https://img.shields.io/badge/X-000000?style=for-the-badge&logo=x&logoColor=white" /></a>
   <a href="https://www.instagram.com/mncoleman_/"><img alt="Instagram" src="https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white" /></a>
   <img alt="Profile views" src="https://komarev.com/ghpvc/?username=mncoleman&style=for-the-badge&color=016b72&label=PROFILE+VIEWS" />
 </p>
