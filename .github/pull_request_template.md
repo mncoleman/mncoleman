@@ -4,14 +4,14 @@ This PR adds a complete personal website with blog functionality.
 
 ## Features
 
-- ✅ Modern, minimalist design with Next.js and TypeScript
-- ✅ Light/dark mode toggle with system preference detection
-- ✅ Static blog powered by markdown files
-- ✅ **Decap CMS integration** for easy content management (no backend/database needed!)
-- ✅ GitHub Pages deployment via GitHub Actions
-- ✅ shadcn/ui and ReactBits component support
-- ✅ Responsive design with Tailwind CSS
-- ✅ Three sample blog posts included
+- Modern, minimalist design with Next.js and TypeScript
+- Light/dark mode toggle with system preference detection
+- Static blog powered by markdown files
+- **Decap CMS integration** for easy content management (no backend/database needed!)
+- GitHub Pages deployment via GitHub Actions
+- shadcn/ui and ReactBits component support
+- Responsive design with Tailwind CSS
+- Three sample blog posts included
 
 ## Tech Stack
 
@@ -70,4 +70,4 @@ Once merged:
 
 ---
 
-Ready to deploy! 🚀
+Ready to deploy!
