@@ -1,8 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    ChartContainer,
+    ChartTooltip,
+    type ChartConfig,
+} from '@/components/ui/chart';
 import { Loader2, RefreshCw, ExternalLink, ArrowUp, ArrowDown, Minus, AlertTriangle } from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
 import { cn } from '@/lib/utils';
@@ -131,67 +137,232 @@ function BarList({
     );
 }
 
-/** Minimal inline sparkline — avoids pulling a charting library into the admin bundle. */
-function Sparkline({ points }: { points: { date: string; activeUsers: number }[] }) {
-    if (points.length < 2) return null;
+// GA4 returns dates as YYYYMMDD.
+function parseGaDate(raw: string): Date {
+    return new Date(
+        Number(raw.slice(0, 4)),
+        Number(raw.slice(4, 6)) - 1,
+        Number(raw.slice(6, 8))
+    );
+}
 
-    const values = points.map((p) => p.activeUsers);
-    const max = Math.max(...values, 1);
-    const w = 100;
-    const h = 28;
-    const path = values
-        .map((v, i) => {
-            const x = (i / (values.length - 1)) * w;
-            const y = h - (v / max) * h;
-            return `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`;
-        })
-        .join(' ');
+const shortDate = (raw: string) =>
+    parseGaDate(raw).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+const longDate = (raw: string) =>
+    parseGaDate(raw).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+
+// Two series, so identity is never left to colour alone: a legend is always shown, and
+// the tooltip names each series too. Colours come from the theme's chart ramp, which is
+// defined for both light and dark in globals.css.
+const CHART_CONFIG = {
+    activeUsers: { label: 'Users', color: 'hsl(var(--chart-1))' },
+    sessions: { label: 'Sessions', color: 'hsl(var(--chart-2))' },
+} satisfies ChartConfig;
+
+function ChartLegend() {
+    return (
+        <div className="mb-3 flex items-center justify-end gap-4 text-xs text-muted-foreground">
+            {(['activeUsers', 'sessions'] as const).map((k) => (
+                <span key={k} className="flex items-center gap-1.5">
+                    <span
+                        className="h-2 w-2 rounded-[2px]"
+                        style={{ background: CHART_CONFIG[k].color }}
+                    />
+                    {CHART_CONFIG[k].label}
+                </span>
+            ))}
+        </div>
+    );
+}
+
+/** The count badge that tracks the cursor. */
+function TrendTooltip({
+    active,
+    payload,
+}: {
+    active?: boolean;
+    payload?: { payload: { date: string; activeUsers: number; sessions: number } }[];
+}) {
+    if (!active || !payload?.length) return null;
+    const p = payload[0].payload;
 
     return (
-        <svg
-            viewBox={`0 0 ${w} ${h}`}
-            preserveAspectRatio="none"
-            className="h-16 w-full"
-            role="img"
-            aria-label={`Daily active users, peaking at ${max}`}
-        >
-            <path d={path} fill="none" stroke="currentColor" strokeWidth={1} vectorEffect="non-scaling-stroke" />
-        </svg>
+        <div className="rounded-lg border bg-background/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
+            <p className="mb-1.5 font-medium text-foreground">{longDate(p.date)}</p>
+            <div className="space-y-1">
+                <div className="flex items-center justify-between gap-4">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                        <span
+                            className="h-2 w-2 shrink-0 rounded-[2px]"
+                            style={{ background: 'hsl(var(--chart-1))' }}
+                        />
+                        Users
+                    </span>
+                    <span className="font-mono font-medium tabular-nums text-foreground">
+                        {p.activeUsers}
+                    </span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                        <span
+                            className="h-2 w-2 shrink-0 rounded-[2px]"
+                            style={{ background: 'hsl(var(--chart-2))' }}
+                        />
+                        Sessions
+                    </span>
+                    <span className="font-mono font-medium tabular-nums text-foreground">
+                        {p.sessions}
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function TrendChart({ points, days }: { points: Summary['trend']; days: number }) {
+    // On a 90-day window, a tick per day is unreadable — thin them out.
+    const tickGap = days <= 7 ? 1 : days <= 28 ? 4 : 12;
+
+    return (
+        <>
+        <ChartLegend />
+        <ChartContainer config={CHART_CONFIG} className="h-[220px] w-full">
+            <AreaChart data={points} margin={{ left: 4, right: 12, top: 8, bottom: 0 }}>
+                <defs>
+                    <linearGradient id="fillUsers" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.02} />
+                    </linearGradient>
+                </defs>
+
+                {/* Recessive grid: horizontal only — vertical rules add noise without aiding reading. */}
+                <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/50" />
+                <XAxis
+                    dataKey="date"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    minTickGap={tickGap * 6}
+                    tickFormatter={shortDate}
+                    className="text-xs"
+                />
+                <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    width={28}
+                    allowDecimals={false}
+                    className="text-xs"
+                />
+                <ChartTooltip
+                    content={<TrendTooltip />}
+                    // The crosshair; the dot is the ≥8px hover marker.
+                    cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
+                />
+                <Area
+                    dataKey="sessions"
+                    type="monotone"
+                    stroke="hsl(var(--chart-2))"
+                    strokeWidth={1.5}
+                    strokeOpacity={0.6}
+                    fill="none"
+                    dot={false}
+                    activeDot={{ r: 3.5, strokeWidth: 0 }}
+                    isAnimationActive={false}
+                />
+                <Area
+                    dataKey="activeUsers"
+                    type="monotone"
+                    stroke="hsl(var(--chart-1))"
+                    strokeWidth={2}
+                    fill="url(#fillUsers)"
+                    dot={false}
+                    activeDot={{ r: 4.5, strokeWidth: 2, className: 'stroke-background' }}
+                    isAnimationActive={false}
+                />
+            </AreaChart>
+        </ChartContainer>
+        </>
     );
 }
 
 export function AnalyticsPanel({ workerUrl }: { workerUrl: string }) {
     const [days, setDays] = useState<number>(28);
-    const [data, setData] = useState<Summary | null>(null);
-    const [loading, setLoading] = useState(true);
+    // Every range that has been fetched, kept so switching tabs is instant rather than
+    // a spinner + round trip. The Worker caches for 10 minutes anyway, so a refetch on
+    // every toggle would usually just re-download an identical payload.
+    const [cache, setCache] = useState<Record<number, Summary>>({});
+    const [pending, setPending] = useState(false);
     const [error, setError] = useState<{ kind: string; message: string } | null>(null);
+    const inFlight = useRef<Set<number>>(new Set());
 
-    const load = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await fetch(`${workerUrl}/api/analytics/summary?days=${days}`, {
-                headers: authHeaders(),
-                credentials: 'include',
-            });
-            const json = await res.json();
-            if (!res.ok) {
-                setError({ kind: json.error || 'error', message: json.message || `Request failed (${res.status})` });
-                setData(null);
-            } else {
-                setData(json);
+    const data = cache[days] ?? null;
+
+    const fetchRange = useCallback(
+        async (range: number, { force = false, background = false } = {}) => {
+            if (inFlight.current.has(range)) return;
+            if (!force && cache[range]) return;
+
+            inFlight.current.add(range);
+            if (!background) {
+                setPending(true);
+                setError(null);
             }
-        } catch (e: unknown) {
-            setError({ kind: 'network', message: e instanceof Error ? e.message : 'Network error' });
-            setData(null);
-        } finally {
-            setLoading(false);
-        }
-    }, [workerUrl, days]);
+            try {
+                const res = await fetch(`${workerUrl}/api/analytics/summary?days=${range}`, {
+                    headers: authHeaders(),
+                    credentials: 'include',
+                });
+                const json = await res.json();
+                if (!res.ok) {
+                    // A background prefetch failing shouldn't blow away the view the
+                    // admin is currently looking at.
+                    if (!background) {
+                        setError({
+                            kind: json.error || 'error',
+                            message: json.message || `Request failed (${res.status})`,
+                        });
+                    }
+                    return;
+                }
+                setCache((prev) => ({ ...prev, [range]: json }));
+            } catch (e: unknown) {
+                if (!background) {
+                    setError({ kind: 'network', message: e instanceof Error ? e.message : 'Network error' });
+                }
+            } finally {
+                inFlight.current.delete(range);
+                if (!background) setPending(false);
+            }
+        },
+        [workerUrl, cache]
+    );
+
+    // Fetch the visible range, then quietly warm the other two so the toggle is instant.
+    useEffect(() => {
+        if (cache[days]) return;
+        fetchRange(days);
+    }, [days, cache, fetchRange]);
 
     useEffect(() => {
-        load();
-    }, [load]);
+        if (!cache[days]) return;
+        const idle = window.setTimeout(() => {
+            RANGES.filter((r) => r !== days && !cache[r]).forEach((r) =>
+                fetchRange(r, { background: true })
+            );
+        }, 300);
+        return () => window.clearTimeout(idle);
+    }, [days, cache, fetchRange]);
+
+    const refresh = useCallback(() => {
+        // Explicit refresh busts every range, not just the visible one.
+        setCache({});
+        setError(null);
+        fetchRange(days, { force: true });
+    }, [days, fetchRange]);
+
+    const loading = pending && !data;
 
     const t = data?.totals;
     const p = data?.previous;
@@ -217,8 +388,8 @@ export function AnalyticsPanel({ workerUrl }: { workerUrl: string }) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-2">
-                        {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                    <Button variant="outline" size="sm" onClick={refresh} disabled={pending} className="gap-2">
+                        {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                         Refresh
                     </Button>
                     <Button asChild variant="outline" size="sm" className="gap-2">
@@ -276,11 +447,13 @@ npx wrangler deploy`}
                     {data.trend.length > 1 && (
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-lg">Daily users</CardTitle>
-                                <CardDescription>Active users per day over the last {days} days.</CardDescription>
+                                <CardTitle className="text-lg">Daily users &amp; sessions</CardTitle>
+                                <CardDescription>
+                                    Hover the chart for a per-day breakdown. Last {days} days.
+                                </CardDescription>
                             </CardHeader>
-                            <CardContent className="text-foreground/60">
-                                <Sparkline points={data.trend} />
+                            <CardContent>
+                                <TrendChart points={data.trend} days={days} />
                             </CardContent>
                         </Card>
                     )}
