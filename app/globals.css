@@ -86,11 +86,52 @@
  * has cascade quirks that can let those win against a same-!important layered base rule).
  */
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  html,
-  body,
-  body * {
+  html[data-fancy-cursor='on'],
+  html[data-fancy-cursor='on'] body,
+  html[data-fancy-cursor='on'] body * {
     cursor: none !important;
   }
+}
+
+/* Pull-chain theme toggle (ported from the Dovito Hub component). The bulb reads as a
+ * dim grey outline in dark mode and glows warm amber once the light is "on". */
+.pull-chain .cord,
+.pull-chain .chain-line {
+  stroke: hsl(var(--muted-foreground) / 0.45);
+  fill: none;
+  transition: stroke 0.6s;
+}
+.pull-chain .cord {
+  stroke-width: 2.4;
+}
+.pull-chain .chain-line {
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+.pull-chain .bead {
+  fill: hsl(var(--muted-foreground) / 0.45);
+  transition: fill 0.6s;
+}
+.pull-chain .handle {
+  fill: none;
+  stroke: hsl(var(--muted-foreground) / 0.6);
+  stroke-width: 3;
+  transition: stroke 0.6s;
+}
+.pull-chain .glass.libfill {
+  fill: #5b6478;
+  transition: fill 0.5s ease;
+}
+.pull-chain[data-lit='on'] .glass.libfill {
+  fill: #e8a417;
+  filter: drop-shadow(0 0 6px #ffce5a);
+}
+.pull-chain .halo {
+  opacity: 0;
+  transition: opacity 0.55s ease;
+}
+.pull-chain[data-lit='on'] .halo {
+  opacity: 1;
 }
 
 /* Homepage layout toggle — both the desktop cube grid and the mobile stack are

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import createGlobe from 'cobe';
+import { useTheme } from 'next-themes';
 import type { Pin } from './visitor-api';
 
 /**
@@ -24,8 +25,26 @@ const EE = 0.8; // cobe base radius
 const MARKER_ELEVATION = 0.05; // cobe default markerElevation
 const R = EE + MARKER_ELEVATION; // 0.85 — where cobe places markers
 
-const BASE_COLOR: [number, number, number] = [0.11, 0.11, 0.13];
-const GLOW_COLOR: [number, number, number] = [0.16, 0.17, 0.22];
+// cobe bakes its palette in at creation, so the globe is torn down and rebuilt when the
+// theme flips (see the `resolvedTheme` dep on the main effect). The dark globe is a near
+// black sphere on a dark page; the light one inverts to a pale sphere with a soft glow,
+// otherwise it reads as a black hole punched through the light background.
+const DARK_GLOBE = {
+    dark: 1,
+    baseColor: [0.11, 0.11, 0.13] as [number, number, number],
+    glowColor: [0.16, 0.17, 0.22] as [number, number, number],
+    mapBrightness: 5,
+    mapBaseBrightness: 0.06,
+    opacity: 0.92,
+};
+const LIGHT_GLOBE = {
+    dark: 0,
+    baseColor: [0.92, 0.92, 0.94] as [number, number, number],
+    glowColor: [0.85, 0.86, 0.9] as [number, number, number],
+    mapBrightness: 1.6,
+    mapBaseBrightness: 0.0,
+    opacity: 0.95,
+};
 
 const AUTO_SPEED = 0.0032;
 const DRAG_THRESHOLD = 5;
@@ -55,6 +74,8 @@ function shortestTo(current: number, target: number): number {
 }
 
 export default function VisitorGlobe({ pins, focusedId, className, onSelect, onUserInteract }: Props) {
+    const { resolvedTheme } = useTheme();
+    const theme = resolvedTheme === 'light' ? LIGHT_GLOBE : DARK_GLOBE;
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const wrapRef = useRef<HTMLDivElement>(null);
     const tooltipRef = useRef<HTMLDivElement>(null);
@@ -139,16 +160,16 @@ export default function VisitorGlobe({ pins, focusedId, className, onSelect, onU
             height: cssH * dpr,
             phi: s.phi,
             theta: s.theta,
-            dark: 1,
+            dark: theme.dark,
             diffuse: 1.1,
             mapSamples: 16000,
-            mapBrightness: 5,
-            mapBaseBrightness: 0.06,
-            baseColor: BASE_COLOR,
-            markerColor: BASE_COLOR,
-            glowColor: GLOW_COLOR,
+            mapBrightness: theme.mapBrightness,
+            mapBaseBrightness: theme.mapBaseBrightness,
+            baseColor: theme.baseColor,
+            markerColor: theme.baseColor,
+            glowColor: theme.glowColor,
             markers: [],
-            opacity: 0.92,
+            opacity: theme.opacity,
         });
 
         const positionPins = () => {
@@ -327,7 +348,8 @@ export default function VisitorGlobe({ pins, focusedId, className, onSelect, onU
             io.disconnect();
             globe.destroy();
         };
-    }, []);
+        // cobe cannot recolour in place: rebuild the globe when the theme flips.
+    }, [theme]);
 
     const pinLabel = (p: Pin) => (p.name ? `${p.name} — ${p.place_label}` : p.place_label);
     const hovered = hoveredId ? pins.find((p) => p.id === hoveredId) : null;

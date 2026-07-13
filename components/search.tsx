@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search as SearchIcon, X } from 'lucide-react';
+import { Search as SearchIcon, X, MessageSquareText } from 'lucide-react';
 import { SquarePenIcon } from '@/components/ui/square-pen';
 import { FolderCodeIcon } from '@/components/ui/folder-code';
 import { BookmarkIcon } from '@/components/ui/bookmark';
@@ -16,7 +16,7 @@ interface AnimatedIconHandle {
     stopAnimation: () => void;
 }
 
-type SearchType = 'blog' | 'project' | 'resource' | 'resume' | 'artifact';
+type SearchType = 'blog' | 'project' | 'resource' | 'resume' | 'artifact' | 'ai';
 
 function TypeIcon({ type, iconRef, size = 16 }: {
     type: SearchType;
@@ -29,6 +29,7 @@ function TypeIcon({ type, iconRef, size = 16 }: {
         case 'resource': return <BookmarkIcon ref={iconRef} size={size} />;
         case 'artifact': return <FileTextIcon ref={iconRef} size={size} />;
         case 'resume': return <ResumeIcon size={size} strokeWidth={2} />;
+        case 'ai': return <MessageSquareText size={size} />;
     }
 }
 
@@ -255,6 +256,7 @@ export function Search({ items }: SearchProps) {
                                     { label: 'Resources', path: '/resources', type: 'resource' },
                                     { label: 'Artifacts', path: '/artifacts', type: 'artifact' },
                                     { label: 'Resume', path: '/resume', type: 'resume' },
+                                    { label: '"A"I', path: '/ai', type: 'ai' },
                                 ] as const).map(({ label, path, type }) => (
                                     <QuickLinkButton
                                         key={label}

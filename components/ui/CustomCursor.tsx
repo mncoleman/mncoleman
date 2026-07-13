@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useCursorPreference } from "@/components/cursor-preference";
 
 const CustomCursor = () => {
     const cursorDotRef = useRef<HTMLDivElement>(null);
@@ -10,12 +11,17 @@ const CustomCursor = () => {
     // Only mount on hover-capable pointers AND when motion is allowed. Under
     // prefers-reduced-motion we render nothing and let the native cursor show
     // (the `cursor: none` override in globals.css is gated on no-preference).
-    const [enabled, setEnabled] = useState(false);
+    const [supported, setSupported] = useState(false);
+    // ...and only when the visitor hasn't turned the fancy mouse off in the header.
+    // globals.css keys `cursor: none` off the same preference, so the native cursor
+    // comes back in the same render that this unmounts — never both, never neither.
+    const { fancy } = useCursorPreference();
+    const enabled = supported && fancy;
 
     useEffect(() => {
         const hoverMq = window.matchMedia("(hover: hover) and (pointer: fine)");
         const motionMq = window.matchMedia("(prefers-reduced-motion: reduce)");
-        const update = () => setEnabled(hoverMq.matches && !motionMq.matches);
+        const update = () => setSupported(hoverMq.matches && !motionMq.matches);
         update();
         hoverMq.addEventListener("change", update);
         motionMq.addEventListener("change", update);

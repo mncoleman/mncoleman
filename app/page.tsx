@@ -16,13 +16,13 @@ interface AnimatedIconHandle {
 import { motion } from 'motion/react';
 import dynamic from 'next/dynamic';
 import GlassCube from '@/components/ui/glass-cube';
+import { HomeBackdrop } from '@/components/home-backdrop';
 import { TransitionLink } from '@/components/transition-link';
 import { usePageTransition } from '@/components/transition-provider';
 
 // Heavy, purely-decorative libraries (OGL for Dark Veil, GSAP for ScrollFloat)
 // load after first paint and stay off the homepage's initial JS chunk. The
 // content cards remain server-rendered (see Home), so LCP is unaffected.
-const DarkVeil = dynamic(() => import('@/components/ui/dark-veil'), { ssr: false });
 const ScrollFloat = dynamic(() => import('@/components/ScrollFloat'), { ssr: false });
 // The visitor globe holds its own WebGL context (cobe) + fetches live pins, so it
 // is client-only and lazy — it never touches the homepage's initial JS or LCP.
@@ -317,7 +317,7 @@ export default function Home() {
   // the idle-pulse interval only runs on the desktop breakpoint).
   return (
     <>
-      <DarkVeil hueShift={40} speed={0.5} resolutionScale={0.8} />
+      <HomeBackdrop />
       <DesktopGrid />
       <MobileStack />
       <VisitorSection />

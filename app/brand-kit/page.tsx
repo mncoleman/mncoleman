@@ -1,4 +1,4 @@
-import DarkVeil from '@/components/ui/dark-veil';
+import { HomeBackdrop } from '@/components/home-backdrop';
 import BrandKitClient from '@/components/brand-kit/BrandKitClient';
 import { Metadata } from 'next';
 
@@ -10,8 +10,10 @@ export const metadata: Metadata = {
 export default function BrandKit() {
     return (
         <>
-            {/* Dark Veil Background remains consistent with the rest of the site */}
-            <DarkVeil hueShift={40} speed={0.5} resolutionScale={0.8} />
+            {/* Same theme-aware backdrop as the home page: Dark Veil in dark, Waves in
+                light. Rendering Dark Veil unconditionally (as this did) left light-mode
+                text sitting invisibly on a dark backdrop. */}
+            <HomeBackdrop />
 
             <main className="min-h-screen py-16 px-4 relative z-10">
                 <div className="max-w-5xl mx-auto">

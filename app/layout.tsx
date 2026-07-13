@@ -15,6 +15,9 @@ import { NavLogo } from '@/components/nav-logo';
 import { TransitionProvider } from '@/components/transition-provider';
 import { FooterButtons } from '@/components/footer-buttons';
 import { Analytics } from '@/components/analytics';
+import { FancyCursorToggle } from '@/components/fancy-cursor-toggle';
+import { PullChainToggle } from '@/components/pull-chain-toggle';
+import { CursorPreferenceProvider, cursorPreferenceScript } from '@/components/cursor-preference';
 import searchIndex from '@/data/search-index.json';
 
 const roboto = localFont({
@@ -90,6 +93,12 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Runs before first paint so a visitor who turned the fancy mouse off never
+            sees it flash back on during hydration. Pairs with the `data-fancy-cursor`
+            selector that gates `cursor: none` in globals.css. */}
+        <script dangerouslySetInnerHTML={{ __html: cursorPreferenceScript }} />
+      </head>
       <body className={`${roboto.className} antialiased`}>
         <PWAInstall />
         <ThemeProvider
@@ -98,6 +107,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <CursorPreferenceProvider>
           <ThemeWrapper>
             <TransitionProvider>
             <div className="min-h-screen flex flex-col">
@@ -106,7 +116,10 @@ export default async function RootLayout({
               <MobileNav />
 
               <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md pwa-safe-top">
-                <div className="container mx-auto px-4 py-4 flex justify-between items-center max-w-5xl">
+                {/* Wider than the 5xl content column: the nav links plus search, the
+                    fancy-mouse toggle and the pull chain don't fit in 5xl and collide
+                    with the logo. */}
+                <div className="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl gap-4">
                   {/* Logo / Brand */}
                   <NavLogo />
 
@@ -138,6 +151,11 @@ export default async function RootLayout({
                     </nav>
                     {/* Search - visible on both mobile and desktop */}
                     <Search items={searchItems} />
+                    {/* Light/dark. The chain hangs below the header — its SVG box is
+                        pointer-events:none so it can't swallow clicks on the page. */}
+                    <div className="ml-3">
+                      <PullChainToggle />
+                    </div>
                     {/* Mobile Hamburger Button */}
                     <HamburgerButton />
                   </div>
@@ -146,7 +164,10 @@ export default async function RootLayout({
               <main className="flex-1">
                 {children}
               </main>
-              <footer className="border-t relative z-10 pwa-safe-bottom">
+              {/* Frosted, not transparent: on the home page the footer sits directly over
+                  the WebGL backdrop, and in light mode the Waves strokes ran straight
+                  through the text. */}
+              <footer className="border-t relative z-10 pwa-safe-bottom bg-background/70 backdrop-blur-xl">
 
                 <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground max-w-4xl space-y-3">
                   <div>
@@ -166,8 +187,12 @@ export default async function RootLayout({
               </footer>
             </div>
             <CustomCursor />
+            {/* Floating, bottom-right. Desktop only: the custom cursor never mounts on
+                touch, so on a phone this would control nothing. */}
+            <FancyCursorToggle />
             </TransitionProvider>
           </ThemeWrapper>
+          </CursorPreferenceProvider>
         </ThemeProvider>
         {process.env.NEXT_PUBLIC_GA_ID && (
           <>
