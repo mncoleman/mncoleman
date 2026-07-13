@@ -8,6 +8,7 @@ import { ArtifactDesignPopup } from '@/components/artifact-design-popup';
 import { formatDistanceToNow } from 'date-fns';
 import { authHeaders } from '@/lib/admin-auth';
 import { artifactSlug } from '@/lib/utils';
+import { trackContentAction } from '@/lib/analytics';
 
 interface Artifact {
     id: string;
@@ -95,6 +96,7 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
         try {
             await navigator.clipboard.writeText(absoluteUrl);
             setCopiedId(artifact.id);
+            trackContentAction('copy', 'artifact', artifact.name, { link_url: absoluteUrl });
             setTimeout(() => setCopiedId(prev => (prev === artifact.id ? null : prev)), 1500);
         } catch {
             // Older browsers without clipboard permissions — fall back to prompt.
@@ -371,6 +373,7 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
                                             href={artifactUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
+                                            onClick={() => trackContentAction('open', 'artifact', artifact.name, { link_url: artifactUrl })}
                                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
                                         >
                                             <ExternalLink className="h-4 w-4" />
@@ -380,6 +383,7 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
                                     <a
                                         href={downloadUrl}
                                         download={artifact.filename}
+                                        onClick={() => trackContentAction('download', 'artifact', artifact.name, { file_name: artifact.filename })}
                                         className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewable
                                             ? 'bg-accent text-accent-foreground hover:bg-accent/80'
                                             : 'flex-1 bg-primary text-primary-foreground hover:bg-primary/90'

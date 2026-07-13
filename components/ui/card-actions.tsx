@@ -3,22 +3,26 @@
 import { useState, useCallback } from 'react';
 import { ExternalLink, Share2, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { trackContentAction, type ContentType } from '@/lib/analytics';
 
 interface CardActionsProps {
     url: string;
     title: string;
     className?: string;
     onToast?: (message: string) => void;
+    /** Groups the GA4 events by the kind of card this sits on. */
+    contentType?: ContentType;
 }
 
-export function CardActions({ url, title, className, onToast }: CardActionsProps) {
+export function CardActions({ url, title, className, onToast, contentType = 'page' }: CardActionsProps) {
     const [isCopied, setIsCopied] = useState(false);
 
     const handleOpen = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        trackContentAction('open', contentType, title, { link_url: url });
         window.open(url, '_blank', 'noopener,noreferrer');
-    }, [url]);
+    }, [url, title, contentType]);
 
     const handleShare = useCallback(async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -29,6 +33,9 @@ export function CardActions({ url, title, className, onToast }: CardActionsProps
                     title: title,
                     url: url
                 });
+                // Only counted once the share sheet is actually completed — an
+                // AbortError means the visitor dismissed it, which isn't a share.
+                trackContentAction('share', contentType, title, { link_url: url });
             } catch (err) {
                 if ((err as Error).name !== 'AbortError') {
                     onToast?.('Sharing failed');
@@ -37,7 +44,7 @@ export function CardActions({ url, title, className, onToast }: CardActionsProps
         } else {
             onToast?.('Sharing not supported on this device');
         }
-    }, [title, url, onToast]);
+    }, [title, url, onToast, contentType]);
 
     const handleCopy = useCallback(async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -45,12 +52,13 @@ export function CardActions({ url, title, className, onToast }: CardActionsProps
         try {
             await navigator.clipboard.writeText(url);
             setIsCopied(true);
+            trackContentAction('copy', contentType, title, { link_url: url });
             onToast?.('Link copied to clipboard!');
             setTimeout(() => setIsCopied(false), 2000);
         } catch (err) {
             onToast?.('Failed to copy link');
         }
-    }, [url, onToast]);
+    }, [url, onToast, title, contentType]);
 
     return (
         <div className={cn("flex gap-2 pt-4 mt-auto border-t border-border/30", className)}>

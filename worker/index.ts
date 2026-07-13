@@ -27,6 +27,9 @@ export interface Env {
     ADMIN_USERS: KVNamespace;       // KV store for multi-user access
     ARTIFACTS_SERVICE_URL: string;  // e.g. https://artifacts.mncoleman.com
     ARTIFACTS_JWT_SECRET: string;   // Shared HS256 secret with the Oracle artifact service
+    GA_PROPERTY_ID: string;         // GA4 numeric property id (not the G- measurement id)
+    GA_SA_CLIENT_EMAIL: string;     // Google service-account email, granted Viewer on the property
+    GA_SA_PRIVATE_KEY: string;      // Service-account PKCS#8 private key (PEM)
 }
 
 interface AdminUser {
@@ -482,6 +485,45 @@ export default {
                 });
                 const text = await upstream.text();
                 return new Response(text, { status: upstream.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            }
+
+            // GA4 traffic summary for the admin analytics page.
+            // Cached in KV for 10 minutes: the Data API has a per-property quota and
+            // the numbers only move hourly anyway.
+            if (url.pathname === '/api/analytics/summary' && request.method === 'GET') {
+                if (!env.GA_PROPERTY_ID || !env.GA_SA_CLIENT_EMAIL || !env.GA_SA_PRIVATE_KEY) {
+                    return new Response(JSON.stringify({
+                        error: 'not_configured',
+                        message: 'GA4 service-account credentials are not set on the Worker.',
+                    }), { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+
+                const requested = parseInt(url.searchParams.get('days') || '28', 10);
+                const days = [7, 28, 90].includes(requested) ? requested : 28;
+                const cacheKey = `ga:summary:${days}`;
+
+                const cached = await env.ADMIN_USERS.get(cacheKey);
+                if (cached) {
+                    return new Response(cached, {
+                        status: 200,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
+                    });
+                }
+
+                try {
+                    const summary = await fetchGaSummary(env, days);
+                    const payload = JSON.stringify(summary);
+                    await env.ADMIN_USERS.put(cacheKey, payload, { expirationTtl: 600 });
+                    return new Response(payload, {
+                        status: 200,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
+                    });
+                } catch (e: any) {
+                    return new Response(JSON.stringify({
+                        error: 'ga_request_failed',
+                        message: e?.message || 'Unknown error talking to the GA4 Data API',
+                    }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
             }
 
             // Artifacts Management Endpoints
@@ -1184,6 +1226,187 @@ async function signArtifactsJwt(payload: Record<string, unknown>, secret: string
     const p = btoaUrl(JSON.stringify(claims));
     const sig = await createSignature(`${h}.${p}`, secret);
     return `${h}.${p}.${sig}`;
+}
+
+// ---------------------------------------------------------------------------
+// GA4 Data API (service-account auth)
+// ---------------------------------------------------------------------------
+
+// `wrangler secret put` preserves real newlines, but a key pasted straight out of
+// the service-account JSON arrives with literal `\n` — handle both.
+async function importServiceAccountKey(pem: string): Promise<CryptoKey> {
+    const body = pem
+        .replace(/\\n/g, '\n')
+        .replace(/-----BEGIN PRIVATE KEY-----/, '')
+        .replace(/-----END PRIVATE KEY-----/, '')
+        .replace(/\s+/g, '');
+    return crypto.subtle.importKey(
+        'pkcs8',
+        decodeBase64ToBytes(body),
+        { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+        false,
+        ['sign']
+    );
+}
+
+// Google's two-legged OAuth: self-sign an RS256 assertion, trade it for a bearer token.
+async function getGoogleAccessToken(env: Env): Promise<string> {
+    const now = Math.floor(Date.now() / 1000);
+    const header = { alg: 'RS256', typ: 'JWT' };
+    const claims = {
+        iss: env.GA_SA_CLIENT_EMAIL,
+        scope: 'https://www.googleapis.com/auth/analytics.readonly',
+        aud: 'https://oauth2.googleapis.com/token',
+        iat: now,
+        exp: now + 3600,
+    };
+
+    const unsigned = `${btoaUrl(JSON.stringify(header))}.${btoaUrl(JSON.stringify(claims))}`;
+    const key = await importServiceAccountKey(env.GA_SA_PRIVATE_KEY);
+    const sigBytes = new Uint8Array(
+        await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(unsigned))
+    );
+    const assertion = `${unsigned}.${btoaUrl(String.fromCharCode(...sigBytes))}`;
+
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+            assertion,
+        }),
+    });
+
+    if (!res.ok) {
+        throw new Error(`Google token exchange failed (${res.status}): ${await res.text()}`);
+    }
+    const json = await res.json() as { access_token?: string };
+    if (!json.access_token) throw new Error('Google token exchange returned no access_token');
+    return json.access_token;
+}
+
+interface GaRow {
+    dimensionValues?: { value: string }[];
+    metricValues?: { value: string }[];
+}
+
+const num = (row: GaRow | undefined, i: number): number =>
+    parseFloat(row?.metricValues?.[i]?.value || '0') || 0;
+
+async function fetchGaSummary(env: Env, days: number) {
+    const token = await getGoogleAccessToken(env);
+
+    // Both bounds are inclusive, so `7daysAgo..today` spans days + 1 days. The previous
+    // window has to span the same count or every delta is biased — it ends the day before
+    // the current one starts (no overlap) and reaches back an equal days + 1 days.
+    const current = { startDate: `${days}daysAgo`, endDate: 'today', name: 'current' };
+    const previous = { startDate: `${days * 2 + 1}daysAgo`, endDate: `${days + 1}daysAgo`, name: 'previous' };
+    const window = [{ startDate: current.startDate, endDate: current.endDate }];
+
+    const body = {
+        requests: [
+            // 0 — headline totals, this period vs the one before it
+            {
+                dateRanges: [current, previous],
+                metrics: [
+                    { name: 'activeUsers' },
+                    { name: 'sessions' },
+                    { name: 'screenPageViews' },
+                    { name: 'averageSessionDuration' },
+                    { name: 'bounceRate' },
+                ],
+            },
+            // 1 — daily trend
+            {
+                dateRanges: window,
+                dimensions: [{ name: 'date' }],
+                metrics: [{ name: 'activeUsers' }, { name: 'sessions' }],
+                orderBys: [{ dimension: { dimensionName: 'date' } }],
+                limit: 100,
+            },
+            // 2 — top pages
+            {
+                dateRanges: window,
+                dimensions: [{ name: 'pagePath' }],
+                metrics: [{ name: 'screenPageViews' }],
+                orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
+                limit: 10,
+            },
+            // 3 — where sessions came from
+            {
+                dateRanges: window,
+                dimensions: [{ name: 'sessionDefaultChannelGroup' }, { name: 'sessionSource' }],
+                metrics: [{ name: 'sessions' }],
+                orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+                limit: 10,
+            },
+            // 4 — countries
+            {
+                dateRanges: window,
+                dimensions: [{ name: 'country' }],
+                metrics: [{ name: 'activeUsers' }],
+                orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
+                limit: 10,
+            },
+        ],
+    };
+
+    const res = await fetch(
+        `https://analyticsdata.googleapis.com/v1beta/properties/${env.GA_PROPERTY_ID}:batchRunReports`,
+        {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        }
+    );
+
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`GA4 Data API error (${res.status}): ${text.slice(0, 300)}`);
+    }
+
+    const data = await res.json() as { reports?: { rows?: GaRow[] }[] };
+    const reports = data.reports || [];
+
+    // Report 0 gains a synthetic `dateRange` dimension because we passed two named
+    // ranges — match on the name rather than trusting row order. That dimension is
+    // appended LAST, so it only sits at index 0 while request 0 asks for no dimensions
+    // of its own. Add one there and this lookup silently returns zeros.
+    const totalRows = reports[0]?.rows || [];
+    const pick = (name: string) => totalRows.find((r) => r.dimensionValues?.[0]?.value === name);
+    const shapeTotals = (row: GaRow | undefined) => ({
+        activeUsers: num(row, 0),
+        sessions: num(row, 1),
+        pageViews: num(row, 2),
+        avgSessionDuration: num(row, 3),
+        bounceRate: num(row, 4),
+    });
+
+    return {
+        days,
+        propertyId: env.GA_PROPERTY_ID,
+        updatedAt: new Date().toISOString(),
+        totals: shapeTotals(pick('current')),
+        previous: shapeTotals(pick('previous')),
+        trend: (reports[1]?.rows || []).map((r) => ({
+            date: r.dimensionValues?.[0]?.value || '',
+            activeUsers: num(r, 0),
+            sessions: num(r, 1),
+        })),
+        topPages: (reports[2]?.rows || []).map((r) => ({
+            path: r.dimensionValues?.[0]?.value || '(not set)',
+            views: num(r, 0),
+        })),
+        sources: (reports[3]?.rows || []).map((r) => ({
+            channel: r.dimensionValues?.[0]?.value || '(not set)',
+            source: r.dimensionValues?.[1]?.value || '(direct)',
+            sessions: num(r, 0),
+        })),
+        countries: (reports[4]?.rows || []).map((r) => ({
+            country: r.dimensionValues?.[0]?.value || '(not set)',
+            users: num(r, 0),
+        })),
+    };
 }
 
 function decodeBase64ToBytes(b64: string): Uint8Array {

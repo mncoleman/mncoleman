@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { MessageSquareText, PackageOpen, Copy, Check, Share2 } from 'lucide-react';
 import { PageEntrance } from '@/components/page-entrance';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { trackContentAction } from '@/lib/analytics';
 
 type LibraryKind = 'prompt' | 'skill';
 type FilterValue = 'prompt' | 'all' | 'skill';
@@ -64,10 +65,15 @@ export default function AiPageClient() {
         return items.filter((i) => i.kind === filter);
     }, [items, filter]);
 
-    const doCopy = useCallback(async (text: string, key: string) => {
+    const doCopy = useCallback(async (
+        text: string,
+        key: string,
+        track?: { action: 'copy' | 'share'; kind: LibraryKind; name: string },
+    ) => {
         try {
             await navigator.clipboard.writeText(text);
             setCopiedKey(key);
+            if (track) trackContentAction(track.action, track.kind, track.name);
             setTimeout(() => setCopiedKey((prev) => (prev === key ? null : prev)), 1600);
         } catch {
             window.prompt('Copy:', text);
@@ -157,7 +163,7 @@ export default function AiPageClient() {
                                     <div className="relative z-10 flex gap-2 pt-4 mt-auto border-t border-border/30">
                                         <button
                                             type="button"
-                                            onClick={() => doCopy(copyTarget, copyKey)}
+                                            onClick={() => doCopy(copyTarget, copyKey, { action: 'copy', kind: item.kind, name: item.name })}
                                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
                                         >
                                             {copiedKey === copyKey ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -165,7 +171,7 @@ export default function AiPageClient() {
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => doCopy(item.url, shareKey)}
+                                            onClick={() => doCopy(item.url, shareKey, { action: 'share', kind: item.kind, name: item.name })}
                                             title="Copy share link"
                                             aria-label="Copy share link"
                                             className="flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium bg-accent text-accent-foreground hover:bg-accent/80 transition-colors"

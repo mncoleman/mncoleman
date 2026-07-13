@@ -52,11 +52,10 @@ export default function PrivacyPolicyPage() {
 
           <h2>Cookies &amp; Analytics</h2>
           <p>
-            The Site may use cookies or similar technologies through analytics services (such as
-            Google Analytics) to measure traffic and improve the experience. These services may set
-            their own cookies and process data according to their own privacy policies. You can
-            control or disable cookies through your browser settings; doing so will not prevent you
-            from using the Site.
+            The Site uses Google Analytics to measure aggregate traffic and improve the experience.
+            Google Analytics sets its own cookies and processes data according to Google&apos;s privacy
+            policy. You can control or disable cookies through your browser settings, or install
+            Google&apos;s opt-out browser add-on; doing either will not prevent you from using the Site.
           </p>
 
           <h2>Third-Party Services</h2>

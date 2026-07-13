@@ -1,113 +1,93 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { TelegramLoginButton } from '@/components/admin/TelegramLoginButton';
-import { AdminDashboard } from '@/components/admin/AdminDashboard';
-import { Loader2 } from 'lucide-react';
-import { setSessionToken, clearSessionToken, authHeaders } from '@/lib/admin-auth';
+import { useState } from 'react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, RefreshCw, FileUp, Library, MapPin, BarChart3 } from 'lucide-react';
+import { useAdmin } from '@/components/admin/admin-context';
+import { authHeaders } from '@/lib/admin-auth';
 
-const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:8787';
+const SHORTCUTS = [
+    { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, description: 'Traffic, top pages and referrers from GA4.' },
+    { href: '/admin/artifacts', label: 'Artifacts', icon: FileUp, description: 'Upload and manage hosted artifacts.' },
+    { href: '/admin/library', label: '"A"I Library', icon: Library, description: 'Publish prompts and skills.' },
+    { href: '/admin/visitors', label: 'Visitors', icon: MapPin, description: 'Moderate the visitor globe guestbook.' },
+];
 
-export default function AdminPage() {
-    const [session, setSession] = useState<{ user: any } | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+export default function AdminOverviewPage() {
+    const { workerUrl } = useAdmin();
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
-    useEffect(() => {
-        // Check for session token from OIDC callback (URL fragment for mobile compatibility)
-        const hash = window.location.hash;
-        if (hash.includes('session_token=')) {
-            const token = hash.split('session_token=')[1];
-            if (token) {
-                setSessionToken(token);
-            }
-            window.history.replaceState({}, '', window.location.pathname);
-        }
-
-        // Check for auth error from OIDC callback redirect
-        const params = new URLSearchParams(window.location.search);
-        const authError = params.get('auth_error');
-        if (authError) {
-            const messages: Record<string, string> = {
-                missing_params: 'Authentication was interrupted.',
-                expired_session: 'Login session expired. Please try again.',
-                invalid_state: 'Invalid login session. Please try again.',
-                token_exchange_failed: 'Authentication failed. Please try again.',
-                invalid_token: 'Invalid authentication response.',
-                unauthorized: 'You are not authorized to access this area.',
-            };
-            setError(messages[authError] || 'Authentication failed.');
-            window.history.replaceState({}, '', window.location.pathname);
-        }
-
-        // Check for existing session via cookie or stored token
-        const checkSession = async () => {
-            try {
-                const res = await fetch(`${WORKER_URL}/auth/me`, {
-                    credentials: 'include',
-                    headers: authHeaders()
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    setSession({ user: data.user });
-                    setError(null);
-                }
-            } catch (e) {
-                console.error('Session check failed', e);
-            } finally {
-                setLoading(false);
-            }
-        };
-        checkSession();
-    }, []);
-
-    const handleLogout = async () => {
+    const rebuild = async () => {
+        setLoading(true);
+        setResult(null);
         try {
-            await fetch(`${WORKER_URL}/auth/logout`, {
+            const res = await fetch(`${workerUrl}/api/trigger`, {
                 method: 'POST',
+                headers: authHeaders({ 'Content-Type': 'application/json' }),
                 credentials: 'include',
-                headers: authHeaders()
+                body: JSON.stringify({ action: 'github_dispatch', data: { event_type: 'rebuild_site' } }),
             });
-        } catch (e) {
-            console.error('Logout failed', e);
+            const json = await res.json();
+            if (res.ok) {
+                setResult({ success: true, message: 'Rebuild triggered. The site updates in a few minutes.' });
+            } else {
+                setResult({ success: false, message: `Error: ${json.error || res.statusText}` });
+            }
+        } catch (e: unknown) {
+            setResult({ success: false, message: `Network Error: ${e instanceof Error ? e.message : 'unknown'}` });
+        } finally {
+            setLoading(false);
         }
-        clearSessionToken();
-        setSession(null);
     };
 
-    if (loading) {
-        return (
-            <div className="flex h-[50vh] w-full items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-        );
-    }
-
     return (
-        <div className="container mx-auto px-4 py-20 flex flex-col items-center min-h-[80vh]">
-            {session ? (
-                <AdminDashboard
-                    user={session.user}
-                    workerUrl={WORKER_URL}
-                    onLogout={handleLogout}
-                />
-            ) : (
-                <div className="w-full max-w-md space-y-8">
-                    <div className="text-center">
-                        <h1 className="text-4xl font-bold tracking-tight">Admin Portal</h1>
-                        <p className="mt-2 text-muted-foreground">Authorized personnel only.</p>
-                    </div>
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Rebuild Site</CardTitle>
+                    <CardDescription>
+                        Notion content is pulled at build time, so new posts, resources and projects
+                        only appear after a rebuild.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <Button variant="outline" onClick={rebuild} disabled={loading} className="gap-2 w-full sm:w-auto">
+                        {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                        Rebuild Site
+                    </Button>
 
-                    {error && (
-                        <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md text-center">
-                            {error}
+                    {result && (
+                        <div
+                            className={`p-4 rounded-md border text-sm ${
+                                result.success
+                                    ? 'bg-green-500/10 border-green-500/20 text-green-600'
+                                    : 'bg-red-500/10 border-red-500/20 text-red-600'
+                            }`}
+                        >
+                            {result.message}
                         </div>
                     )}
+                </CardContent>
+            </Card>
 
-                    <TelegramLoginButton workerUrl={WORKER_URL} />
-                </div>
-            )}
+            <div className="grid gap-4 sm:grid-cols-2">
+                {SHORTCUTS.map(({ href, label, icon: Icon, description }) => (
+                    <Link key={href} href={href}>
+                        <Card className="h-full transition-colors hover:border-foreground/30">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                    <Icon size={18} />
+                                    {label}
+                                </CardTitle>
+                                <CardDescription>{description}</CardDescription>
+                            </CardHeader>
+                        </Card>
+                    </Link>
+                ))}
+            </div>
         </div>
     );
 }

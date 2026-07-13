@@ -87,6 +87,7 @@ function ProjectCard({
             </div>
 
             <CardActions
+                contentType="project"
                 url={project.url}
                 title={project.name}
                 onToast={showToast}

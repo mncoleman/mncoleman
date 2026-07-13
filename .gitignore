@@ -45,3 +45,6 @@ data/search-index.json
 *.swp
 *.swo
 *~
+
+# Wrangler local build cache
+.wrangler/

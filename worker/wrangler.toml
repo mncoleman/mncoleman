@@ -9,6 +9,8 @@ compatibility_date = "2024-04-01"
 #   OWNER_SUB               — Owner's Telegram OIDC sub (always allowed)
 #   GITHUB_TOKEN            — GitHub API access
 #   ARTIFACTS_JWT_SECRET    — Shared HS256 secret with the Oracle artifact service
+#   GA_SA_CLIENT_EMAIL      — Google service-account email (Viewer on the GA4 property)
+#   GA_SA_PRIVATE_KEY       — That service account's PKCS#8 private key (PEM)
 [vars]
 TELEGRAM_BOT_ID = "8681257901"  # mncolemandotcombot — OIDC client_id
 FRONTEND_URL = "https://mncoleman.com"
@@ -16,6 +18,7 @@ GITHUB_REPO_OWNER = "mncoleman"
 GITHUB_REPO_NAME = "mncoleman"
 N8N_WEBHOOK_URL = ""
 ARTIFACTS_SERVICE_URL = "https://artifacts.mncoleman.com"
+GA_PROPERTY_ID = "515551096"    # GA4 numeric property id — not the G- measurement id
 
 [[kv_namespaces]]
 binding = "ADMIN_USERS"

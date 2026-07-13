@@ -47,6 +47,13 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
+
+  // Cross-origin (gtag.js, the artifact service, fonts) is never cacheable here —
+  // cachePut already rejects non-`basic` responses — and routing it through the
+  // network-first branch below only risks respondWith() rejecting when the offline
+  // fallback misses. Leave those requests to the browser.
+  if (url.origin !== self.location.origin) return;
+
   const immutable =
     url.pathname.startsWith('/_next/static/') ||
     /\.(?:woff2?|png|svg|ico|jpe?g|webp|avif)$/.test(url.pathname);
@@ -69,9 +76,13 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Network-first for HTML/navigations; fall back to cache when offline.
+  // `caches.match` resolves to undefined on a miss, and respondWith(undefined)
+  // rejects — so surface a real error response instead.
   event.respondWith(
     fetch(event.request)
       .then(cachePut)
-      .catch(() => caches.match(event.request))
+      .catch(() =>
+        caches.match(event.request).then((cached) => cached || Response.error())
+      )
   );
 });

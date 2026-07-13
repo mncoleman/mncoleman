@@ -74,6 +74,7 @@ function ResourceCard({
             </div>
 
             <CardActions
+                contentType="resource"
                 url={resource.url}
                 title={resource.name}
                 onToast={showToast}

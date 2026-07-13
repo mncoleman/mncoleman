@@ -14,6 +14,7 @@ import { Search, SearchItem } from '@/components/search';
 import { NavLogo } from '@/components/nav-logo';
 import { TransitionProvider } from '@/components/transition-provider';
 import { FooterButtons } from '@/components/footer-buttons';
+import { Analytics } from '@/components/analytics';
 import searchIndex from '@/data/search-index.json';
 
 const roboto = localFont({
@@ -170,18 +171,26 @@ export default async function RootLayout({
         </ThemeProvider>
         {process.env.NEXT_PUBLIC_GA_ID && (
           <>
-            {/* Analytics is not needed for first paint — load it lazily (after the
-                page is idle) so its ~160 KB never competes with FCP/LCP. */}
+            {/* `afterInteractive`, not `lazyOnload`: lazyOnload waits for window load
+                + idle, so anyone who bounced before that never fired a page_view and
+                the session went uncounted. afterInteractive still loads after
+                hydration, so it stays off the critical path for FCP/LCP.
+
+                `send_page_view: false` hands page_view duty to <Analytics/>, which
+                fires one per App Router navigation (soft navs included). Enhanced
+                Measurement's history-event tracking must stay OFF in the GA property
+                or every soft nav is double-counted. */}
             <Script
               src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
-              strategy="lazyOnload"
+              strategy="afterInteractive"
             />
-            <Script id="ga-init" strategy="lazyOnload">
+            <Script id="ga-init" strategy="afterInteractive">
               {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}');`}
+gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}', { send_page_view: false });`}
             </Script>
+            <Analytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
           </>
         )}
       </body>
