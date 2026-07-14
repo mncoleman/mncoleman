@@ -17,6 +17,7 @@ import { motion } from 'motion/react';
 import dynamic from 'next/dynamic';
 import GlassCube from '@/components/ui/glass-cube';
 import { HomeBackdrop } from '@/components/home-backdrop';
+import { DeferUntilVisible } from '@/components/defer';
 import { TransitionLink } from '@/components/transition-link';
 import { usePageTransition } from '@/components/transition-provider';
 
@@ -320,7 +321,13 @@ export default function Home() {
       <HomeBackdrop />
       <DesktopGrid />
       <MobileStack />
-      <VisitorSection />
+      {/* The globe is well below the fold, but `dynamic(ssr:false)` still downloaded cobe,
+          booted a WebGL canvas and hit the visitors API during hydration — inside the LCP
+          window, for a section many visitors never scroll to. Gate it on the viewport.
+          minHeight reserves the space so revealing it can't shift layout. */}
+      <DeferUntilVisible rootMargin="300px" minHeight={600}>
+        <VisitorSection />
+      </DeferUntilVisible>
     </>
   );
 }

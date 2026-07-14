@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
+import { DeferUntilIdle } from '@/components/defer';
 
 // Both backdrops are WebGL and heavy (OGL / three.js). Keep them off the initial JS —
 // only the one matching the active theme is ever fetched.
@@ -24,18 +25,23 @@ export function HomeBackdrop() {
 
     if (!mounted) return null;
 
-    if (resolvedTheme === 'light') {
-        return (
-            <div className="fixed inset-0 -z-10 h-screen w-screen" aria-hidden>
-                <Waves
-                    lineColor="#000000"
-                    backgroundColor="transparent"
-                    waveAmpX={15}
-                    waveAmpY={15}
-                />
-            </div>
-        );
-    }
-
-    return <DarkVeil hueShift={40} speed={0.5} resolutionScale={0.8} />;
+    // Purely decorative, and full-bleed behind the content — so it waits for load + idle
+    // rather than competing with LCP. Both shaders fade themselves in, so arriving a beat
+    // late reads as intentional rather than as a pop.
+    return (
+        <DeferUntilIdle>
+            {resolvedTheme === 'light' ? (
+                <div className="fixed inset-0 -z-10 h-screen w-screen animate-in fade-in duration-700" aria-hidden>
+                    <Waves
+                        lineColor="#000000"
+                        backgroundColor="transparent"
+                        waveAmpX={15}
+                        waveAmpY={15}
+                    />
+                </div>
+            ) : (
+                <DarkVeil hueShift={40} speed={0.5} resolutionScale={0.8} />
+            )}
+        </DeferUntilIdle>
+    );
 }
