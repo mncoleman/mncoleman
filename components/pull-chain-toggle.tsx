@@ -2,15 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
-import {
-    Engine,
-    Composite,
-    Bodies,
-    Body,
-    Constraint,
-    type Engine as EngineType,
-    type Body as BodyType,
-    type Constraint as ConstraintType,
+import type {
+    Engine as EngineType,
+    Body as BodyType,
+    Constraint as ConstraintType,
 } from 'matter-js';
 
 /**
@@ -45,6 +40,16 @@ const BULB_H = 512 * SCALE;
 const BULB_TOP = 20;
 const PIVOT_Y = BULB_TOP + BULB_H + 2;
 
+// The rope's rest geometry. setupPhysics seeds bead i at exactly this y, so rendering it
+// server-side means the chain is already in place at first paint and does not jump when
+// the lazily-loaded engine takes over.
+const SEG_LEN = CHAIN_LEN / (BEADS + 1);
+const REST_Y = (i: number) => PIVOT_Y + SEG_LEN * (i + 1);
+const REST_POINTS = [
+    `${CX},${PIVOT_Y}`,
+    ...Array.from({ length: BEADS }, (_, i) => `${CX},${REST_Y(i).toFixed(1)}`),
+].join(' ');
+
 export function PullChainToggle() {
     const { resolvedTheme, setTheme } = useTheme();
     const svgRef = useRef<SVGSVGElement>(null);
@@ -65,6 +70,28 @@ export function PullChainToggle() {
         // Reduced motion: no rope simulation. The button below still toggles the theme.
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
+        let teardown: (() => void) | null = null;
+        let cancelled = false;
+
+        // matter-js is ~36 KB gzipped and this toggle lives in the header of EVERY page,
+        // so a static import put a physics engine on the critical path sitewide. Load it
+        // on idle instead. The SVG below renders the chain's rest pose, which is exactly
+        // where the simulation starts, so nothing moves when physics takes over.
+        const boot = async () => {
+            const M = await import('matter-js');
+            if (cancelled) return;
+            teardown = start(M, svg);
+        };
+
+        const ric = window.requestIdleCallback;
+        const handle = typeof ric === 'function'
+            ? ric(() => void boot(), { timeout: 2000 })
+            : window.setTimeout(() => void boot(), 300);
+
+        function start(
+            { Engine, Composite, Bodies, Body, Constraint }: typeof import('matter-js'),
+            svg: SVGSVGElement,
+        ) {
         const engine = Engine.create();
         engine.gravity.y = 1;
         engine.gravity.scale = 0.0011; // gentle — units are SVG pixels
@@ -73,7 +100,7 @@ export function PullChainToggle() {
 
         const bulb = Bodies.circle(CX, PIVOT_Y, 5, { isStatic: true });
 
-        const segLen = CHAIN_LEN / (BEADS + 1);
+        const segLen = SEG_LEN;
         const chain: BodyType[] = [];
         let prev: BodyType | null = null;
         for (let i = 0; i < BEADS; i++) {
@@ -244,6 +271,17 @@ export function PullChainToggle() {
             Engine.clear(engine as EngineType);
             void bulb;
         };
+        }
+
+        return () => {
+            cancelled = true;
+            if (typeof window.cancelIdleCallback === 'function' && typeof ric === 'function') {
+                window.cancelIdleCallback(handle as number);
+            } else {
+                window.clearTimeout(handle as number);
+            }
+            teardown?.();
+        };
     }, []);
 
     const isLight = mounted && resolvedTheme === 'light';
@@ -286,15 +324,25 @@ export function PullChainToggle() {
                     </g>
                 </g>
 
+                {/* Rendered at the chain's REST POSE — the exact state the simulation
+                    starts from — so the toggle looks finished at first paint even though
+                    matter-js only arrives on idle. The physics loop then paints over these
+                    same attributes every frame. */}
                 <g className="chain pointer-events-auto cursor-grab">
-                    <polyline className="chain-line" points="" />
+                    <polyline className="chain-line" points={REST_POINTS} />
                     {Array.from({ length: BEADS - 1 }).map((_, i) => (
-                        <circle key={i} className="bead" r="2.6" />
+                        <circle key={i} className="bead" r="2.6" cx={CX} cy={REST_Y(i)} />
                     ))}
-                    <circle className="handle" r="5" />
+                    <circle className="handle" r="5" cx={CX} cy={REST_Y(BEADS - 1)} />
                     {/* A fatter invisible hit target on the knob — the drawn knob is
                         too small to grab reliably at this size. */}
-                    <circle className="handle-hit" r="11" fill="transparent" />
+                    <circle
+                        className="handle-hit"
+                        r="11"
+                        fill="transparent"
+                        cx={CX}
+                        cy={REST_Y(BEADS - 1)}
+                    />
                 </g>
             </svg>
 
