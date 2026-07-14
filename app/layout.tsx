@@ -119,9 +119,14 @@ export default async function RootLayout({
                 {/* Wider than the 5xl content column: the nav links plus search, the
                     fancy-mouse toggle and the pull chain don't fit in 5xl and collide
                     with the logo. */}
-                <div className="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl gap-4">
+                {/* Three columns, not justify-between: the outer two are flex-1 with equal
+                    basis, so the nav sits in the true centre of the header no matter how
+                    wide the logo or the controls are. */}
+                <div className="container mx-auto px-4 py-4 flex items-center max-w-7xl gap-4">
                   {/* Logo / Brand */}
-                  <NavLogo />
+                  <div className="flex-1 flex justify-start min-w-0">
+                    <NavLogo />
+                  </div>
 
                   {/* Desktop Navigation - Hidden on mobile */}
                   <div className="flex items-center gap-2">
@@ -147,13 +152,16 @@ export default async function RootLayout({
                       <Link href="/about" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
                         About <Kbd>A</Kbd>
                       </Link>
-                      <div className="h-4 w-[1px] bg-border mx-2" />
                     </nav>
+                  </div>
+
+                  {/* Controls, mirroring the logo column so the nav stays centred */}
+                  <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
                     {/* Search - visible on both mobile and desktop */}
                     <Search items={searchItems} />
                     {/* Light/dark. The chain hangs below the header — its SVG box is
                         pointer-events:none so it can't swallow clicks on the page. */}
-                    <div className="ml-3">
+                    <div className="ml-1">
                       <PullChainToggle />
                     </div>
                     {/* Mobile Hamburger Button */}
