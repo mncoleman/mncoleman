@@ -93,6 +93,49 @@
   }
 }
 
+/* Theme change (View Transitions API — see lib/theme-transition.ts).
+ *
+ * NOT a cross-fade. Fading light<->dark means both snapshots sit at ~50% opacity on top of
+ * each other mid-animation, so light text and dark text blend into grey mush — worst on
+ * headings. Instead the new theme is WIPED in as an expanding circle from the bulb: the
+ * old snapshot holds still underneath, the new one is clipped over it, and text stays
+ * crisp on both sides of the edge the whole way. --x/--y are set from the bulb's position
+ * at toggle time. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: none;
+    z-index: 0;
+  }
+  ::view-transition-new(root) {
+    animation: theme-reveal 620ms cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+  }
+}
+
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0% at var(--theme-x, 50%) var(--theme-y, 0%));
+  }
+  to {
+    clip-path: circle(150% at var(--theme-x, 50%) var(--theme-y, 0%));
+  }
+}
+
+/* The pull chain itself must not be captured in the page snapshot — otherwise the rope
+ * freezes mid-swing for the duration of the cross-fade. Lifting it into its own
+ * view-transition group keeps it live and on top. */
+.pull-chain {
+  view-transition-name: pull-chain;
+}
+::view-transition-group(pull-chain) {
+  z-index: 100;
+}
+::view-transition-old(pull-chain),
+::view-transition-new(pull-chain) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
 /* Pull-chain theme toggle (ported from the Dovito Hub component). The bulb reads as a
  * dim grey outline in dark mode and glows warm amber once the light is "on". */
 .pull-chain .cord,

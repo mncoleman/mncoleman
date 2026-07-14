@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
+import { setThemeWithTransition } from '@/lib/theme-transition';
 import type {
     Engine as EngineType,
     Body as BodyType,
@@ -58,7 +59,8 @@ export function PullChainToggle() {
     // The physics loop lives outside React and must always call the *current* toggle.
     const toggleRef = useRef<() => void>(() => {});
     useEffect(() => {
-        toggleRef.current = () => setTheme(resolvedTheme === 'light' ? 'dark' : 'light');
+        toggleRef.current = () =>
+            setThemeWithTransition(setTheme, resolvedTheme === 'light' ? 'dark' : 'light');
     }, [resolvedTheme, setTheme]);
 
     useEffect(() => setMounted(true), []);
@@ -353,7 +355,7 @@ export function PullChainToggle() {
                 role="switch"
                 aria-checked={isLight}
                 aria-label="Toggle light mode"
-                onClick={() => setTheme(isLight ? 'dark' : 'light')}
+                onClick={() => setThemeWithTransition(setTheme, isLight ? 'dark' : 'light')}
                 className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:left-0 focus-visible:top-0 focus-visible:z-50 focus-visible:rounded focus-visible:bg-background focus-visible:px-2 focus-visible:py-1 focus-visible:text-xs focus-visible:ring-2 focus-visible:ring-ring"
             >
                 {isLight ? 'Switch to dark mode' : 'Switch to light mode'}
