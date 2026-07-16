@@ -21,10 +21,9 @@ import { DeferUntilVisible } from '@/components/defer';
 import { TransitionLink } from '@/components/transition-link';
 import { usePageTransition } from '@/components/transition-provider';
 
-// Heavy, purely-decorative libraries (OGL for Dark Veil, GSAP for ScrollFloat)
-// load after first paint and stay off the homepage's initial JS chunk. The
-// content cards remain server-rendered (see Home), so LCP is unaffected.
-const ScrollFloat = dynamic(() => import('@/components/ScrollFloat'), { ssr: false });
+// Heavy, purely-decorative libraries (OGL for Dark Veil) load after first paint
+// and stay off the homepage's initial JS chunk. The content cards remain
+// server-rendered (see Home), so LCP is unaffected.
 // The visitor globe holds its own WebGL context (cobe) + fetches live pins, so it
 // is client-only and lazy — it never touches the homepage's initial JS or LCP.
 const VisitorSection = dynamic(() => import('@/components/visitor-globe/VisitorSection'), {
@@ -212,7 +211,6 @@ function DesktopGrid() {
 // ── Mobile: sticky cards that stack on top of each other as you scroll ──
 function MobileStack() {
   const [headerH, setHeaderH] = useState(64);
-  const scrollTriggerRef = useRef<HTMLDivElement>(null);
   const { activeCardId } = usePageTransition();
 
   useEffect(() => {
@@ -279,33 +277,6 @@ function MobileStack() {
           </motion.div>
         );
       })}
-
-      {/* Scroll area for the ending text */}
-      <div ref={scrollTriggerRef} className="h-[50vh]">
-        {/* Sticky container: pins text in the center of the gap between cards and footer */}
-        <div
-          className="sticky flex items-center justify-center"
-          style={{
-            zIndex: bentoCards.length + 1,
-            top: `calc(${baseTop + bentoCards.length * cardStep}px + (100vh - ${baseTop + bentoCards.length * cardStep}px) / 2 - 1.5rem)`,
-          }}
-        >
-          <div
-            style={{
-              WebkitMaskImage: 'linear-gradient(to right, black 0%, rgba(0,0,0,0.5) 100%)',
-              maskImage: 'linear-gradient(to right, black 0%, rgba(0,0,0,0.5) 100%)',
-            }}
-          >
-            <ScrollFloat
-              triggerRef={scrollTriggerRef as React.RefObject<HTMLElement>}
-              containerClassName="text-center"
-              textClassName="text-4xl md:text-5xl font-bold tracking-tight text-primary leading-tight"
-            >
-              That&apos;s all for now.
-            </ScrollFloat>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
