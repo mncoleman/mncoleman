@@ -55,7 +55,7 @@
   },
   {
     "id": "add4601e-26d9-4dd1-a69c-2f82c2862a10",
-    "name": "spotDL Manual",
+    "name": "spotDL Guide",
     "filename": "spotdl-manual.html",
     "description": "Complete command reference for spotDL, the open-source Spotify downloader — setup guide, every command with copy buttons, and a copy-paste AI prompt to install it for you.",
     "type": "text/html",
