@@ -46,7 +46,7 @@
   },
   {
     "id": "f1e217a7-fdc7-4d3b-b975-ac55c9107136",
-    "name": "Homebrew Field Guide",
+    "name": "Homebrew Guide",
     "filename": "homebrew-field-guide.html",
     "description": "What Homebrew installs on your Mac, the five kinds of packages, and a live lookup tool to investigate any formula or cask.",
     "type": "text/html",
