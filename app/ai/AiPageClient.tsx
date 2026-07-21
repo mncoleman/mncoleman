@@ -86,7 +86,7 @@ export default function AiPageClient() {
                 <div className="mb-10 text-center">
                     <h1 className="text-4xl font-bold tracking-tight mb-3">&quot;A&quot;I</h1>
                     <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                        Prompts and Agent Skills I&apos;ve written — AI resources, made by a (mostly) human.
+                        Prompts and Agent Skills.
                     </p>
                 </div>
 
