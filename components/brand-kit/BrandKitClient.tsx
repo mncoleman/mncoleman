@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { gsap } from 'gsap';
+import Lenis from 'lenis';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -214,6 +215,66 @@ function ScrollStackPreview() {
             <div className="absolute bottom-1 inset-x-0 text-center">
                 <span className="text-[9px] text-muted-foreground/60 uppercase tracking-widest">Scroll to interact</span>
             </div>
+        </div>
+    );
+}
+
+/**
+ * Two identical scrollers side by side — one native, one driven by its own Lenis
+ * instance. The difference only exists in motion, so a still image or a code
+ * sample can't show it; wheeling over both back to back can.
+ */
+function SmoothScrollPreview() {
+    const lenisWrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const wrapper = lenisWrapperRef.current;
+        const content = wrapper?.firstElementChild as HTMLElement | null;
+        if (!wrapper || !content) return;
+        // Container mode: `wrapper` + `content` scope this instance to the pane,
+        // leaving the site-wide root instance alone.
+        const lenis = new Lenis({ wrapper, content, lerp: 0.07, autoRaf: true });
+        return () => lenis.destroy();
+    }, []);
+
+    const rows = Array.from({ length: 14 }, (_, i) => i);
+    const Rows = () => (
+        <div className="px-3 py-2 space-y-2">
+            {rows.map(i => (
+                <div
+                    key={i}
+                    className="h-2 rounded bg-foreground/10"
+                    style={{ width: `${45 + ((i * 37) % 50)}%` }}
+                />
+            ))}
+        </div>
+    );
+
+    // grid-rows-[minmax(0,1fr)]: without it the row auto-sizes to the bars and the
+    // panes grow past the 128px preview box instead of scrolling inside it.
+    return (
+        <div className="grid h-full grid-cols-2 grid-rows-[minmax(0,1fr)] divide-x divide-border/40">
+            <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+            {[
+                { label: 'Native', ref: undefined },
+                { label: 'Lenis', ref: lenisWrapperRef },
+            ].map(pane => (
+                <div key={pane.label} className="relative h-full">
+                    <div
+                        ref={pane.ref}
+                        // Both panes scroll themselves, so the site-wide Lenis has to
+                        // ignore them — including the one that runs its own instance.
+                        data-lenis-prevent
+                        className="h-full overflow-y-auto no-scrollbar"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
+                        <Rows />
+                    </div>
+                    <span className="pointer-events-none absolute bottom-1 inset-x-0 text-center text-[9px] uppercase tracking-widest text-muted-foreground/60">
+                        {pane.label}
+                    </span>
+                </div>
+            ))}
         </div>
     );
 }
@@ -429,6 +490,12 @@ On hover: \`hover:border-primary/50 hover:bg-background/50\`
 - Glassmorphism front face: \`rgba(255, 255, 255, 0.03)\` background with \`backdrop-filter: blur(12px) saturate(1.4)\`
 - Depth slices (translucent borders) for 3D depth illusion
 - Wobble animation on load, idle pulse animation when not interacting
+
+### Smooth Scroll
+- One site-wide Lenis instance (\`<ReactLenis root>\`) scrolling the real document — \`sticky\`/\`fixed\` and \`window.scrollY\` readers keep working
+- Every nested scroll container needs \`data-lenis-prevent\`, or Lenis swallows its wheel events
+- Corner panel exposes glide (\`lerp\`) and reach (\`wheelMultiplier\`) live; prefs persist to \`localStorage\`
+- Off entirely under \`prefers-reduced-motion\`; page scrollbar hidden on \`html\`/\`body\`
 
 ### Custom Cursor
 - Hide OS cursor with \`cursor: none\` on all elements
@@ -769,6 +836,12 @@ export default function BrandKitClient() {
             description: '3D CSS cube with frosted glass faces for bento grid cards.',
             file: '/components/ui/glass-cube.tsx',
             preview: 'bg-primary/5'
+        },
+        {
+            name: 'Smooth Scroll',
+            description: 'Site-wide Lenis scrolling, with live glide and reach controls in the corner.',
+            file: '/components/smooth-scroll.tsx',
+            preview: 'bg-foreground/5'
         },
         {
             name: 'Scroll Float',
@@ -1121,6 +1194,9 @@ export default function BrandKitClient() {
                                                         </div>
                                                     </GlassCube>
                                                 </div>
+                                            )}
+                                            {selectedComponent === 'Smooth Scroll' && (
+                                                <SmoothScrollPreview />
                                             )}
                                             {selectedComponent === 'Scroll Float' && (
                                                 <ScrollFloatPreview key={Date.now()} />
