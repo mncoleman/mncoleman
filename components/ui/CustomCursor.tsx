@@ -83,9 +83,27 @@ const CustomCursor = () => {
             requestRef = requestAnimationFrame(animate);
         };
 
+        // Pointer events as well as mouse: a component that calls preventDefault()
+        // on pointerdown to own a drag (the captcha slider) suppresses the
+        // compatibility mouse events for the whole gesture, and the cursor would
+        // sit frozen until the drag ended. Same coordinates either way, so the
+        // duplicate updates are free.
+        const onPointerMove = (e: PointerEvent) => {
+            if (e.pointerType === "mouse") onMouseMove(e);
+        };
+        const onPointerDown = (e: PointerEvent) => {
+            if (e.pointerType === "mouse") onMouseDown();
+        };
+        const onPointerUp = (e: PointerEvent) => {
+            if (e.pointerType === "mouse") onMouseUp();
+        };
+
         window.addEventListener("mousemove", onMouseMove);
         window.addEventListener("mousedown", onMouseDown);
         window.addEventListener("mouseup", onMouseUp);
+        window.addEventListener("pointermove", onPointerMove);
+        window.addEventListener("pointerdown", onPointerDown);
+        window.addEventListener("pointerup", onPointerUp);
         document.addEventListener("mouseenter", onMouseEnter);
         document.addEventListener("mouseleave", onMouseLeave);
 

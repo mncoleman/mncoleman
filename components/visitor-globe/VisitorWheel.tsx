@@ -188,7 +188,11 @@ export default function VisitorWheel({ pins, focusedId, onSelect, className }: P
                         // dropped by the CSS pipeline, while `backdrop-blur-*` (which
                         // compiles to a var-driven backdrop-filter) survives.
                         className={cn(
-                            'vg-wheel-item bg-background/40 backdrop-blur-md',
+                            // Heavier than the site's usual bg-background/40 frosting:
+                            // this sits directly on the Waves line art in light mode,
+                            // where thin high-contrast strokes read straight through a
+                            // lighter scrim.
+                            'vg-wheel-item bg-background/75 backdrop-blur-xl',
                             p.id === focusedId && 'vg-wheel-item--focused'
                         )}
                         style={{ height: ITEM_H, flex: '0 0 auto' }}

@@ -110,8 +110,12 @@ export default function VisitorSection() {
                                 </div>
                             )}
                         </div>
-                        <p className="mt-3 text-center text-[11px] text-muted-foreground/60">
-                            Drag to spin · tap a visitor below to fly there
+                        {/* Same frosting as the wheel entries — the Waves strokes run
+                            straight through this line in light mode too. */}
+                        <p className="mt-3 text-center">
+                            <span className="inline-block rounded-full bg-background/75 px-3 py-1 text-[11px] text-muted-foreground/80 backdrop-blur-xl">
+                                Drag to spin · tap a visitor below to fly there
+                            </span>
                         </p>
 
                         {/* Recent visitors — 3D infinite auto-scrolling wheel */}
