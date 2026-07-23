@@ -19,6 +19,7 @@ import {
 import dynamic from 'next/dynamic';
 import { gsap } from 'gsap';
 import Lenis from 'lenis';
+import { useLenis } from 'lenis/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -237,13 +238,13 @@ function SmoothScrollPreview() {
         return () => lenis.destroy();
     }, []);
 
-    const rows = Array.from({ length: 14 }, (_, i) => i);
+    const rows = Array.from({ length: 26 }, (_, i) => i);
     const Rows = () => (
-        <div className="px-3 py-2 space-y-2">
+        <div className="px-4 py-3 space-y-3">
             {rows.map(i => (
                 <div
                     key={i}
-                    className="h-2 rounded bg-foreground/10"
+                    className="h-2.5 rounded bg-foreground/10"
                     style={{ width: `${45 + ((i * 37) % 50)}%` }}
                 />
             ))}
@@ -765,7 +766,63 @@ function PromptingSection({ copyToClipboard, copiedColor }: { copyToClipboard: (
     );
 }
 
+const TAB_SLUGS = ['colors', 'type', 'system', 'ui-kit', 'effects', 'prompting', 'globe'] as const;
+
 export default function BrandKitClient() {
+    const [tab, setTab] = useState<string>('colors');
+    const tabsRef = useRef<HTMLDivElement>(null);
+    const lenis = useLenis();
+    const [floorHeight, setFloorHeight] = useState<number | null>(null);
+
+    // Deep links: /brand-kit#effects opens that section. Read after mount rather
+    // than during render so the server and first client pass agree.
+    useEffect(() => {
+        const fromHash = () => {
+            const slug = window.location.hash.replace('#', '');
+            if ((TAB_SLUGS as readonly string[]).includes(slug)) setTab(slug);
+        };
+        fromHash();
+        window.addEventListener('hashchange', fromHash);
+        return () => window.removeEventListener('hashchange', fromHash);
+    }, []);
+
+    const handleTabChange = (next: string) => {
+        const el = tabsRef.current;
+        const oldTabsH = el?.getBoundingClientRect().height ?? 0;
+        const oldDocH = document.documentElement.scrollHeight;
+
+        // Switching to a shorter section shrinks the document, and the browser
+        // clamps scrollY the instant it does — that snap is the jerk. Hold the
+        // outgoing height as a floor so nothing clamps, glide down to where the
+        // scroll position is legal again, then drop the floor.
+        if (el) setFloorHeight(oldTabsH);
+        setTab(next);
+        history.replaceState(null, '', `#${next}`);
+
+        const release = () => setFloorHeight(null);
+        requestAnimationFrame(() => {
+            const list = el?.querySelector('[role="tablist"]') as HTMLElement | null;
+            const panel = el?.querySelector('[role="tabpanel"]') as HTMLElement | null;
+            if (!list || !panel) return release();
+
+            // offsetTop delta rather than a hardcoded 32: it picks up the panel's
+            // top margin without assuming which utility class set it.
+            const newTabsH = panel.offsetTop - list.offsetTop + panel.offsetHeight;
+            const newMax = Math.max(0, oldDocH - oldTabsH + newTabsH - window.innerHeight);
+            if (window.scrollY <= newMax) return release();
+
+            if (lenis) {
+                lenis.scrollTo(newMax, { duration: 0.6, onComplete: release });
+            } else {
+                window.scrollTo({ top: newMax, behavior: 'smooth' });
+                window.setTimeout(release, 700);
+            }
+        });
+        // Belt and braces: a pinned floor is far worse than a missed animation,
+        // so drop it regardless of whether the callbacks above ever fire.
+        window.setTimeout(release, 1500);
+    };
+
     const [copiedColor, setCopiedColor] = useState<string | null>(null);
     const [selectedComponent, setSelectedComponent] = useState<string | null>(null);
     const [cursorPos, setCursorPos] = useState({ x: 50, y: 50 }); // percentage positions
@@ -958,25 +1015,31 @@ export default function BrandKitClient() {
                 </CardContent>
             </Card>
 
-            <Tabs defaultValue="colors" className="w-full">
+            <Tabs
+                value={tab}
+                onValueChange={handleTabChange}
+                className="w-full"
+                ref={tabsRef}
+                style={floorHeight ? { minHeight: floorHeight } : undefined}
+            >
                 <TabsList className="grid w-full h-auto grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 bg-muted/50 p-1 rounded-2xl xl:rounded-full border border-border/40">
                     <TabsTrigger value="colors" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                         <Palette className="h-4 w-4 mr-2" />
                         Colors
                     </TabsTrigger>
-                    <TabsTrigger value="typography" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                    <TabsTrigger value="type" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                         <Type className="h-4 w-4 mr-2" />
                         Type
                     </TabsTrigger>
-                    <TabsTrigger value="spacing" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                    <TabsTrigger value="system" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                         <Layout className="h-4 w-4 mr-2" />
                         System
                     </TabsTrigger>
-                    <TabsTrigger value="ui-components" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                    <TabsTrigger value="ui-kit" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                         <Layers className="h-4 w-4 mr-2" />
                         UI Kit
                     </TabsTrigger>
-                    <TabsTrigger value="react-bits" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                    <TabsTrigger value="effects" className="rounded-xl xl:rounded-full py-2 xl:py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                         <Zap className="h-4 w-4 mr-2" />
                         Effects
                     </TabsTrigger>
@@ -1013,7 +1076,7 @@ export default function BrandKitClient() {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="typography" className="mt-8">
+                <TabsContent value="type" className="mt-8">
                     <div className="space-y-6">
                         <Card className="border-border/40 bg-background/60 backdrop-blur-xl">
                             <CardHeader>
@@ -1053,7 +1116,7 @@ export default function BrandKitClient() {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="spacing" className="mt-8">
+                <TabsContent value="system" className="mt-8">
                     <div className="grid md:grid-cols-2 gap-8">
                         <Card className="border-border/40 bg-background/60 backdrop-blur-xl">
                             <CardHeader>
@@ -1085,7 +1148,7 @@ export default function BrandKitClient() {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="ui-components" className="mt-8">
+                <TabsContent value="ui-kit" className="mt-8">
                     <div className="grid md:grid-cols-2 gap-6">
                         <Card className="border-border/40 bg-background/60 backdrop-blur-xl">
                             <CardHeader>
@@ -1132,7 +1195,7 @@ export default function BrandKitClient() {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="react-bits" className="mt-8">
+                <TabsContent value="effects" className="mt-8">
                     <div className="grid md:grid-cols-2 gap-6">
                         <Card className="border-border/40 bg-background/60 backdrop-blur-xl">
                             <CardHeader>
@@ -1182,7 +1245,9 @@ export default function BrandKitClient() {
                             <CardContent className="space-y-4">
                                 {selectedComponent ? (
                                     <>
-                                        <div className="relative h-32 rounded-xl overflow-hidden border border-border/40 bg-transparent">
+                                        {/* Smooth Scroll gets a taller box: you can't feel the
+                                            difference between the two panes through a 128px slit. */}
+                                        <div className={`relative rounded-xl overflow-hidden border border-border/40 bg-transparent ${selectedComponent === 'Smooth Scroll' ? 'h-64' : 'h-32'}`}>
                                             {selectedComponent === 'Dark Veil' && (
                                                 <div className="relative w-full h-full" />
                                             )}

@@ -15,10 +15,10 @@ export default function BrandKit() {
                 text sitting invisibly on a dark backdrop. */}
             <HomeBackdrop />
 
-            <main className="min-h-screen py-16 px-4 relative z-10">
-                <div className="max-w-5xl mx-auto">
-                    <BrandKitClient />
-                </div>
+            {/* Full-bleed: the tab strip is seven columns wide and the Effects panes
+                are side-by-side previews — a 5xl column squeezed both. */}
+            <main className="min-h-screen py-16 px-4 sm:px-8 relative z-10">
+                <BrandKitClient />
             </main>
         </>
     );
