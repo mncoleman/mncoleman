@@ -436,12 +436,15 @@
 .hairline-slider:focus {
   outline: none;
 }
+/* A 1px runnable track, which Chrome centres vertically in the input box —
+   that gives the thumb a mid-height line to hang its negative margin off, so it
+   lands dead-centre on the drawn track. A full-height track parks it at the top. */
 .hairline-slider::-webkit-slider-runnable-track {
-  height: 100%;
+  height: 1px;
   background: transparent;
 }
 .hairline-slider::-moz-range-track {
-  height: 100%;
+  height: 1px;
   background: transparent;
 }
 .hairline-slider::-webkit-slider-thumb {
@@ -449,7 +452,7 @@
   appearance: none;
   width: 14px;
   height: 14px;
-  margin-top: 0; /* runnable-track is full height, so the thumb self-centres */
+  margin-top: -6.5px; /* (track 1px - thumb 14px) / 2 */
   border-radius: 9999px;
   background: hsl(var(--background));
   border: 1px solid hsl(var(--foreground) / 0.5);

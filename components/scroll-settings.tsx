@@ -36,6 +36,7 @@ function ScrollIcon({ off }: { off: boolean }) {
  */
 function HairlineSlider({
     label,
+    hint,
     value,
     min,
     max,
@@ -44,6 +45,7 @@ function HairlineSlider({
     onChange,
 }: {
     label: string;
+    hint: string;
     value: number;
     min: number;
     max: number;
@@ -54,7 +56,7 @@ function HairlineSlider({
     const pct = ((value - min) / (max - min)) * 100;
 
     return (
-        <label className="block group/slider">
+        <label className="block group/slider" title={hint}>
             <span className="flex items-baseline justify-between text-[11px] leading-none">
                 <span className="text-muted-foreground group-hover/slider:text-foreground transition-colors">
                     {label}
@@ -72,7 +74,7 @@ function HairlineSlider({
                 <input
                     type="range"
                     className="hairline-slider absolute inset-0 w-full"
-                    aria-label={label}
+                    aria-label={`${label} — ${hint}`}
                     min={min}
                     max={max}
                     step={step}
@@ -157,6 +159,7 @@ export function ScrollSettings() {
                     <div className="mt-4 space-y-4">
                         <HairlineSlider
                             label="Glide"
+                            hint="How long the page keeps coasting after you stop scrolling."
                             value={prefs.smoothness}
                             min={0}
                             max={100}
@@ -166,6 +169,7 @@ export function ScrollSettings() {
                         />
                         <HairlineSlider
                             label="Reach"
+                            hint="How far the page travels per notch of the scroll wheel."
                             value={prefs.strength}
                             min={0.4}
                             max={2}
