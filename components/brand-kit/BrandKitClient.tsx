@@ -14,7 +14,8 @@ import {
     ClipboardCheck,
     Github,
     ExternalLink,
-    Globe2
+    Globe2,
+    ChevronDown
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { gsap } from 'gsap';
@@ -768,10 +769,154 @@ function PromptingSection({ copyToClipboard, copiedColor }: { copyToClipboard: (
 
 const TAB_SLUGS = ['colors', 'type', 'system', 'ui-kit', 'effects', 'prompting', 'globe'] as const;
 
-// Shown at true pixel size, so the ramp stops at 256 — a 512 tile is taller than
-// the card it sits in. The bigger exports live in their own row below.
-const LOGO_SIZES = [16, 32, 64, 128, 256];
-const LOGO_EXPORT_ONLY_SIZES = [512, 1024];
+const LOGO_FORMATS: { format: LogoFormat; label: string; note: string }[] = [
+    { format: 'svg', label: 'SVG', note: 'vector' },
+    { format: 'png', label: 'PNG', note: 'transparent' },
+    { format: 'jpeg', label: 'JPG', note: 'opaque' },
+];
+
+/** One download button per size, with the three formats behind it. */
+function LogoDownloadMenu({ variant, size }: { variant: LogoVariant; size: number }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const onDown = (e: MouseEvent) => {
+            if (!ref.current?.contains(e.target as Node)) setOpen(false);
+        };
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setOpen(false);
+        };
+        document.addEventListener('mousedown', onDown);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [open]);
+
+    return (
+        <div ref={ref} className="relative">
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                aria-haspopup="menu"
+                aria-expanded={open}
+                aria-label={`Download the ${size} pixel ${variant} logo`}
+                className={`flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-[10px] uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    open
+                        ? 'border-border bg-muted/50 text-foreground'
+                        : 'border-border/40 text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground'
+                }`}
+            >
+                <Download className="h-3 w-3" />
+                Download
+                <ChevronDown className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+
+            {open && (
+                <div
+                    role="menu"
+                    className="absolute left-1/2 top-full z-20 mt-1 w-36 -translate-x-1/2 rounded-lg border border-border/50 bg-background/95 p-1 shadow-lg backdrop-blur-xl"
+                >
+                    {LOGO_FORMATS.map(({ format, label, note }) => (
+                        <button
+                            key={format}
+                            role="menuitem"
+                            type="button"
+                            onClick={() => {
+                                downloadLogo(variant, size, format);
+                                setOpen(false);
+                            }}
+                            className="flex w-full items-baseline justify-between rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60"
+                        >
+                            <span className="font-mono text-[11px] uppercase tracking-wider">{label}</span>
+                            <span className="text-[10px] text-muted-foreground/70">{note}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function LogoHero({ variant }: { variant: LogoVariant }) {
+    const dark = variant === 'dark';
+    return (
+        <div
+            className={`relative aspect-video rounded-2xl flex items-center justify-center border group/logo ${
+                dark ? 'bg-black border-white/10' : 'bg-white border-black/5'
+            }`}
+        >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+                src={logoDataUrl(variant, 96)}
+                width={96}
+                height={96}
+                alt={`MC monogram, ${variant} version`}
+                className="rounded-2xl shadow-2xl transition-transform group-hover/logo:scale-110"
+            />
+            <div className="absolute inset-x-0 bottom-4 text-center">
+                <span
+                    className={`text-xs font-mono tracking-widest uppercase ${
+                        dark ? 'text-white/40' : 'text-black/40'
+                    }`}
+                >
+                    {variant} Version
+                </span>
+            </div>
+        </div>
+    );
+}
+
+function LogoSizeRamp({ variant }: { variant: LogoVariant }) {
+    return (
+        <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                {variant} Version Sizes
+            </h3>
+
+            <div className="mt-5 flex flex-wrap items-end gap-6">
+                {LOGO_SIZES.map(size => (
+                    <div key={size} className="flex flex-col items-center gap-2.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={logoDataUrl(variant, size)}
+                            width={size}
+                            height={size}
+                            alt={`MC monogram, ${variant} version, ${size} by ${size} pixels`}
+                            className="shrink-0"
+                        />
+                        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                            {size}×{size}
+                        </span>
+                        <LogoDownloadMenu variant={variant} size={size} />
+                    </div>
+                ))}
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                    Larger
+                </span>
+                {LOGO_EXPORT_ONLY_SIZES.map(size => (
+                    <div key={size} className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
+                            {size}
+                        </span>
+                        <LogoDownloadMenu variant={variant} size={size} />
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// Shown at true pixel size, so the ramp stops where a tile still fits the
+// half-width column it lives in. Bigger sizes are export-only, in their own row.
+const LOGO_SIZES = [16, 32, 64, 128];
+const LOGO_EXPORT_ONLY_SIZES = [256, 512, 1024];
 type LogoVariant = 'dark' | 'light';
 type LogoFormat = 'svg' | 'png' | 'jpeg';
 
@@ -842,7 +987,7 @@ async function downloadLogo(variant: LogoVariant, size: number, format: LogoForm
 
 export default function BrandKitClient() {
     const [tab, setTab] = useState<string>('colors');
-    const [logoVariant, setLogoVariant] = useState<LogoVariant>('dark');
+    const [logoOpen, setLogoOpen] = useState(true);
     const tabsRef = useRef<HTMLDivElement>(null);
     const lenis = useLenis();
     const [floorHeight, setFloorHeight] = useState<number | null>(null);
@@ -1057,7 +1202,12 @@ export default function BrandKitClient() {
             {/* Logo Section */}
             <Card className="border-border/40 bg-background/60 backdrop-blur-xl overflow-hidden group">
                 <CardHeader>
-                    <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => setLogoOpen(o => !o)}
+                        aria-expanded={logoOpen}
+                        className="flex w-full items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                    >
                         <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
                             <Layers className="h-6 w-6 text-primary" />
                         </div>
@@ -1065,111 +1215,39 @@ export default function BrandKitClient() {
                             <CardTitle className="text-2xl">The Logo</CardTitle>
                             <CardDescription>Official "MC" monogram and typography.</CardDescription>
                         </div>
-                    </div>
+                        <ChevronDown
+                            className={`ml-auto h-5 w-5 text-muted-foreground transition-transform duration-300 ${
+                                logoOpen ? '' : '-rotate-90'
+                            }`}
+                        />
+                    </button>
                 </CardHeader>
+                {/* grid-rows 1fr→0fr animates the collapse without measuring the
+                    content, which matters because the ramps reflow as the card
+                    changes width. */}
+                <div
+                    className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+                        logoOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                    }`}
+                >
+                    <div className="overflow-hidden">
                 <CardContent>
-                    <div className="grid md:grid-cols-2 gap-8">
-                        <div className="relative aspect-video rounded-2xl bg-black flex items-center justify-center border border-white/10 group/logo">
-                            <div className="w-24 h-24 rounded-2xl bg-[#18181b] flex items-center justify-center text-4xl font-bold text-white border border-white/20 shadow-2xl transition-transform group-hover/logo:scale-110">
-                                MC
-                            </div>
-                            <div className="absolute inset-x-0 bottom-4 text-center">
-                                <span className="text-xs text-white/40 font-mono tracking-widest uppercase">Dark Version</span>
-                            </div>
-                        </div>
-                        <div className="relative aspect-video rounded-2xl bg-white flex items-center justify-center border border-black/5 group/logo">
-                            <div className="w-24 h-24 rounded-2xl bg-white flex items-center justify-center text-4xl font-bold text-black border border-black/10 shadow-xl transition-transform group-hover/logo:scale-110">
-                                MC
-                            </div>
-                            <div className="absolute inset-x-0 bottom-4 text-center">
-                                <span className="text-xs text-black/40 font-mono tracking-widest uppercase">Light Version</span>
-                            </div>
-                        </div>
-                    </div>
-                    {/* Size ramp. Every tile is the real mark at its real pixel size,
-                        rendered from the same string the downloads serialise, so the
-                        thing you pick is the thing you get. */}
-                    <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Sizes</h3>
-                            <p className="mt-1 text-xs text-muted-foreground/70">
-                                Shown at actual size. Pick a format to download.
-                            </p>
-                        </div>
-                        <div className="inline-flex rounded-full border border-border/40 bg-muted/40 p-1">
-                            {(['dark', 'light'] as LogoVariant[]).map(v => (
-                                <button
-                                    key={v}
-                                    type="button"
-                                    onClick={() => setLogoVariant(v)}
-                                    aria-pressed={logoVariant === v}
-                                    className={`rounded-full px-4 py-1.5 text-xs capitalize transition-colors ${
-                                        logoVariant === v
-                                            ? 'bg-background text-foreground shadow-sm'
-                                            : 'text-muted-foreground hover:text-foreground'
-                                    }`}
-                                >
-                                    {v}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="mt-6 flex flex-wrap items-end gap-8">
-                        {LOGO_SIZES.map(size => (
-                            <div key={size} className="flex flex-col items-center gap-3">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                    src={logoDataUrl(logoVariant, size)}
-                                    width={size}
-                                    height={size}
-                                    alt={`MC monogram, ${logoVariant} version, ${size} by ${size} pixels`}
-                                    className="shrink-0"
-                                />
-                                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                                    {size}×{size}
-                                </span>
-                                <div className="flex gap-1">
-                                    {(['svg', 'png', 'jpeg'] as LogoFormat[]).map(format => (
-                                        <button
-                                            key={format}
-                                            type="button"
-                                            onClick={() => downloadLogo(logoVariant, size, format)}
-                                            title={`Download ${size}px ${logoVariant} logo as ${format === 'jpeg' ? 'JPG' : format.toUpperCase()}`}
-                                            className="rounded-md border border-border/40 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-border hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                        >
-                                            {format === 'jpeg' ? 'jpg' : format}
-                                        </button>
-                                    ))}
-                                </div>
+                    {/* One column per variant: hero above its own size ramp, so each
+                        family reads top to bottom and the two sit side by side. */}
+                    <div className="grid gap-10 lg:grid-cols-2">
+                        {(['dark', 'light'] as LogoVariant[]).map(variant => (
+                            <div key={variant} className="space-y-6">
+                                <LogoHero variant={variant} />
+                                <LogoSizeRamp variant={variant} />
                             </div>
                         ))}
                     </div>
 
-                    <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-border/30 pt-6">
-                        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                            Larger exports
-                        </span>
-                        {LOGO_EXPORT_ONLY_SIZES.map(size => (
-                            <div key={size} className="flex items-center gap-2">
-                                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
-                                    {size}×{size}
-                                </span>
-                                <div className="flex gap-1">
-                                    {(['svg', 'png', 'jpeg'] as LogoFormat[]).map(format => (
-                                        <button
-                                            key={format}
-                                            type="button"
-                                            onClick={() => downloadLogo(logoVariant, size, format)}
-                                            title={`Download ${size}px ${logoVariant} logo as ${format === 'jpeg' ? 'JPG' : format.toUpperCase()}`}
-                                            className="rounded-md border border-border/40 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-border hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                        >
-                                            {format === 'jpeg' ? 'jpg' : format}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
+                    <div className="mt-8 flex flex-wrap items-center gap-4 border-t border-border/30 pt-6">
+                        <p className="text-xs text-muted-foreground/70">
+                            Ramps are shown at actual size. Every download is generated from the same
+                            source as the mark you see.
+                        </p>
                         <Button className="ml-auto rounded-full px-6 transition-all hover:scale-105" variant="secondary" asChild>
                             <a href="/icon.svg" download="mncoleman-logo.svg">
                                 <Download className="mr-2 h-4 w-4" />
@@ -1178,6 +1256,8 @@ export default function BrandKitClient() {
                         </Button>
                     </div>
                 </CardContent>
+                    </div>
+                </div>
             </Card>
 
             <Tabs

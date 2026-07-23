@@ -346,10 +346,20 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  /* Shrink to the text so the frosted pill hugs the name instead of banding the
+     whole column — the names sit straight on the WebGL backdrop, where the
+     bright streaks of Dark Veil cut straight through them. */
+  align-self: center;
+  width: auto;
+  max-width: 100%;
+  padding: 3px 12px;
+  border-radius: 9999px;
   gap: 1px;
   border: 0;
-  background: transparent;
+  /* No `background` here on purpose: this rule ships after Tailwind's utilities,
+     so declaring one would beat the element's own bg-background/40. Background and
+     blur both live on the element — a raw backdrop-filter in this file gets
+     dropped by the CSS pipeline anyway. */
   cursor: pointer;
   transform-origin: center center;
   will-change: transform, opacity;

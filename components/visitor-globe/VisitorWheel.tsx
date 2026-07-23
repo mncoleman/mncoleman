@@ -183,7 +183,14 @@ export default function VisitorWheel({ pins, focusedId, onSelect, className }: P
                     <button
                         key={key}
                         type="button"
-                        className={cn('vg-wheel-item', p.id === focusedId && 'vg-wheel-item--focused')}
+                        // The frosted pill is a Tailwind utility, not part of
+                        // .vg-wheel-item: a raw `backdrop-filter` in globals.css gets
+                        // dropped by the CSS pipeline, while `backdrop-blur-*` (which
+                        // compiles to a var-driven backdrop-filter) survives.
+                        className={cn(
+                            'vg-wheel-item bg-background/40 backdrop-blur-md',
+                            p.id === focusedId && 'vg-wheel-item--focused'
+                        )}
                         style={{ height: ITEM_H, flex: '0 0 auto' }}
                         onClick={() => onSelect(p.id)}
                         title={p.place_label}
