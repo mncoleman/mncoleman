@@ -326,6 +326,9 @@ const ScrollStack: React.FC<ScrollStackProps> = ({
 
   return (
     <div
+      // In container mode this element runs its own Lenis instance — the
+      // site-wide one has to keep its hands off it.
+      data-lenis-prevent={!useWindowScroll || undefined}
       className={`relative w-full h-full overflow-y-auto overflow-x-visible ${className}`.trim()}
       ref={scrollerRef}
       style={{

@@ -407,3 +407,59 @@
     animation: none;
   }
 }
+
+/* ── Scroll settings: hairline slider ──
+   The visible track is drawn by the wrapper (see ScrollSettings) so it can stay
+   1px tall while the input keeps a comfortable 24px hit area. The input itself
+   is transparent apart from its thumb: a filled dot inside a hairline ring, the
+   same 1:4 ratio as the custom cursor. */
+.hairline-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 100%;
+  background: transparent;
+  cursor: pointer;
+  margin: 0;
+}
+.hairline-slider:focus {
+  outline: none;
+}
+.hairline-slider::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+}
+.hairline-slider::-moz-range-track {
+  height: 100%;
+  background: transparent;
+}
+.hairline-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 0; /* runnable-track is full height, so the thumb self-centres */
+  border-radius: 9999px;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--foreground) / 0.5);
+  box-shadow: inset 0 0 0 3.5px hsl(var(--background)), inset 0 0 0 7px hsl(var(--foreground) / 0.8);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.hairline-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--foreground) / 0.5);
+  box-shadow: inset 0 0 0 3.5px hsl(var(--background)), inset 0 0 0 7px hsl(var(--foreground) / 0.8);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.hairline-slider:hover::-webkit-slider-thumb,
+.hairline-slider:focus-visible::-webkit-slider-thumb {
+  border-color: hsl(var(--foreground));
+  transform: scale(1.12);
+}
+.hairline-slider:hover::-moz-range-thumb,
+.hairline-slider:focus-visible::-moz-range-thumb {
+  border-color: hsl(var(--foreground));
+  transform: scale(1.12);
+}

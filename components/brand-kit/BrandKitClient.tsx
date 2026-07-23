@@ -175,6 +175,9 @@ function ScrollStackPreview() {
             <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
             <div
                 ref={scrollRef}
+                // Its own scroll drives the preview's stack progress — the
+                // site-wide Lenis must not intercept the wheel here.
+                data-lenis-prevent
                 className="h-full no-scrollbar"
                 style={noScrollbarStyle}
             >
@@ -283,6 +286,8 @@ function ScrollFloatPreview() {
     return (
         <div
             ref={containerRef}
+            // Scrolling this container is what triggers the ScrollFloat preview.
+            data-lenis-prevent
             className="h-full no-scrollbar"
             style={{
                 overflowY: 'scroll',
@@ -640,7 +645,7 @@ function PromptingSection({ copyToClipboard, copiedColor }: { copyToClipboard: (
                         {expandedPrompt === prompt.id && (
                             <CardContent>
                                 <div className="relative">
-                                    <pre className="p-4 rounded-xl bg-muted/50 border border-border/40 text-xs leading-relaxed whitespace-pre-wrap break-words max-h-[500px] overflow-y-auto font-mono">
+                                    <pre data-lenis-prevent className="p-4 rounded-xl bg-muted/50 border border-border/40 text-xs leading-relaxed whitespace-pre-wrap break-words max-h-[500px] overflow-y-auto font-mono">
                                         {prompt.content}
                                     </pre>
                                 </div>

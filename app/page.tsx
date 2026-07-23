@@ -20,6 +20,7 @@ import { HomeBackdrop } from '@/components/home-backdrop';
 import { DeferUntilVisible } from '@/components/defer';
 import { TransitionLink } from '@/components/transition-link';
 import { usePageTransition } from '@/components/transition-provider';
+import { useSmoothScrollTo } from '@/components/smooth-scroll';
 
 // Heavy, purely-decorative libraries (OGL for Dark Veil) load after first paint
 // and stay off the homepage's initial JS chunk. The content cards remain
@@ -137,6 +138,9 @@ function CardContent({ card }: { card: (typeof bentoCards)[number] }) {
 
 // ── Desktop: 3D glass cubes in bento grid with idle pulse ──
 function DesktopGrid() {
+  // Native smooth scroll fights Lenis, so the cue routes through it instead
+  // (falls back to scrollIntoView when Lenis is off — reduced motion).
+  const smoothScrollTo = useSmoothScrollTo();
   // Pulse sweeps left-to-right by column (0, 1, 2)
   const [pulseCol, setPulseCol] = useState(-1);
   const lastInteraction = useRef(Date.now());
@@ -198,7 +202,7 @@ function DesktopGrid() {
       {/* Gentle scroll cue hinting at the visitor globe below the cards. */}
       <button
         type="button"
-        onClick={() => document.getElementById('visitor-globe')?.scrollIntoView({ behavior: 'smooth' })}
+        onClick={() => smoothScrollTo('#visitor-globe')}
         aria-label="Scroll down to the visitor globe"
         className="vg-scroll-cue absolute bottom-8 left-1/2 z-10 text-muted-foreground/50 hover:text-foreground transition-colors"
       >

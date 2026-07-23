@@ -196,8 +196,10 @@ export function Search({ items }: SearchProps) {
         setIsOpen(false);
     };
 
+    // data-lenis-prevent keeps the site-wide Lenis off the modal's wheel events,
+    // so the results list scrolls instead of the page behind it.
     const searchModal = (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4 overflow-y-auto">
+        <div data-lenis-prevent className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4 overflow-y-auto">
             {/* Backdrop */}
             <div
                 className="fixed inset-0 bg-black/60 transition-opacity"

@@ -13,6 +13,8 @@ import { KeyBindings } from '@/components/key-bindings';
 import { Search, SearchItem } from '@/components/search';
 import { NavLogo } from '@/components/nav-logo';
 import { TransitionProvider } from '@/components/transition-provider';
+import { SmoothScroll } from '@/components/smooth-scroll';
+import { ScrollSettings } from '@/components/scroll-settings';
 import { FooterButtons } from '@/components/footer-buttons';
 import { Analytics } from '@/components/analytics';
 import { FancyCursorToggle } from '@/components/fancy-cursor-toggle';
@@ -108,6 +110,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <CursorPreferenceProvider>
+          <SmoothScroll>
           <ThemeWrapper>
             <TransitionProvider>
             <div className="min-h-screen flex flex-col">
@@ -198,8 +201,11 @@ export default async function RootLayout({
             {/* Floating, bottom-right. Desktop only: the custom cursor never mounts on
                 touch, so on a phone this would control nothing. */}
             <FancyCursorToggle />
+            {/* Lenis controls, parked immediately left of the cursor toggle. */}
+            <ScrollSettings />
             </TransitionProvider>
           </ThemeWrapper>
+          </SmoothScroll>
           </CursorPreferenceProvider>
         </ThemeProvider>
         {process.env.NEXT_PUBLIC_GA_ID && (

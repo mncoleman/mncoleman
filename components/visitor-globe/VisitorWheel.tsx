@@ -167,6 +167,9 @@ export default function VisitorWheel({ pins, focusedId, onSelect, className }: P
         <div className={className}>
             <div
                 ref={scrollRef}
+                // The wheel drives its own infinite scroll off native wheel
+                // events — the site-wide Lenis would swallow them.
+                data-lenis-prevent
                 className="vg-wheel"
                 style={{
                     height: CONTAINER_H,
