@@ -15,9 +15,10 @@ export default function BrandKit() {
                 text sitting invisibly on a dark backdrop. */}
             <HomeBackdrop />
 
-            {/* Full-bleed: the tab strip is seven columns wide and the Effects panes
-                are side-by-side previews — a 5xl column squeezed both. */}
-            <main className="min-h-screen py-16 px-4 sm:px-8 relative z-10">
+            {/* Near-full-bleed: the tab strip is seven columns wide and the Effects
+                panes are side-by-side previews, so a 5xl column squeezed both — but
+                the content still wants air at the edges rather than running to them. */}
+            <main className="min-h-screen py-16 px-6 sm:px-10 lg:px-16 xl:px-24 relative z-10">
                 <BrandKitClient />
             </main>
         </>

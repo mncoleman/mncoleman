@@ -768,8 +768,81 @@ function PromptingSection({ copyToClipboard, copiedColor }: { copyToClipboard: (
 
 const TAB_SLUGS = ['colors', 'type', 'system', 'ui-kit', 'effects', 'prompting', 'globe'] as const;
 
+// Shown at true pixel size, so the ramp stops at 256 — a 512 tile is taller than
+// the card it sits in. The bigger exports live in their own row below.
+const LOGO_SIZES = [16, 32, 64, 128, 256];
+const LOGO_EXPORT_ONLY_SIZES = [512, 1024];
+type LogoVariant = 'dark' | 'light';
+type LogoFormat = 'svg' | 'png' | 'jpeg';
+
+/**
+ * The single source of truth for the mark: the size ramp on this page and every
+ * download are rendered from this same string, so what you see is what you get.
+ *
+ * `width`/`height` are set explicitly, not just `viewBox` — an <img> fed an SVG
+ * with only a viewBox rasterises at the browser's default 300x150 (or nothing),
+ * which is how you end up with blank PNGs.
+ */
+function logoSvg(variant: LogoVariant, size: number) {
+    const bg = variant === 'dark' ? '#18181b' : '#ffffff';
+    const fg = variant === 'dark' ? '#ffffff' : '#18181b';
+    // The light mark is white on white: without a hairline it disappears on a
+    // light page, which is exactly where it gets used.
+    const hairline =
+        variant === 'light'
+            ? '<rect x="0.5" y="0.5" width="99" height="99" rx="19.5" fill="none" stroke="rgba(0,0,0,0.1)"/>'
+            : '';
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="20" fill="${bg}"/>${hairline}
+  <text x="50" y="50" font-family="system-ui, -apple-system, sans-serif" font-size="42" font-weight="700" fill="${fg}" text-anchor="middle" dominant-baseline="central">MC</text>
+</svg>`;
+}
+
+const logoDataUrl = (variant: LogoVariant, size: number) =>
+    `data:image/svg+xml;charset=utf-8,${encodeURIComponent(logoSvg(variant, size))}`;
+
+function saveBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+async function downloadLogo(variant: LogoVariant, size: number, format: LogoFormat) {
+    const svg = logoSvg(variant, size);
+    const name = `mncoleman-logo-${variant}-${size}`;
+    if (format === 'svg') {
+        return saveBlob(new Blob([svg], { type: 'image/svg+xml' }), `${name}.svg`);
+    }
+
+    const img = new Image();
+    img.src = logoDataUrl(variant, size);
+    await img.decode();
+
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    // JPG has no alpha, so the rounded corners would rasterise black. PNG and SVG
+    // keep them transparent, which is what you want for a rounded mark.
+    if (format === 'jpeg') {
+        ctx.fillStyle = variant === 'dark' ? '#18181b' : '#ffffff';
+        ctx.fillRect(0, 0, size, size);
+    }
+    ctx.drawImage(img, 0, 0, size, size);
+    canvas.toBlob(
+        blob => blob && saveBlob(blob, `${name}.${format === 'jpeg' ? 'jpg' : 'png'}`),
+        `image/${format}`,
+        0.95
+    );
+}
+
 export default function BrandKitClient() {
     const [tab, setTab] = useState<string>('colors');
+    const [logoVariant, setLogoVariant] = useState<LogoVariant>('dark');
     const tabsRef = useRef<HTMLDivElement>(null);
     const lenis = useLenis();
     const [floorHeight, setFloorHeight] = useState<number | null>(null);
@@ -792,9 +865,10 @@ export default function BrandKitClient() {
         const oldDocH = document.documentElement.scrollHeight;
 
         // Switching to a shorter section shrinks the document, and the browser
-        // clamps scrollY the instant it does — that snap is the jerk. Hold the
-        // outgoing height as a floor so nothing clamps, glide down to where the
-        // scroll position is legal again, then drop the floor.
+        // clamps scrollY the instant it does — that snap is the jerk. The panels'
+        // min-h-[80vh] means this rarely bites now; when it still does, hold the
+        // outgoing height as a floor so nothing clamps, glide to a sane position,
+        // then drop the floor.
         if (el) setFloorHeight(oldTabsH);
         setTab(next);
         history.replaceState(null, '', `#${next}`);
@@ -809,12 +883,20 @@ export default function BrandKitClient() {
             // top margin without assuming which utility class set it.
             const newTabsH = panel.offsetTop - list.offsetTop + panel.offsetHeight;
             const newMax = Math.max(0, oldDocH - oldTabsH + newTabsH - window.innerHeight);
+            // Nothing will clamp — stay exactly where you are. This is the common
+            // case now that the panels carry a min-height.
             if (window.scrollY <= newMax) return release();
 
+            // Something has to move. Land on the tab strip rather than on the new
+            // bottom of the page: being dumped at the top of the document every
+            // time you change section is worse than the snap we set out to fix.
+            const stripTop = list.getBoundingClientRect().top + window.scrollY - 96;
+            const target = Math.min(Math.max(0, stripTop), newMax);
+
             if (lenis) {
-                lenis.scrollTo(newMax, { duration: 0.6, onComplete: release });
+                lenis.scrollTo(target, { duration: 0.6, onComplete: release });
             } else {
-                window.scrollTo({ top: newMax, behavior: 'smooth' });
+                window.scrollTo({ top: target, behavior: 'smooth' });
                 window.setTimeout(release, 700);
             }
         });
@@ -1004,11 +1086,94 @@ export default function BrandKitClient() {
                             </div>
                         </div>
                     </div>
-                    <div className="mt-8 flex flex-wrap gap-4">
-                        <Button className="rounded-full px-6 transition-all hover:scale-105" variant="secondary" asChild>
+                    {/* Size ramp. Every tile is the real mark at its real pixel size,
+                        rendered from the same string the downloads serialise, so the
+                        thing you pick is the thing you get. */}
+                    <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Sizes</h3>
+                            <p className="mt-1 text-xs text-muted-foreground/70">
+                                Shown at actual size. Pick a format to download.
+                            </p>
+                        </div>
+                        <div className="inline-flex rounded-full border border-border/40 bg-muted/40 p-1">
+                            {(['dark', 'light'] as LogoVariant[]).map(v => (
+                                <button
+                                    key={v}
+                                    type="button"
+                                    onClick={() => setLogoVariant(v)}
+                                    aria-pressed={logoVariant === v}
+                                    className={`rounded-full px-4 py-1.5 text-xs capitalize transition-colors ${
+                                        logoVariant === v
+                                            ? 'bg-background text-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                >
+                                    {v}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="mt-6 flex flex-wrap items-end gap-8">
+                        {LOGO_SIZES.map(size => (
+                            <div key={size} className="flex flex-col items-center gap-3">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src={logoDataUrl(logoVariant, size)}
+                                    width={size}
+                                    height={size}
+                                    alt={`MC monogram, ${logoVariant} version, ${size} by ${size} pixels`}
+                                    className="shrink-0"
+                                />
+                                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                                    {size}×{size}
+                                </span>
+                                <div className="flex gap-1">
+                                    {(['svg', 'png', 'jpeg'] as LogoFormat[]).map(format => (
+                                        <button
+                                            key={format}
+                                            type="button"
+                                            onClick={() => downloadLogo(logoVariant, size, format)}
+                                            title={`Download ${size}px ${logoVariant} logo as ${format === 'jpeg' ? 'JPG' : format.toUpperCase()}`}
+                                            className="rounded-md border border-border/40 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-border hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                        >
+                                            {format === 'jpeg' ? 'jpg' : format}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-border/30 pt-6">
+                        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                            Larger exports
+                        </span>
+                        {LOGO_EXPORT_ONLY_SIZES.map(size => (
+                            <div key={size} className="flex items-center gap-2">
+                                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
+                                    {size}×{size}
+                                </span>
+                                <div className="flex gap-1">
+                                    {(['svg', 'png', 'jpeg'] as LogoFormat[]).map(format => (
+                                        <button
+                                            key={format}
+                                            type="button"
+                                            onClick={() => downloadLogo(logoVariant, size, format)}
+                                            title={`Download ${size}px ${logoVariant} logo as ${format === 'jpeg' ? 'JPG' : format.toUpperCase()}`}
+                                            className="rounded-md border border-border/40 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-border hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                        >
+                                            {format === 'jpeg' ? 'jpg' : format}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                        <Button className="ml-auto rounded-full px-6 transition-all hover:scale-105" variant="secondary" asChild>
                             <a href="/icon.svg" download="mncoleman-logo.svg">
                                 <Download className="mr-2 h-4 w-4" />
-                                Download SVG
+                                Source SVG
                             </a>
                         </Button>
                     </div>
@@ -1053,7 +1218,7 @@ export default function BrandKitClient() {
                     </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="colors" className="mt-8">
+                <TabsContent value="colors" className="mt-8 min-h-[80vh]">
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                         {colors.map((color) => (
                             <div key={color.name} className="group relative">
@@ -1076,7 +1241,7 @@ export default function BrandKitClient() {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="type" className="mt-8">
+                <TabsContent value="type" className="mt-8 min-h-[80vh]">
                     <div className="space-y-6">
                         <Card className="border-border/40 bg-background/60 backdrop-blur-xl">
                             <CardHeader>
@@ -1116,7 +1281,7 @@ export default function BrandKitClient() {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="system" className="mt-8">
+                <TabsContent value="system" className="mt-8 min-h-[80vh]">
                     <div className="grid md:grid-cols-2 gap-8">
                         <Card className="border-border/40 bg-background/60 backdrop-blur-xl">
                             <CardHeader>
@@ -1148,7 +1313,7 @@ export default function BrandKitClient() {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="ui-kit" className="mt-8">
+                <TabsContent value="ui-kit" className="mt-8 min-h-[80vh]">
                     <div className="grid md:grid-cols-2 gap-6">
                         <Card className="border-border/40 bg-background/60 backdrop-blur-xl">
                             <CardHeader>
@@ -1195,7 +1360,7 @@ export default function BrandKitClient() {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="effects" className="mt-8">
+                <TabsContent value="effects" className="mt-8 min-h-[80vh]">
                     <div className="grid md:grid-cols-2 gap-6">
                         <Card className="border-border/40 bg-background/60 backdrop-blur-xl">
                             <CardHeader>
@@ -1386,11 +1551,11 @@ export default function BrandKitClient() {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="prompting" className="mt-8">
+                <TabsContent value="prompting" className="mt-8 min-h-[80vh]">
                     <PromptingSection copyToClipboard={copyToClipboard} copiedColor={copiedColor} />
                 </TabsContent>
 
-                <TabsContent value="globe" className="mt-8">
+                <TabsContent value="globe" className="mt-8 min-h-[80vh]">
                     <GlobeShowcase copyToClipboard={copyToClipboard} copiedColor={copiedColor} />
                 </TabsContent>
             </Tabs>
