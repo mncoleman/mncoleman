@@ -1004,85 +1004,62 @@ export default function BrandKitClient() {
         return () => window.removeEventListener('hashchange', fromHash);
     }, []);
 
+    /**
+     * Changing section must not move the page. Full stop — no scrolling here at
+     * any point, not even an eased one.
+     *
+     * The page can only move if the document gets SHORTER than the current scroll
+     * position, because the browser clamps scrollY the instant that happens. So
+     * the tab container keeps a floor equal to the tallest section seen this
+     * session and never gives it back: the document can grow, never shrink, and
+     * there is nothing left to clamp. The cost is some empty space under a short
+     * section, which beats being thrown up the page.
+     *
+     * `holdPosition` is the backstop for anything else that might scroll us —
+     * a router sync, a stray restore — and bows out the moment the reader
+     * touches the wheel.
+     */
     const handleTabChange = (next: string) => {
         const el = tabsRef.current;
-        const oldTabsH = el?.getBoundingClientRect().height ?? 0;
-        const oldDocH = document.documentElement.scrollHeight;
+        const startY = window.scrollY;
+        const outgoingH = el?.getBoundingClientRect().height ?? 0;
 
-        // Switching to a shorter section shrinks the document, and the browser
-        // clamps scrollY the instant it does — that snap is the jerk. The panels'
-        // min-h-[80vh] means this rarely bites now; when it still does, hold the
-        // outgoing height as a floor so nothing clamps, glide to a sane position,
-        // then drop the floor.
-        if (el) setFloorHeight(oldTabsH);
+        setFloorHeight(prev => Math.max(prev ?? 0, outgoingH));
         setTab(next);
         history.replaceState(null, '', `#${next}`);
 
-        // Anything that moves the page during a tab change is a bug, whoever
-        // caused it — the router syncing the new hash, a stray scroll restore,
-        // the browser clamping. If the old position is still reachable, put it
-        // back and keep watching for a few frames.
-        const startY = window.scrollY;
-        const holdPosition = (limit: number) => {
-            let frames = 0;
-            let done = false;
-            // Stop the moment the reader takes over, or we'd fight their wheel
-            // for half a second after every tab click.
-            const stop = () => {
-                done = true;
-                window.removeEventListener('wheel', stop);
-                window.removeEventListener('touchstart', stop);
-                window.removeEventListener('keydown', stop);
-            };
-            window.addEventListener('wheel', stop, { passive: true });
-            window.addEventListener('touchstart', stop, { passive: true });
-            window.addEventListener('keydown', stop);
+        let frames = 0;
+        let done = false;
+        const stop = () => {
+            done = true;
+            window.removeEventListener('wheel', stop);
+            window.removeEventListener('touchstart', stop);
+            window.removeEventListener('keydown', stop);
+        };
+        window.addEventListener('wheel', stop, { passive: true });
+        window.addEventListener('touchstart', stop, { passive: true });
+        window.addEventListener('keydown', stop);
 
-            const tick = () => {
-                if (done || frames++ > 30) return stop();
+        const tick = () => {
+            if (done || frames++ > 40) return stop();
+            // Grow the floor to fit the incoming section, so the next switch away
+            // from it can't shrink the page either.
+            const list = el?.querySelector('[role="tablist"]') as HTMLElement | null;
+            const panel = el?.querySelector('[role="tabpanel"]') as HTMLElement | null;
+            if (list && panel) {
+                const naturalH = panel.offsetTop - list.offsetTop + panel.offsetHeight;
+                setFloorHeight(prev => (naturalH > (prev ?? 0) ? naturalH : prev));
+            }
+            if (window.scrollY !== startY) {
                 const max = document.documentElement.scrollHeight - window.innerHeight;
-                if (window.scrollY !== startY && startY <= Math.min(limit, max)) {
+                if (startY <= max) {
                     if (lenis) lenis.scrollTo(startY, { immediate: true, force: true });
                     else window.scrollTo(0, startY);
                 }
-                requestAnimationFrame(tick);
-            };
+            }
             requestAnimationFrame(tick);
         };
-
-        const release = () => setFloorHeight(null);
-        requestAnimationFrame(() => {
-            const list = el?.querySelector('[role="tablist"]') as HTMLElement | null;
-            const panel = el?.querySelector('[role="tabpanel"]') as HTMLElement | null;
-            if (!list || !panel) return release();
-
-            // offsetTop delta rather than a hardcoded 32: it picks up the panel's
-            // top margin without assuming which utility class set it.
-            const newTabsH = panel.offsetTop - list.offsetTop + panel.offsetHeight;
-            const newMax = Math.max(0, oldDocH - oldTabsH + newTabsH - window.innerHeight);
-            // Nothing will clamp — stay exactly where you are. This is the common
-            // case now that the panels carry a min-height.
-            if (startY <= newMax) {
-                holdPosition(newMax);
-                return release();
-            }
-
-            // Something has to move. Land on the tab strip rather than on the new
-            // bottom of the page: being dumped at the top of the document every
-            // time you change section is worse than the snap we set out to fix.
-            const stripTop = list.getBoundingClientRect().top + window.scrollY - 96;
-            const target = Math.min(Math.max(0, stripTop), newMax);
-
-            if (lenis) {
-                lenis.scrollTo(target, { duration: 0.6, onComplete: release });
-            } else {
-                window.scrollTo({ top: target, behavior: 'smooth' });
-                window.setTimeout(release, 700);
-            }
-        });
-        // Belt and braces: a pinned floor is far worse than a missed animation,
-        // so drop it regardless of whether the callbacks above ever fire.
-        window.setTimeout(release, 1500);
+        requestAnimationFrame(tick);
     };
 
     const [copiedColor, setCopiedColor] = useState<string | null>(null);
