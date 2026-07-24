@@ -184,8 +184,16 @@ function LenisRoot({ prefs, children }: { prefs: ScrollPrefs; children: ReactNod
 function ScrollReset() {
   const pathname = usePathname();
   const lenis = useLenis();
+  // The effect also re-runs when `lenis` first becomes available, and Next syncs
+  // `history.replaceState` into the router — so a page that writes a hash on
+  // click (the brand kit's tabs) can re-run this with the path unchanged. Reset
+  // only on a real path change, or those turn into a yank back to the top.
+  const lastPath = useRef<string | null>(null);
 
   useEffect(() => {
+    const previous = lastPath.current;
+    lastPath.current = pathname;
+    if (previous === null || previous === pathname) return;
     lenis?.scrollTo(0, { immediate: true, force: true });
   }, [pathname, lenis]);
 

@@ -1018,6 +1018,38 @@ export default function BrandKitClient() {
         setTab(next);
         history.replaceState(null, '', `#${next}`);
 
+        // Anything that moves the page during a tab change is a bug, whoever
+        // caused it — the router syncing the new hash, a stray scroll restore,
+        // the browser clamping. If the old position is still reachable, put it
+        // back and keep watching for a few frames.
+        const startY = window.scrollY;
+        const holdPosition = (limit: number) => {
+            let frames = 0;
+            let done = false;
+            // Stop the moment the reader takes over, or we'd fight their wheel
+            // for half a second after every tab click.
+            const stop = () => {
+                done = true;
+                window.removeEventListener('wheel', stop);
+                window.removeEventListener('touchstart', stop);
+                window.removeEventListener('keydown', stop);
+            };
+            window.addEventListener('wheel', stop, { passive: true });
+            window.addEventListener('touchstart', stop, { passive: true });
+            window.addEventListener('keydown', stop);
+
+            const tick = () => {
+                if (done || frames++ > 30) return stop();
+                const max = document.documentElement.scrollHeight - window.innerHeight;
+                if (window.scrollY !== startY && startY <= Math.min(limit, max)) {
+                    if (lenis) lenis.scrollTo(startY, { immediate: true, force: true });
+                    else window.scrollTo(0, startY);
+                }
+                requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        };
+
         const release = () => setFloorHeight(null);
         requestAnimationFrame(() => {
             const list = el?.querySelector('[role="tablist"]') as HTMLElement | null;
@@ -1030,7 +1062,10 @@ export default function BrandKitClient() {
             const newMax = Math.max(0, oldDocH - oldTabsH + newTabsH - window.innerHeight);
             // Nothing will clamp — stay exactly where you are. This is the common
             // case now that the panels carry a min-height.
-            if (window.scrollY <= newMax) return release();
+            if (startY <= newMax) {
+                holdPosition(newMax);
+                return release();
+            }
 
             // Something has to move. Land on the tab strip rather than on the new
             // bottom of the page: being dumped at the top of the document every
