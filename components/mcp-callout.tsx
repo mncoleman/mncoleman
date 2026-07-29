@@ -104,7 +104,13 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
     const [copied, setCopied] = useState(false);
     const [open, setOpen] = useState(false);
     const [tab, setTab] = useState<(typeof TABS)[number]['id']>('claude-code');
-    /** Per-character vector to the copy button. Non-null only while the URL is in flight. */
+    /**
+     * idle → absorb (characters fly into the copy button) → type (they come back
+     * one keystroke at a time, left to right) → idle.
+     */
+    const [phase, setPhase] = useState<'idle' | 'absorb' | 'type'>('idle');
+    const [typed, setTyped] = useState(CHARS.length);
+    /** Per-character vector to the copy button. Only meaningful during `absorb`. */
     const [flight, setFlight] = useState<{ x: number; y: number }[] | null>(null);
 
     const charRefs = useRef<(HTMLSpanElement | null)[]>([]);
@@ -124,7 +130,10 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
         const button = buttonRef.current;
         if (!reduced && button) {
             const b = button.getBoundingClientRect();
-            const tx = b.left + b.width / 2;
+            // Aim at the copy icon, not the middle of the button: with the "Copy"
+            // label the box centre sits in empty space and the characters look like
+            // they land beside the icon rather than in it.
+            const tx = b.left + Math.min(20, b.width / 2);
             const ty = b.top + b.height / 2;
             setFlight(
                 charRefs.current.map(el => {
@@ -133,12 +142,34 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
                     return { x: tx - (r.left + r.width / 2), y: ty - (r.top + r.height / 2) };
                 }),
             );
-            // Releasing `flight` animates every character back out of the button.
-            timers.current.push(setTimeout(() => setFlight(null), 620));
+            setTyped(0);
+            setPhase('absorb');
+            // Once the URL is inside the button, type it back out.
+            timers.current.push(setTimeout(() => setPhase('type'), 620));
         }
 
         timers.current.push(setTimeout(() => setCopied(false), 2200));
     }, []);
+
+    // Typewriter: one character per tick until the URL is whole again.
+    useEffect(() => {
+        if (phase !== 'type') return;
+        const id = setInterval(() => {
+            setTyped(n => {
+                if (n >= CHARS.length) return n;
+                return n + 1;
+            });
+        }, 26);
+        return () => clearInterval(id);
+    }, [phase]);
+
+    // Hold at the end of the line for a beat so the caret is seen finishing the URL,
+    // rather than vanishing on the same frame as the final character.
+    useEffect(() => {
+        if (phase !== 'type' || typed < CHARS.length) return;
+        const id = setTimeout(() => setPhase('idle'), 260);
+        return () => clearTimeout(id);
+    }, [phase, typed]);
 
     // Dismiss the instructions on outside click / Escape.
     useEffect(() => {
@@ -159,10 +190,21 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
 
     const active = TABS.find(t => t.id === tab) ?? TABS[0];
 
+    const next = charRefs.current[typed];
+    const last = charRefs.current[CHARS.length - 1];
+    const caretLeft = next
+        ? next.offsetLeft
+        : last
+            ? last.offsetLeft + last.offsetWidth
+            : 0;
+
+    // The root hugs its content rather than matching the bento grid's width — the row
+    // is a URL and two buttons, and stretching it to 5xl left a lake of dead space
+    // between the URL and the copy button.
     return (
-        <div id={anchorId} ref={rootRef} className="relative w-full mb-5 scroll-mt-24">
+        <div id={anchorId} ref={rootRef} className="relative mx-auto w-fit max-w-full scroll-mt-24">
             <div
-                className="flex items-center gap-3 rounded-xl border border-border/40 px-3 py-2.5
+                className="flex items-center gap-2 rounded-xl border border-border/40 px-3 py-2.5
                     bg-background/40 backdrop-blur-xl"
                 style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}
             >
@@ -175,8 +217,9 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
                     Browse this site from your AI:
                 </span>
 
-                {/* The URL, one <span> per character so it can be pulled into the button. */}
-                <code className="flex-1 min-w-0 overflow-hidden whitespace-nowrap font-mono text-xs sm:text-sm text-foreground/90">
+                {/* The URL, one <span> per character so it can be pulled into the button
+                    and typed back out. `relative` anchors the typing caret. */}
+                <code className="relative min-w-0 overflow-hidden whitespace-nowrap font-mono text-xs sm:text-sm text-foreground/90 mr-1">
                     {CHARS.map((c, i) => (
                         <motion.span
                             key={i}
@@ -185,28 +228,72 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
                             }}
                             className="inline-block"
                             animate={
-                                flight
-                                    ? { x: flight[i]?.x ?? 0, y: flight[i]?.y ?? 0, scale: 0.15, opacity: 0, rotate: (i % 2 ? 1 : -1) * 25 }
-                                    : { x: 0, y: 0, scale: 1, opacity: 1, rotate: 0 }
+                                phase === 'absorb' && flight
+                                    ? {
+                                        // Keyframes, not a single tween: a plain tween fades the
+                                        // character out linearly, so it is invisible long before it
+                                        // reaches the button and never reads as being swallowed.
+                                        // Here it stays fully opaque until the last moment, pulls
+                                        // back slightly, then rushes in and collapses at the icon.
+                                        x: [0, -(flight[i]?.x ?? 0) * 0.05, (flight[i]?.x ?? 0) * 0.78, flight[i]?.x ?? 0],
+                                        y: [0, -(flight[i]?.y ?? 0) * 0.05 - 2, (flight[i]?.y ?? 0) * 0.82, flight[i]?.y ?? 0],
+                                        scale: [1, 1.06, 0.5, 0.04],
+                                        rotate: [0, 0, (i % 2 ? 1 : -1) * 12, (i % 2 ? 1 : -1) * 28],
+                                        opacity: [1, 1, 1, 0],
+                                    }
+                                    : phase === 'type'
+                                        // Characters land already in place; the reveal IS the animation.
+                                        ? { x: 0, y: 0, scale: 1, rotate: 0, opacity: i < typed ? 1 : 0 }
+                                        : { x: 0, y: 0, scale: 1, rotate: 0, opacity: 1 }
                             }
                             transition={
-                                flight
-                                    ? { duration: 0.42, delay: i * 0.011, ease: [0.4, 0, 0.15, 1] }
-                                    : { duration: 0.3, delay: (CHARS.length - i) * 0.008, ease: [0.2, 0.8, 0.3, 1] }
+                                phase === 'absorb'
+                                    ? {
+                                        duration: 0.5,
+                                        delay: i * 0.012,
+                                        times: [0, 0.22, 0.76, 1],
+                                        ease: ['easeOut', 'easeIn', 'easeIn'],
+                                    }
+                                    : { duration: 0 }
                             }
                         >
                             {c === ' ' ? ' ' : c}
                         </motion.span>
                     ))}
+
+                    {/* Typing caret, parked at the left edge of the next character. */}
+                    <AnimatePresence>
+                        {phase === 'type' && (
+                            <motion.span
+                                aria-hidden
+                                className="absolute top-1/2 w-[1.5px] bg-primary"
+                                style={{
+                                    height: '1.1em',
+                                    translateY: '-50%',
+                                    // Sits at the left edge of the next character, and past the
+                                    // right edge of the last one once the URL is complete — so the
+                                    // caret visibly finishes the line instead of stopping short.
+                                    left: caretLeft,
+                                }}
+                                initial={{ opacity: 1 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.18 }}
+                            />
+                        )}
+                    </AnimatePresence>
                 </code>
 
-                <button
+                <motion.button
                     ref={buttonRef}
                     type="button"
                     onClick={handleCopy}
                     aria-label={copied ? 'Copied' : 'Copy MCP URL'}
                     className="relative shrink-0 flex items-center gap-1.5 rounded-lg border border-border/50 px-2.5 py-1.5
                         text-xs font-medium bg-background/60 hover:bg-foreground/5 transition-colors"
+                    // The button gulps as the characters arrive.
+                    animate={phase === 'absorb' ? { scale: [1, 1.09, 0.97, 1] } : { scale: 1 }}
+                    transition={phase === 'absorb' ? { duration: 0.55, delay: 0.3, times: [0, 0.4, 0.7, 1] } : { duration: 0.2 }}
                 >
                     {/* Ring that swallows the incoming characters. */}
                     <AnimatePresence>
@@ -217,7 +304,7 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
                                 initial={{ opacity: 0, scale: 0.8 }}
                                 animate={{ opacity: [0, 1, 0], scale: [0.8, 1.35, 1.6] }}
                                 exit={{ opacity: 0 }}
-                                transition={{ duration: 0.9, times: [0, 0.35, 1], delay: 0.28 }}
+                                transition={{ duration: 0.9, times: [0, 0.35, 1], delay: 0.5 }}
                             />
                         )}
                     </AnimatePresence>
@@ -229,7 +316,7 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
                                 initial={{ opacity: 0, scale: 0.6 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.6 }}
-                                transition={{ duration: 0.2, delay: 0.24 }}
+                                transition={{ duration: 0.2, delay: 0.55 }}
                             >
                                 <Check className="h-3.5 w-3.5" />
                                 Copied
@@ -248,7 +335,7 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
                             </motion.span>
                         )}
                     </AnimatePresence>
-                </button>
+                </motion.button>
 
                 <button
                     type="button"
@@ -265,6 +352,9 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
 
             {/* Overlays the grid instead of reflowing it — the bento layout is
                 vertically centred in a 100dvh box and would otherwise shift. */}
+            {/* Positioning lives on this wrapper, not the motion element: motion writes
+                `transform` inline, which would clobber a Tailwind -translate-x-1/2. */}
+            <div className="absolute left-1/2 top-full z-40 mt-2 w-[min(92vw,34rem)] -translate-x-1/2">
             <AnimatePresence>
                 {open && (
                     <motion.div
@@ -272,7 +362,7 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -8, scale: 0.98 }}
                         transition={{ duration: 0.2, ease: 'easeOut' }}
-                        className="absolute left-0 right-0 top-full mt-2 z-40 rounded-xl border border-border/40
+                        className="w-full rounded-xl border border-border/40
                             bg-background/85 backdrop-blur-2xl p-4"
                         style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.28)' }}
                     >
@@ -317,6 +407,7 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
                     </motion.div>
                 )}
             </AnimatePresence>
+            </div>
         </div>
     );
 }

@@ -180,13 +180,20 @@ function DesktopGrid() {
 
   return (
     <div
-      className="home-desktop flex-1 flex items-center justify-center px-4 relative"
+      className="home-desktop flex-1 flex flex-col items-center px-4 relative"
       style={{ minHeight: 'calc(100dvh - 8rem)' }}
       onMouseMove={handleGridInteraction}
       onMouseDown={handleGridInteraction}
     >
-      <div className="w-full max-w-5xl relative z-10">
+      {/* Three rows: the band between the header and the cards, the cards, and a
+          balancing band below. Both bands are flex-1, so the grid stays centred in
+          the viewport and the MCP callout sits in the middle of the gap above it —
+          no measurement, and it degrades to "stacked, nothing overlapping" when the
+          viewport is too short to have spare room to distribute. */}
+      <div className="w-full max-w-5xl flex-1 flex items-center justify-center relative z-20">
         <McpCallout />
+      </div>
+      <div className="w-full max-w-5xl relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 auto-rows-fr">
           {bentoCards.map((card, i) => (
             <GlassCube
@@ -200,6 +207,7 @@ function DesktopGrid() {
           ))}
         </div>
       </div>
+      <div className="flex-1" aria-hidden />
 
       {/* Gentle scroll cue hinting at the visitor globe below the cards. */}
       <button
@@ -232,7 +240,9 @@ function MobileStack() {
       className="home-mobile flex-1 relative px-4 pb-16"
       style={{ paddingTop: `${24}px` }}
     >
-      <McpCallout anchorId="mcp-mobile" />
+      <div className="mb-5">
+        <McpCallout anchorId="mcp-mobile" />
+      </div>
       {bentoCards.map((card, i) => {
         const isSibling = activeCardId !== null && activeCardId !== card.id;
         return (
