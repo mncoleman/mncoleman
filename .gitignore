@@ -38,6 +38,7 @@ next-env.d.ts
 
 # Generated data
 data/search-index.json
+public/data/site-content.json
 
 # IDE
 .vscode/

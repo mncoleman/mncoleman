@@ -16,6 +16,7 @@ import { TransitionProvider } from '@/components/transition-provider';
 import { SmoothScroll } from '@/components/smooth-scroll';
 import { ScrollSettings } from '@/components/scroll-settings';
 import { FooterButtons } from '@/components/footer-buttons';
+import { FooterMcp } from '@/components/footer-mcp';
 import { Analytics } from '@/components/analytics';
 import { FancyCursorToggle } from '@/components/fancy-cursor-toggle';
 import { PullChainToggle } from '@/components/pull-chain-toggle';
@@ -193,6 +194,8 @@ export default async function RootLayout({
                     <Link href="/terms" className="hover:text-foreground underline-offset-4 hover:underline transition-colors">
                       Terms of Service
                     </Link>
+                    <span aria-hidden="true">·</span>
+                    <FooterMcp />
                   </div>
                 </div>
               </footer>

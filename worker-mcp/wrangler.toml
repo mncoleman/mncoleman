@@ -1,0 +1,26 @@
+name = "mncoleman-site-mcp"
+main = "index.ts"
+compatibility_date = "2026-07-01"
+
+# Public MCP server for mncoleman.com. Holds NO secrets — everything it serves is
+# already published on the site, and it authenticates nothing. Deliberately a
+# separate Worker from `worker/` (mncoleman-admin-auth), which does hold secrets
+# and gates every POST behind an Origin allowlist + CSRF header that MCP clients
+# cannot send.
+
+# The apex is proxied through Cloudflare (orange), so this route intercepts
+# /mcp* on the real domain while every other path still falls through to the
+# GitHub Pages origin. That is what makes https://mncoleman.com/mcp possible on
+# an otherwise fully static site.
+routes = [
+  { pattern = "mncoleman.com/mcp", zone_name = "mncoleman.com" },
+  { pattern = "mncoleman.com/mcp/*", zone_name = "mncoleman.com" },
+  { pattern = "mncoleman.com/.well-known/mcp.json", zone_name = "mncoleman.com" },
+]
+
+# Also reachable on workers.dev for smoke-testing before/independently of DNS.
+workers_dev = true
+
+[vars]
+SITE_URL = "https://mncoleman.com"
+ARTIFACTS_SERVICE_URL = "https://artifacts.mncoleman.com"

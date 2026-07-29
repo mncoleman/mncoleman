@@ -17,6 +17,7 @@ import { motion } from 'motion/react';
 import dynamic from 'next/dynamic';
 import GlassCube from '@/components/ui/glass-cube';
 import { HomeBackdrop } from '@/components/home-backdrop';
+import { McpCallout } from '@/components/mcp-callout';
 import { DeferUntilVisible } from '@/components/defer';
 import { TransitionLink } from '@/components/transition-link';
 import { usePageTransition } from '@/components/transition-provider';
@@ -185,6 +186,7 @@ function DesktopGrid() {
       onMouseDown={handleGridInteraction}
     >
       <div className="w-full max-w-5xl relative z-10">
+        <McpCallout />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 auto-rows-fr">
           {bentoCards.map((card, i) => (
             <GlassCube
@@ -230,6 +232,7 @@ function MobileStack() {
       className="home-mobile flex-1 relative px-4 pb-16"
       style={{ paddingTop: `${24}px` }}
     >
+      <McpCallout anchorId="mcp-mobile" />
       {bentoCards.map((card, i) => {
         const isSibling = activeCardId !== null && activeCardId !== card.id;
         return (
