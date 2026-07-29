@@ -148,7 +148,9 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
             timers.current.push(setTimeout(() => setPhase('type'), 620));
         }
 
-        timers.current.push(setTimeout(() => setCopied(false), 2200));
+        // Long enough to be read while the typewriter is still redrawing the URL
+        // beside it (absorb + typing runs ~1.4s on its own).
+        timers.current.push(setTimeout(() => setCopied(false), 3200));
     }, []);
 
     // Typewriter: one character per tick until the URL is whole again.
@@ -339,8 +341,12 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
                         <motion.span
                             className="col-start-1 row-start-1 flex items-center gap-1.5"
                             initial={false}
+                            // No delay on the way out. Holding "Copy" for half a second while
+                            // the characters fly meant the button looked untouched at exactly
+                            // the moment it needed to confirm, and "Copied" then had barely a
+                            // second on screen before reverting — it read as never appearing.
                             animate={{ opacity: copied ? 0 : 1, scale: copied ? 0.6 : 1 }}
-                            transition={{ duration: copied ? 0.15 : 0.2, delay: copied ? 0.5 : 0.1 }}
+                            transition={{ duration: copied ? 0.12 : 0.2, delay: copied ? 0 : 0.15 }}
                         >
                             <Copy className="h-3.5 w-3.5" />
                             <span className="hidden sm:inline">Copy</span>
@@ -349,7 +355,7 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
                             className="col-start-1 row-start-1 flex items-center gap-1.5 text-primary"
                             initial={false}
                             animate={{ opacity: copied ? 1 : 0, scale: copied ? 1 : 0.6 }}
-                            transition={{ duration: 0.2, delay: copied ? 0.55 : 0 }}
+                            transition={{ duration: 0.18, delay: copied ? 0.1 : 0 }}
                         >
                             <Check className="h-3.5 w-3.5" />
                             <span className="hidden sm:inline">Copied</span>
