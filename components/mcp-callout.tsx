@@ -218,8 +218,26 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
                 </span>
 
                 {/* The URL, one <span> per character so it can be pulled into the button
-                    and typed back out. `relative` anchors the typing caret. */}
+                    and typed back out. `relative` anchors both the overlay and the caret. */}
                 <code className="relative min-w-0 overflow-hidden whitespace-nowrap font-mono text-xs sm:text-sm text-foreground/90 mr-1">
+                    {/* Width ruler. The card is `w-fit`, so anything in normal flow here
+                        decides how wide the card is — including, mid-animation, characters
+                        that have been scaled and translated away. This copy of the URL is
+                        never animated, so the card's width is fixed by it and cannot twitch
+                        when the animation runs. It is also the copy that screen readers
+                        announce and that the mouse selects; the animated one below is
+                        decorative, hidden from AT and unselectable.
+                        `text-transparent`, NOT `invisible` — visibility:hidden would drop the
+                        URL out of the accessibility tree entirely, leaving the whole element
+                        unreadable, since the only other copy is aria-hidden. */}
+                    <span className="text-transparent">{MCP_URL}</span>
+
+                    {/* Centred explicitly rather than relying on the abspos box happening to
+                        be exactly one line tall, which is the only reason bare inline content
+                        lined up with the ruler. Measured: glyph centres 0.25px apart. */}
+                    {/* `select-none` so dragging over the URL selects the ruler's clean single
+                        line, not these per-character flex items (which come out one per line). */}
+                    <span className="absolute inset-0 flex items-center select-none" aria-hidden>
                     {CHARS.map((c, i) => (
                         <motion.span
                             key={i}
@@ -282,6 +300,7 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
                             />
                         )}
                     </AnimatePresence>
+                    </span>
                 </code>
 
                 <motion.button
@@ -308,33 +327,34 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
                             />
                         )}
                     </AnimatePresence>
-                    <AnimatePresence mode="wait" initial={false}>
-                        {copied ? (
-                            <motion.span
-                                key="done"
-                                className="flex items-center gap-1.5 text-primary"
-                                initial={{ opacity: 0, scale: 0.6 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.6 }}
-                                transition={{ duration: 0.2, delay: 0.55 }}
-                            >
-                                <Check className="h-3.5 w-3.5" />
-                                Copied
-                            </motion.span>
-                        ) : (
-                            <motion.span
-                                key="copy"
-                                className="flex items-center gap-1.5"
-                                initial={{ opacity: 0, scale: 0.6 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.6 }}
-                                transition={{ duration: 0.15 }}
-                            >
-                                <Copy className="h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Copy</span>
-                            </motion.span>
-                        )}
-                    </AnimatePresence>
+                    {/* Both labels stay mounted, stacked in one grid cell, and cross-fade.
+                        Swapping them with AnimatePresence instead made the button resize
+                        twice per press — "Copied" is wider than "Copy", and `mode="wait"`
+                        leaves the button momentarily empty between the two — and in a
+                        `w-fit` card every one of those changes moves the whole card. */}
+                    <span className="grid place-items-center">
+                        {/* `initial={false}` on both: without it the hidden "Copied" label
+                            mounts at its default scale/opacity and animates down to hidden, so
+                            it flashed on screen during every page load. */}
+                        <motion.span
+                            className="col-start-1 row-start-1 flex items-center gap-1.5"
+                            initial={false}
+                            animate={{ opacity: copied ? 0 : 1, scale: copied ? 0.6 : 1 }}
+                            transition={{ duration: copied ? 0.15 : 0.2, delay: copied ? 0.5 : 0.1 }}
+                        >
+                            <Copy className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Copy</span>
+                        </motion.span>
+                        <motion.span
+                            className="col-start-1 row-start-1 flex items-center gap-1.5 text-primary"
+                            initial={false}
+                            animate={{ opacity: copied ? 1 : 0, scale: copied ? 1 : 0.6 }}
+                            transition={{ duration: 0.2, delay: copied ? 0.55 : 0 }}
+                        >
+                            <Check className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Copied</span>
+                        </motion.span>
+                    </span>
                 </motion.button>
 
                 <button
