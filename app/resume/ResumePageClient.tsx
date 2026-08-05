@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode, useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChevronDown, Globe, Linkedin, Mail, MapPin, Phone } from 'lucide-react';
@@ -36,6 +36,14 @@ function Reveal({
     delay?: number;
     className?: string;
 }) {
+    // Matches `page-entrance.tsx` / `smooth-scroll.tsx`: motion is opt-out here,
+    // not decoration layered over content that would otherwise be missing.
+    const reducedMotion = useReducedMotion();
+
+    if (reducedMotion) {
+        return <div className={className}>{children}</div>;
+    }
+
     return (
         <motion.div
             className={className}
@@ -58,13 +66,21 @@ function Reveal({
  * elements with no text at all for crawlers and screen readers.
  */
 function SectionHeading({ text, delay = 0 }: { text: string; delay?: number }) {
+    const reducedMotion = useReducedMotion();
+
     return (
         <Reveal delay={delay}>
             <h2 className="text-2xl font-bold tracking-tight mb-6 min-h-[2rem]">
-                <span aria-hidden="true">
-                    <TextType text={text} delay={delay * 1000} />
-                </span>
-                <span className="sr-only">{text}</span>
+                {reducedMotion ? (
+                    text
+                ) : (
+                    <>
+                        <span aria-hidden="true">
+                            <TextType text={text} delay={delay * 1000} />
+                        </span>
+                        <span className="sr-only">{text}</span>
+                    </>
+                )}
             </h2>
         </Reveal>
     );
@@ -211,7 +227,13 @@ export function ResumePageClient({ resume }: { resume: ParsedResume }) {
                                                 href={contact.href}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="flex items-center gap-2 text-sm text-zinc-200 hover:text-blue-200 transition-all duration-300 hover:translate-x-0.5"
+                                                // `min-w-0 break-all` because a
+                                                // LinkedIn vanity URL is one
+                                                // unbroken token — flex-wrap can
+                                                // only wrap *between* chips, so
+                                                // without this it runs past the
+                                                // card edge on phones.
+                                                className="flex items-center gap-2 text-sm text-zinc-200 hover:text-blue-200 transition-all duration-300 hover:translate-x-0.5 min-w-0 max-w-full break-all"
                                                 style={{
                                                     opacity: 0,
                                                     animation: `fadeSlideIn 0.5s ease-out ${
@@ -219,7 +241,7 @@ export function ResumePageClient({ resume }: { resume: ParsedResume }) {
                                                     }ms forwards`,
                                                 }}
                                             >
-                                                <Icon className="w-4 h-4" />
+                                                <Icon className="w-4 h-4 shrink-0" />
                                                 {contact.label}
                                             </a>
                                         );
