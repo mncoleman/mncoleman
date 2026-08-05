@@ -2,6 +2,18 @@
 
 A complete guide for configuring a custom domain with your GitHub Pages site, including DNS setup and troubleshooting.
 
+> **Status for this repo: already done.** `mncoleman.com` is live via `public/CNAME`, and
+> `next.config.ts` correctly has **no** `basePath` (see gotcha 1 in [`CLAUDE.md`](./CLAUDE.md)
+> — the old `/mncoleman` subpath must not come back). The guide below is kept as a reference
+> for redoing this from scratch or moving domains.
+>
+> **One wrinkle specific to this setup:** the apex is **proxied through Cloudflare**, not
+> pointed straight at GitHub's IPs. That is deliberate — it lets a Cloudflare Worker own the
+> `/mcp*` route for the public MCP server while every other path falls through to GitHub
+> Pages. If you re-point DNS at GitHub directly, `mncoleman.com/mcp` stops working. The
+> artifact service at `artifacts.mncoleman.com` is separate again: Caddy on the Oracle box,
+> **not** Cloudflare-proxied.
+
 ## Overview
 
 This guide helps you connect a custom domain (like `yourdomain.com`) to your GitHub Pages site using any DNS provider.

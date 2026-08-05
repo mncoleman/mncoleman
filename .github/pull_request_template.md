@@ -1,73 +1,42 @@
-# Personal Website with Blog and Decap CMS
+## What & why
 
-This PR adds a complete personal website with blog functionality.
+<!-- What changes, and what problem it solves. Link any issue. -->
 
-## Features
+## Which pieces does this touch?
 
-- Modern, minimalist design with Next.js and TypeScript
-- Light/dark mode toggle with system preference detection
-- Static blog powered by markdown files
-- **Decap CMS integration** for easy content management (no backend/database needed!)
-- GitHub Pages deployment via GitHub Actions
-- shadcn/ui and ReactBits component support
-- Responsive design with Tailwind CSS
-- Three sample blog posts included
+This repo ships **four independently deployed pieces**. Pushing to `main` deploys only the
+first — tick everything this PR changes, because the rest need their own deploy step.
 
-## Tech Stack
+- [ ] **Next.js site** (repo root) — deploys on merge to `main`
+- [ ] **`worker/`** — admin auth Worker → `cd worker && npx wrangler deploy`
+- [ ] **`worker-mcp/`** — public MCP server → `cd worker-mcp && npx wrangler deploy`
+- [ ] **`server/`** — artifact service → Docker build + ship, see `server/README.md`
 
-- **Framework**: Next.js 16 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS v3
-- **CMS**: Decap CMS (browser-only, Git-based)
-- **Deployment**: GitHub Pages
+If more than one is ticked, note the required **deploy order** here. The admin Worker mints
+the JWT the artifact service authorises against, so the Worker generally ships first.
 
-## What's Included
+## Checks
 
-### Website Structure
-- Homepage with recent blog posts
-- Blog listing page
-- Individual blog post pages
-- About page
-- Responsive header with navigation
-- Dark mode toggle
+- [ ] `npx tsc --noEmit` clean at the repo root
+- [ ] `npm run lint` — no new errors
+- [ ] `npm run build` succeeds
+- [ ] Checked in **both light and dark mode** (if UI)
+- [ ] Checked at mobile width (if UI)
 
-### Decap CMS
-- Admin interface at `/admin/`
-- Rich markdown editor
-- Media library for images
-- No backend server or database required
-- Simple 5-minute setup (just create GitHub OAuth app)
+## Things this repo gets wrong easily
 
-### Documentation
-- Complete README with setup instructions
-- Detailed Decap CMS setup guide
-- Sample blog posts
-- GitHub Actions workflow for auto-deployment
+Only relevant if the PR goes near them — see the Gotchas list in `CLAUDE.md`:
 
-## Next Steps
+- [ ] No `basePath` reintroduced (custom domain — gotcha 1)
+- [ ] New animation loops are gated: reduced-motion, IntersectionObserver, visibility pause
+      (`components/ui/dark-veil.tsx` is the reference — gotcha 13)
+- [ ] Nested scroll containers have `data-lenis-prevent`
+- [ ] Both OG renderers changed together, `OG_VERSION` bumped (`lib/og-card.tsx` +
+      `server/src/og.tsx` — gotcha 10)
+- [ ] Notion fetchers still distinguish *missing credentials* (sample data) from
+      *failed fetch* (throw)
+- [ ] Secrets: nothing committed; nothing sensitive behind a `NEXT_PUBLIC_` prefix
 
-Once merged:
+## Notes for review
 
-1. **Enable GitHub Pages**:
-   - Go to Settings → Pages
-   - Source should already be set to "GitHub Actions"
-
-2. **Set up Decap CMS** (optional, for web-based content editing):
-   - Follow instructions in `personal-website/DECAP_CMS_SETUP.md`
-   - Takes ~5 minutes to create GitHub OAuth app
-   - Then access admin at `/admin/`
-
-3. **Site will be live at**:
-   - `https://slider003.github.io/matthew-coleman/`
-
-## Files Added
-
-- Complete Next.js application in `personal-website/`
-- GitHub Actions workflow for deployment
-- Decap CMS admin interface
-- Sample blog posts and content
-- Comprehensive documentation
-
----
-
-Ready to deploy!
+<!-- Anything you're unsure about, deliberate trade-offs, or follow-ups you're leaving. -->

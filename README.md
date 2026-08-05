@@ -79,9 +79,10 @@
 
 ### Design & UX
 
-- **WebGL Background** - Animated Dark Veil effect (OGL)
-- **3D Glass Cubes** - Interactive bento grid on desktop (Three.js / R3F)
+- **WebGL Backgrounds** - Dark Veil shader (OGL) in dark mode, a canvas wave field in light
+- **3D Glass Cubes** - Interactive bento grid on desktop (pure CSS 3D transforms, no 3D library)
 - **Sticky Card Stack** - Scroll-driven mobile home page
+- **Visitor Globe** - Interactive guestbook globe (cobe) on the home page
 - **Frosted Glass UI** - Modern glassmorphism design
 - **Page Transitions** - Smooth Motion-powered route transitions
 - **Dark Mode** - System-aware theme switching
@@ -96,11 +97,12 @@
 
 - **Static Generation** - Lightning-fast pre-rendered pages
 - **Global Search** - Pre-built search index with `Cmd/Ctrl+K`
+- **Public MCP Server** - Model Context Protocol endpoint at `/mcp`
 - **Keyboard Shortcuts** - Single-key navigation across the site
 - **Type Safety** - Full TypeScript coverage
 - **Zero Runtime** - 100% static export to GitHub Pages
 - **Daily Auto-Rebuild** - Scheduled GitHub Actions workflow
-- **SEO Optimized** - Meta tags & app manifest
+- **Generated OG Images** - Per-route share cards, one design across both pipelines
 - **Analytics Ready** - Google Analytics 4 integration
 
 </td>
@@ -114,13 +116,14 @@
 | **Blog** | Notion-powered blog with markdown rendering & tag filtering |
 | **Projects** | Notion-powered portfolio of things I've made |
 | **Resources** | Curated link library grouped by multi-select categories |
-| **Resume** | Professional CV rendered from a Notion page |
-| **Artifacts** | Static-file gallery (HTML/PDF/images) served from `/public/artifacts` |
+| **Resume** | Notion page parsed into a structured card layout (hero, experience, education) |
+| **Artifacts** | Two kinds: *static* files committed to `public/artifacts/`, and *instant* ones uploaded live to the artifact service |
+| **"A"I Library** | Public prompts + skills at `/ai`, served from the artifact service |
+| **Visitor Globe** | Public "where are you from" guestbook with bot defence and moderation |
 | **Brand Kit** | Public brand assets and style reference page |
 | **Featured Posts** | Pin important content to the top of the blog |
-| **Smart Tags** | Auto-extracted tag filtering system |
 | **Secure Admin** | Telegram-authenticated dashboard backed by a Cloudflare Worker |
-| **Content Sync** | Trigger rebuilds, edit "About Me", manage users & artifacts |
+| **Content Sync** | Trigger rebuilds, edit "About Me", manage users, artifacts, library & visitors |
 
 ## Admin Dashboard
 
@@ -129,11 +132,16 @@ The site features a secure, hidden admin dashboard for managing content and depl
 - **Telegram Authentication**: Secure login via Telegram widget (no passwords to manage).
 - **One-Click Rebuilds**: Trigger GitHub Actions deployments directly from the dashboard.
 - **Content Editing**: Edit the "About Me" section with a live preview editor.
-- **Artifact Uploads**: Upload arbitrary files (HTML, PDF, images) to the artifacts gallery.
-- **User Management**: Manage allow-listed Telegram users.
-- **Status Monitoring**: View current deployment status and system health.
+- **Artifact Uploads**: Upload files (HTML, PDF, images) either as *static* artifacts committed to the repo or *instant* ones published live to the artifact service.
+- **"A"I Library**: Author and publish prompts and skills.
+- **Analytics**: GA4 figures read through the Worker with a service account.
+- **Visitors**: Moderate the guestbook globe's pins.
+- **User Management**: Manage allow-listed Telegram users. Roles are `admin` and `super_admin`; only `super_admin` can manage users or reveal private-artifact passwords.
 
-The admin auth flow is handled by a Cloudflare Worker (`worker/index.ts`).
+The admin auth flow is handled by a Cloudflare Worker (`worker/index.ts`), which mints a
+short-lived, audience-scoped JWT for each call it proxies to the artifact service. Sessions
+are revalidated against KV per request, so removing a user takes effect immediately rather
+than when their token expires.
 
 > Access the dashboard at `/admin` (requires configuration — see [`ADMIN_SETUP.md`](./ADMIN_SETUP.md)).
 
@@ -188,10 +196,23 @@ NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
 # Admin Dashboard (optional — required for /admin)
 NEXT_PUBLIC_WORKER_URL=https://your-worker.workers.dev
 NEXT_PUBLIC_TELEGRAM_BOT_NAME=your_bot_username
+
+# Hosted services (optional — default to production)
+NEXT_PUBLIC_ARTIFACTS_API_URL=https://artifacts.mncoleman.com
+NEXT_PUBLIC_VISITOR_API_URL=            # falls back to ARTIFACTS_API_URL
+
+# Local dev convenience (optional)
+NEXT_PUBLIC_DISABLE_DARKVEIL=1          # what `npm run dev:lite` sets
 ```
 
-If Notion credentials are missing or set to placeholder values, the data layer
-gracefully falls back to sample content so local development still works.
+If Notion credentials are **missing or set to placeholder values**, the data layer falls
+back to sample content, so local development works with no `.env.local`.
+
+If credentials are **present but a fetch fails**, the fetchers throw and the build fails on
+purpose. `deploy.yml` runs unattended and deploys on success, so falling back there would
+publish sample content over the live site; a failed build leaves the previous good deploy
+serving. Transient failures (rate limits, 5xx) are retried first by `lib/notion-retry.ts`,
+so only a sustained outage stops a build.
 
 ### Notion CMS Template (Quick Start)
 
@@ -271,8 +292,8 @@ If you prefer to set up manually:
 - **Styling**: Tailwind CSS + shadcn/ui-style components, `@tailwindcss/typography`
 - **CMS**: Notion API (`@notionhq/client`, `notion-to-md`)
 - **Markdown**: `react-markdown` + `remark-gfm`, `@next/mdx`
-- **Backend**: Cloudflare Worker (Telegram auth, GitHub dispatch, admin API)
-- **Graphics**: OGL for the Dark Veil shader; `three` + `@react-three/fiber` + `@react-three/drei` for the 3D glass-cube bento
+- **Backend**: Cloudflare Workers (admin auth + a separate public MCP server) and a Bun + Hono artifact service
+- **Graphics**: `ogl` for the Dark Veil shader, a hand-rolled canvas wave field for light mode, `cobe` for the visitor globe. The 3D glass-cube bento is pure CSS 3D transforms — there is no `three`/R3F dependency
 - **Animation**: `motion` (Framer Motion successor), `gsap`, `lenis` for smooth scroll
 - **Hosting**: GitHub Pages on a custom domain (`mncoleman.com`)
 - **CI/CD**: GitHub Actions (push, daily cron, repository dispatch, manual)
@@ -284,6 +305,31 @@ If you prefer to set up manually:
 ## How It Works: Notion CMS + Static Site Architecture
 
 This site uses a unique architecture that combines **Notion's powerful CMS** with **100% static hosting** on GitHub Pages. Here's how it works:
+
+### Four Independently Deployed Pieces
+
+The repo looks like one project but ships as four, each on its own cadence. Knowing which
+piece owns a behaviour is usually the fastest way to debug it.
+
+| # | Piece | Where it runs | Deployed by |
+|---|-------|---------------|-------------|
+| 1 | **Next.js site** (repo root) | GitHub Pages, behind `mncoleman.com` | Push to `main` / daily cron |
+| 2 | **`worker/`** — admin auth | Cloudflare Worker `mncoleman-admin-auth` | `cd worker && npx wrangler deploy` |
+| 3 | **`worker-mcp/`** — public MCP server | Cloudflare Worker on `mncoleman.com/mcp` | `cd worker-mcp && npx wrangler deploy` |
+| 4 | **`server/`** — artifacts + "A"I library | Bun + Hono container on an Oracle ARM box, `artifacts.mncoleman.com` | Docker image build + ship (see [`server/README.md`](./server/README.md)) |
+
+A few consequences worth knowing up front:
+
+- **Pushing to `main` deploys only piece 1.** The two Workers and the container are separate
+  deploys. A change spanning them needs all of them shipped, and sometimes in a specific
+  order — the admin Worker mints the JWT that the artifact service authorises against, so
+  the Worker goes first.
+- **The MCP server is a second Worker on purpose.** It is public and unauthenticated, and it
+  owns a route on the Cloudflare-proxied apex so `/mcp*` is intercepted while every other
+  path falls through to GitHub Pages. It stays separate from `worker/` because that one gates
+  every POST behind an Origin allowlist and a CSRF header that MCP clients cannot send.
+- **Only piece 4 has a database.** Everything else is stateless; the artifact service holds
+  uploaded files, the "A"I library, and the visitor guestbook's SQLite file.
 
 ### The Build-Time CMS Approach
 
@@ -371,8 +417,8 @@ User Request → CDN → Serve Pre-rendered HTML → Done
 
 - Uses `@notionhq/client` to query Notion databases
 - Fetches only published content (filtered by "Published" checkbox)
-- Validates credentials before connecting and gracefully falls back to sample
-  data when Notion is not configured
+- Validates credentials before connecting; falls back to sample data only when Notion is
+  unconfigured, and throws when configured credentials hit a sustained failure
 
 **Search Index** (`scripts/generate-search-index.ts`)
 
@@ -424,74 +470,79 @@ For most blogs and portfolios, these trade-offs are worth it for the **speed, co
 ```
 mncoleman/
 ├── app/                            # Next.js App Router
-│   ├── about/page.tsx              # About page
-│   ├── admin/page.tsx              # Admin dashboard (Telegram auth)
-│   ├── artifacts/                  # Static-file gallery
-│   ├── blog/                       # Blog listing + [slug] post pages
-│   ├── brand-kit/page.tsx          # Brand assets / style reference
-│   ├── projects/                   # Projects portfolio
-│   ├── resources/                  # Resource library
-│   ├── resume/page.tsx             # Professional resume
+│   ├── about/                      # About page
+│   ├── admin/                      # Admin panel. layout.tsx owns the session gate
+│   │   ├── analytics/              #   + tab nav for every /admin/* subroute;
+│   │   ├── artifacts/              #   each subpage is a thin wrapper reading
+│   │   ├── library/                #   workerUrl/user from admin-context.tsx
+│   │   ├── users/
+│   │   └── visitors/
+│   ├── ai/                         # "A"I library (prompts + skills)
+│   ├── artifacts/                  # Artifact gallery + [slug]/details + OG image
+│   ├── blog/                       # Blog listing + [slug] + OG image
+│   ├── brand-kit/                  # Brand assets / style reference
+│   ├── projects/                   # Projects portfolio + [slug] + OG image
+│   ├── resources/                  # Resource library + [slug] + OG image
+│   ├── resume/                     # Resume (server page + ResumePageClient)
+│   ├── privacy/, terms/            # Legal pages
 │   ├── globals.css                 # Theme variables & styles
-│   ├── icon.svg                    # App icon
 │   ├── layout.tsx                  # Root layout, header & footer
 │   ├── manifest.ts                 # PWA manifest
+│   ├── opengraph-image.tsx         # Site-wide OG card
+│   ├── robots.ts, sitemap.ts       # SEO route handlers
 │   └── page.tsx                    # Bento grid home page
 │
 ├── components/
-│   ├── admin/                      # Admin dashboard widgets
-│   │   ├── AdminDashboard.tsx
-│   │   ├── ArtifactUploader.tsx
-│   │   ├── ContentEditor.tsx
-│   │   ├── TelegramLoginButton.tsx
-│   │   └── UserManagement.tsx
+│   ├── admin/                      # Admin panel widgets
+│   │   ├── admin-context.tsx       #   shared session/workerUrl context
+│   │   ├── AdminNav.tsx, AnalyticsPanel.tsx
+│   │   ├── ArtifactUploader.tsx, LibraryManager.tsx
+│   │   ├── ContentEditor.tsx, UserManagement.tsx, VisitorManager.tsx
+│   │   └── TelegramLoginButton.tsx
 │   ├── brand-kit/BrandKitClient.tsx
+│   ├── visitor-globe/              # cobe globe + guestbook dialog + captchas
 │   ├── ui/                         # Reusable UI primitives
-│   │   ├── CustomCursor.tsx        # Pointer-aware accent cursor
-│   │   ├── dark-veil.tsx           # OGL/WebGL animated background
-│   │   ├── glass-cube.tsx          # 3D glass-cube wrapper (R3F)
-│   │   ├── profile-card.tsx
-│   │   └── ...                     # button, card, badge, input, tabs, …
-│   ├── MagicBento.tsx              # Bento grid effects
-│   ├── ScrollFloat.tsx             # Scroll-driven text animation
-│   ├── ScrollStack.tsx             # Sticky stacking cards
-│   ├── blog-list.tsx               # Tag filtering for blog
-│   ├── hamburger-button.tsx        # Mobile nav trigger
-│   ├── key-bindings.tsx            # Global keyboard shortcuts
-│   ├── mobile-nav.tsx              # Mobile drawer
-│   ├── nav-logo.tsx
-│   ├── pwa-install.tsx             # PWA service worker registration
-│   ├── refresh-button.tsx
+│   │   ├── CustomCursor.tsx        #   pointer-aware accent cursor
+│   │   ├── dark-veil.tsx           #   OGL shader; `contained` fills a parent
+│   │   ├── glass-cube.tsx          #   3D glass cube — CSS transforms, no 3D lib
+│   │   ├── blur-text.tsx, fall-in-text.tsx, text-type.tsx
+│   │   └── ...                     #   button, card, badge, input, tabs, …
+│   ├── Waves.tsx                   # Canvas wave field (light-mode backdrop)
+│   ├── home-backdrop.tsx           # Picks Dark Veil vs Waves by theme
+│   ├── defer.tsx                   # DeferUntilIdle / DeferUntilVisible
+│   ├── smooth-scroll.tsx           # Site-wide Lenis instance
+│   ├── MagicBento.tsx, ScrollFloat.tsx, ScrollStack.tsx
 │   ├── search.tsx                  # Cmd/Ctrl+K global search
-│   ├── theme-provider.tsx          # next-themes wrapper
-│   ├── theme-toggle.tsx
-│   ├── theme-wrapper.tsx
-│   ├── transition-link.tsx         # Animated route link
-│   └── transition-provider.tsx     # Page-transition state
+│   ├── mcp-callout.tsx             # Home page MCP promo
+│   └── ...                         # nav, theme, transitions, PWA install, …
 │
 ├── lib/                            # Data layer & utilities
-│   ├── admin-auth.ts               # Admin auth helpers
-│   ├── artifacts.ts                # Artifact metadata loader
-│   ├── blog.ts                     # Blog adapter
-│   ├── notion.ts                   # Notion API integration
-│   ├── projects.ts                 # Projects adapter
-│   ├── resources.ts                # Resources adapter
-│   ├── resume.ts                   # Resume adapter
-│   └── utils.ts                    # Helper functions
+│   ├── notion.ts                   # Direct Notion API integration
+│   ├── blog.ts, projects.ts, resources.ts, resume.ts   # Per-type adapters
+│   ├── notion-retry.ts             # Retries transient Notion failures only
+│   ├── resume-parse.ts             # Resume markdown -> structured sections
+│   ├── artifacts.ts                # Static artifact manifest loader
+│   ├── og-card.tsx                 # Shared OG card renderer (see server/src/og.tsx)
+│   ├── admin-auth.ts               # Client-side session token helpers
+│   ├── analytics.ts, theme-transition.ts
+│   └── utils.ts                    # cn(), slugify(), artifactSlug()
 │
 ├── scripts/
-│   ├── dev-artifacts-server.ts     # Local artifact dev server
-│   └── generate-search-index.ts    # Build-time search index generator
+│   ├── generate-search-index.ts    # Build-time search index generator
+│   ├── finalize-og-images.ts       # .png siblings + OG tags for static artifacts
+│   ├── stamp-sw-version.ts         # Service-worker cache versioning
+│   └── dev-artifacts-server.ts     # Local artifact dev server
 │
-├── worker/                         # Cloudflare Worker (admin auth & API)
-│   ├── index.ts
-│   └── wrangler.toml
+├── worker/                         # Cloudflare Worker — admin auth  (own deploy)
+├── worker-mcp/                     # Cloudflare Worker — public MCP  (own deploy)
+├── server/                         # Bun + Hono artifact service     (own deploy)
 │
-├── data/                           # JSON content (about, artifacts, search)
+├── data/                           # about.json, artifacts.json, search-index.json
 ├── hooks/                          # Custom React hooks (e.g. use-toast)
-├── public/                         # Static assets, fonts, icons, artifacts
+├── public/                         # Static assets, fonts, icons, artifacts, sw.js
 └── .github/workflows/
-    └── deploy.yml                  # GitHub Actions deployment
+    ├── deploy.yml                  # Build + deploy to GitHub Pages
+    └── profile-cards.yml           # Daily GitHub stat SVG regeneration
 ```
 
 ---
@@ -524,17 +575,23 @@ const bentoCards = [
 ];
 ```
 
-### Dark Veil Background
+### Animated Backgrounds
 
-Customize the animated WebGL background in `app/page.tsx`:
+`components/home-backdrop.tsx` picks the backdrop by theme — Dark Veil is built for a dark
+surface and reads as muddy noise on a light one, so light mode gets the wave field instead:
 
 ```typescript
 <DarkVeil
-  hueShift={40}           // Color hue (0-360)
-  speed={0.5}             // Animation speed
-  resolutionScale={0.8}   // Render quality (0.5-1.0)
+  hueShift={40}           // Copied, not derived — 40 is what produces the blue.
+  speed={0.5}             //   The shader's palette does not map to hue degrees
+  resolutionScale={0.8}   //   in any way you can reason about.
 />
 ```
+
+Both are loaded with `dynamic(..., { ssr: false })` and wrapped in `DeferUntilIdle` so they
+stay off the initial JS and out of the LCP window. Pass `contained` to `DarkVeil` to fill a
+parent element instead of the viewport (used by the resume hero); the default full-bleed
+path deliberately measures the *viewport*, not its parent — see gotcha 6 in `CLAUDE.md`.
 
 ### Theme Colors
 
@@ -623,6 +680,8 @@ Go to Settings → Secrets and variables → Actions:
 | `NEXT_PUBLIC_GA_ID` | Google Analytics ID (optional) | `G-XXXXXXXXXX` |
 | `NEXT_PUBLIC_WORKER_URL` | Cloudflare Worker URL (admin) | `https://...workers.dev` |
 | `NEXT_PUBLIC_TELEGRAM_BOT_NAME` | Telegram bot username (admin) | `mncoleman_admin_bot` |
+| `NEXT_PUBLIC_ARTIFACTS_API_URL` | Artifact + "A"I library service | `https://artifacts.mncoleman.com` |
+| `NEXT_PUBLIC_VISITOR_API_URL` | Visitor guestbook (falls back to artifacts URL) | `https://artifacts.mncoleman.com` |
 | `N8N_DEPLOY_WEBHOOK_URL` | Optional n8n notify webhook | `https://n8n.example.com/...` |
 
 **2. Enable GitHub Pages**
@@ -661,9 +720,10 @@ The site is hosted on a custom domain at <https://mncoleman.com>
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start the Next.js development server at localhost:3000 |
+| `npm run dev:lite` | Same, with the Dark Veil shader disabled and a smaller heap |
 | `npm run dev:artifacts` | Start the local artifact upload dev server (`tsx scripts/dev-artifacts-server.ts`) |
 | `npm run generate-search-index` | Regenerate `data/search-index.json` from Notion + artifacts |
-| `npm run build` | Generate the search index, then build the static site to `out/` |
+| `npm run build` | search index → `next build` → OG finalize → stamp SW version → `out/` |
 | `npm run export` | Alias for `next build` (kept for backwards compat) |
 | `npm run start` | Start the Next.js production server (for testing the build) |
 | `npm run lint` | Run ESLint for code quality checks |
@@ -729,8 +789,9 @@ The site is hosted on a custom domain at <https://mncoleman.com>
 
 ## Documentation
 
-- **[CLAUDE.md](./CLAUDE.md)** - Project guide, architecture, and Notion schema reference
-- **[ADMIN_SETUP.md](./ADMIN_SETUP.md)** - Admin Dashboard & Telegram Auth setup
+- **[CLAUDE.md](./CLAUDE.md)** - Project guide, architecture, patterns, and the gotcha list
+- **[ADMIN_SETUP.md](./ADMIN_SETUP.md)** - Admin dashboard & Telegram auth setup
+- **[server/README.md](./server/README.md)** - Artifact + "A"I library service: endpoints, deploy, storage layout
 - **[CUSTOM_DOMAIN_SETUP.md](./CUSTOM_DOMAIN_SETUP.md)** - GitHub Pages custom domain configuration
 
 ---

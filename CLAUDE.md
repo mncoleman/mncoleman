@@ -8,14 +8,14 @@ Next.js 16 (App Router, `output: 'export'` static site) · React 19 · TypeScrip
 
 ## Architecture
 
-Three independently-deployed pieces live in this repo:
+Four independently-deployed pieces live in this repo. Pushing to `main` deploys only the first; the other three each have their own deploy step, and a change spanning them must ship in dependency order (the Worker mints the JWT the artifact service authorises against, so the Worker goes first):
 
 1. **Next.js static site** (repo root) — statically exported at build time, hosted on GitHub Pages behind the custom domain. All content is fetched from Notion **at build time**; there is no runtime server for the site itself.
 2. **`worker/`** — a Cloudflare Worker (`mncoleman-admin-auth`) that handles admin login (Telegram OIDC), mints session JWTs, stores admin users in KV, fires GitHub `repository_dispatch` rebuild triggers, and proxies artifact uploads to the artifact service.
 3. **`worker-mcp/`** — a second Cloudflare Worker (`mncoleman-site-mcp`) serving the **public, unauthenticated MCP server** at `https://mncoleman.com/mcp`. It owns a route on the Cloudflare-proxied apex, so `/mcp*` is intercepted while every other path still falls through to GitHub Pages. Holds no secrets; reads `public/data/site-content.json` (built by `scripts/generate-search-index.ts`) plus the artifact service's public list endpoints. Stateless per MCP 2026-07-28 (SEP-2575) with the legacy `initialize` handshake still supported. Separate Worker on purpose — `worker/` gates every POST behind an Origin allowlist + CSRF header that MCP clients cannot send.
 4. **`server/`** — a Bun + Hono service on an Oracle ARM box (`artifacts.mncoleman.com`) that hosts uploaded artifacts (HTML/PDF/images) and the "A"I library (prompts + skills), each with auto-generated OG share images. Deployed as a Docker container. See `server/README.md`.
 
-The site uses a **two-layer adapter pattern** for Notion content: `lib/notion.ts` does the direct API integration; `lib/blog.ts`, `lib/resources.ts`, `lib/resume.ts`, `lib/projects.ts` are thin adapters per content type. Every fetcher validates credentials before calling Notion and falls back to sample data (see Patterns).
+The site uses a **two-layer adapter pattern** for Notion content: `lib/notion.ts` does the direct API integration; `lib/blog.ts`, `lib/resources.ts`, `lib/resume.ts`, `lib/projects.ts` are thin adapters per content type. Every fetcher validates credentials before calling Notion, falls back to sample data when they are absent, and throws when they are present but the fetch fails (see Patterns).
 
 ## Directory Map
 
@@ -43,6 +43,7 @@ data/                   — about.json, artifacts.json (static manifest), search
 hooks/                  — use-toast
 scripts/                — Build-time scripts (search index, OG finalize, SW version stamp)
 worker/                 — Cloudflare Worker (admin auth) — separate deploy
+worker-mcp/             — Cloudflare Worker (public MCP server at /mcp) — separate deploy
 server/                 — Bun/Hono artifact + "A"I library service — separate deploy
 public/                 — Static assets, icons, sw.js, CNAME, fonts
 profile-summary-card-output/ — CI-generated GitHub stat SVGs (do not hand-edit)
@@ -56,7 +57,9 @@ profile-summary-card-output/ — CI-generated GitHub stat SVGs (do not hand-edit
 - `lib/blog.ts` / `lib/resources.ts` / `lib/resume.ts` / `lib/projects.ts` — Per-content-type adapters over Notion.
 - `lib/artifacts.ts` — Reads `data/artifacts.json` static manifest; file-type/label/size helpers.
 - `lib/admin-auth.ts` — Client-side session token helpers (sessionStorage) + `authHeaders()` for Worker calls.
-- `lib/og-card.tsx` — Shared OG image renderer used by the per-route `opengraph-image.tsx` files.
+- `lib/og-card.tsx` — Shared OG image renderer used by the per-route `opengraph-image.tsx` files. **Must stay visually identical to `server/src/og.tsx`** — static artifacts unfurl from here, instant ones from there, and a viewer seeing both should not be able to tell which pipeline produced which. They cannot share code (separate deploys; the Docker image only copies `server/`), so a change to one is a manual change to the other.
+- `lib/resume-parse.ts` — Parses the Notion resume markdown into typed sections for the card layout. Every classifier is a fuzzy heading match and unrecognised sections fall through to `extra`, which still renders as prose — a renamed section degrades rather than disappears. `app/resume/page.tsx` keeps a full-prose fallback for markdown with no recognisable structure.
+- `lib/notion-retry.ts` — Retries *transient* Notion failures (rate limits, 5xx, socket drops) so an unattended build survives a blip. Deterministic failures (bad token, deleted database) are not retried and surface immediately.
 - `lib/utils.ts` — `cn()`, `slugify()`, `artifactSlug()` (shared by `generateStaticParams` and the browser so slugs always agree).
 - `next.config.ts` — Static export config (no basePath — custom domain).
 - `.github/workflows/deploy.yml` — Build + deploy to GitHub Pages.
@@ -113,9 +116,10 @@ Content comes from **four separate Notion data sources** (three databases + one 
 - **Add an artifact (static)**: add an entry to `data/artifacts.json`; place the file under `public/artifacts/`. Dynamic artifacts are uploaded through the admin panel → Worker → artifact service.
 - **Add a page**: create `app/<route>/page.tsx`; add the nav link in `app/layout.tsx` (and to `components/mobile-nav.tsx` if needed); add it to `app/sitemap.ts`.
 - **Add a shadcn/ui component**: `npx shadcn@latest add button` (shadcn) or `npx shadcn@latest add @react-bits/<name>` (ReactBits registry). Both registries are configured in `components.json`.
-- **Change OG images**: edit `lib/og-card.tsx` (shared renderer) or a route's `opengraph-image.tsx`; `scripts/finalize-og-images.ts` runs at the end of the build.
+- **Change OG images**: edit `lib/og-card.tsx` (shared renderer) or a route's `opengraph-image.tsx`, **and make the matching change in `server/src/og.tsx`** so both pipelines still produce the same card. Bump `OG_VERSION` there so already-published instant artifacts re-render. `scripts/finalize-og-images.ts` runs at the end of the build: it gives each generated image a real `.png` sibling (GitHub Pages serves extensionless files as `application/octet-stream`, which strict OG consumers reject) and injects OG tags into the raw static artifact HTML, which Next never renders and which therefore ships without any.
 - **Deploy the Worker**: `cd worker && npx wrangler deploy` (secrets via `wrangler secret put`).
-- **Deploy the artifact service**: see the Docker build/ship steps in `server/README.md`.
+- **Deploy the MCP Worker**: `cd worker-mcp && npx wrangler deploy`.
+- **Deploy the artifact service**: see the Docker build/ship steps in `server/README.md`. Do NOT recreate the container from that `docker run` block by hand — carry the live container's env forward with `docker inspect artifacts --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -v '^PATH='` instead, so a documentation drift can't silently drop a secret.
 
 ## Environment
 
@@ -142,4 +146,8 @@ Required env (see `.env.example`): `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `NOTION
 7. **Shared JWT secret**: the Worker and the artifact service share one HS256 `JWT_SECRET` (and `ARTIFACTS_JWT_SECRET`). Rotating one without the other breaks uploads.
 8. **GA4 page_views are manual**: the root layout configures gtag with `send_page_view: false`, and `components/analytics.tsx` fires one `page_view` per App Router navigation. GA4 Enhanced Measurement's *"page changes based on browser history events"* must stay **OFF** on the property, or every soft navigation is counted twice. `/admin/analytics` reads GA4 through the Worker's `/api/analytics/summary` (service-account auth, `GA_SA_CLIENT_EMAIL` + `GA_SA_PRIVATE_KEY` secrets, `GA_PROPERTY_ID` var, 10-min KV cache).
 9. **`profile-summary-card-output/`** is regenerated by CI daily — don't hand-edit the SVGs there.
+10. **The two OG renderers must move together**: `lib/og-card.tsx` (static, build-time) and `server/src/og.tsx` (instant, runtime). Stored instant cards record an `ogVersion`; `/og/*` re-renders lazily when it no longer matches `OG_VERSION`, so a redesign reaches already-published artifacts instead of only new ones.
+11. **Worker ↔ service role contract**: the admin Worker stamps a `role` claim on the short-lived artifacts JWT, and the service discloses decrypted private-artifact passwords only for `super_admin`. It **fails closed** — an absent claim omits the field. Consequence: deploy the Worker before the service, or the password column goes blank in between.
+12. **No `btoa`/`atob` on the artifacts manifest.** `btoa` throws above U+00FF and `atob` decodes UTF-8 as Latin-1, so an em-dash in a description used to 500 the write *after* the file commit landed and corrupt the manifest on every edit. `worker/index.ts` has TextEncoder/TextDecoder base64 helpers — use those.
+13. **Animation loops must be gated.** `components/ui/dark-veil.tsx` is the reference: `prefers-reduced-motion` renders one static frame, plus an IntersectionObserver and a `visibilitychange` pause, plus demand-driven rAF that stops once motion settles. `components/Waves.tsx` follows it. Also keep `touchmove` listeners `passive: true` unless the handler genuinely calls `preventDefault()` — a non-passive one blocks every scroll frame on the page.
 ```
