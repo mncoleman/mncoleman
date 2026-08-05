@@ -39,9 +39,9 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 /* overflow-x:clip, NOT hidden -- hidden on html/body creates a scroll container and breaks
-   position:sticky on the header, filter bar and sidebar. clip contains stray wide content
+   position:sticky on the header and sidebar. clip contains stray wide content
    without that side effect. */
-html{scroll-behavior:smooth;scroll-padding-top:var(--stick,140px);-webkit-font-smoothing:antialiased;overflow-x:clip}
+html{scroll-behavior:smooth;scroll-padding-top:88px;-webkit-font-smoothing:antialiased;overflow-x:clip}
 body{font-family:var(--font-body);font-size:var(--text-base);color:var(--color-text);background:var(--color-bg);line-height:1.6;min-height:100dvh;overflow-x:clip}
 h1,h2,h3,h4{text-wrap:balance;font-family:var(--font-display)}p{text-wrap:pretty}
 a{color:var(--color-primary);text-decoration:none;transition:color var(--t)}
@@ -85,28 +85,8 @@ a:hover{color:var(--color-primary-hover);text-decoration:underline}
 .stat-number{font-family:var(--font-display);font-size:var(--text-xl);font-weight:700;color:var(--color-primary);display:block;line-height:1}
 .stat-label{font-size:var(--text-xs);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.1em;margin-top:.35rem}
 
-.filter-bar{position:sticky;top:64px;z-index:90;background:var(--color-surface-2);border-bottom:1px solid var(--color-border);padding:.4rem clamp(1rem,4vw,3rem) .55rem;backdrop-filter:blur(8px)}
-.filter-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-/* collapsible control strip */
-.filter-head{display:flex;align-items:center;gap:.6rem;max-width:1280px;margin:0 auto;min-height:32px}
-.filter-toggle{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .7rem;border-radius:var(--radius-full);border:1px solid var(--color-border);background:none;color:var(--color-text);font-family:var(--font-body);font-size:var(--text-xs);font-weight:600;cursor:pointer;transition:all var(--t);touch-action:manipulation;-webkit-tap-highlight-color:transparent;white-space:nowrap}
-.filter-toggle:hover{border-color:var(--color-primary);color:var(--color-primary)}
-.filter-toggle svg{width:13px;height:13px;transition:transform var(--t)}
-.filter-bar.collapsed .filter-toggle svg{transform:rotate(-90deg)}
-.filter-count{font-size:var(--text-xs);color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.filter-count strong{color:var(--color-primary)}
-.filter-body{display:block}
-.filter-bar.collapsed .filter-body{display:none}
-.filter-row{display:flex;gap:.4rem;max-width:1280px;margin:0 auto;align-items:center;min-width:max-content;padding:.15rem 0}
-.filter-label{font-size:var(--text-xs);color:var(--color-text-faint);margin-right:.4rem;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;font-weight:600;flex-shrink:0}
-.filter-btn{padding:.32rem .8rem;border-radius:var(--radius-full);border:1px solid var(--color-border);background:none;color:var(--color-text-muted);font-family:var(--font-body);font-size:var(--text-xs);cursor:pointer;transition:all var(--t);white-space:nowrap;font-weight:500;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
-.filter-btn:hover{border-color:var(--color-primary);color:var(--color-primary)}
-.filter-btn.active{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
-.filter-reset{margin-left:auto;font-size:var(--text-xs);color:var(--color-text-faint);background:none;border:none;cursor:pointer;text-decoration:underline;white-space:nowrap;padding:.3rem .5rem;font-family:var(--font-body)}
-.filter-reset:hover{color:var(--color-primary)}
-
 .main-layout{max-width:1280px;margin:0 auto;padding:2rem clamp(1rem,4vw,3rem);display:grid;grid-template-columns:230px 1fr;gap:2.25rem;align-items:start;min-width:0}
-.sidebar{position:sticky;top:calc(var(--stick,140px) + 10px);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:1rem;max-height:calc(100vh - var(--stick,140px) - 30px);overflow-y:auto}
+.sidebar{position:sticky;top:88px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:1rem;max-height:calc(100vh - 108px);overflow-y:auto}
 .sidebar-title{font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.12em;color:var(--color-text-faint);margin-bottom:.75rem;padding:0 .5rem;font-weight:600}
 .sidebar-nav{list-style:none}
 .sidebar-nav li{margin-bottom:.1rem}
@@ -125,7 +105,7 @@ a:hover{color:var(--color-primary-hover);text-decoration:underline}
 .no-results{text-align:center;padding:3rem;color:var(--color-text-muted);display:none}
 .no-results.visible{display:block}
 
-.section-block{margin-bottom:3.25rem;scroll-margin-top:calc(var(--stick,140px) + 10px)}
+.section-block{margin-bottom:3.25rem;scroll-margin-top:88px}
 .section-block.section-hidden{display:none}
 .section-header{display:flex;align-items:center;gap:.85rem;padding-bottom:.85rem;margin-bottom:1.25rem;border-bottom:2px solid var(--color-border)}
 .section-icon{width:38px;height:38px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--color-primary-dim);color:var(--color-primary)}
@@ -233,8 +213,6 @@ footer em{color:var(--color-primary);font-style:normal;font-weight:600}
   .mobile-toggle{display:inline-flex;align-items:center;justify-content:center}
   .resource-card:not(.hidden){display:flex;flex-direction:column;gap:.6rem}
   .card-link{justify-content:center;width:100%;padding:.6rem}
-  .filter-bar{top:auto;position:relative}
-  .filter-btn{padding:.45rem .9rem;font-size:.72rem}
   .official-block,.nar-section{padding:1.1rem 1rem}
 }
 @media(min-width:981px){
@@ -294,77 +272,7 @@ footer em{color:var(--color-primary);font-style:normal;font-weight:600}
 </div>
 </section>
 
-<nav class="filter-bar" id="filterBar" aria-label="Resource filters">
-  <div class="filter-head">
-    <button class="filter-toggle" id="filterToggle" aria-expanded="true" aria-controls="filterBody">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-      Filters
-    </button>
-    <span class="filter-count" id="filterCount"></span>
-    <button class="filter-reset" id="resetFilters" style="margin-left:auto">Reset all</button>
-  </div>
-  <div class="filter-body" id="filterBody">
-  <div class="filter-scroll">
-    <div class="filter-row">
-      <span class="filter-label">Type</span>
-      <button class="filter-btn active" data-group="bucket" data-value="all">All</button>
-      <button class="filter-btn" data-group="bucket" data-value="paid">Paid</button>
-      <button class="filter-btn" data-group="bucket" data-value="free">Free</button>
-      <button class="filter-btn" data-group="bucket" data-value="bonus">Bonus media</button>
-      <span class="filter-label" style="margin-left:1rem">Credit</span>
-      <button class="filter-btn active" data-group="ce" data-value="all">All</button>
-      <button class="filter-btn" data-group="ce" data-value="crec_approved">Commission-approved</button>
-      <button class="filter-btn" data-group="ce" data-value="exempt_provider">Exempt provider</button>
-      <button class="filter-btn" data-group="ce" data-value="not_ce">No CO CE credit</button>
-    </div>
-  </div>
-  <div class="filter-scroll">
-    <div class="filter-row">
-      <span class="filter-label">Cost</span>
-      <button class="filter-btn active" data-group="cost" data-value="all">All</button>
-      <button class="filter-btn" data-group="cost" data-value="free">Free</button>
-      <button class="filter-btn" data-group="cost" data-value="free_with_membership">Free w/ membership</button>
-      <button class="filter-btn" data-group="cost" data-value="paid">Paid</button>
-      <span class="filter-label" style="margin-left:1rem">Price</span>
-      <button class="filter-btn active" data-group="price" data-value="all">Any</button>
-      <button class="filter-btn" data-group="price" data-value="0">$0</button>
-      <button class="filter-btn" data-group="price" data-value="1-99">Under $100</button>
-      <button class="filter-btn" data-group="price" data-value="100-299">$100&ndash;299</button>
-      <button class="filter-btn" data-group="price" data-value="300+">$300+</button>
-    </div>
-  </div>
-  <div class="filter-scroll">
-    <div class="filter-row">
-      <span class="filter-label">Format</span>
-      <button class="filter-btn active" data-group="format" data-value="all">All</button>
-      <button class="filter-btn" data-group="format" data-value="in_person">In person</button>
-      <button class="filter-btn" data-group="format" data-value="live_online">Live online</button>
-      <button class="filter-btn" data-group="format" data-value="on_demand">On demand</button>
-      <span class="filter-label" style="margin-left:1rem">Region</span>
-      <button class="filter-btn active" data-group="region" data-value="all">All</button>
-      <button class="filter-btn" data-group="region" data-value="northern_colorado">Northern Colorado</button>
-      <button class="filter-btn" data-group="region" data-value="front_range_adjacent">Front Range adjacent</button>
-      <button class="filter-btn" data-group="region" data-value="statewide">Statewide</button>
-      <button class="filter-btn" data-group="region" data-value="national">National</button>
-    </div>
-  </div>
-  <div class="filter-scroll">
-    <div class="filter-row">
-      <span class="filter-label">Requirement</span>
-      <button class="filter-btn active" data-group="req" data-value="all">All</button>
-      <button class="filter-btn" data-group="req" data-value="license">Counts toward the state licence</button>
-      <button class="filter-btn" data-group="req" data-value="membership">REALTOR membership only</button>
-      <span class="filter-label" style="margin-left:1rem">Credit type</span>
-      <button class="filter-btn active" data-group="credit" data-value="all">All</button>
-      <button class="filter-btn" data-group="credit" data-value="acu_annual">Annual Commission Update</button>
-      <button class="filter-btn" data-group="credit" data-value="elective_ce">Elective CE</button>
-      <button class="filter-btn" data-group="credit" data-value="employing_broker_topic">Employing Broker credits</button>
-      <button class="filter-btn" data-group="credit" data-value="nar_coe">NAR Code of Ethics</button>
-      <button class="filter-btn" data-group="credit" data-value="nar_fair_housing">NAR Fair Housing</button>
-    </div>
-  </div>
-  </div>
-</nav>
+
 
 <div class="main-layout">
 <aside class="sidebar" id="sidebar">
@@ -794,89 +702,31 @@ var allCards = Array.prototype.slice.call(document.querySelectorAll('.resource-c
   setStat('stat-noco', allCards.filter(function(c){ return c.dataset.region === 'northern_colorado'; }).length);
 })();
 
-/* ---------- collapsible filter bar ----------
-   Four dense rows of chips eat a lot of a sticky viewport. Collapsed by default on narrow
-   screens, remembered per visitor. --stick tracks the real sticky height so scroll-padding,
-   section scroll-margin and the sidebar offset all follow the bar as it opens and closes. */
-var setStick;
+/* ---------- search ----------
+   The chip filter bar was removed; free-text search over the card contents is the only
+   narrowing left, so it also has to hide any section it empties. */
 (function(){
-  var bar = document.getElementById('filterBar');
-  var btn = document.getElementById('filterToggle');
-  var header = document.querySelector('.site-header');
-  if (!bar || !btn) return;
-
-  setStick = function(){
-    var h = (header ? header.offsetHeight : 64) + bar.offsetHeight + 8;
-    document.documentElement.style.setProperty('--stick', h + 'px');
-  };
-
-  function setCollapsed(collapsed, remember){
-    bar.classList.toggle('collapsed', collapsed);
-    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    if (remember) { try { localStorage.setItem('noco-ce-filters', collapsed ? 'closed' : 'open'); } catch (e) {} }
-    setStick();
-  }
-
-  var stored = null;
-  try { stored = localStorage.getItem('noco-ce-filters'); } catch (e) {}
-  /* default: open on desktop, collapsed on phones where it would dominate the screen */
-  setCollapsed(stored ? stored === 'closed' : window.innerWidth <= 700, false);
-
-  btn.addEventListener('click', function(){ setCollapsed(!bar.classList.contains('collapsed'), true); });
-  window.addEventListener('resize', function(){ setStick(); }, { passive: true });
-  setStick();
-})();
-
-/* ---------- search + filters ---------- */
-(function(){
-  var state = { bucket: 'all', ce: 'all', cost: 'all', price: 'all', format: 'all', region: 'all', req: 'all', credit: 'all' };
-  var query = '';
   var searchEl = document.getElementById('search');
   var countEl = document.getElementById('results-count');
-  var summaryEl = document.getElementById('filterCount');
-
+  if (!searchEl) return;
   var haystack = allCards.map(function(c){ return (c.innerText || c.textContent || '').toLowerCase(); });
 
-  function priceMatches(card, band){
-    if (band === 'all') return true;
-    var raw = card.dataset.price;
-    if (raw === '' || raw == null) return band === 'all';
-    var p = parseFloat(raw);
-    if (isNaN(p)) return false;
-    if (band === '0') return p === 0;
-    if (band === '1-99') return p > 0 && p < 100;
-    if (band === '100-299') return p >= 100 && p < 300;
-    if (band === '300+') return p >= 300;
-    return true;
-  }
-  function listHas(card, attr, value){
-    if (value === 'all') return true;
-    var raw = card.dataset[attr] || '';
-    return (' ' + raw + ' ').indexOf(' ' + value + ' ') !== -1;
-  }
-
   function apply(){
+    var query = searchEl.value.trim().toLowerCase();
     var shown = 0;
     for (var i = 0; i < allCards.length; i++) {
-      var c = allCards[i];
-      var ok = (state.bucket === 'all' || c.dataset.bucket === state.bucket)
-        && (state.ce === 'all' || c.dataset.ce === state.ce)
-        && (state.cost === 'all' || c.dataset.cost === state.cost)
-        && (state.region === 'all' || c.dataset.region === state.region)
-        && listHas(c, 'req', state.req)
-        && priceMatches(c, state.price)
-        && listHas(c, 'format', state.format)
-        && listHas(c, 'credit', state.credit)
-        && (query === '' || haystack[i].indexOf(query) !== -1);
-      c.classList.toggle('hidden', !ok);
+      var ok = query === '' || haystack[i].indexOf(query) !== -1;
+      allCards[i].classList.toggle('hidden', !ok);
       if (ok) shown++;
     }
+    /* a section whose every card is hidden should go too, heading and all */
     Array.prototype.forEach.call(document.querySelectorAll('.section-block'), function(sec){
       var cards = sec.querySelectorAll('.resource-card');
       if (!cards.length) return;
       var anyVisible = Array.prototype.some.call(cards, function(c){ return !c.classList.contains('hidden'); });
       sec.classList.toggle('section-hidden', !anyVisible);
     });
+    /* ditto the free/paid sub-headings inside a section */
     Array.prototype.forEach.call(document.querySelectorAll('.bucket-split'), function(sp){
       var grid = sp.nextElementSibling;
       if (!grid || !grid.classList.contains('resource-grid')) return;
@@ -885,64 +735,11 @@ var setStick;
       sp.style.display = anyVisible ? '' : 'none';
       grid.style.display = anyVisible ? '' : 'none';
     });
-    var activeCount = 0;
-    Object.keys(state).forEach(function(k){ if (state[k] !== 'all') activeCount++; });
-    var filtering = query !== '' || activeCount > 0;
-    if (countEl) countEl.textContent = filtering ? (shown + ' of ' + allCards.length + ' resources shown') : '';
-    /* the collapsed bar still has to say what is being filtered out */
-    if (summaryEl) {
-      if (activeCount === 0 && query === '') summaryEl.innerHTML = '';
-      else summaryEl.innerHTML = '<strong>' + shown + '</strong> of ' + allCards.length +
-        (activeCount ? ' &middot; ' + activeCount + ' filter' + (activeCount === 1 ? '' : 's') + ' active' : '') +
-        (query ? ' &middot; search' : '');
-    }
-    /* sections just appeared/disappeared -- let the scroll-spy re-pick */
-    window.dispatchEvent(new Event('scroll'));
+    if (countEl) countEl.textContent = query ? (shown + ' of ' + allCards.length + ' resources match \u201c' + searchEl.value.trim() + '\u201d') : '';
+    window.dispatchEvent(new Event('scroll'));   /* sections moved -- let the scroll-spy re-pick */
   }
 
-  function selectBtn(btn){
-    var group = btn.dataset.group;
-    state[group] = btn.dataset.value;
-    Array.prototype.forEach.call(document.querySelectorAll('.filter-btn[data-group="' + group + '"]'), function(b){
-      b.classList.toggle('active', b === btn);
-    });
-    apply();
-  }
-
-  Array.prototype.forEach.call(document.querySelectorAll('.filter-btn'), function(btn){
-    btn.addEventListener('click', function(){ selectBtn(btn); });
-    /* mobile Safari swallows clicks inside overflow-x containers when it suspects a swipe */
-    var sx = 0, sy = 0, moved = false;
-    btn.addEventListener('touchstart', function(e){
-      var t = e.changedTouches[0]; sx = t.clientX; sy = t.clientY; moved = false;
-    }, { passive: true });
-    btn.addEventListener('touchmove', function(e){
-      var t = e.changedTouches[0];
-      if (Math.abs(t.clientX - sx) > 8 || Math.abs(t.clientY - sy) > 8) moved = true;
-    }, { passive: true });
-    btn.addEventListener('touchend', function(e){
-      if (moved) return;
-      e.preventDefault();
-      selectBtn(btn);
-    });
-  });
-
-  var reset = document.getElementById('resetFilters');
-  if (reset) reset.addEventListener('click', function(){
-    Object.keys(state).forEach(function(k){ state[k] = 'all'; });
-    if (searchEl) searchEl.value = '';
-    query = '';
-    Array.prototype.forEach.call(document.querySelectorAll('.filter-btn'), function(b){
-      b.classList.toggle('active', b.dataset.value === 'all');
-    });
-    apply();
-  });
-
-  if (searchEl) searchEl.addEventListener('input', function(){
-    query = searchEl.value.trim().toLowerCase();
-    apply();
-  });
-
+  searchEl.addEventListener('input', apply);
   apply();
 })();
 
