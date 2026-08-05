@@ -7,8 +7,27 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FONT_DIR = join(__dirname, '..', 'assets', 'fonts');
 
+/**
+ * IMPORTANT: this card must stay visually identical to `lib/og-card.tsx` in the
+ * Next.js app. Instant artifacts unfurl from here; static ones unfurl from
+ * there, and a viewer seeing both in the same chat should not be able to tell
+ * which pipeline produced which. The two cannot share code — the app and this
+ * service are separate deploys, and the Docker image only copies `server/` — so
+ * any change to one is a manual change to the other.
+ */
 const OG_WIDTH = 1200;
-const OG_HEIGHT = 500;
+const OG_HEIGHT = 630;
+
+/**
+ * Bump on every visual change to the card. Stored cards record the version they
+ * were rendered at; `/og/*` re-renders lazily when it doesn't match, so a
+ * redesign reaches already-published artifacts instead of only new ones.
+ *
+ * 1 — original: 1200×500, centred title, grey "mncoleman Artifact:" eyebrow.
+ * 2 — parity with `lib/og-card.tsx`: 1200×630, teal uppercase eyebrow,
+ *     left-aligned title, description, mncoleman.com footer.
+ */
+export const OG_VERSION = 2;
 
 interface FontCache {
     regular: ArrayBuffer | null;
@@ -36,14 +55,25 @@ async function loadFonts() {
 
 function chooseTitleSize(title: string): number {
     const len = title.length;
-    if (len <= 24) return 80;
-    if (len <= 40) return 64;
-    if (len <= 60) return 52;
+    if (len <= 24) return 84;
+    if (len <= 40) return 68;
+    if (len <= 60) return 54;
     return 44;
 }
 
-export async function renderOg(title: string, eyebrowLabel: string = 'mncoleman Artifact:'): Promise<Buffer> {
+function clamp(text: string | undefined, max: number): string {
+    if (!text) return '';
+    const t = text.trim();
+    return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t;
+}
+
+export async function renderOg(
+    title: string,
+    eyebrowLabel: string = 'mncoleman · Artifact',
+    description?: string
+): Promise<Buffer> {
     const fonts = await loadFonts();
+    const desc = clamp(description, 150);
 
     const svg = await satori(
         {
@@ -67,18 +97,19 @@ export async function renderOg(title: string, eyebrowLabel: string = 'mncoleman 
                             borderRadius: 28,
                             display: 'flex',
                             flexDirection: 'column',
-                            padding: '36px 48px',
+                            padding: '52px 60px',
                             color: '#e5e5e5',
-                            position: 'relative',
                         },
                         children: [
                             {
                                 type: 'div',
                                 props: {
                                     style: {
-                                        fontSize: 28,
-                                        opacity: 0.75,
-                                        letterSpacing: '-0.01em',
+                                        display: 'flex',
+                                        fontSize: 26,
+                                        color: '#2bb3bb',
+                                        letterSpacing: '0.06em',
+                                        textTransform: 'uppercase',
                                     },
                                     children: eyebrowLabel,
                                 },
@@ -89,16 +120,48 @@ export async function renderOg(title: string, eyebrowLabel: string = 'mncoleman 
                                     style: {
                                         flex: 1,
                                         display: 'flex',
-                                        alignItems: 'center',
+                                        flexDirection: 'column',
                                         justifyContent: 'center',
-                                        textAlign: 'center',
-                                        fontSize: chooseTitleSize(title),
-                                        fontWeight: 600,
-                                        letterSpacing: '-0.025em',
-                                        lineHeight: 1.1,
-                                        padding: '0 12px',
                                     },
-                                    children: title,
+                                    children: [
+                                        {
+                                            type: 'div',
+                                            props: {
+                                                style: {
+                                                    display: 'flex',
+                                                    fontSize: chooseTitleSize(title),
+                                                    fontWeight: 600,
+                                                    letterSpacing: '-0.025em',
+                                                    lineHeight: 1.08,
+                                                },
+                                                children: title,
+                                            },
+                                        },
+                                        ...(desc
+                                            ? [
+                                                  {
+                                                      type: 'div',
+                                                      props: {
+                                                          style: {
+                                                              display: 'flex',
+                                                              marginTop: 26,
+                                                              fontSize: 30,
+                                                              opacity: 0.7,
+                                                              lineHeight: 1.4,
+                                                          },
+                                                          children: desc,
+                                                      },
+                                                  },
+                                              ]
+                                            : []),
+                                    ],
+                                },
+                            },
+                            {
+                                type: 'div',
+                                props: {
+                                    style: { display: 'flex', fontSize: 24, opacity: 0.6 },
+                                    children: 'mncoleman.com',
                                 },
                             },
                         ],

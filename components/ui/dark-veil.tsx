@@ -83,6 +83,16 @@ type Props = {
   scanlineFrequency?: number;
   warpAmount?: number;
   resolutionScale?: number;
+  /**
+   * Fill the parent element instead of the viewport.
+   *
+   * The default is a fixed, full-bleed page backdrop — see gotcha #6 in
+   * CLAUDE.md for why that path must keep using `window.innerWidth/Height` and
+   * explicit `100vw/100vh`. Contained mode is the opposite case: an absolutely
+   * positioned panel inside a card, sized by ResizeObserver off its parent.
+   * Leave this off and behaviour is byte-for-byte what it always was.
+   */
+  contained?: boolean;
 };
 
 export default function DarkVeil({
@@ -92,7 +102,8 @@ export default function DarkVeil({
   speed = 0.5,
   scanlineFrequency = 0,
   warpAmount = 0,
-  resolutionScale = 1
+  resolutionScale = 1,
+  contained = false
 }: Props) {
   // Dev escape hatch: `npm run dev:lite` sets NEXT_PUBLIC_DISABLE_DARKVEIL=1 so
   // only the globe's single WebGL context runs — keeps the dev server light on
@@ -128,17 +139,31 @@ export default function DarkVeil({
       const mobile = window.matchMedia('(max-width: 768px)').matches;
       const baseDpr = mobile ? 1 : Math.min(window.devicePixelRatio || 1, 2);
       const scale = mobile ? 0.5 : resolutionScale;
-      const w = window.innerWidth;
-      const h = window.innerHeight;
+      // Contained mode measures the parent; the full-bleed default must keep
+      // reading the viewport (parent dims are unreliable there — gotcha #6).
+      const box = contained ? canvas.parentElement : null;
+      const w = box ? box.clientWidth : window.innerWidth;
+      const h = box ? box.clientHeight : window.innerHeight;
+      if (w === 0 || h === 0) return;
       // Shrink the render buffer by `scale` (via dpr) while keeping the canvas
       // full-viewport. uResolution scales with it, so the pattern composition is
       // identical regardless of scale — it's purely a quality/perf knob.
       renderer.dpr = baseDpr * scale;
       renderer.setSize(w, h);
+      if (contained) {
+        // setSize writes explicit px onto the element; stretch it back so the
+        // canvas tracks the card through layout changes between observations.
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+      }
       program.uniforms.uResolution.value.set(w * scale, h * scale);
     };
 
     window.addEventListener('resize', resize);
+    // A card's box changes without the window changing (text reflow, font swap),
+    // so contained mode needs to watch the element itself.
+    const ro = contained && canvas.parentElement ? new ResizeObserver(resize) : null;
+    ro?.observe(canvas.parentElement!);
     resize();
 
     const start = performance.now();
@@ -196,25 +221,29 @@ export default function DarkVeil({
 
     return () => {
       pause();
+      ro?.disconnect();
       window.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', onVisibility);
       reduceMq.removeEventListener('change', onReduceChange);
       io.disconnect();
     };
-  }, [hueShift, noiseIntensity, scanlineIntensity, speed, scanlineFrequency, warpAmount, resolutionScale]);
+  }, [hueShift, noiseIntensity, scanlineIntensity, speed, scanlineFrequency, warpAmount, resolutionScale, contained]);
   return (
     <canvas
       ref={ref}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        display: 'block',
-        zIndex: 0
-
-      }}
+      style={
+        contained
+          ? { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }
+          : {
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              display: 'block',
+              zIndex: 0
+            }
+      }
     />
   );
 }

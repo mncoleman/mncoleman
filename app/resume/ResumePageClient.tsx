@@ -2,14 +2,21 @@
 
 import { ReactNode, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
+import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChevronDown, Globe, Linkedin, Mail, MapPin, Phone } from 'lucide-react';
 import { BlurText } from '@/components/ui/blur-text';
 import { FallInText } from '@/components/ui/fall-in-text';
 import { TextType } from '@/components/ui/text-type';
+import GlassCube from '@/components/ui/glass-cube';
+import { DeferUntilIdle } from '@/components/defer';
 import { cn } from '@/lib/utils';
 import type { ContactType, ParsedResume, ResumeExperience } from '@/lib/resume-parse';
+
+// WebGL and purely decorative — same treatment the home page gives it, so it
+// never lands in this route's initial JS.
+const DarkVeil = dynamic(() => import('@/components/ui/dark-veil'), { ssr: false });
 
 /** The site-wide frosted-glass card (see CLAUDE.md → Patterns). */
 const CARD =
@@ -197,59 +204,114 @@ function ExperienceCard({ entry, delay }: { entry: ResumeExperience; delay: numb
     );
 }
 
+/**
+ * The one piece of this page that isn't plain black-or-white: the home page's
+ * `GlassCube` (3D tilt on hover, load wobble, depth slices) wrapping a blue
+ * Dark Veil canvas with a frosted pane over it.
+ *
+ * The veil lives *inside* the cube's front face, so the cube's own
+ * `backdrop-filter` — which only sees the page behind it — can't blur it.
+ * The frosting is therefore its own layer stacked between the canvas and the
+ * text.
+ */
+function ResumeHero({ resume }: { resume: ParsedResume }) {
+    const reducedMotion = useReducedMotion();
+
+    const content = (
+        <div className="relative overflow-hidden rounded-2xl">
+            {/* Dark Veil, contained to the card rather than the viewport. Waits
+                for idle like the home page backdrop does — it is decoration
+                sitting behind the page's LCP text, so it should not compete
+                with it. The shader fades in, so arriving late reads as
+                intentional rather than as a pop. */}
+            <DeferUntilIdle>
+                <div className="absolute inset-0 pointer-events-none" aria-hidden>
+                    {/* hueShift/speed match `home-backdrop.tsx` exactly — that
+                        40 is what produces the blue on the home page. The
+                        shader's palette does not map to hue degrees in any way
+                        you can reason about, so this number is copied, not
+                        derived. */}
+                    <DarkVeil contained hueShift={40} speed={0.5} resolutionScale={0.8} />
+                </div>
+            </DeferUntilIdle>
+
+            {/* Frosted pane over the veil. Heavier in light mode: the shader is
+                built for a dark surface and reads muddy under thin frosting. */}
+            <div
+                className="absolute inset-0 bg-background/65 dark:bg-background/25 backdrop-blur-[8px] pointer-events-none"
+                aria-hidden
+            />
+
+            <div className="relative z-10 p-8 md:p-12">
+                <h1 className="text-4xl md:text-5xl font-bold mb-2 text-foreground">
+                    <FallInText text={resume.name} />
+                </h1>
+
+                {resume.headline && (
+                    <div className={cn('text-lg font-medium mb-6', ACCENT)}>
+                        <BlurText text={resume.headline} delay={300} />
+                    </div>
+                )}
+
+                {resume.contacts.length > 0 && (
+                    <div className="flex flex-wrap gap-x-6 gap-y-3">
+                        {resume.contacts.map((contact, index) => {
+                            const Icon = CONTACT_ICONS[contact.type];
+                            return (
+                                <a
+                                    key={contact.href}
+                                    href={contact.href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    // `min-w-0 break-all` because a LinkedIn
+                                    // vanity URL is one unbroken token —
+                                    // flex-wrap can only wrap *between* chips,
+                                    // so without this it runs past the card
+                                    // edge on phones.
+                                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 hover:translate-x-0.5 min-w-0 max-w-full break-all"
+                                    style={{
+                                        opacity: 0,
+                                        animation: `fadeSlideIn 0.5s ease-out ${
+                                            600 + index * 100
+                                        }ms forwards`,
+                                    }}
+                                >
+                                    <Icon className="w-4 h-4 shrink-0" />
+                                    {contact.label}
+                                </a>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    // GlassCube's tilt is mouse-driven and pointless without a pointer; under
+    // reduced motion it already renders flat, but skipping the wrapper entirely
+    // also drops the 3D context and its rAF loop.
+    if (reducedMotion) {
+        return (
+            <div className="rounded-2xl border border-border/30 overflow-hidden shadow-lg">{content}</div>
+        );
+    }
+
+    // Gentler than the home page's cards: this one is a wide banner, where 25°
+    // of tilt swings the far corner much further than it does on a square.
+    return (
+        <GlassCube depth={24} tiltMax={9} wobbleAngle={Math.PI / 5}>
+            {content}
+        </GlassCube>
+    );
+}
+
 export function ResumePageClient({ resume }: { resume: ParsedResume }) {
     return (
         <div className="container mx-auto px-4 py-12 max-w-5xl">
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* ---- Hero ---------------------------------------------------- */}
                 <Reveal>
-                    <div className={cn(CARD, 'relative overflow-hidden !p-0')}>
-                        <div className="bg-gradient-to-br from-blue-700 to-blue-950 dark:from-blue-900/90 dark:to-blue-950/80 text-white p-8 md:p-12 rounded-2xl relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full translate-x-[30%] -translate-y-[30%] pointer-events-none" />
-
-                            <h1 className="text-4xl md:text-5xl font-bold mb-2 relative z-10">
-                                <FallInText text={resume.name} />
-                            </h1>
-
-                            {resume.headline && (
-                                <div className="text-lg text-blue-200 font-medium mb-6 relative z-10">
-                                    <BlurText text={resume.headline} delay={300} />
-                                </div>
-                            )}
-
-                            {resume.contacts.length > 0 && (
-                                <div className="flex flex-wrap gap-x-6 gap-y-3 relative z-10">
-                                    {resume.contacts.map((contact, index) => {
-                                        const Icon = CONTACT_ICONS[contact.type];
-                                        return (
-                                            <a
-                                                key={contact.href}
-                                                href={contact.href}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                // `min-w-0 break-all` because a
-                                                // LinkedIn vanity URL is one
-                                                // unbroken token — flex-wrap can
-                                                // only wrap *between* chips, so
-                                                // without this it runs past the
-                                                // card edge on phones.
-                                                className="flex items-center gap-2 text-sm text-zinc-200 hover:text-blue-200 transition-all duration-300 hover:translate-x-0.5 min-w-0 max-w-full break-all"
-                                                style={{
-                                                    opacity: 0,
-                                                    animation: `fadeSlideIn 0.5s ease-out ${
-                                                        600 + index * 100
-                                                    }ms forwards`,
-                                                }}
-                                            >
-                                                <Icon className="w-4 h-4 shrink-0" />
-                                                {contact.label}
-                                            </a>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    <ResumeHero resume={resume} />
                 </Reveal>
 
                 {/* ---- Summary ------------------------------------------------- */}

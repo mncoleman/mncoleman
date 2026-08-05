@@ -738,10 +738,12 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                onClick={() => navigator.clipboard.writeText(lastShareUrl)}
+                                onClick={() => copyToClipboard(lastShareUrl, 'share-url')}
                                 className="h-8 gap-1"
                             >
-                                <Copy className="h-3 w-3" /> Copy
+                                {copiedKey === 'share-url'
+                                    ? <><Check className="h-3 w-3 text-emerald-500" /> Copied</>
+                                    : <><Copy className="h-3 w-3" /> Copy</>}
                             </Button>
                             <Button
                                 type="button"

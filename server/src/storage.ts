@@ -22,6 +22,12 @@ export interface ArtifactMeta {
      * Lets the admin reveal the password later without storing it in plaintext.
      */
     passwordCipher?: string;
+    /**
+     * Design revision of the cached `og.png`. Bumping OG_VERSION in `og.tsx`
+     * makes every stored card regenerate lazily on next read, so a card
+     * redesign reaches already-published artifacts without a manual re-save.
+     */
+    ogVersion?: number;
 }
 
 export class SlugTakenError extends Error {

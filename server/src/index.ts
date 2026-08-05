@@ -19,7 +19,7 @@ import {
 } from './storage';
 import { isValidSlug, suggestFromFilename } from './slugs';
 import { requireAuth } from './auth';
-import { renderOg } from './og';
+import { renderOg, OG_VERSION } from './og';
 import { signSlugCookie, verifySlugCookie, cookieName, parseCookies } from './cookies';
 import { notFoundPage, passwordPromptPage, artifactDetailsPage } from './pages';
 import { encryptPassword, decryptPassword } from './crypto';
@@ -248,8 +248,9 @@ app.post('/api/upload', requireAuth, async (c) => {
     // Render OG image in the background — don't block the upload response.
     queueMicrotask(async () => {
         try {
-            const png = await renderOg(meta.name);
+            const png = await renderOg(meta.name, 'mncoleman · Artifact', meta.description);
             await saveOg(slug, png);
+            await updateMeta(slug, { ...meta, ogVersion: OG_VERSION });
         } catch (e) {
             console.error('[og] render failed:', e);
         }
@@ -286,14 +287,17 @@ app.patch('/api/:slug', requireAuth, async (c) => {
     }
 
     const next: ArtifactMeta = { ...existing, visibility: existing.visibility ?? 'public' };
-    let nameChanged = false;
+    // Name *and* description are both rendered onto the OG card, so either one
+    // changing invalidates it.
+    let ogChanged = false;
 
     if (form.has('name')) {
         const v = ((form.get('name') as string | null) || '').slice(0, 200);
-        if (v && v !== next.name) { next.name = v; nameChanged = true; }
+        if (v && v !== next.name) { next.name = v; ogChanged = true; }
     }
     if (form.has('description')) {
-        next.description = ((form.get('description') as string | null) || '').slice(0, 500);
+        const v = ((form.get('description') as string | null) || '').slice(0, 500);
+        if (v !== next.description) { next.description = v; ogChanged = true; }
     }
 
     const newVisibility = form.get('visibility') as string | null;
@@ -346,12 +350,13 @@ app.patch('/api/:slug', requireAuth, async (c) => {
 
     await updateMeta(slug, next);
 
-    if (nameChanged) {
-        // OG render is title-only — re-render in the background.
+    if (ogChanged) {
+        // Re-render in the background — never block the update response.
         queueMicrotask(async () => {
             try {
-                const png = await renderOg(next.name);
+                const png = await renderOg(next.name, 'mncoleman · Artifact', next.description);
                 await saveOg(slug, png);
+                await updateMeta(slug, { ...next, ogVersion: OG_VERSION });
             } catch (e) {
                 console.error('[og] re-render failed:', e);
             }
@@ -366,7 +371,21 @@ app.get('/og/:filename', async (c) => {
     const m = filename.match(/^([a-z0-9][a-z0-9-]{0,59})\.png$/);
     if (!m) return c.notFound();
     const slug = m[1];
-    const png = await getOg(slug);
+    let png = await getOg(slug);
+
+    // Cards published before the current design are re-rendered on first read,
+    // so a redesign reaches existing artifacts without touching each one.
+    const meta = await getMeta(slug);
+    if (meta && meta.ogVersion !== OG_VERSION) {
+        try {
+            png = await renderOg(meta.name, 'mncoleman · Artifact', meta.description);
+            await saveOg(slug, png);
+            await updateMeta(slug, { ...meta, ogVersion: OG_VERSION });
+        } catch (e) {
+            console.error('[og] lazy re-render failed:', e);
+        }
+    }
+
     if (!png) return c.notFound();
     return new Response(png, {
         headers: {
@@ -673,8 +692,9 @@ app.post('/api/library', requireAuth, async (c) => {
         }
         queueMicrotask(async () => {
             try {
-                const png = await renderOg(meta.name, 'mncoleman Prompt:');
+                const png = await renderOg(meta.name, 'mncoleman · Prompt', meta.description);
                 await saveLibraryOg(slug, png);
+                await updateLibraryMeta(slug, { ...meta, ogVersion: OG_VERSION });
             } catch (e) {
                 console.error('[library-og] render failed:', e);
             }
@@ -708,8 +728,9 @@ app.post('/api/library', requireAuth, async (c) => {
 
     queueMicrotask(async () => {
         try {
-            const png = await renderOg(meta.name, 'mncoleman Skill:');
+            const png = await renderOg(meta.name, 'mncoleman · Skill', meta.description);
             await saveLibraryOg(slug, png);
+            await updateLibraryMeta(slug, { ...meta, ogVersion: OG_VERSION });
         } catch (e) {
             console.error('[library-og] render failed:', e);
         }
@@ -740,12 +761,14 @@ app.patch('/api/library/:slug', requireAuth, async (c) => {
     }
 
     const next: LibraryItemMeta = { ...existing, updatedAt: new Date().toISOString() };
-    let nameChanged = false;
+    // Name *and* description are both rendered onto the OG card now, so either
+    // one changing invalidates it.
+    let ogChanged = false;
     let skillAffected = false;
 
     if (typeof body.name === 'string') {
         const v = body.name.slice(0, 200);
-        if (v && v !== next.name) { next.name = v; nameChanged = true; }
+        if (v && v !== next.name) { next.name = v; ogChanged = true; }
     }
 
     if (existing.kind === 'prompt') {
@@ -760,7 +783,7 @@ app.patch('/api/library/:slug', requireAuth, async (c) => {
         if (typeof body.description === 'string') {
             const d = body.description.slice(0, 1024);
             if (!d) return c.json({ error: 'description is required for skills' }, 400);
-            if (d !== next.description) { next.description = d; descriptionChanged = true; }
+            if (d !== next.description) { next.description = d; descriptionChanged = true; ogChanged = true; }
         }
 
         if (typeof body.skillBodyMd === 'string') {
@@ -792,11 +815,12 @@ app.patch('/api/library/:slug', requireAuth, async (c) => {
 
     await updateLibraryMeta(slug, next);
 
-    if (nameChanged) {
+    if (ogChanged) {
         queueMicrotask(async () => {
             try {
-                const png = await renderOg(next.name, next.kind === 'prompt' ? 'mncoleman Prompt:' : 'mncoleman Skill:');
+                const png = await renderOg(next.name, next.kind === 'prompt' ? 'mncoleman · Prompt' : 'mncoleman · Skill', next.description);
                 await saveLibraryOg(slug, png);
+                await updateLibraryMeta(slug, { ...next, ogVersion: OG_VERSION });
             } catch (e) {
                 console.error('[library-og] re-render failed:', e);
             }
@@ -832,7 +856,24 @@ app.get('/og/library/:filename', async (c) => {
     const m = filename.match(/^([a-z0-9][a-z0-9-]{0,59})\.png$/);
     if (!m) return c.notFound();
     const slug = m[1];
-    const png = await getLibraryOg(slug);
+    let png = await getLibraryOg(slug);
+
+    // Same lazy upgrade as the artifact card above.
+    const meta = await getLibraryMeta(slug);
+    if (meta && meta.ogVersion !== OG_VERSION) {
+        try {
+            png = await renderOg(
+                meta.name,
+                meta.kind === 'prompt' ? 'mncoleman · Prompt' : 'mncoleman · Skill',
+                meta.description
+            );
+            await saveLibraryOg(slug, png);
+            await updateLibraryMeta(slug, { ...meta, ogVersion: OG_VERSION });
+        } catch (e) {
+            console.error('[library-og] lazy re-render failed:', e);
+        }
+    }
+
     if (!png) return c.notFound();
     return new Response(png, {
         headers: {

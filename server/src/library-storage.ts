@@ -17,6 +17,12 @@ export interface LibraryItemMeta {
     updatedAt: string;
     /** Skills only — required, ≤1024 chars, doubles as SKILL.md frontmatter `description`. */
     description?: string;
+    /**
+     * Design revision of the cached `og.png`. Bumping OG_VERSION in `og.tsx`
+     * makes every stored card regenerate lazily on next read, so a card
+     * redesign reaches already-published items without a manual re-save.
+     */
+    ogVersion?: number;
 }
 
 export interface ResourceFile {

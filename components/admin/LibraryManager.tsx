@@ -585,8 +585,10 @@ export function LibraryManager({ workerUrl }: LibraryManagerProps) {
                         </div>
                         <div className="flex items-center gap-2">
                             <Input value={lastShareUrl} readOnly className="font-mono text-xs h-8" />
-                            <Button type="button" size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(lastShareUrl)} className="h-8 gap-1">
-                                <Copy className="h-3 w-3" /> Copy
+                            <Button type="button" size="sm" variant="outline" onClick={() => copyToClipboard(lastShareUrl, 'share-url')} className="h-8 gap-1">
+                                {copiedKey === 'share-url'
+                                    ? <><Check className="h-3 w-3 text-emerald-500" /> Copied</>
+                                    : <><Copy className="h-3 w-3" /> Copy</>}
                             </Button>
                             <Button type="button" size="sm" variant="outline" asChild className="h-8 gap-1">
                                 <a href={lastShareUrl} target="_blank" rel="noopener noreferrer">
