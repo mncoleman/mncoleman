@@ -1,15 +1,15 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import dynamic from 'next/dynamic';
+import { useTheme } from 'next-themes';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChevronDown, Globe, Linkedin, Mail, MapPin, Phone } from 'lucide-react';
 import { BlurText } from '@/components/ui/blur-text';
 import { FallInText } from '@/components/ui/fall-in-text';
 import { TextType } from '@/components/ui/text-type';
-import GlassCube from '@/components/ui/glass-cube';
 import { DeferUntilIdle } from '@/components/defer';
 import { cn } from '@/lib/utils';
 import type { ContactType, ParsedResume, ResumeExperience } from '@/lib/resume-parse';
@@ -17,6 +17,7 @@ import type { ContactType, ParsedResume, ResumeExperience } from '@/lib/resume-p
 // WebGL and purely decorative — same treatment the home page gives it, so it
 // never lands in this route's initial JS.
 const DarkVeil = dynamic(() => import('@/components/ui/dark-veil'), { ssr: false });
+const Waves = dynamic(() => import('@/components/Waves'), { ssr: false });
 
 /** The site-wide frosted-glass card (see CLAUDE.md → Patterns). */
 const CARD =
@@ -204,45 +205,166 @@ function ExperienceCard({ entry, delay }: { entry: ResumeExperience; delay: numb
     );
 }
 
+function lerp(a: number, b: number, t: number) {
+    return a + (b - a) * t;
+}
+
 /**
- * The one piece of this page that isn't plain black-or-white: the home page's
- * `GlassCube` (3D tilt on hover, load wobble, depth slices) wrapping a blue
- * Dark Veil canvas with a frosted pane over it.
+ * Mouse-tracked tilt applied to the hero's *content only*.
  *
- * The veil lives *inside* the cube's front face, so the cube's own
- * `backdrop-filter` — which only sees the page behind it — can't blur it.
- * The frosting is therefore its own layer stacked between the canvas and the
- * text.
+ * `GlassCube` can't do this job here. It rotates the whole card, so a backdrop
+ * pinned behind it keeps its own straight edges and juts out past the rotated
+ * silhouette. Anchoring the aperture instead means the rotating element has to
+ * live *inside* the clip: the frame — border, radius, wave field — never moves,
+ * and `overflow-hidden` guarantees nothing can escape it however far the
+ * content leans. Same physics constants as GlassCube so it reads as a sibling
+ * of the home page cards.
+ */
+function TiltFrame({ backdrop, children }: { backdrop: ReactNode; children: ReactNode }) {
+    const frameRef = useRef<HTMLDivElement>(null);
+    const innerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const frame = frameRef.current;
+        const inner = innerRef.current;
+        if (!frame || !inner) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        const TILT_MAX = 9; // a wide banner throws its far corner much further than a square
+        const s = { rx: 0, ry: 0, tRx: 0, tRy: 0, hover: false };
+        let raf = 0;
+        let running = false;
+        let onScreen = true;
+
+        const hasWork = () =>
+            s.hover || Math.abs(s.rx - s.tRx) > 0.01 || Math.abs(s.ry - s.tRy) > 0.01;
+
+        const animate = () => {
+            const speed = s.hover ? 0.12 : 0.08;
+            s.rx = lerp(s.rx, s.tRx, speed);
+            s.ry = lerp(s.ry, s.tRy, speed);
+            inner.style.transform = `rotateX(${s.rx}deg) rotateY(${s.ry}deg)`;
+            // Demand-driven: stop the loop once the motion has settled.
+            if (onScreen && hasWork()) raf = requestAnimationFrame(animate);
+            else running = false;
+        };
+
+        const kick = () => {
+            if (running || !onScreen) return;
+            running = true;
+            raf = requestAnimationFrame(animate);
+        };
+
+        const onMove = (e: MouseEvent) => {
+            const r = frame.getBoundingClientRect();
+            s.tRy = ((e.clientX - r.left) / r.width - 0.5) * 2 * TILT_MAX;
+            s.tRx = -((e.clientY - r.top) / r.height - 0.5) * 2 * TILT_MAX;
+            kick();
+        };
+        const onEnter = () => {
+            s.hover = true;
+            kick();
+        };
+        const onLeave = () => {
+            s.hover = false;
+            s.tRx = 0;
+            s.tRy = 0;
+            kick();
+        };
+
+        frame.addEventListener('mousemove', onMove);
+        frame.addEventListener('mouseenter', onEnter);
+        frame.addEventListener('mouseleave', onLeave);
+
+        const io = new IntersectionObserver(
+            (entries) => {
+                onScreen = entries.some((e) => e.isIntersecting);
+                if (onScreen) kick();
+            },
+            { threshold: 0 }
+        );
+        io.observe(frame);
+
+        return () => {
+            cancelAnimationFrame(raf);
+            frame.removeEventListener('mousemove', onMove);
+            frame.removeEventListener('mouseenter', onEnter);
+            frame.removeEventListener('mouseleave', onLeave);
+            io.disconnect();
+        };
+    }, []);
+
+    return (
+        <div
+            ref={frameRef}
+            className="relative rounded-2xl overflow-hidden border border-border/30 shadow-lg"
+            style={{ perspective: '800px' }}
+        >
+            {backdrop}
+            <div
+                ref={innerRef}
+                className="relative"
+                style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
+            >
+                {children}
+            </div>
+        </div>
+    );
+}
+
+/**
+ * The one piece of this page that isn't plain black-or-white: a fixed aperture
+ * onto the same backdrop the home page uses, with the text leaning over it.
+ *
+ * Backdrop per theme follows `home-backdrop.tsx`: Dark Veil is built for a dark
+ * surface and goes muddy on a light one, so light mode gets Waves instead.
  */
 function ResumeHero({ resume }: { resume: ParsedResume }) {
     const reducedMotion = useReducedMotion();
+    const { resolvedTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+
+    // `resolvedTheme` is undefined on the server and on the first client render.
+    // Painting a guess would flash the wrong backdrop, so neither renders until
+    // we know which one is right.
+    const isLight = resolvedTheme !== 'dark';
+
+    const backdrop = (
+        <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none" aria-hidden>
+            {/* Waits for idle like the home page backdrop — decoration behind
+                this page's LCP text should not compete with it. Both fade
+                themselves in, so arriving a beat late reads as intentional. */}
+            {mounted && (
+                <DeferUntilIdle>
+                    {isLight ? (
+                        <Waves
+                            lineColor="#2563eb"
+                            backgroundColor="transparent"
+                            waveAmpX={28}
+                            waveAmpY={14}
+                            xGap={12}
+                            yGap={28}
+                        />
+                    ) : (
+                        /* hueShift/speed copied verbatim from `home-backdrop.tsx` —
+                           40 is what produces the blue there. The shader's palette
+                           does not map to hue degrees in any way you can reason
+                           about, so this number is copied, not derived. */
+                        <DarkVeil contained hueShift={40} speed={0.5} resolutionScale={0.8} />
+                    )}
+                </DeferUntilIdle>
+            )}
+
+            {/* Frosting. Light on the blur because the glass pane above adds its
+                own — this layer is mostly here to hold text contrast steady
+                while the pane moves. */}
+            <div className="absolute inset-0 bg-background/60 dark:bg-background/20 backdrop-blur-[4px]" />
+        </div>
+    );
 
     const content = (
-        <div className="relative overflow-hidden rounded-2xl">
-            {/* Dark Veil, contained to the card rather than the viewport. Waits
-                for idle like the home page backdrop does — it is decoration
-                sitting behind the page's LCP text, so it should not compete
-                with it. The shader fades in, so arriving late reads as
-                intentional rather than as a pop. */}
-            <DeferUntilIdle>
-                <div className="absolute inset-0 pointer-events-none" aria-hidden>
-                    {/* hueShift/speed match `home-backdrop.tsx` exactly — that
-                        40 is what produces the blue on the home page. The
-                        shader's palette does not map to hue degrees in any way
-                        you can reason about, so this number is copied, not
-                        derived. */}
-                    <DarkVeil contained hueShift={40} speed={0.5} resolutionScale={0.8} />
-                </div>
-            </DeferUntilIdle>
-
-            {/* Frosted pane over the veil. Heavier in light mode: the shader is
-                built for a dark surface and reads muddy under thin frosting. */}
-            <div
-                className="absolute inset-0 bg-background/65 dark:bg-background/25 backdrop-blur-[8px] pointer-events-none"
-                aria-hidden
-            />
-
-            <div className="relative z-10 p-8 md:p-12">
+        <div className="p-8 md:p-12">
                 <h1 className="text-4xl md:text-5xl font-bold mb-2 text-foreground">
                     <FallInText text={resume.name} />
                 </h1>
@@ -283,26 +405,20 @@ function ResumeHero({ resume }: { resume: ParsedResume }) {
                         })}
                     </div>
                 )}
-            </div>
         </div>
     );
 
-    // GlassCube's tilt is mouse-driven and pointless without a pointer; under
-    // reduced motion it already renders flat, but skipping the wrapper entirely
-    // also drops the 3D context and its rAF loop.
+    // The tilt is mouse-driven and pointless without a pointer.
     if (reducedMotion) {
         return (
-            <div className="rounded-2xl border border-border/30 overflow-hidden shadow-lg">{content}</div>
+            <div className="relative rounded-2xl border border-border/30 overflow-hidden shadow-lg">
+                {backdrop}
+                <div className="relative">{content}</div>
+            </div>
         );
     }
 
-    // Gentler than the home page's cards: this one is a wide banner, where 25°
-    // of tilt swings the far corner much further than it does on a square.
-    return (
-        <GlassCube depth={24} tiltMax={9} wobbleAngle={Math.PI / 5}>
-            {content}
-        </GlassCube>
-    );
+    return <TiltFrame backdrop={backdrop}>{content}</TiltFrame>;
 }
 
 export function ResumePageClient({ resume }: { resume: ParsedResume }) {
