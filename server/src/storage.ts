@@ -104,11 +104,6 @@ export async function listAll(): Promise<ArtifactMeta[]> {
     );
 }
 
-export function getLatestUploadedAt(metas: ArtifactMeta[]): string | null {
-    if (metas.length === 0) return null;
-    return metas[0].uploadedAt;
-}
-
 export async function remove(slug: string): Promise<void> {
     await rm(join(ROOT, slug), { recursive: true, force: true });
 }

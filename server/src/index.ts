@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { join, resolve } from 'node:path';
 import {
@@ -130,13 +130,23 @@ function publicArtifactView(m: ArtifactMeta) {
     };
 }
 
-function adminArtifactView(m: ArtifactMeta) {
+// Only super admins may see the decrypted plaintext. Fail closed: a token minted
+// before the Worker started stamping `role` (still in flight during a rollout)
+// has no claim at all, and must land in the omit branch — hence the strict
+// equality against the literal rather than a truthiness or !== 'admin' test.
+function canSeePasswords(c: Context): boolean {
+    const user = c.get('user') as { role?: string } | undefined;
+    return user?.role === 'super_admin';
+}
+
+function adminArtifactView(m: ArtifactMeta, withPassword: boolean) {
     return {
         ...publicArtifactView(m),
         hasPassword: !!m.passwordHash,
-        // Plaintext password decrypted from the at-rest cipher. May be null for
-        // legacy private artifacts uploaded before AES storage was added.
-        password: decryptPassword(m.passwordCipher),
+        // Plaintext password decrypted from the at-rest cipher. Omitted entirely
+        // for non-super-admins; `null` means super admin but no cipher on disk
+        // (legacy private artifacts uploaded before AES storage was added).
+        ...(withPassword ? { password: decryptPassword(m.passwordCipher) } : {}),
     };
 }
 
@@ -161,7 +171,9 @@ app.get('/api/list', async (c) => {
 // Admin-only listing — includes private artifacts (with hasPassword flag, never the hash).
 app.get('/api/admin/list', requireAuth, async (c) => {
     const metas = await listAll();
-    return c.json({ artifacts: metas.map(adminArtifactView) });
+    // Bound to a local so `.map` can't pass the array index in as `withPassword`.
+    const withPassword = canSeePasswords(c);
+    return c.json({ artifacts: metas.map((m) => adminArtifactView(m, withPassword)) });
 });
 
 app.post('/api/upload', requireAuth, async (c) => {
@@ -256,7 +268,7 @@ app.post('/api/upload', requireAuth, async (c) => {
         }
     });
 
-    return c.json({ ok: true, artifact: adminArtifactView(meta) }, 201);
+    return c.json({ ok: true, artifact: adminArtifactView(meta, canSeePasswords(c)) }, 201);
 });
 
 app.delete('/api/:slug', requireAuth, async (c) => {
@@ -271,7 +283,8 @@ app.delete('/api/:slug', requireAuth, async (c) => {
 //   name, description     — metadata
 //   visibility            — 'public' | 'private'
 //   password              — required when transitioning to private (or to rotate)
-//   clearPassword=true    — combined with visibility=public, drops the hash
+//   clearPassword=true    — accepted but ignored; visibility=public always drops
+//                           the hash and the at-rest cipher
 //   file                  — replaces the underlying file (size/type/filename update too)
 app.patch('/api/:slug', requireAuth, async (c) => {
     const slug = c.req.param('slug');
@@ -302,7 +315,6 @@ app.patch('/api/:slug', requireAuth, async (c) => {
 
     const newVisibility = form.get('visibility') as string | null;
     const newPassword = (form.get('password') as string | null) || '';
-    const clearPassword = form.get('clearPassword') === 'true';
 
     if (newVisibility === 'private' || (next.visibility === 'private' && newVisibility === null && newPassword)) {
         // Setting private OR rotating password on already-private artifact.
@@ -319,10 +331,10 @@ app.patch('/api/:slug', requireAuth, async (c) => {
         next.visibility = 'private';
     } else if (newVisibility === 'public') {
         next.visibility = 'public';
-        if (clearPassword || newVisibility === 'public') {
-            delete next.passwordHash;
-            delete next.passwordCipher;
-        }
+        // A public artifact keeps no secret — leaving the cipher behind would
+        // hand the plaintext back out on the next admin read.
+        delete next.passwordHash;
+        delete next.passwordCipher;
     }
 
     // Optional file replacement.
@@ -363,7 +375,7 @@ app.patch('/api/:slug', requireAuth, async (c) => {
         });
     }
 
-    return c.json({ ok: true, artifact: adminArtifactView(next) });
+    return c.json({ ok: true, artifact: adminArtifactView(next, canSeePasswords(c)) });
 });
 
 app.get('/og/:filename', async (c) => {
@@ -624,7 +636,7 @@ function parseSkillResources(input: unknown, existingSkillMdBytes: number): Reso
         if (!isResourceFolder(folder)) {
             throw new Response(JSON.stringify({ error: `invalid resource folder: ${folder}` }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
-        let filename = String(r?.filename || '').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200);
+        const filename = String(r?.filename || '').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200);
         if (!filename || filename.startsWith('.')) {
             throw new Response(JSON.stringify({ error: 'invalid resource filename' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }

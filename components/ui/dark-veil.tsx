@@ -95,6 +95,12 @@ type Props = {
   contained?: boolean;
 };
 
+// Dev escape hatch: `npm run dev:lite` sets NEXT_PUBLIC_DISABLE_DARKVEIL=1 so
+// only the globe's single WebGL context runs — keeps the dev server light on
+// RAM. Read at module scope: it is inlined at build time, and hoisting it keeps
+// the component's hooks unconditional.
+const DISABLED = process.env.NEXT_PUBLIC_DISABLE_DARKVEIL === '1';
+
 export default function DarkVeil({
   hueShift = 40,
   noiseIntensity = 0,
@@ -105,12 +111,9 @@ export default function DarkVeil({
   resolutionScale = 1,
   contained = false
 }: Props) {
-  // Dev escape hatch: `npm run dev:lite` sets NEXT_PUBLIC_DISABLE_DARKVEIL=1 so
-  // only the globe's single WebGL context runs — keeps the dev server light on
-  // RAM. Build-time constant, so the early return is order-stable for hooks.
-  if (process.env.NEXT_PUBLIC_DISABLE_DARKVEIL === '1') return null;
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
+    if (DISABLED) return; // no canvas is rendered — nothing to attach to
     const canvas = ref.current as HTMLCanvasElement;
 
     const reduceMq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -228,6 +231,7 @@ export default function DarkVeil({
       io.disconnect();
     };
   }, [hueShift, noiseIntensity, scanlineIntensity, speed, scanlineFrequency, warpAmount, resolutionScale, contained]);
+  if (DISABLED) return null;
   return (
     <canvas
       ref={ref}

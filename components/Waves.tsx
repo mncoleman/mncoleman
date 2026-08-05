@@ -57,7 +57,7 @@ class Noise {
     seed = Math.floor(seed);
     if (seed < 256) seed |= seed << 8;
     for (let i = 0; i < 256; i++) {
-      let v = i & 1 ? this.p[i] ^ (seed & 255) : this.p[i] ^ ((seed >> 8) & 255);
+      const v = i & 1 ? this.p[i] ^ (seed & 255) : this.p[i] ^ ((seed >> 8) & 255);
       this.perm[i] = this.perm[i + 256] = v;
       this.gradP[i] = this.gradP[i + 256] = this.grad3[v % 12];
     }
@@ -311,7 +311,7 @@ const Waves: React.FC<WavesProps> = ({
       ctx.stroke();
     }
 
-    function tick(t: number) {
+    function renderFrame(t: number) {
       if (!container) return;
       const mouse = mouseRef.current;
       mouse.sx += (mouse.x - mouse.sx) * 0.1;
@@ -330,12 +330,34 @@ const Waves: React.FC<WavesProps> = ({
 
       movePoints(t);
       drawLines();
-      frameIdRef.current = requestAnimationFrame(tick);
     }
+
+    function loop(t: number) {
+      renderFrame(t);
+      frameIdRef.current = requestAnimationFrame(loop);
+    }
+
+    const reduceMq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let running = false;
+    let onScreen = true;
+
+    // Only run while motion is allowed, the tab is visible, and the canvas is on-screen.
+    const play = () => {
+      if (running || reduceMq.matches || document.hidden || !onScreen) return;
+      running = true;
+      frameIdRef.current = requestAnimationFrame(loop);
+    };
+    const pause = () => {
+      running = false;
+      if (frameIdRef.current !== null) cancelAnimationFrame(frameIdRef.current);
+    };
 
     function onResize() {
       setSize();
       setLines();
+      // Writing canvas.width wipes the 2D bitmap, so a paused field (reduced
+      // motion, hidden tab, off-screen) would stay blank without a redraw.
+      if (!running) renderFrame(0);
     }
     function onMouseMove(e: MouseEvent) {
       updateMouse(e.clientX, e.clientY);
@@ -360,18 +382,50 @@ const Waves: React.FC<WavesProps> = ({
 
     setSize();
     setLines();
-    frameIdRef.current = requestAnimationFrame(tick);
+
+    if (reduceMq.matches) {
+      renderFrame(0); // one static frame — no animation loop
+    } else {
+      play();
+    }
+
+    const onVisibility = () => (document.hidden ? pause() : play());
+    document.addEventListener('visibilitychange', onVisibility);
+
+    const io = new IntersectionObserver(
+      entries => {
+        onScreen = entries.some(e => e.isIntersecting);
+        if (onScreen) play();
+        else pause();
+      },
+      { threshold: 0 }
+    );
+    io.observe(canvas);
+
+    const onReduceChange = () => {
+      if (reduceMq.matches) {
+        pause();
+        renderFrame(0);
+      } else {
+        play();
+      }
+    };
+    reduceMq.addEventListener('change', onReduceChange);
+
     window.addEventListener('resize', onResize);
     window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    // The handler never calls preventDefault(), so a non-passive listener would
+    // block every touch-scroll frame on it for nothing.
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
 
     return () => {
+      pause();
       window.removeEventListener('resize', onResize);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('touchmove', onTouchMove);
-      if (frameIdRef.current !== null) {
-        cancelAnimationFrame(frameIdRef.current);
-      }
+      document.removeEventListener('visibilitychange', onVisibility);
+      reduceMq.removeEventListener('change', onReduceChange);
+      io.disconnect();
     };
   }, []);
 

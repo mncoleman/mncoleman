@@ -116,6 +116,8 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
     const charRefs = useRef<(HTMLSpanElement | null)[]>([]);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const rootRef = useRef<HTMLDivElement>(null);
+    /** Left edge of the typing caret, in px. Measured off the character spans. */
+    const [caretLeft, setCaretLeft] = useState(0);
     const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
     useEffect(() => () => timers.current.forEach(clearTimeout), []);
@@ -190,15 +192,19 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
         };
     }, [open]);
 
-    const active = TABS.find(t => t.id === tab) ?? TABS[0];
+    // Measured in an effect, not during render: refs are not render inputs, and
+    // reading one there misbehaves under concurrent rendering.
+    useEffect(() => {
+        if (phase !== 'type') return;
+        const next = charRefs.current[typed];
+        const last = charRefs.current[CHARS.length - 1];
+        // Sits at the left edge of the next character, and past the right edge of
+        // the last one once the URL is complete — so the caret visibly finishes
+        // the line instead of stopping short.
+        setCaretLeft(next ? next.offsetLeft : last ? last.offsetLeft + last.offsetWidth : 0);
+    }, [phase, typed]);
 
-    const next = charRefs.current[typed];
-    const last = charRefs.current[CHARS.length - 1];
-    const caretLeft = next
-        ? next.offsetLeft
-        : last
-            ? last.offsetLeft + last.offsetWidth
-            : 0;
+    const active = TABS.find(t => t.id === tab) ?? TABS[0];
 
     // The root hugs its content rather than matching the bento grid's width — the row
     // is a URL and two buttons, and stretching it to 5xl left a lake of dead space
@@ -290,9 +296,6 @@ export function McpCallout({ anchorId = 'mcp' }: { anchorId?: string }) {
                                 style={{
                                     height: '1.1em',
                                     translateY: '-50%',
-                                    // Sits at the left edge of the next character, and past the
-                                    // right edge of the last one once the URL is complete — so the
-                                    // caret visibly finishes the line instead of stopping short.
                                     left: caretLeft,
                                 }}
                                 initial={{ opacity: 1 }}

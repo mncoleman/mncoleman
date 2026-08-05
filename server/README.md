@@ -49,6 +49,13 @@ docker save artifacts:latest | gzip | \
 # On the ARM box (one-time, before the first run with library support):
 mkdir -p /srv/library
 
+# On the ARM box — retire the running container first, the name is already taken.
+#   Keep the old one around under a new name until the replacement is verified,
+#   then `docker rm artifacts-old`. NEVER `docker rm -v` — the -v would delete the
+#   artifacts_data volume and every hosted artifact plus visitors.db with it.
+docker stop artifacts                    # skip both on a first-ever run —
+docker rename artifacts artifacts-old    #   there is no container yet
+
 # On the ARM box:
 docker run -d \
     --name artifacts \
@@ -61,9 +68,18 @@ docker run -d \
     -e CORS_ORIGINS=https://mncoleman.com,https://mncoleman.github.io,http://localhost:3000 \
     -e MAX_UPLOAD_BYTES=104857600 \
     -e LIBRARY_ROOT=/library \
+    -e VISITOR_IP_SALT="$(cat /home/ubuntu/.visitor-ip-salt)" \
+    -e VISITOR_TOKEN_SECRET="$(cat /home/ubuntu/.visitor-token-secret)" \
+    -e GEOAPIFY_KEY="$(cat /home/ubuntu/.geoapify.key)" \
     -v artifacts_data:/data \
     -v /srv/library:/library \
     artifacts:latest
+
+# The last three are secrets read from chmod-600 files on the box — the
+#   `$(cat ...)` must run on the ARM box, never as a literal pasted from here.
+#   Omitting them does NOT fail the build: the visitor-globe guestbook silently
+#   falls back to JWT_SECRET-derived salts (invalidating every issued submission
+#   token) and geocoding returns no results. Both have bitten a real deploy.
 
 # /srv/library is a bind mount (not a named volume) so the host-side private MCP
 #   server can read prompt/skill files directly off the filesystem with no extra
@@ -85,6 +101,11 @@ The Cloudflare Worker mints a short-lived HS256 JWT, signed with the same
 `JWT_SECRET` this service holds. Upload requests carry `Authorization: Bearer
 <jwt>`. Public reads (the `/a/:slug`, `/raw/:slug`, `/og/:slug.png`,
 `/api/list` endpoints) are unauthenticated.
+
+The JWT carries a `role` claim (`super_admin` | `admin`) copied from the
+authenticated session user. Admin responses include a private artifact's
+decrypted plaintext `password` only when `role === 'super_admin'`; any other
+value — including the claim being absent on older tokens — omits the field.
 
 Generate the shared secret with `openssl rand -hex 32`, then:
 - store it in the Worker via `wrangler secret put JWT_SECRET`

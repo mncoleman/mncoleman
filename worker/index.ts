@@ -225,8 +225,13 @@ export default {
                 const payload = await verifyJwt(token, env.JWT_SECRET);
                 if (!payload) return new Response('Invalid session', { status: 401, headers: corsHeaders });
 
+                // Same KV re-check as the authenticated block below — without it a removed
+                // admin gets a 200 here and the panel renders while every action 401s.
+                const session = await revalidateSession(env, payload);
+                if (!session.valid) return new Response('Invalid session', { status: 401, headers: corsHeaders });
+
                 return new Response(JSON.stringify({ user: {
-                    name: payload.name, id: payload.id, role: payload.role, username: payload.username
+                    name: payload.name, id: payload.id, role: session.role, username: payload.username
                 } }), {
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
                 });
@@ -244,6 +249,52 @@ export default {
                 });
             }
 
+            // Telegram avatar proxy. The Bot API's file URL embeds BOT_TOKEN, so it must
+            // never reach the browser inside an <img src>. Unauthenticated on purpose:
+            // an <img> cannot send a bearer token and cross-site cookies are unreliable,
+            // and these bytes are already public on t.me. It serves ONLY file_ids a
+            // super_admin lookup already cached, so it cannot be used to probe arbitrary
+            // usernames or drain the bot's API quota.
+            if (url.pathname.startsWith('/api/avatar/') && request.method === 'GET') {
+                const uname = decodeURIComponent(url.pathname.split('/').pop() || '').toLowerCase();
+                if (!/^[a-z0-9_]{1,32}$/.test(uname)) {
+                    return new Response('Not Found', { status: 404, headers: corsHeaders });
+                }
+                const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+                if (!checkRateLimit(`avatar:${ip}`, 60, 60_000)) {
+                    return new Response('Too Many Requests', { status: 429, headers: { ...corsHeaders, 'Retry-After': '60' } });
+                }
+
+                const fileId = await env.ADMIN_USERS.get(`avatar:${uname}`);
+                if (!fileId || !env.BOT_TOKEN) {
+                    return new Response('Not Found', { status: 404, headers: corsHeaders });
+                }
+
+                // getFile paths expire after roughly an hour, so resolve one per request
+                // instead of caching the resolved URL.
+                const fileResp = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/getFile?file_id=${encodeURIComponent(fileId)}`);
+                if (!fileResp.ok) {
+                    return new Response('Not Found', { status: 404, headers: corsHeaders });
+                }
+                const fileData = await fileResp.json() as any;
+                if (!fileData.ok || !fileData.result?.file_path) {
+                    return new Response('Not Found', { status: 404, headers: corsHeaders });
+                }
+
+                const imgResp = await fetch(`https://api.telegram.org/file/bot${env.BOT_TOKEN}/${fileData.result.file_path}`);
+                if (!imgResp.ok) {
+                    return new Response('Not Found', { status: 404, headers: corsHeaders });
+                }
+                return new Response(imgResp.body, {
+                    status: 200,
+                    headers: {
+                        ...corsHeaders,
+                        'Content-Type': imgResp.headers.get('Content-Type') || 'image/jpeg',
+                        'Cache-Control': 'private, max-age=3600',
+                    },
+                });
+            }
+
             // Authenticated Endpoints — fail-closed: reject if no valid token
             const token = getAuthToken(request);
             const authPayload = token ? await verifyJwt(token, env.JWT_SECRET) : null;
@@ -251,6 +302,15 @@ export default {
             if (!authPayload) {
                 return new Response('Unauthorized', { status: 401, headers: corsHeaders });
             }
+
+            // Signature + expiry alone would keep a removed admin working for the full
+            // 7-day token lifetime. One KV read re-checks the user still exists and
+            // re-derives the role, so nothing below trusts a week-old role claim.
+            const session = await revalidateSession(env, authPayload);
+            if (!session.valid) {
+                return new Response('Unauthorized', { status: 401, headers: corsHeaders });
+            }
+            authPayload.role = session.role;
 
             // Trigger Action endpoint
             if (url.pathname === '/api/trigger' && request.method === 'POST') {
@@ -291,7 +351,7 @@ export default {
                     });
                 }
                 const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'artifact-list' },
+                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'artifact-list' },
                     env.ARTIFACTS_JWT_SECRET
                 );
                 const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/admin/list`, {
@@ -317,7 +377,7 @@ export default {
                     return new Response(JSON.stringify({ error: 'invalid slug' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                 }
                 const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'artifact-edit' },
+                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'artifact-edit' },
                     env.ARTIFACTS_JWT_SECRET
                 );
                 const upstreamHeaders: Record<string, string> = {
@@ -354,7 +414,7 @@ export default {
                     return new Response(JSON.stringify({ error: 'invalid slug' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                 }
                 const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'artifact-delete' },
+                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'artifact-delete' },
                     env.ARTIFACTS_JWT_SECRET
                 );
                 const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/${encodeURIComponent(slug)}`, {
@@ -378,7 +438,7 @@ export default {
                     );
                 }
                 const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'library-create' },
+                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'library-create' },
                     env.ARTIFACTS_JWT_SECRET
                 );
                 const bodyText = await request.text();
@@ -407,7 +467,7 @@ export default {
                     return new Response(JSON.stringify({ error: 'invalid slug' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                 }
                 const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'library-edit' },
+                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'library-edit' },
                     env.ARTIFACTS_JWT_SECRET
                 );
                 const bodyText = await request.text();
@@ -436,7 +496,7 @@ export default {
                     return new Response(JSON.stringify({ error: 'invalid slug' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                 }
                 const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'library-delete' },
+                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'library-delete' },
                     env.ARTIFACTS_JWT_SECRET
                 );
                 const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/library/${encodeURIComponent(slug)}`, {
@@ -456,7 +516,7 @@ export default {
                     return new Response(JSON.stringify({ error: 'Visitor service not configured' }), { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                 }
                 const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'visitors-list' },
+                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'visitors-list' },
                     env.ARTIFACTS_JWT_SECRET
                 );
                 const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/admin/visitors`, {
@@ -476,7 +536,7 @@ export default {
                     return new Response(JSON.stringify({ error: 'invalid id' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                 }
                 const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', purpose: 'visitors-delete' },
+                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'visitors-delete' },
                     env.ARTIFACTS_JWT_SECRET
                 );
                 const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/admin/visitors/${encodeURIComponent(id)}`, {
@@ -544,7 +604,7 @@ export default {
                         });
                     }
                     const data = await resp.json() as any;
-                    const content = atob(data.content);
+                    const content = decodeBase64ToUtf8(data.content);
                     return new Response(JSON.stringify({ artifacts: JSON.parse(content) }), {
                         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                     });
@@ -562,7 +622,7 @@ export default {
                             );
                         }
                         const jwt = await signArtifactsJwt(
-                            { sub: authPayload.id || authPayload.username || 'admin', purpose: 'artifact-upload' },
+                            { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'artifact-upload' },
                             env.ARTIFACTS_JWT_SECRET
                         );
                         const upstreamHeaders: Record<string, string> = {
@@ -620,7 +680,7 @@ export default {
                         }
 
                         const jwt = await signArtifactsJwt(
-                            { sub: authPayload.id || authPayload.username || 'admin', purpose: 'artifact-upload' },
+                            { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'artifact-upload' },
                             env.ARTIFACTS_JWT_SECRET
                         );
 
@@ -707,7 +767,7 @@ export default {
                     if (manifestResp.ok) {
                         const manifestData = await manifestResp.json() as any;
                         manifestSha = manifestData.sha;
-                        artifacts = JSON.parse(atob(manifestData.content));
+                        artifacts = JSON.parse(decodeBase64ToUtf8(manifestData.content));
                     }
 
                     // Remove existing entry with same filename if overwriting
@@ -728,7 +788,7 @@ export default {
 
                     const manifestUpdateBody: any = {
                         message: `Update artifacts manifest: add ${safeFilename}`,
-                        content: btoa(JSON.stringify(artifacts, null, 2)),
+                        content: encodeUtf8ToBase64(JSON.stringify(artifacts, null, 2)),
                     };
                     if (manifestSha) manifestUpdateBody.sha = manifestSha;
 
@@ -744,6 +804,15 @@ export default {
 
                     if (!manifestUpdateResp.ok) {
                         const errText = await manifestUpdateResp.text();
+                        // 409 = the manifest moved between our read and this write (another
+                        // admin, or a build committing to main). The sha we hold is stale, so
+                        // the only fix is to re-read it — say so instead of leaking GitHub's text.
+                        if (manifestUpdateResp.status === 409) {
+                            return new Response(
+                                `The artifacts manifest changed while this upload was in flight. The file "${safeFilename}" was committed — retry the upload to add its manifest entry.`,
+                                { status: 409, headers: corsHeaders }
+                            );
+                        }
                         return new Response(`File uploaded but manifest update failed: ${errText}`, { status: 500, headers: corsHeaders });
                     }
 
@@ -825,7 +894,7 @@ export default {
                     }
 
                     const manifestData = await manifestResp.json() as any;
-                    const artifacts = JSON.parse(atob(manifestData.content));
+                    const artifacts = JSON.parse(decodeBase64ToUtf8(manifestData.content));
                     const idx = artifacts.findIndex((a: any) => a.filename === safeFilename);
 
                     if (idx === -1) {
@@ -849,13 +918,19 @@ export default {
                         },
                         body: JSON.stringify({
                             message: `Update artifact metadata: ${safeFilename}`,
-                            content: btoa(JSON.stringify(artifacts, null, 2)),
+                            content: encodeUtf8ToBase64(JSON.stringify(artifacts, null, 2)),
                             sha: manifestData.sha,
                         }),
                     });
 
                     if (!manifestUpdateResp.ok) {
                         const errText = await manifestUpdateResp.text();
+                        if (manifestUpdateResp.status === 409) {
+                            return new Response(
+                                `The artifacts manifest changed while this edit was in flight. The metadata was not saved — reload the artifact list and try again.`,
+                                { status: 409, headers: corsHeaders }
+                            );
+                        }
                         return new Response(`Manifest update failed: ${errText}`, { status: 500, headers: corsHeaders });
                     }
 
@@ -884,9 +959,12 @@ export default {
                         },
                     });
 
+                    // A 404 here means the file is already gone — that is a no-op, not a
+                    // failure. Anything else that fails has to surface: this used to
+                    // fire-and-forget both calls and report success regardless.
                     if (fileResp.ok) {
                         const fileData = await fileResp.json() as any;
-                        await fetch(fileUrl, {
+                        const fileDeleteResp = await fetch(fileUrl, {
                             method: 'DELETE',
                             headers: {
                                 'Authorization': `token ${env.GITHUB_TOKEN}`,
@@ -898,6 +976,19 @@ export default {
                                 sha: fileData.sha,
                             }),
                         });
+                        if (!fileDeleteResp.ok) {
+                            const errText = await fileDeleteResp.text();
+                            if (fileDeleteResp.status === 409) {
+                                return new Response(
+                                    `"${safeFilename}" changed while this delete was in flight. Nothing was deleted — reload the artifact list and try again.`,
+                                    { status: 409, headers: corsHeaders }
+                                );
+                            }
+                            return new Response(`Failed to delete file: ${errText}`, { status: 502, headers: corsHeaders });
+                        }
+                    } else if (fileResp.status !== 404) {
+                        const errText = await fileResp.text();
+                        return new Response(`Failed to read file before delete: ${errText}`, { status: 502, headers: corsHeaders });
                     }
 
                     // 2. Update manifest
@@ -910,24 +1001,37 @@ export default {
                         },
                     });
 
-                    if (manifestResp.ok) {
-                        const manifestData = await manifestResp.json() as any;
-                        const artifacts = JSON.parse(atob(manifestData.content));
-                        const filtered = artifacts.filter((a: any) => a.filename !== safeFilename);
+                    if (!manifestResp.ok) {
+                        return new Response('File deleted but the manifest could not be read', { status: 502, headers: corsHeaders });
+                    }
 
-                        await fetch(manifestUrl, {
-                            method: 'PUT',
-                            headers: {
-                                'Authorization': `token ${env.GITHUB_TOKEN}`,
-                                'Accept': 'application/vnd.github.v3+json',
-                                'User-Agent': 'Cloudflare-Worker',
-                            },
-                            body: JSON.stringify({
-                                message: `Update artifacts manifest: remove ${safeFilename}`,
-                                content: btoa(JSON.stringify(filtered, null, 2)),
-                                sha: manifestData.sha,
-                            }),
-                        });
+                    const manifestData = await manifestResp.json() as any;
+                    const artifacts = JSON.parse(decodeBase64ToUtf8(manifestData.content));
+                    const filtered = artifacts.filter((a: any) => a.filename !== safeFilename);
+
+                    const manifestUpdateResp = await fetch(manifestUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${env.GITHUB_TOKEN}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Cloudflare-Worker',
+                        },
+                        body: JSON.stringify({
+                            message: `Update artifacts manifest: remove ${safeFilename}`,
+                            content: encodeUtf8ToBase64(JSON.stringify(filtered, null, 2)),
+                            sha: manifestData.sha,
+                        }),
+                    });
+
+                    if (!manifestUpdateResp.ok) {
+                        const errText = await manifestUpdateResp.text();
+                        if (manifestUpdateResp.status === 409) {
+                            return new Response(
+                                `The artifacts manifest changed while this delete was in flight. The file was removed — retry the delete to drop its manifest entry.`,
+                                { status: 409, headers: corsHeaders }
+                            );
+                        }
+                        return new Response(`File deleted but manifest update failed: ${errText}`, { status: 502, headers: corsHeaders });
                     }
 
                     return new Response(JSON.stringify({ success: true }), {
@@ -949,7 +1053,7 @@ export default {
                     // Owner — enrich with cached profile
                     const ownerUsername = authPayload.username || '';
                     const ownerProfile = ownerUsername
-                        ? await getCachedProfile(env, ownerUsername)
+                        ? await getCachedProfile(env, ownerUsername, url.origin)
                         : null;
                     users.push({
                         username: ownerUsername,
@@ -965,7 +1069,7 @@ export default {
                     for (const uname of userList) {
                         const user = await getUser(env.ADMIN_USERS, uname);
                         if (user) {
-                            const profile = await getCachedProfile(env, uname);
+                            const profile = await getCachedProfile(env, uname, url.origin);
                             users.push({ ...user, photoUrl: profile?.photoUrl || null });
                         }
                     }
@@ -1025,7 +1129,7 @@ export default {
                     });
                 }
 
-                const profile = await resolveTelegramProfile(env, username);
+                const profile = await resolveTelegramProfile(env, username, url.origin);
 
                 // Pre-warm the profile cache so the user list renders the same
                 // avatar instantly once this user is invited.
@@ -1218,6 +1322,9 @@ async function signJwt(payload: any, secret: string): Promise<string> {
 }
 
 // Mints a short-lived (60s) HS256 JWT for the Oracle artifact service.
+// Callers pass `role` (the freshly re-derived session role, not the token's own
+// claim): the service only discloses decrypted artifact passwords when it reads
+// role === 'super_admin', and treats an absent claim as not-super_admin.
 async function signArtifactsJwt(payload: Record<string, unknown>, secret: string): Promise<string> {
     const header = { alg: 'HS256', typ: 'JWT' };
     const now = Math.floor(Date.now() / 1000);
@@ -1416,6 +1523,22 @@ function decodeBase64ToBytes(b64: string): Uint8Array {
     return out;
 }
 
+// GitHub's contents API speaks base64 of the raw UTF-8 bytes, but btoa/atob are
+// Latin-1: btoa() throws on anything above U+00FF (an em-dash in a description
+// would 500 the request *after* the file commit already landed) and atob() decodes
+// UTF-8 bytes as Latin-1, turning '—' into 'â€"'. Round-trip through
+// TextEncoder/TextDecoder instead.
+function encodeUtf8ToBase64(str: string): string {
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+}
+
+function decodeBase64ToUtf8(b64: string): string {
+    return new TextDecoder().decode(decodeBase64ToBytes(b64));
+}
+
 async function verifyJwt(token: string, secret: string): Promise<any | null> {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
@@ -1510,6 +1633,24 @@ async function checkUserAuthorization(
     return { authorized: false, role: '' };
 }
 
+/**
+ * Re-check an already-verified session JWT against KV, in one read.
+ *
+ * Keyed on `sub:` rather than `user:<username>` deliberately: `sub:` is written by
+ * claimInvitation and deleted by removeUser, so its presence means "still an active
+ * admin", and an admin who changed their Telegram username after claiming the invite
+ * is not locked out. Only the owner is ever super_admin, and that comes from
+ * OWNER_SUB, never KV — so the owner short-circuits with zero reads.
+ */
+async function revalidateSession(env: Env, payload: any): Promise<{ valid: boolean; role: string }> {
+    if (String(payload.id) === env.OWNER_SUB) {
+        return { valid: true, role: 'super_admin' };
+    }
+    const username = await env.ADMIN_USERS.get(`sub:${payload.id}`);
+    if (!username) return { valid: false, role: '' };
+    return { valid: true, role: 'admin' };
+}
+
 async function getUserList(kv: KVNamespace): Promise<string[]> {
     const raw = await kv.get('user_list');
     return raw ? JSON.parse(raw) : [];
@@ -1557,17 +1698,23 @@ async function removeUser(kv: KVNamespace, username: string): Promise<void> {
     }
     await kv.delete(`user:${username}`);
     await kv.delete(`profile:${username}`);
+    await kv.delete(`avatar:${username}`);
     const list = await getUserList(kv);
     const filtered = list.filter(u => u !== username);
     await kv.put('user_list', JSON.stringify(filtered));
 }
 
-async function getCachedProfile(env: Env, username: string): Promise<{ firstName: string; photoUrl: string | null } | null> {
+async function getCachedProfile(env: Env, username: string, origin: string): Promise<{ firstName: string; photoUrl: string | null } | null> {
     const kv = env.ADMIN_USERS;
     const cached = await kv.get(`profile:${username}`);
-    if (cached) return JSON.parse(cached);
+    if (cached) {
+        const parsed = JSON.parse(cached) as { firstName: string; photoUrl: string | null };
+        // Entries written before the avatar proxy existed embed the bot token in the
+        // photo URL and live for 7 days — treat those as a miss and re-resolve.
+        if (!parsed.photoUrl?.startsWith('https://api.telegram.org/')) return parsed;
+    }
 
-    const profile = await resolveTelegramProfile(env, username);
+    const profile = await resolveTelegramProfile(env, username, origin);
     if (!profile.found && !profile.photoUrl) return null;
 
     const result = { firstName: profile.firstName || username, photoUrl: profile.photoUrl };
@@ -1583,12 +1730,15 @@ async function getCachedProfile(env: Env, username: string): Promise<{ firstName
  *  1. Bot API getChat — authoritative existence check + structured name.
  *  2. t.me Open Graph tags — token-free CDN avatar URL (preferred for display)
  *     plus a name fallback when the bot cannot see the user.
- *  3. Bot API getFile — last-resort avatar only; the resulting URL embeds the
- *     bot token, so it is used only when t.me yields no image.
+ *  3. Bot API photo — last-resort avatar only, served back through this Worker's
+ *     /api/avatar proxy because the Bot API's own file URL embeds the bot token.
+ *
+ * `origin` is this Worker's own origin, used to build that proxy URL.
  */
 async function resolveTelegramProfile(
     env: Env,
     username: string,
+    origin: string,
 ): Promise<{ found: boolean; username: string; firstName: string | null; lastName: string | null; photoUrl: string | null }> {
     let found = false;
     let canonicalUsername = username;
@@ -1641,18 +1791,20 @@ async function resolveTelegramProfile(
         console.error('t.me profile lookup failed:', e);
     }
 
-    // 3) Bot API avatar — last resort (URL carries the bot token)
+    // 3) Bot API avatar — last resort. Cache the (token-free, stable) file_id and hand
+    //    out the Worker proxy URL; the resolved Bot API file URL carries the bot token
+    //    and must never end up in an <img src>. file_ids are cached only here, and the
+    //    proxy serves nothing else, so it can only ever return already-looked-up users.
     if (!photoUrl && botPhotoFileId && env.BOT_TOKEN) {
         try {
-            const fileResp = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/getFile?file_id=${botPhotoFileId}`);
-            if (fileResp.ok) {
-                const fileData = await fileResp.json() as any;
-                if (fileData.ok) {
-                    photoUrl = `https://api.telegram.org/file/bot${env.BOT_TOKEN}/${fileData.result.file_path}`;
-                }
-            }
+            const key = username.toLowerCase();
+            // 8 days, one longer than the profile cache that points at it — same-instant
+            // TTLs would let this key lapse first and 404 the avatar for the last hours
+            // of an otherwise valid profile entry.
+            await env.ADMIN_USERS.put(`avatar:${key}`, botPhotoFileId, { expirationTtl: 60 * 60 * 24 * 8 });
+            photoUrl = `${origin}/api/avatar/${encodeURIComponent(key)}`;
         } catch (e) {
-            console.error('Telegram getFile failed:', e);
+            console.error('Avatar file_id cache failed:', e);
         }
     }
 

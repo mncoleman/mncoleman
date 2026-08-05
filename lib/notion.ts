@@ -1,4 +1,5 @@
 import { Client } from '@notionhq/client';
+import { withNotionRetry } from './notion-retry';
 // Import NotionToMarkdown only when needed to avoid top-level triggers
 
 const getNotionClient = () => {
@@ -63,15 +64,17 @@ export async function getPublishedPosts(): Promise<NotionPost[]> {
 
     try {
         const notion = getNotionClient();
-        const response = await notion.databases.query({
-            database_id: databaseId,
-            filter: {
-                property: 'Published',
-                checkbox: {
-                    equals: true,
+        const response = await withNotionRetry('databases.query', () =>
+            notion.databases.query({
+                database_id: databaseId,
+                filter: {
+                    property: 'Published',
+                    checkbox: {
+                        equals: true,
+                    },
                 },
-            },
-        });
+            })
+        );
 
         const posts = response.results.map((page: any) => {
             const featured = page.properties.Featured?.checkbox || false;
@@ -109,20 +112,11 @@ export async function getPublishedPosts(): Promise<NotionPost[]> {
 
         return sortedPosts;
     } catch (error) {
+        // Credentials are configured, so this is a real outage — fail the build.
+        // Falling back to sample data here would deploy "Welcome to Notion CMS"
+        // over the live site; a failed build leaves the last good deploy up.
         console.error('Error fetching posts from Notion:', error);
-        // Return sample data on error
-        return [
-            {
-                id: 'sample-post',
-                slug: 'welcome-to-notion-cms',
-                title: 'Welcome to Notion CMS',
-                date: new Date().toISOString(),
-                excerpt: 'This is a sample post because Notion credentials are not configured.',
-                author: 'Admin',
-                tags: ['Sample', 'Setup'],
-                published: true,
-            }
-        ];
+        throw error;
     }
 }
 
@@ -164,32 +158,34 @@ Check \`CLAUDE.md\` for detailed instructions.
         const notion = getNotionClient();
         const { NotionToMarkdown } = await import('notion-to-md');
         const n2m = new NotionToMarkdown({ notionClient: notion });
-        const response = await notion.databases.query({
-            database_id: databaseId,
-            filter: {
-                and: [
-                    {
-                        property: 'Slug',
-                        rich_text: {
-                            equals: slug,
+        const response = await withNotionRetry('databases.query', () =>
+            notion.databases.query({
+                database_id: databaseId,
+                filter: {
+                    and: [
+                        {
+                            property: 'Slug',
+                            rich_text: {
+                                equals: slug,
+                            },
                         },
-                    },
-                    {
-                        property: 'Published',
-                        checkbox: {
-                            equals: true,
+                        {
+                            property: 'Published',
+                            checkbox: {
+                                equals: true,
+                            },
                         },
-                    },
-                ],
-            },
-        });
+                    ],
+                },
+            })
+        );
 
         if (response.results.length === 0) {
             return null;
         }
 
         const page = response.results[0] as any;
-        const mdblocks = await n2m.pageToMarkdown(page.id);
+        const mdblocks = await withNotionRetry('pageToMarkdown', () => n2m.pageToMarkdown(page.id));
         const mdString = n2m.toMarkdownString(mdblocks);
 
         // Calculate word count and reading time
@@ -211,8 +207,10 @@ Check \`CLAUDE.md\` for detailed instructions.
             readingTime,
         };
     } catch (error) {
+        // Configured credentials + a failed fetch = outage, not a missing post.
+        // Returning null would bake a 404 for a real post into the deploy.
         console.error(`Error fetching post with slug ${slug}:`, error);
-        return null;
+        throw error;
     }
 }
 
@@ -271,7 +269,7 @@ export async function getBlogStats(): Promise<BlogStats> {
             const notion = getNotionClient();
             const { NotionToMarkdown } = await import('notion-to-md');
             const n2m = new NotionToMarkdown({ notionClient: notion });
-            const mdblocks = await n2m.pageToMarkdown(post.id);
+            const mdblocks = await withNotionRetry('pageToMarkdown', () => n2m.pageToMarkdown(post.id));
             const mdString = n2m.toMarkdownString(mdblocks);
             const wordCount = mdString.parent.split(/\s+/).length;
             totalWords += wordCount;

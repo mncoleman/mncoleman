@@ -1,5 +1,6 @@
 import { Client } from '@notionhq/client';
 import { slugify } from './utils';
+import { withNotionRetry } from './notion-retry';
 
 const getNotionClient = () => {
     if (!process.env.NOTION_TOKEN || process.env.NOTION_TOKEN === 'ntn_your_integration_token_here') {
@@ -53,12 +54,14 @@ export async function getResourceBySlug(slug: string): Promise<ResourceDetail | 
         const notion = getNotionClient();
         const { NotionToMarkdown } = await import('notion-to-md');
         const n2m = new NotionToMarkdown({ notionClient: notion });
-        const mdblocks = await n2m.pageToMarkdown(match.id);
+        const mdblocks = await withNotionRetry('pageToMarkdown', () => n2m.pageToMarkdown(match.id));
         const content = n2m.toMarkdownString(mdblocks).parent;
         return { ...match, content };
     } catch (error) {
+        // Configured credentials + a failed fetch = outage. Silently shipping the
+        // record without its body would publish a half-empty page.
         console.error(`Error fetching resource body for slug ${slug}:`, error);
-        return { ...match };
+        throw error;
     }
 }
 
@@ -83,13 +86,15 @@ export async function getPublishedResources(): Promise<Resource[]> {
 
     try {
         const notion = getNotionClient();
-        const response = await notion.databases.query({
-            database_id: databaseId,
-            filter: {
-                property: 'Published',
-                checkbox: { equals: true }
-            }
-        });
+        const response = await withNotionRetry('databases.query', () =>
+            notion.databases.query({
+                database_id: databaseId,
+                filter: {
+                    property: 'Published',
+                    checkbox: { equals: true }
+                }
+            })
+        );
 
         return response.results.map((page: any) => ({
             id: page.id,
@@ -100,8 +105,11 @@ export async function getPublishedResources(): Promise<Resource[]> {
             published: page.properties.Published?.checkbox || false
         }));
     } catch (error) {
+        // Credentials are configured, so this is a real outage — fail the build.
+        // An empty list would deploy an empty /resources over the live site; a
+        // failed build leaves the last good deploy up.
         console.error('Error fetching resources:', error);
-        return [];
+        throw error;
     }
 }
 

@@ -1,5 +1,6 @@
 import { Client } from '@notionhq/client';
 import { NotionToMarkdown } from 'notion-to-md';
+import { withNotionRetry } from './notion-retry';
 
 const getNotionClient = () => {
     if (!process.env.NOTION_TOKEN || process.env.NOTION_TOKEN.includes('your_integration_token')) {
@@ -32,8 +33,8 @@ export async function getResume(): Promise<Resume | null> {
         const notion = getNotionClient();
         const n2m = new NotionToMarkdown({ notionClient: notion });
 
-        const page = await notion.pages.retrieve({ page_id: pageId }) as any;
-        const mdblocks = await n2m.pageToMarkdown(pageId);
+        const page = await withNotionRetry('pages.retrieve', () => notion.pages.retrieve({ page_id: pageId })) as any;
+        const mdblocks = await withNotionRetry('pageToMarkdown', () => n2m.pageToMarkdown(pageId));
         const mdString = n2m.toMarkdownString(mdblocks);
 
         return {
@@ -42,7 +43,10 @@ export async function getResume(): Promise<Resume | null> {
             lastUpdated: page.last_edited_time
         };
     } catch (error) {
+        // Credentials are configured, so this is a real outage — fail the build.
+        // Returning null would deploy an empty /resume over the live site; a
+        // failed build leaves the last good deploy up.
         console.error('Error fetching resume:', error);
-        return null;
+        throw error;
     }
 }
