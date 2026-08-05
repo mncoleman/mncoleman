@@ -488,3 +488,24 @@
   border-color: hsl(var(--foreground));
   transform: scale(1.12);
 }
+
+/* Staggered entrance for the resume hero's contact chips. Kept as a keyframe
+ * rather than a motion component so each chip can fire off a plain inline
+ * `animation-delay` without another client component per link. */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*='fadeSlideIn'] {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}
