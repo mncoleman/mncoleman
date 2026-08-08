@@ -70,5 +70,14 @@
     "type": "text/html",
     "size": 351815,
     "uploadedAt": "2026-08-04T00:00:00.000Z"
+  },
+  {
+    "id": "c407fa9e-b17f-4222-ab5e-63d094ff51ab",
+    "name": "MCP Inspector",
+    "filename": "mcp-wire-inspector.html",
+    "description": "A rebranded MCP inspector. Might not contain all features of the official equivalent.",
+    "type": "text/html",
+    "size": 85963,
+    "uploadedAt": "2026-08-08T01:55:20.569Z"
   }
 ]
