@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP Wire Inspector</title>
+<style>
+:root{
+  --ink:#0c0e11;
+  --panel:#13161b;
+  --panel-2:#171b21;
+  --line:#232932;
+  --line-soft:#1c2129;
+  --text:#d8dee6;
+  --text-strong:#f2f5f9;
+  --dim:#78828f;
+  --dim-2:#5b646f;
+  --out:#d0a145;
+  --in:#63b3a2;
+  --err:#e2664e;
+  --warn:#c9903f;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+  --r:3px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--ink);color:var(--text);
+  font-family:var(--sans);font-size:13px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+:focus-visible{outline:1px solid var(--out);outline-offset:1px}
+::selection{background:#3a4250;color:#fff}
+
+/* ---------- chrome ---------- */
+.topbar{
+  height:38px;border-bottom:1px solid var(--line);background:var(--panel);
+  display:flex;align-items:center;gap:14px;padding:0 12px;
+  position:sticky;top:0;z-index:40;
+}
+.brand{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-strong)}
+.brand b{color:var(--out);font-weight:600}
+.status{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--dim-2);flex:none}
+.dot.on{background:var(--in);box-shadow:0 0 0 3px rgba(99,179,162,.14)}
+.dot.err{background:var(--err);box-shadow:0 0 0 3px rgba(226,102,78,.14)}
+.dot.busy{background:var(--out);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.spacer{flex:1}
+.topbar .ghost{font-family:var(--mono);font-size:11px}
+
+/* ---------- layout ---------- */
+.shell{display:grid;grid-template-columns:330px minmax(0,1fr) 400px;height:calc(100% - 38px)}
+.col{overflow-y:auto;min-width:0}
+.col.rail{border-right:1px solid var(--line);background:var(--panel)}
+.col.wire{border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;overflow:hidden}
+.tabbar{display:none}
+
+@media (max-width:1180px){
+  .shell{grid-template-columns:300px minmax(0,1fr);}
+  .col.wire{position:fixed;right:0;top:38px;bottom:0;width:min(440px,92vw);z-index:30;
+    box-shadow:-18px 0 40px rgba(0,0,0,.5);transform:translateX(100%);transition:transform .18s ease}
+  body.wire-open .col.wire{transform:none}
+}
+@media (max-width:820px){
+  .shell{display:block;height:auto}
+  .col.rail{border-right:0;border-bottom:1px solid var(--line)}
+  .col{overflow:visible}
+  .tabbar{display:flex;position:sticky;top:38px;z-index:20;background:var(--panel);border-bottom:1px solid var(--line)}
+  .tabbar button{flex:1;padding:9px;background:none;border:0;border-bottom:2px solid transparent;
+    font-family:var(--mono);font-size:11px;color:var(--dim);cursor:pointer}
+  .tabbar button.active{color:var(--text-strong);border-bottom-color:var(--out)}
+  body[data-pane="work"] .col.rail{display:none}
+  body[data-pane="rail"] .col.work{display:none}
+}
+
+/* ---------- generic bits ---------- */
+.sect{border-bottom:1px solid var(--line-soft)}
+.sect > summary{
+  list-style:none;cursor:pointer;padding:9px 12px;display:flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);
+  user-select:none;
+}
+.sect > summary::-webkit-details-marker{display:none}
+.sect > summary:hover{color:var(--text)}
+.sect > summary::before{content:"+";width:9px;color:var(--dim-2);font-size:12px;line-height:1}
+.sect[open] > summary::before{content:"\2212"}
+.sect > summary .count{margin-left:auto;color:var(--dim-2);font-size:10px}
+.sect .body{padding:0 12px 14px}
+
+label.f{display:block;margin:9px 0 4px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--dim)}
+label.f .req{color:var(--out)}
+.hint{color:var(--dim-2);font-size:11.5px;margin:3px 0 0;font-family:var(--sans);text-transform:none;letter-spacing:0}
+input[type=text],input[type=number],input[type=url],select,textarea{
+  width:100%;background:var(--ink);border:1px solid var(--line);border-radius:var(--r);
+  padding:6px 8px;font-family:var(--mono);font-size:12px;
+}
+textarea{resize:vertical;min-height:64px;line-height:1.45}
+input:focus,select:focus,textarea:focus{border-color:#39414d;outline:none}
+input::placeholder,textarea::placeholder{color:var(--dim-2)}
+.row{display:flex;gap:6px}
+.row > *{min-width:0}
+
+button.btn{
+  background:var(--out);color:#1a1409;border:0;border-radius:var(--r);padding:7px 13px;
+  font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.05em;cursor:pointer;
+}
+button.btn:hover{filter:brightness(1.1)}
+button.btn:disabled{opacity:.4;cursor:default;filter:none}
+button.ghost{
+  background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:var(--r);
+  padding:6px 10px;font-family:var(--mono);font-size:11px;cursor:pointer;
+}
+button.ghost:hover{color:var(--text);border-color:#39414d}
+button.ghost.danger:hover{color:var(--err);border-color:var(--err)}
+button.mini{background:none;border:0;color:var(--dim-2);cursor:pointer;font-family:var(--mono);font-size:11px;padding:2px 5px}
+button.mini:hover{color:var(--text)}
+
+.kv{display:grid;grid-template-columns:1fr 1.35fr auto;gap:5px;margin-bottom:5px}
+.kv input{font-size:11.5px}
+
+.pill{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;
+  padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--dim)}
+.pill.ok{color:var(--in);border-color:rgba(99,179,162,.4)}
+.pill.bad{color:var(--err);border-color:rgba(226,102,78,.4)}
+.pill.warn{color:var(--warn);border-color:rgba(201,144,63,.4)}
+
+.note{border:1px solid var(--line);border-left:2px solid var(--dim-2);border-radius:var(--r);
+  padding:9px 11px;margin:10px 0;font-size:12px;color:var(--dim)}
+.note.bad{border-left-color:var(--err);color:#e9a595}
+.note.warn{border-left-color:var(--warn);color:#dcbb85}
+.note.ok{border-left-color:var(--in);color:#a4d3c9}
+.note h4{margin:0 0 5px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text)}
+.note pre{margin:7px 0 0;background:var(--ink);border:1px solid var(--line);border-radius:var(--r);
+  padding:8px;overflow-x:auto;font-family:var(--mono);font-size:11px;color:var(--text);white-space:pre}
+.note code{font-family:var(--mono);font-size:11.5px;color:var(--text)}
+
+/* ---------- rail lists ---------- */
+.list{margin:0;padding:0;list-style:none}
+.list li{border-bottom:1px solid var(--line-soft)}
+.list button.item{
+  display:block;width:100%;text-align:left;background:none;border:0;padding:8px 12px;cursor:pointer;
+}
+.list button.item:hover{background:var(--panel-2)}
+.list button.item.sel{background:var(--panel-2);box-shadow:inset 2px 0 0 var(--out)}
+.item .nm{font-family:var(--mono);font-size:12px;color:var(--text-strong);word-break:break-all}
+.item .ds{color:var(--dim);font-size:11.5px;margin-top:2px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.item .tag{font-family:var(--mono);font-size:9.5px;color:var(--dim-2);letter-spacing:.06em}
+
+.empty{padding:14px 12px;color:var(--dim-2);font-size:12px}
+
+/* ---------- work surface ---------- */
+.work{padding:18px 22px 60px;max-width:900px}
+.work h2{margin:0 0 2px;font-family:var(--mono);font-size:16px;font-weight:600;color:var(--text-strong);word-break:break-all}
+.work .sub{color:var(--dim);font-size:12.5px;margin:0 0 16px}
+.divide{height:1px;background:var(--line);margin:20px 0}
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:0 0 8px}
+pre.out{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;
+  overflow:auto;max-height:520px;font-family:var(--mono);font-size:12px;white-space:pre-wrap;word-break:break-word;margin:0}
+.blocks{display:flex;flex-direction:column;gap:10px}
+.block{border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+.block .bh{padding:5px 10px;border-bottom:1px solid var(--line-soft);font-family:var(--mono);
+  font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);display:flex;gap:8px}
+.block .bb{padding:10px;font-size:13px;white-space:pre-wrap;word-break:break-word;line-height:1.55}
+.block .bb.mono{font-family:var(--mono);font-size:12px}
+.block img{max-width:100%;display:block;border-radius:2px}
+
+.welcome{max-width:640px}
+.welcome h1{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--text-strong);margin:0 0 4px;letter-spacing:-.01em}
+.welcome p{color:var(--dim);font-size:13px}
+.welcome ol{color:var(--dim);padding-left:18px}
+.welcome li{margin:6px 0}
+.welcome kbd{font-family:var(--mono);font-size:11px;background:var(--panel-2);border:1px solid var(--line);
+  border-radius:2px;padding:1px 5px;color:var(--text)}
+
+/* ---------- wire log ---------- */
+.wire-head{padding:8px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;flex:none}
+.wire-head .t{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.wire-body{overflow-y:auto;flex:1}
+.entry{border-bottom:1px solid var(--line-soft);border-left:2px solid var(--line)}
+.entry.out{border-left-color:var(--out)}
+.entry.in{border-left-color:var(--in)}
+.entry.err{border-left-color:var(--err)}
+.entry.note{border-left-color:var(--dim-2)}
+.entry > .eh{display:flex;gap:8px;align-items:baseline;padding:6px 10px;cursor:pointer;font-family:var(--mono);font-size:11px}
+.entry > .eh:hover{background:var(--panel-2)}
+.eh .arrow{color:var(--dim-2);width:9px;flex:none}
+.entry.out .eh .arrow{color:var(--out)}
+.entry.in .eh .arrow{color:var(--in)}
+.entry.err .eh .arrow{color:var(--err)}
+.eh .ts{color:var(--dim-2);font-size:10px;flex:none}
+.eh .mth{color:var(--text-strong);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eh .meta{color:var(--dim-2);font-size:10px;flex:none;white-space:nowrap}
+.entry .eb{padding:0 10px 10px;display:none}
+.entry.open .eb{display:block}
+.eb pre{background:var(--ink);border:1px solid var(--line);border-radius:var(--r);padding:8px;margin:6px 0 0;
+  overflow:auto;max-height:280px;font-family:var(--mono);font-size:11px;white-space:pre-wrap;word-break:break-word}
+.eb .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim-2);margin-top:8px}
+.eb .acts{display:flex;gap:4px;margin-top:8px}
+
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--panel-2);
+  border:1px solid var(--line);border-radius:var(--r);padding:8px 14px;font-family:var(--mono);font-size:11.5px;
+  z-index:99;opacity:0;pointer-events:none;transition:opacity .15s}
+.toast.show{opacity:1}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body data-pane="work">
+
+<div class="topbar">
+  <span class="brand"><b>MCP</b> Wire Inspector</span>
+  <span class="status"><span class="dot" id="dot"></span><span id="statusText">not connected</span></span>
+  <span class="spacer"></span>
+  <button class="ghost" id="btnWire" style="display:none">Wire log</button>
+</div>
+
+<div class="tabbar">
+  <button data-pane="rail">Connection</button>
+  <button data-pane="work">Workspace</button>
+</div>
+
+<div class="shell">
+
+  <!-- ============ LEFT RAIL ============ -->
+  <div class="col rail" id="rail">
+
+    <details class="sect" id="secConn" open>
+      <summary>Endpoint</summary>
+      <div class="body">
+        <label class="f" for="url">Server URL</label>
+        <input type="url" id="url" placeholder="https://example.com/mcp" spellcheck="false">
+
+        <label class="f" for="era">Protocol</label>
+        <select id="era">
+          <option value="auto">Auto detect</option>
+          <option value="2026-07-28">2026-07-28 (stateless)</option>
+          <option value="2025-11-25">2025-11-25 (session)</option>
+          <option value="2025-06-18">2025-06-18 (session)</option>
+          <option value="2025-03-26">2025-03-26 (session)</option>
+        </select>
+
+        <label class="f">Headers</label>
+        <div id="hdrs"></div>
+        <button class="ghost" id="addHdr" style="margin-top:4px">Add header</button>
+
+        <div class="row" style="margin-top:14px">
+          <button class="btn" id="btnConnect" style="flex:1">Connect</button>
+          <button class="ghost" id="btnDisconnect">Reset</button>
+        </div>
+        <div id="connMsg"></div>
+      </div>
+    </details>
+
+    <details class="sect" id="secAuth">
+      <summary>OAuth <span class="count" id="authState">off</span></summary>
+      <div class="body">
+        <p class="hint" style="margin:6px 0 10px">
+          Discovers the server's authorization server, registers this page as a client, and runs
+          an authorization-code flow with PKCE. Needs this page served over http(s), not opened from disk.
+        </p>
+        <div class="row">
+          <button class="ghost" id="btnOauthDisc" style="flex:1">Discover</button>
+          <button class="ghost" id="btnOauthGo" style="flex:1">Authorize</button>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <button class="ghost" id="btnOauthRefresh" style="flex:1">Refresh token</button>
+          <button class="ghost danger" id="btnOauthClear">Forget</button>
+        </div>
+        <label class="f" for="oauthScope">Scope override</label>
+        <input type="text" id="oauthScope" placeholder="(from server metadata)" spellcheck="false">
+        <label class="f" for="oauthClientId">Client ID override</label>
+        <input type="text" id="oauthClientId" placeholder="(dynamic registration)" spellcheck="false">
+        <label class="f" for="oauthSecret">Client secret</label>
+        <input type="text" id="oauthSecret" placeholder="(public client, usually empty)" spellcheck="false">
+        <div id="oauthInfo"></div>
+      </div>
+    </details>
+
+    <details class="sect" id="secServer">
+      <summary>Server</summary>
+      <div class="body" id="serverInfo"><p class="hint">Connect to see identity and capabilities.</p></div>
+    </details>
+
+    <details class="sect" id="secTools" open>
+      <summary>Tools <span class="count" id="cTools">—</span></summary>
+      <ul class="list" id="lTools"><li class="empty">Not loaded.</li></ul>
+    </details>
+
+    <details class="sect" id="secRes">
+      <summary>Resources <span class="count" id="cRes">—</span></summary>
+      <ul class="list" id="lRes"><li class="empty">Not loaded.</li></ul>
+    </details>
+
+    <details class="sect" id="secPrompts">
+      <summary>Prompts <span class="count" id="cPrompts">—</span></summary>
+      <ul class="list" id="lPrompts"><li class="empty">Not loaded.</li></ul>
+    </details>
+
+    <details class="sect" id="secRaw">
+      <summary>Utilities</summary>
+      <div class="body">
+        <button class="ghost" id="btnRaw" style="width:100%;margin-bottom:6px">Raw JSON-RPC</button>
+        <button class="ghost" id="btnPing" style="width:100%;margin-bottom:6px">Send ping</button>
+        <button class="ghost" id="btnRefresh" style="width:100%;margin-bottom:6px">Reload lists</button>
+        <button class="ghost" id="btnDoctor" style="width:100%">CORS doctor</button>
+      </div>
+    </details>
+
+    <details class="sect" id="secSaved">
+      <summary>Saved endpoints <span class="count" id="cSaved">0</span></summary>
+      <div class="body">
+        <div class="row"><input type="text" id="saveName" placeholder="name"><button class="ghost" id="btnSave">Save</button></div>
+        <ul class="list" id="lSaved" style="margin-top:8px"></ul>
+      </div>
+    </details>
+  </div>
+
+  <!-- ============ WORK SURFACE ============ -->
+  <div class="col work-col work"><div id="work" class="work"></div></div>
+
+  <!-- ============ WIRE LOG ============ -->
+  <div class="col wire">
+    <div class="wire-head">
+      <span class="t">Wire</span>
+      <span class="pill" id="wireCount">0</span>
+      <span class="spacer" style="flex:1"></span>
+      <button class="mini" id="btnExport">export</button>
+      <button class="mini" id="btnClear">clear</button>
+      <button class="mini" id="btnCloseWire" style="display:none">close</button>
+    </div>
+    <div class="wire-body" id="wireBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+"use strict";
+
+/* =========================================================================
+   MCP Wire Inspector — a single-file, dependency-free MCP client.
+   Speaks Streamable HTTP for both protocol eras:
+     modern  (2026-07-28) : stateless, per-request _meta envelope, no handshake
+     legacy  (2025-03-26 .. 2025-11-25) : initialize handshake + Mcp-Session-Id
+   ========================================================================= */
+
+const CLIENT_INFO = { name: "mcp-wire-inspector", version: "1.0.0" };
+const MODERN = "2026-07-28";
+const LEGACY_PREFERRED = "2025-11-25";
+const MODERN_ERAS = new Set([MODERN]);
+const META = {
+  ver: "io.modelcontextprotocol/protocolVersion",
+  info: "io.modelcontextprotocol/clientInfo",
+  caps: "io.modelcontextprotocol/clientCapabilities"
+};
+
+/* ---------- tiny helpers ---------- */
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const j = (v) => { try { return JSON.stringify(v, null, 2); } catch { return String(v); } };
+const nowStamp = () => { const d = new Date(); return d.toTimeString().slice(0, 8) + "." + String(d.getMilliseconds()).padStart(3, "0"); };
+const bytes = (n) => n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " kB" : (n / 1048576).toFixed(1) + " MB";
+
+/* localStorage is unavailable in some sandboxed frames — degrade to memory. */
+const store = (() => {
+  let ok = true;
+  try { localStorage.setItem("__t", "1"); localStorage.removeItem("__t"); } catch { ok = false; }
+  const mem = new Map();
+  return {
+    ok,
+    get(k) { try { return ok ? localStorage.getItem(k) : (mem.has(k) ? mem.get(k) : null); } catch { return null; } },
+    set(k, v) { try { ok ? localStorage.setItem(k, v) : mem.set(k, v); } catch { } },
+    del(k) { try { ok ? localStorage.removeItem(k) : mem.delete(k); } catch { } }
+  };
+})();
+
+let toastTimer;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+}
+async function copy(text, label) {
+  try { await navigator.clipboard.writeText(text); toast((label || "Copied") + " to clipboard"); }
+  catch { toast("Clipboard blocked — select and copy manually"); }
+}
+
+/* ---------- header value encoding (spec: Value Encoding) ---------- */
+function b64utf8(s) {
+  const b = new TextEncoder().encode(s);
+  let bin = ""; for (const x of b) bin += String.fromCharCode(x);
+  return btoa(bin);
+}
+function encodeHeaderValue(v) {
+  const plainAscii = /^[\x20-\x7e]*$/.test(v);
+  const padded = v !== v.trim();
+  const sentinelClash = v.startsWith("=?base64?") && v.endsWith("?=");
+  if (plainAscii && !padded && !sentinelClash) return v;
+  return "=?base64?" + b64utf8(v) + "?=";
+}
+
+/* =========================================================================
+   Wire log
+   ========================================================================= */
+const wire = { entries: [], seq: 0 };
+
+function logEntry(kind, method, meta, sections) {
+  const id = ++wire.seq;
+  const rec = { id, kind, method, meta, sections, ts: nowStamp() };
+  wire.entries.push(rec);
+  const node = el("div", "entry " + kind);
+  const head = el("div", "eh");
+  head.appendChild(el("span", "arrow", kind === "out" ? "\u2192" : kind === "in" ? "\u2190" : kind === "err" ? "\u2717" : "\u00b7"));
+  head.appendChild(el("span", "ts", rec.ts));
+  head.appendChild(el("span", "mth", method));
+  head.appendChild(el("span", "meta", meta || ""));
+  node.appendChild(head);
+  const body = el("div", "eb");
+  for (const [label, content] of sections) {
+    if (content == null || content === "") continue;
+    body.appendChild(el("div", "lbl", label));
+    const pre = el("pre"); pre.textContent = typeof content === "string" ? content : j(content);
+    body.appendChild(pre);
+  }
+  if (rec.curl) { /* filled below */ }
+  node.appendChild(body);
+  head.onclick = () => node.classList.toggle("open");
+  const box = $("wireBody");
+  box.appendChild(node);
+  box.scrollTop = box.scrollHeight;
+  $("wireCount").textContent = wire.entries.length;
+  return { rec, node, body };
+}
+
+function addCurl(handle, curlText) {
+  const acts = el("div", "acts");
+  const b1 = el("button", "ghost", "Copy as curl"); b1.onclick = () => copy(curlText, "curl command");
+  acts.appendChild(b1);
+  handle.body.appendChild(acts);
+  handle.rec.curl = curlText;
+}
+
+function logNote(text, detail) { logEntry("note", text, "", detail ? [["detail", detail]] : []); }
+function logWarn(text, detail) { const h = logEntry("err", "\u26a0 " + text, "", detail ? [["detail", detail]] : []); h.node.classList.add("open"); }
+
+$("btnClear").onclick = () => { wire.entries = []; $("wireBody").innerHTML = ""; $("wireCount").textContent = "0"; };
+$("btnExport").onclick = () => {
+  const blob = new Blob([j({ exportedAt: new Date().toISOString(), server: client.url, entries: wire.entries })], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "mcp-wire-" + Date.now() + ".json"; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+
+/* =========================================================================
+   The client
+   ========================================================================= */
+const client = {
+  url: "",
+  era: "auto",
+  version: null,        // negotiated protocol version
+  isModern: false,
+  sessionId: null,      // legacy only
+  headers: {},          // user-supplied
+  connected: false,
+  server: null,         // serverInfo / discover result
+  capabilities: null,
+  tools: [], resources: [], templates: [], prompts: [],
+  reqId: 0,
+  sawSessionHeaderBlocked: false
+};
+
+function setStatus(state, text) {
+  const d = $("dot");
+  d.className = "dot" + (state ? " " + state : "");
+  $("statusText").textContent = text;
+}
+
+function buildHeaders(method, params, extra) {
+  const h = Object.assign({
+    "Content-Type": "application/json",
+    "Accept": "application/json, text/event-stream"
+  }, client.headers, extra || {});
+  if (client.version) h["MCP-Protocol-Version"] = client.version;
+  if (client.isModern) {
+    h["Mcp-Method"] = method;
+    let name = null;
+    if (method === "tools/call" || method === "prompts/get") name = params && params.name;
+    if (method === "resources/read") name = params && params.uri;
+    if (name != null) h["Mcp-Name"] = encodeHeaderValue(String(name));
+  } else if (client.sessionId) {
+    h["Mcp-Session-Id"] = client.sessionId;
+  }
+  return h;
+}
+
+function wrapParams(method, params) {
+  const p = params ? JSON.parse(JSON.stringify(params)) : {};
+  if (client.isModern) {
+    p._meta = Object.assign({}, p._meta, {
+      [META.ver]: client.version || MODERN,
+      [META.info]: CLIENT_INFO,
+      [META.caps]: {}
+    });
+  }
+  return p;
+}
+
+function toCurl(url, headers, body) {
+  const parts = ["curl -sS -X POST " + JSON.stringify(url)];
+  for (const [k, v] of Object.entries(headers)) parts.push("  -H " + JSON.stringify(k + ": " + v));
+  parts.push("  -d " + JSON.stringify(JSON.stringify(body)));
+  return parts.join(" \\\n");
+}
+
+/* Parse a text/event-stream body, surfacing notifications as they arrive.
+   Resolves with the first JSON-RPC response object seen. */
+async function readSse(response, onNotification) {
+  const reader = response.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "", result = null, raw = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = dec.decode(value, { stream: true });
+    raw += chunk; buf += chunk;
+    let m;
+    while ((m = /\r?\n\r?\n/.exec(buf)) !== null) {
+      const rawEvent = buf.slice(0, m.index);
+      buf = buf.slice(m.index + m[0].length);
+      const dataLines = [];
+      for (const line of rawEvent.split(/\r?\n/)) {
+        if (line.startsWith(":")) continue;                 // keep-alive comment
+        if (line.startsWith("data:")) dataLines.push(line.slice(5).replace(/^ /, ""));
+      }
+      if (!dataLines.length) continue;
+      let msg;
+      try { msg = JSON.parse(dataLines.join("\n")); } catch { continue; }
+      if (msg.method && msg.id === undefined) { onNotification && onNotification(msg); continue; }
+      if (msg.method && msg.id !== undefined) { onNotification && onNotification(msg); continue; }
+      if (result === null) result = msg;
+    }
+    if (result !== null) { try { reader.cancel(); } catch { } break; }
+  }
+  return { result, raw };
+}
+
+/* Core RPC. Returns { ok, result, error, status, httpError } */
+async function rpc(method, params, opts) {
+  opts = opts || {};
+  const isNotification = method.startsWith("notifications/");
+  const id = ++client.reqId;
+  const wrapped = wrapParams(method, params);
+  const body = isNotification
+    ? { jsonrpc: "2.0", method, params: wrapped }
+    : { jsonrpc: "2.0", id, method, params: wrapped };
+  if (opts.extraHeaders && opts.extraHeaders.__mirror) {
+    // Mcp-Param-* mirroring handled by caller passing computed headers
+  }
+  const headers = buildHeaders(method, wrapped, opts.extraHeaders);
+  const bodyText = JSON.stringify(body);
+
+  const outHandle = logEntry("out", method, "POST \u00b7 " + bytes(bodyText.length), [
+    ["request headers", j(redact(headers))],
+    ["request body", j(body)]
+  ]);
+  addCurl(outHandle, toCurl(client.url, redact(headers), body));
+
+  const t0 = performance.now();
+  let res;
+  try {
+    res = await fetch(client.url, { method: "POST", headers, body: bodyText, mode: "cors", credentials: "omit" });
+  } catch (e) {
+    const ms = Math.round(performance.now() - t0);
+    logEntry("err", method, ms + "ms \u00b7 network", [
+      ["error", String(e)],
+      ["likely cause", "The browser blocked this before a response was read. That is almost always CORS or a bad hostname/scheme. Run the CORS doctor."]
+    ]).node.classList.add("open");
+    return { ok: false, transport: true, error: { message: String(e) } };
+  }
+  const ms = Math.round(performance.now() - t0);
+  const ctype = (res.headers.get("content-type") || "").toLowerCase();
+
+  // Legacy session capture
+  const sid = res.headers.get("mcp-session-id");
+  if (sid && !client.isModern) client.sessionId = sid;
+
+  const respHeaders = {};
+  res.headers.forEach((v, k) => { respHeaders[k] = v; });
+
+  if (res.status === 202) {
+    logEntry("in", method, ms + "ms \u00b7 202 accepted", [["response headers", j(respHeaders)]]);
+    return { ok: true, result: null, status: 202 };
+  }
+
+  let result = null, errObj = null, rawText = "";
+
+  if (ctype.includes("text/event-stream") && res.body) {
+    const sse = await readSse(res, (n) => {
+      logEntry("in", n.method || "notification", "sse", [["message", j(n)]]);
+    });
+    rawText = sse.raw;
+    if (sse.result) { result = sse.result.result; errObj = sse.result.error; }
+  } else {
+    rawText = await res.text();
+    if (rawText) {
+      try { const parsed = JSON.parse(rawText); result = parsed.result; errObj = parsed.error; }
+      catch { errObj = { code: 0, message: "Response was not JSON", data: rawText.slice(0, 400) }; }
+    }
+  }
+
+  if ((res.status === 401 || res.status === 403) && client.connected) {
+    handleUnauthorized({ status: res.status, headers: respHeaders });
+  }
+
+  const kind = (!res.ok || errObj) ? "err" : "in";
+  const h = logEntry(kind, method, ms + "ms \u00b7 " + res.status + " \u00b7 " + bytes(rawText.length), [
+    ["response headers", j(respHeaders)],
+    ["response body", rawText ? (rawText.length > 40000 ? rawText.slice(0, 40000) + "\n\u2026 truncated" : rawText) : "(empty)"]
+  ]);
+  if (kind === "err") h.node.classList.add("open");
+
+  // Compliance nudges worth knowing about
+  if (!client.isModern && !res.headers.get("mcp-session-id") && res.headers.get("access-control-expose-headers") === null
+      && location.origin !== new URL(client.url, location.href).origin && method === "initialize") {
+    client.sawSessionHeaderBlocked = true;
+  }
+
+  return { ok: res.ok && !errObj, result, error: errObj, status: res.status, raw: rawText, headers: respHeaders };
+}
+
+function redact(h) {
+  const out = {};
+  for (const [k, v] of Object.entries(h)) {
+    out[k] = /^(authorization|x-api-key|cookie|api-key)$/i.test(k) && v.length > 16
+      ? v.slice(0, 12) + "\u2026[redacted]" : v;
+  }
+  return out;
+}
+
+/* =========================================================================
+   Connect / negotiate
+   ========================================================================= */
+async function connect() {
+  const url = $("url").value.trim();
+  if (!url) { toast("Enter a server URL"); return; }
+  try { new URL(url); } catch { toast("That URL does not parse"); return; }
+
+  client.url = url;
+  client.era = $("era").value;
+  client.headers = readHeaderRows();
+  const tok = oauth.tokens[tokenKey()];
+  if (tok && tok.access_token && !client.headers.Authorization && !client.headers.authorization) {
+    client.headers.Authorization = (tok.token_type || "Bearer") + " " + tok.access_token;
+  }
+  client.sessionId = null; client.connected = false; client.server = null;
+  client.tools = []; client.resources = []; client.templates = []; client.prompts = [];
+  $("connMsg").innerHTML = "";
+  setStatus("busy", "connecting\u2026");
+
+  let ok = false;
+  if (client.era === "auto" || MODERN_ERAS.has(client.era)) ok = await tryModern(client.era === "auto" ? MODERN : client.era);
+  if (!ok && (client.era === "auto" || !MODERN_ERAS.has(client.era))) {
+    ok = await tryLegacy(MODERN_ERAS.has(client.era) ? LEGACY_PREFERRED : (client.era === "auto" ? LEGACY_PREFERRED : client.era));
+  }
+  if (!ok) { setStatus("err", "not connected"); return; }
+
+  client.connected = true;
+  setStatus("on", (client.isModern ? "stateless " : "session ") + client.version);
+  renderServerInfo();
+  saveLast();
+  await loadAll();
+}
+
+async function tryModern(version) {
+  client.isModern = true; client.version = version;
+  const r = await rpc("server/discover", {});
+  if (r.transport) { await doctor(true); return false; }
+
+  if (r.ok) {
+    client.server = r.result || {};
+    client.capabilities = (r.result && r.result.capabilities) || {};
+    const adv = pickVersions(r.result);
+    if (adv.length && !adv.includes(client.version)) {
+      client.version = adv[0];
+      logNote("Server advertises " + adv.join(", ") + " \u2014 switching to " + client.version);
+    }
+    return true;
+  }
+
+  // Modern JSON-RPC errors mean the server IS modern; only fall back otherwise.
+  const code = r.error && r.error.code;
+  if (r.status === 400 && r.error) {
+    const supported = pickVersions(r.error.data) || [];
+    if (supported.length) {
+      client.version = supported[0];
+      logNote("Server rejected " + version + ", retrying with " + client.version);
+      const r2 = await rpc("server/discover", {});
+      if (r2.ok) { client.server = r2.result || {}; client.capabilities = (r2.result && r2.result.capabilities) || {}; return true; }
+    }
+    if (code === -32020) { logWarn("Header/body mismatch reported by server", j(r.error)); return false; }
+  }
+  if (r.status === 404 || r.status === 405 || r.status === 400 || code === -32601) {
+    logNote("No modern response to server/discover \u2014 falling back to the initialize handshake");
+    return false;
+  }
+  if (r.status === 401 || r.status === 403) {
+    handleUnauthorized(r);
+    return false;
+  }
+  logNote("server/discover failed (" + r.status + ") \u2014 trying the initialize handshake");
+  return false;
+}
+
+function pickVersions(obj) {
+  if (!obj || typeof obj !== "object") return [];
+  for (const k of ["supported", "supportedVersions", "protocolVersions", "versions"]) {
+    if (Array.isArray(obj[k])) return obj[k].filter((x) => typeof x === "string");
+  }
+  if (typeof obj.protocolVersion === "string") return [obj.protocolVersion];
+  return [];
+}
+
+async function tryLegacy(version) {
+  client.isModern = false; client.version = null; client.sessionId = null;
+  const r = await rpc("initialize", {
+    protocolVersion: version,
+    capabilities: { roots: { listChanged: false }, sampling: {}, elicitation: {} },
+    clientInfo: CLIENT_INFO
+  });
+  if (r.transport) { await doctor(true); return false; }
+  if (r.status === 401 || r.status === 403) { handleUnauthorized(r); return false; }
+  if (!r.ok) {
+    showConnErr("The handshake failed with HTTP " + r.status + (r.error ? " \u2014 " + (r.error.message || "") : "") +
+      ". Check the URL points at the MCP endpoint itself (often /mcp), not the site root.");
+    return false;
+  }
+  client.version = (r.result && r.result.protocolVersion) || version;
+  client.server = r.result || {};
+  client.capabilities = (r.result && r.result.capabilities) || {};
+
+  if (!client.sessionId) {
+    const originDiffers = new URL(client.url, location.href).origin !== location.origin;
+    if (originDiffers) {
+      showConnWarn("Session header not readable",
+        "The server may have issued an <code>Mcp-Session-Id</code>, but the browser can only read it if the server sends " +
+        "<code>Access-Control-Expose-Headers: Mcp-Session-Id</code>. If the next call fails with " +
+        "&ldquo;Missing Mcp-Session-Id&rdquo;, that header is the fix.");
+    }
+  }
+  // Handshake completion notification
+  await rpc("notifications/initialized", {});
+  return true;
+}
+
+function showConnErr(html) { $("connMsg").innerHTML = '<div class="note bad"><h4>Could not connect</h4>' + html + "</div>"; }
+function showConnWarn(title, html) { $("connMsg").insertAdjacentHTML("beforeend", '<div class="note warn"><h4>' + title + "</h4>" + html + "</div>"); }
+function showConnOk(html) { $("connMsg").innerHTML = '<div class="note ok">' + html + "</div>"; }
+
+function handleUnauthorized(r) {
+  const wa = r.headers && (r.headers["www-authenticate"] || r.headers["WWW-Authenticate"]);
+  setStatus("err", "unauthorized");
+  showConnErr("The server returned <b>" + r.status + "</b>." +
+    (wa ? " It sent <code>WWW-Authenticate: " + esc(wa) + "</code>." : "") +
+    " Either paste a token under Headers, or open the OAuth section and run Discover.");
+  $("secAuth").open = true;
+  oauth.wwwAuth = wa || null;
+}
+
+/* =========================================================================
+   Capability loading
+   ========================================================================= */
+async function listAll(method, key) {
+  const items = []; let cursor;
+  for (let page = 0; page < 40; page++) {
+    const r = await rpc(method, cursor ? { cursor } : {});
+    if (!r.ok) {
+      if (r.error && (r.error.code === -32601 || r.status === 404)) return { items: [], unsupported: true };
+      return { items, error: r.error || { message: "HTTP " + r.status } };
+    }
+    const chunk = (r.result && r.result[key]) || [];
+    items.push(...chunk);
+    cursor = r.result && r.result.nextCursor;
+    if (!cursor) break;
+  }
+  return { items };
+}
+
+async function loadAll() {
+  const caps = client.capabilities || {};
+  const hasTools = !client.isModern ? !!caps.tools : true;
+  const hasRes = !client.isModern ? !!caps.resources : true;
+  const hasPrompts = !client.isModern ? !!caps.prompts : true;
+
+  if (hasTools) {
+    const r = await listAll("tools/list", "tools");
+    client.tools = r.items.filter(validateToolHeaders);
+    renderList("lTools", "cTools", client.tools, openTool, (t) => t.name, (t) => t.description);
+  } else { renderList("lTools", "cTools", [], null, null, null, "Server does not advertise tools."); }
+
+  if (hasRes) {
+    const r = await listAll("resources/list", "resources");
+    client.resources = r.items;
+    const t = await listAll("resources/templates/list", "resourceTemplates");
+    client.templates = t.items || [];
+    const merged = client.resources.map((x) => Object.assign({ __kind: "resource" }, x))
+      .concat(client.templates.map((x) => Object.assign({ __kind: "template" }, x)));
+    renderList("lRes", "cRes", merged, openResource,
+      (r2) => r2.name || r2.uri || r2.uriTemplate,
+      (r2) => r2.description || r2.uri || r2.uriTemplate,
+      merged.length ? null : "No resources exposed.");
+  } else { renderList("lRes", "cRes", [], null, null, null, "Server does not advertise resources."); }
+
+  if (hasPrompts) {
+    const r = await listAll("prompts/list", "prompts");
+    client.prompts = r.items;
+    renderList("lPrompts", "cPrompts", client.prompts, openPrompt, (p) => p.name, (p) => p.description,
+      client.prompts.length ? null : "No prompts exposed.");
+  } else { renderList("lPrompts", "cPrompts", [], null, null, null, "Server does not advertise prompts."); }
+
+  if (!$("work").dataset.pinned) renderWelcome();
+}
+
+/* Spec: clients MUST reject tool definitions with invalid x-mcp-header annotations. */
+function validateToolHeaders(tool) {
+  const found = collectHeaderParams(tool.inputSchema);
+  if (found.invalid) {
+    logWarn("Tool excluded: " + tool.name, "Invalid x-mcp-header annotation \u2014 " + found.invalid);
+    return false;
+  }
+  tool.__headerParams = found.list;
+  return true;
+}
+function collectHeaderParams(schema, path, seen, depth) {
+  path = path || []; seen = seen || new Set(); depth = depth || 0;
+  const list = [];
+  if (!schema || typeof schema !== "object" || depth > 8) return { list };
+  const props = schema.properties;
+  if (!props || typeof props !== "object") return { list };
+  for (const [key, sub] of Object.entries(props)) {
+    if (!sub || typeof sub !== "object") continue;
+    const p = path.concat(key);
+    if (typeof sub["x-mcp-header"] === "string" || sub["x-mcp-header"] != null) {
+      const name = sub["x-mcp-header"];
+      if (typeof name !== "string" || !name) return { invalid: "empty header name on " + p.join(".") };
+      if (!/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(name)) return { invalid: "'" + name + "' is not a valid HTTP token" };
+      if (seen.has(name.toLowerCase())) return { invalid: "duplicate name '" + name + "'" };
+      const t = sub.type;
+      if (t === "number" || (t && !["string", "integer", "boolean"].includes(t)))
+        return { invalid: "type '" + t + "' is not allowed for header mirroring" };
+      seen.add(name.toLowerCase());
+      list.push({ path: p, name });
+    }
+    if (sub.type === "object" || sub.properties) {
+      const nested = collectHeaderParams(sub, p, seen, depth + 1);
+      if (nested.invalid) return nested;
+      list.push(...nested.list);
+    }
+  }
+  return { list };
+}
+function mirrorHeaders(tool, args) {
+  const h = {};
+  for (const hp of (tool.__headerParams || [])) {
+    let v = args, ok = true;
+    for (const seg of hp.path) { if (v && typeof v === "object" && seg in v) v = v[seg]; else { ok = false; break; } }
+    if (!ok || v === null || v === undefined) continue;
+    const s = typeof v === "boolean" ? (v ? "true" : "false") : String(v);
+    h["Mcp-Param-" + hp.name] = encodeHeaderValue(s);
+  }
+  return h;
+}
+
+/* =========================================================================
+   Rail rendering
+   ========================================================================= */
+function renderServerInfo() {
+  const s = client.server || {};
+  const info = s.serverInfo || s.implementation || {};
+  const caps = client.capabilities || {};
+  const capNames = Object.keys(caps).filter((k) => caps[k]);
+  const rows = [];
+  if (info.name) rows.push(["name", info.name + (info.version ? " " + info.version : "")]);
+  if (info.title) rows.push(["title", info.title]);
+  rows.push(["protocol", client.version || "?"]);
+  rows.push(["mode", client.isModern ? "stateless (no session)" : "session handshake"]);
+  if (client.sessionId) rows.push(["session", client.sessionId]);
+  if (capNames.length) rows.push(["capabilities", capNames.join(", ")]);
+  if (s.instructions) rows.push(["instructions", s.instructions]);
+
+  let html = "";
+  for (const [k, v] of rows) html += '<label class="f" style="margin-top:8px">' + esc(k) + '</label><div style="font-family:var(--mono);font-size:11.5px;word-break:break-word">' + esc(v) + "</div>";
+  html += '<button class="ghost" style="margin-top:12px;width:100%" onclick="showRawServer()">View raw</button>';
+  $("serverInfo").innerHTML = html;
+  $("secServer").open = true;
+}
+window.showRawServer = () => {
+  pin();
+  const w = $("work"); w.innerHTML = "";
+  w.appendChild(el("h2", null, "Server description"));
+  w.appendChild(el("p", "sub", client.isModern ? "Result of server/discover" : "Result of initialize"));
+  const pre = el("pre", "out"); pre.textContent = j(client.server); w.appendChild(pre);
+};
+
+function renderList(listId, countId, items, onOpen, nameOf, descOf, emptyMsg) {
+  const ul = $(listId); ul.innerHTML = "";
+  $(countId).textContent = items.length ? items.length : "0";
+  if (!items.length) { ul.appendChild(el("li", "empty", emptyMsg || "Nothing here.")); return; }
+  items.forEach((item, i) => {
+    const li = el("li");
+    const b = el("button", "item");
+    b.appendChild(el("div", "nm", nameOf(item)));
+    const d = descOf(item);
+    if (d) b.appendChild(el("div", "ds", d));
+    if (item.__kind === "template") b.appendChild(el("div", "tag", "TEMPLATE"));
+    b.onclick = () => {
+      document.querySelectorAll(".list .item.sel").forEach((x) => x.classList.remove("sel"));
+      b.classList.add("sel");
+      document.body.dataset.pane = "work";
+      onOpen(item, i);
+    };
+    li.appendChild(b); ul.appendChild(li);
+  });
+}
+
+function pin() { $("work").dataset.pinned = "1"; }
+
+/* =========================================================================
+   Work surface: welcome
+   ========================================================================= */
+function renderWelcome() {
+  const w = $("work"); w.innerHTML = "";
+  const box = el("div", "welcome");
+  if (!client.connected) {
+    box.innerHTML =
+      "<h1>Point it at an endpoint.</h1>" +
+      "<p>This is a browser-native MCP client. Every request goes straight from this page to your server " +
+      "with <code>fetch</code>, and the full exchange lands in the wire log.</p>" +
+      "<ol>" +
+      "<li>Paste the Streamable HTTP endpoint (usually ends in <kbd>/mcp</kbd>).</li>" +
+      "<li>Add an <kbd>Authorization</kbd> header if the server wants a static token, or use OAuth.</li>" +
+      "<li>Press Connect. Protocol era is detected automatically.</li>" +
+      "</ol>" +
+      '<div class="note"><h4>One constraint worth knowing</h4>There is no proxy here, so the server must allow ' +
+      "this page's origin with CORS. If a request dies before you see a status code, open the CORS doctor \u2014 " +
+      "it prints the exact server config that fixes it.</div>";
+    if (location.protocol === "file:") {
+      box.insertAdjacentHTML("beforeend",
+        '<div class="note warn"><h4>Opened from disk</h4>Your origin is <code>null</code>, which almost nothing allowlists, ' +
+        "and OAuth redirects will not work. Serve the file instead:<pre>python3 -m http.server 8787</pre>then open " +
+        "<code>http://localhost:8787/mcp-wire-inspector.html</code>.</div>");
+    }
+  } else {
+    const counts = [client.tools.length + " tools", (client.resources.length + client.templates.length) + " resources", client.prompts.length + " prompts"];
+    box.innerHTML = "<h1>Connected.</h1><p>" + esc(counts.join(" \u00b7 ")) +
+      ". Pick something from the left, or open the raw JSON-RPC console to send an arbitrary method.</p>";
+  }
+  w.appendChild(box);
+}
+
+/* =========================================================================
+   Work surface: tool caller
+   ========================================================================= */
+function openTool(tool) {
+  pin();
+  const w = $("work"); w.innerHTML = "";
+  w.appendChild(el("h2", null, tool.name));
+  if (tool.title && tool.title !== tool.name) w.appendChild(el("p", "sub", tool.title));
+  if (tool.description) w.appendChild(el("p", "sub", tool.description));
+
+  const ann = tool.annotations || {};
+  const flags = [];
+  if (ann.readOnlyHint) flags.push("read-only");
+  if (ann.destructiveHint) flags.push("destructive");
+  if (ann.idempotentHint) flags.push("idempotent");
+  if (ann.openWorldHint) flags.push("open-world");
+  if (tool.__headerParams && tool.__headerParams.length) flags.push(tool.__headerParams.length + " mirrored header(s)");
+  if (flags.length) {
+    const row = el("div"); row.style.margin = "0 0 14px";
+    flags.forEach((f) => { const p = el("span", "pill", f); p.style.marginRight = "5px"; row.appendChild(p); });
+    w.appendChild(row);
+  }
+
+  const schema = tool.inputSchema || { type: "object", properties: {} };
+  const form = el("div");
+  w.appendChild(form);
+
+  let rawMode = false;
+  const fields = buildForm(schema, form);
+
+  const rawWrap = el("div"); rawWrap.style.display = "none";
+  rawWrap.appendChild(el("label", "f", "Arguments JSON"));
+  const rawTa = el("textarea"); rawTa.rows = 10; rawTa.value = "{}";
+  rawWrap.appendChild(rawTa);
+  w.appendChild(rawWrap);
+
+  const bar = el("div", "row"); bar.style.marginTop = "16px";
+  const run = el("button", "btn", "Call tool");
+  const toggle = el("button", "ghost", "Edit as JSON");
+  const schemaBtn = el("button", "ghost", "View schema");
+  bar.appendChild(run); bar.appendChild(toggle); bar.appendChild(schemaBtn);
+  w.appendChild(bar);
+
+  const outWrap = el("div"); outWrap.style.marginTop = "20px";
+  w.appendChild(outWrap);
+
+  toggle.onclick = () => {
+    rawMode = !rawMode;
+    if (rawMode) { rawTa.value = j(readForm(fields)); form.style.display = "none"; rawWrap.style.display = ""; toggle.textContent = "Edit as form"; }
+    else { form.style.display = ""; rawWrap.style.display = "none"; toggle.textContent = "Edit as JSON"; }
+  };
+  schemaBtn.onclick = () => {
+    outWrap.innerHTML = "";
+    outWrap.appendChild(el("p", "eyebrow", "Input schema"));
+    const pre = el("pre", "out"); pre.textContent = j(schema); outWrap.appendChild(pre);
+  };
+
+  run.onclick = async () => {
+    let args;
+    if (rawMode) {
+      try { args = JSON.parse(rawTa.value || "{}"); }
+      catch (e) { outWrap.innerHTML = '<div class="note bad"><h4>Arguments are not valid JSON</h4>' + esc(String(e)) + "</div>"; return; }
+    } else {
+      try { args = readForm(fields); }
+      catch (e) { outWrap.innerHTML = '<div class="note bad"><h4>Check the highlighted field</h4>' + esc(String(e.message || e)) + "</div>"; return; }
+    }
+    run.disabled = true; run.textContent = "Calling\u2026";
+    outWrap.innerHTML = "";
+    const extra = client.isModern ? mirrorHeaders(tool, args) : {};
+    const r = await rpc("tools/call", { name: tool.name, arguments: args }, { extraHeaders: extra });
+    run.disabled = false; run.textContent = "Call tool";
+    renderToolResult(outWrap, r);
+  };
+}
+
+function renderToolResult(host, r) {
+  host.innerHTML = "";
+  if (!r.ok) {
+    const n = el("div", "note bad");
+    n.innerHTML = "<h4>Call failed" + (r.status ? " \u00b7 HTTP " + r.status : "") + "</h4>" +
+      (r.error ? "<pre>" + esc(j(r.error)) + "</pre>" : "See the wire log for the raw exchange.");
+    host.appendChild(n);
+    return;
+  }
+  const res = r.result || {};
+  if (res.isError) host.appendChild(Object.assign(el("div", "note bad"), { innerHTML: "<h4>Tool reported an error</h4>The call succeeded at the protocol level; the tool itself failed." }));
+
+  if (res.resultType === "input_required" || res.inputRequests) {
+    const n = el("div", "note warn");
+    n.innerHTML = "<h4>Server asked for input</h4>This is a multi round-trip request. The server wants sampling, " +
+      "elicitation, or roots before it can finish. This inspector shows the request but does not answer it \u2014 " +
+      "retry with <code>inputResponses</code> from the raw console.<pre>" + esc(j(res.inputRequests)) + "</pre>";
+    host.appendChild(n);
+  }
+
+  host.appendChild(el("p", "eyebrow", "Content"));
+  const blocks = el("div", "blocks");
+  const content = Array.isArray(res.content) ? res.content : [];
+  if (!content.length) blocks.appendChild(Object.assign(el("div", "note"), { textContent: "No content blocks returned." }));
+  for (const c of content) blocks.appendChild(renderBlock(c));
+  host.appendChild(blocks);
+
+  if (res.structuredContent) {
+    host.appendChild(el("p", "eyebrow", "Structured content"));
+    const pre = el("pre", "out"); pre.textContent = j(res.structuredContent); host.appendChild(pre);
+  }
+  const acts = el("div", "row"); acts.style.marginTop = "12px";
+  const b = el("button", "ghost", "Copy full result");
+  b.onclick = () => copy(j(res), "Result");
+  acts.appendChild(b);
+  const b2 = el("button", "ghost", "Show raw result");
+  b2.onclick = () => { const pre = el("pre", "out"); pre.textContent = j(res); host.appendChild(pre); b2.remove(); };
+  acts.appendChild(b2);
+  host.appendChild(acts);
+}
+
+function renderBlock(c) {
+  const box = el("div", "block");
+  const head = el("div", "bh", (c.type || "unknown").toUpperCase());
+  box.appendChild(head);
+  if (c.type === "text") {
+    box.appendChild(el("div", "bb", c.text || ""));
+  } else if (c.type === "image" && c.data) {
+    const b = el("div", "bb");
+    const img = el("img"); img.src = "data:" + (c.mimeType || "image/png") + ";base64," + c.data;
+    img.alt = "image content block"; b.appendChild(img); box.appendChild(b);
+  } else if (c.type === "audio" && c.data) {
+    const b = el("div", "bb");
+    const a = document.createElement("audio"); a.controls = true;
+    a.src = "data:" + (c.mimeType || "audio/wav") + ";base64," + c.data; b.appendChild(a); box.appendChild(b);
+  } else if (c.type === "resource" || c.type === "resource_link") {
+    const r = c.resource || c;
+    head.appendChild(el("span", null, r.uri || ""));
+    box.appendChild(el("div", "bb mono", r.text != null ? r.text : j(r)));
+  } else {
+    box.appendChild(el("div", "bb mono", j(c)));
+  }
+  return box;
+}
+
+/* ---------- schema-driven form ---------- */
+function buildForm(schema, host) {
+  const fields = [];
+  const props = (schema && schema.properties) || {};
+  const required = new Set((schema && schema.required) || []);
+  if (!Object.keys(props).length) {
+    host.appendChild(Object.assign(el("p", "hint"), { textContent: "This tool takes no arguments." }));
+    return fields;
+  }
+  for (const [key, sub] of Object.entries(props)) {
+    const isReq = required.has(key);
+    const lab = el("label", "f");
+    lab.textContent = key + " ";
+    lab.appendChild(el("span", "pill", sub.type || (sub.enum ? "enum" : "any")));
+    if (isReq) { const r = el("span", "req", " required"); lab.appendChild(r); }
+    host.appendChild(lab);
+
+    let input, kind;
+    if (sub.enum) {
+      input = el("select"); kind = "enum";
+      if (!isReq) input.appendChild(new Option("(omit)", "__omit__"));
+      sub.enum.forEach((v) => input.appendChild(new Option(String(v), String(v))));
+    } else if (sub.type === "boolean") {
+      input = el("select"); kind = "boolean";
+      if (!isReq) input.appendChild(new Option("(omit)", "__omit__"));
+      input.appendChild(new Option("true", "true")); input.appendChild(new Option("false", "false"));
+      if (sub.default === true) input.value = "true";
+      if (sub.default === false) input.value = "false";
+    } else if (sub.type === "number" || sub.type === "integer") {
+      input = el("input"); input.type = "number"; kind = sub.type;
+      if (sub.type === "integer") input.step = "1";
+      if (sub.default != null) input.value = sub.default;
+    } else if (sub.type === "array" || sub.type === "object" || (!sub.type && (sub.properties || sub.items))) {
+      input = el("textarea"); input.rows = 4; kind = "json";
+      input.placeholder = sub.type === "array" ? "[]" : "{}";
+      if (sub.default != null) input.value = j(sub.default);
+    } else {
+      const long = /\b(text|body|content|markdown|query|sql|prompt|message|code)\b/i.test(key + " " + (sub.description || ""));
+      input = long ? el("textarea") : el("input");
+      if (long) input.rows = 4; else input.type = "text";
+      kind = "string";
+      if (sub.default != null) input.value = sub.default;
+      if (sub.format) input.placeholder = sub.format;
+    }
+    host.appendChild(input);
+    if (sub.description) host.appendChild(el("p", "hint", sub.description));
+    if (sub["x-mcp-header"]) host.appendChild(el("p", "hint", "Mirrored to header Mcp-Param-" + sub["x-mcp-header"]));
+    fields.push({ key, kind, input, required: isReq });
+  }
+  return fields;
+}
+
+function readForm(fields) {
+  const out = {};
+  for (const f of fields) {
+    const raw = f.input.value;
+    if (raw === "__omit__") continue;
+    if (raw === "" || raw == null) {
+      if (f.required) throw new Error("'" + f.key + "' is required.");
+      continue;
+    }
+    if (f.kind === "boolean") out[f.key] = raw === "true";
+    else if (f.kind === "number") out[f.key] = Number(raw);
+    else if (f.kind === "integer") out[f.key] = parseInt(raw, 10);
+    else if (f.kind === "json") {
+      try { out[f.key] = JSON.parse(raw); }
+      catch (e) { throw new Error("'" + f.key + "' must be valid JSON: " + e.message); }
+    } else out[f.key] = raw;
+  }
+  return out;
+}
+
+/* =========================================================================
+   Work surface: resources & prompts
+   ========================================================================= */
+function openResource(item) {
+  pin();
+  const w = $("work"); w.innerHTML = "";
+  const isTemplate = item.__kind === "template";
+  w.appendChild(el("h2", null, item.name || item.uri || item.uriTemplate));
+  if (item.description) w.appendChild(el("p", "sub", item.description));
+  const meta = [];
+  if (item.mimeType) meta.push(item.mimeType);
+  if (item.uri) meta.push(item.uri);
+  if (item.uriTemplate) meta.push(item.uriTemplate);
+  if (meta.length) {
+    const row = el("div"); row.style.margin = "0 0 14px";
+    meta.forEach((m) => { const p = el("span", "pill", m); p.style.marginRight = "5px"; row.appendChild(p); });
+    w.appendChild(row);
+  }
+
+  w.appendChild(el("label", "f", isTemplate ? "URI (fill in the template variables)" : "URI"));
+  const uriIn = el("input"); uriIn.type = "text";
+  uriIn.value = item.uri || item.uriTemplate || "";
+  w.appendChild(uriIn);
+
+  const bar = el("div", "row"); bar.style.marginTop = "14px";
+  const go = el("button", "btn", "Read resource");
+  bar.appendChild(go); w.appendChild(bar);
+  const out = el("div"); out.style.marginTop = "20px"; w.appendChild(out);
+
+  go.onclick = async () => {
+    go.disabled = true; go.textContent = "Reading\u2026";
+    const r = await rpc("resources/read", { uri: uriIn.value.trim() });
+    go.disabled = false; go.textContent = "Read resource";
+    out.innerHTML = "";
+    if (!r.ok) {
+      out.innerHTML = '<div class="note bad"><h4>Read failed</h4><pre>' + esc(j(r.error || { status: r.status })) + "</pre></div>";
+      return;
+    }
+    const contents = (r.result && r.result.contents) || [];
+    out.appendChild(el("p", "eyebrow", contents.length + " content item(s)"));
+    const blocks = el("div", "blocks");
+    for (const c of contents) {
+      const box = el("div", "block");
+      const h = el("div", "bh", c.mimeType || "unknown");
+      h.appendChild(el("span", null, c.uri || ""));
+      box.appendChild(h);
+      if (c.text != null) box.appendChild(el("div", "bb mono", c.text));
+      else if (c.blob && /^image\//.test(c.mimeType || "")) {
+        const b = el("div", "bb"); const img = el("img");
+        img.src = "data:" + c.mimeType + ";base64," + c.blob; img.alt = "resource"; b.appendChild(img); box.appendChild(b);
+      } else box.appendChild(el("div", "bb mono", "binary blob \u00b7 " + bytes((c.blob || "").length * 0.75)));
+      blocks.appendChild(box);
+    }
+    out.appendChild(blocks);
+  };
+}
+
+function openPrompt(prompt) {
+  pin();
+  const w = $("work"); w.innerHTML = "";
+  w.appendChild(el("h2", null, prompt.name));
+  if (prompt.description) w.appendChild(el("p", "sub", prompt.description));
+
+  const args = prompt.arguments || [];
+  const fields = [];
+  if (!args.length) w.appendChild(Object.assign(el("p", "hint"), { textContent: "This prompt takes no arguments." }));
+  for (const a of args) {
+    const lab = el("label", "f");
+    lab.textContent = a.name + " ";
+    if (a.required) lab.appendChild(el("span", "req", "required"));
+    w.appendChild(lab);
+    const input = el("input"); input.type = "text"; w.appendChild(input);
+    if (a.description) w.appendChild(el("p", "hint", a.description));
+    fields.push({ key: a.name, input, required: a.required, kind: "string" });
+  }
+
+  const bar = el("div", "row"); bar.style.marginTop = "14px";
+  const go = el("button", "btn", "Get prompt"); bar.appendChild(go); w.appendChild(bar);
+  const out = el("div"); out.style.marginTop = "20px"; w.appendChild(out);
+
+  go.onclick = async () => {
+    let argv;
+    try { argv = readForm(fields); } catch (e) { out.innerHTML = '<div class="note bad">' + esc(e.message) + "</div>"; return; }
+    go.disabled = true; go.textContent = "Loading\u2026";
+    const r = await rpc("prompts/get", { name: prompt.name, arguments: argv });
+    go.disabled = false; go.textContent = "Get prompt";
+    out.innerHTML = "";
+    if (!r.ok) { out.innerHTML = '<div class="note bad"><h4>Request failed</h4><pre>' + esc(j(r.error || { status: r.status })) + "</pre></div>"; return; }
+    const msgs = (r.result && r.result.messages) || [];
+    if (r.result && r.result.description) out.appendChild(el("p", "sub", r.result.description));
+    out.appendChild(el("p", "eyebrow", msgs.length + " message(s)"));
+    const blocks = el("div", "blocks");
+    for (const m of msgs) {
+      const box = el("div", "block");
+      box.appendChild(el("div", "bh", m.role || "?"));
+      const c = m.content;
+      if (c && c.type === "text") box.appendChild(el("div", "bb", c.text));
+      else box.appendChild(el("div", "bb mono", j(c)));
+      blocks.appendChild(box);
+    }
+    out.appendChild(blocks);
+  };
+}
+
+/* =========================================================================
+   Work surface: raw console
+   ========================================================================= */
+function openRaw() {
+  pin();
+  const w = $("work"); w.innerHTML = "";
+  w.appendChild(el("h2", null, "Raw JSON-RPC"));
+  w.appendChild(el("p", "sub", "Send any method. The protocol envelope, required headers, and session handling are applied for you."));
+
+  w.appendChild(el("label", "f", "Method"));
+  const m = el("input"); m.type = "text"; m.value = "tools/list"; w.appendChild(m);
+  const quick = el("div"); quick.style.marginTop = "6px";
+  ["tools/list", "resources/list", "resources/templates/list", "prompts/list", "server/discover", "ping", "logging/setLevel", "completion/complete"]
+    .forEach((name) => {
+      const b = el("button", "mini", name);
+      b.onclick = () => { m.value = name; };
+      quick.appendChild(b);
+    });
+  w.appendChild(quick);
+
+  w.appendChild(el("label", "f", "Params JSON"));
+  const p = el("textarea"); p.rows = 8; p.value = "{}"; w.appendChild(p);
+
+  const bar = el("div", "row"); bar.style.marginTop = "14px";
+  const go = el("button", "btn", "Send"); bar.appendChild(go); w.appendChild(bar);
+  const out = el("div"); out.style.marginTop = "20px"; w.appendChild(out);
+
+  go.onclick = async () => {
+    let params;
+    try { params = JSON.parse(p.value || "{}"); }
+    catch (e) { out.innerHTML = '<div class="note bad"><h4>Params are not valid JSON</h4>' + esc(String(e)) + "</div>"; return; }
+    go.disabled = true; go.textContent = "Sending\u2026";
+    const r = await rpc(m.value.trim(), params);
+    go.disabled = false; go.textContent = "Send";
+    out.innerHTML = "";
+    out.appendChild(el("p", "eyebrow", r.ok ? "Result" : "Error \u00b7 HTTP " + r.status));
+    const pre = el("pre", "out"); pre.textContent = j(r.ok ? r.result : (r.error || r.raw)); out.appendChild(pre);
+  };
+}
+
+/* =========================================================================
+   CORS doctor
+   ========================================================================= */
+async function doctor(inline) {
+  const url = ($("url").value || client.url || "").trim();
+  if (!url) { toast("Enter a server URL first"); return; }
+  let u; try { u = new URL(url); } catch { toast("That URL does not parse"); return; }
+
+  const findings = [];
+  const sameOrigin = u.origin === location.origin;
+  const pageOrigin = location.protocol === "file:" ? "null" : location.origin;
+
+  if (sameOrigin) findings.push(["ok", "Same origin", "This page and the server share an origin, so CORS does not apply."]);
+  else findings.push(["info", "Cross origin", "This page is <code>" + esc(pageOrigin) + "</code> and the server is <code>" + esc(u.origin) + "</code>. The server decides whether that is allowed."]);
+
+  if (location.protocol === "file:") {
+    findings.push(["bad", "Origin is null",
+      "Files opened from disk send <code>Origin: null</code>. Only a server with <code>Access-Control-Allow-Origin: *</code> will answer, and OAuth redirects cannot work at all. Serve the file over http instead."]);
+  }
+  if (location.protocol === "https:" && u.protocol === "http:") {
+    findings.push(["bad", "Mixed content",
+      "A page served over https cannot call a plain http endpoint. Either serve this page over http, or put TLS in front of the MCP server."]);
+  }
+
+  // Reachability probe: an opaque no-cors request succeeds even when CORS blocks reading.
+  let reachable = null;
+  try {
+    await fetch(url, { method: "POST", mode: "no-cors", body: "{}", headers: { "Content-Type": "text/plain" } });
+    reachable = true;
+  } catch { reachable = false; }
+
+  if (reachable === false) {
+    findings.push(["bad", "Host unreachable",
+      "The browser could not open a connection at all. That is DNS, TLS, a firewall, or a wrong port \u2014 not CORS. Check the URL resolves from this machine."]);
+  } else {
+    findings.push(["ok", "Host reachable", "A connection opened, so the address and TLS are fine."]);
+  }
+
+  // Preflight probe
+  let preflight = null;
+  if (!sameOrigin && reachable) {
+    try {
+      const r = await fetch(url, {
+        method: "POST", mode: "cors", credentials: "omit",
+        headers: { "Content-Type": "application/json", "Accept": "application/json, text/event-stream", "MCP-Protocol-Version": MODERN, "Mcp-Method": "ping" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "ping", params: {} })
+      });
+      preflight = { ok: true, status: r.status, expose: r.headers.get("access-control-expose-headers"), session: r.headers.get("mcp-session-id") };
+    } catch (e) { preflight = { ok: false, error: String(e) }; }
+  }
+
+  if (preflight && preflight.ok) {
+    findings.push(["ok", "CORS allows this page", "A real request came back with HTTP " + preflight.status + ". Reads are permitted from this origin."]);
+    if (!preflight.expose || !/mcp-session-id/i.test(preflight.expose)) {
+      findings.push(["warn", "Session header not exposed",
+        "The server does not list <code>Mcp-Session-Id</code> in <code>Access-Control-Expose-Headers</code>. Harmless on the 2026-07-28 stateless protocol, fatal on older session-based servers \u2014 the browser silently drops the session ID and every follow-up call fails with &ldquo;Missing Mcp-Session-Id&rdquo;."]);
+    }
+  } else if (preflight && !preflight.ok) {
+    findings.push(["bad", "CORS blocked the request",
+      "The connection opened but the browser refused to hand over the response. The server needs to answer the preflight and allow this origin."]);
+  }
+
+  const fix =
+    "Access-Control-Allow-Origin: " + (pageOrigin === "null" ? "*" : pageOrigin) + "\n" +
+    "Access-Control-Allow-Methods: POST, OPTIONS\n" +
+    "Access-Control-Allow-Headers: Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Session-Id, Last-Event-ID\n" +
+    "Access-Control-Expose-Headers: Mcp-Session-Id, WWW-Authenticate\n" +
+    "Access-Control-Max-Age: 86400";
+
+  const expressFix =
+    "import cors from \"cors\";\n\n" +
+    "app.use(cors({\n" +
+    "  origin: " + JSON.stringify(pageOrigin === "null" ? "*" : pageOrigin) + ",\n" +
+    "  methods: [\"POST\", \"OPTIONS\"],\n" +
+    "  allowedHeaders: [\"Content-Type\",\"Accept\",\"Authorization\",\"MCP-Protocol-Version\",\"Mcp-Method\",\"Mcp-Name\",\"Mcp-Session-Id\",\"Last-Event-ID\"],\n" +
+    "  exposedHeaders: [\"Mcp-Session-Id\",\"WWW-Authenticate\"],\n" +
+    "  maxAge: 86400\n" +
+    "}));";
+
+  const pyFix =
+    "from fastapi.middleware.cors import CORSMiddleware\n\n" +
+    "app.add_middleware(\n" +
+    "    CORSMiddleware,\n" +
+    "    allow_origins=[" + JSON.stringify(pageOrigin === "null" ? "*" : pageOrigin) + "],\n" +
+    "    allow_methods=[\"POST\", \"OPTIONS\"],\n" +
+    "    allow_headers=[\"Content-Type\",\"Accept\",\"Authorization\",\"MCP-Protocol-Version\",\"Mcp-Method\",\"Mcp-Name\",\"Mcp-Session-Id\",\"Last-Event-ID\"],\n" +
+    "    expose_headers=[\"Mcp-Session-Id\",\"WWW-Authenticate\"],\n" +
+    "    max_age=86400,\n" +
+    ")";
+
+  if (inline) {
+    const bad = findings.filter((f) => f[0] === "bad");
+    if (bad.length) showConnErr("<b>" + bad[0][1] + ".</b> " + bad[0][2] + ' <button class="ghost" style="margin-top:8px" onclick="doctor()">Full diagnosis</button>');
+    return;
+  }
+
+  pin();
+  const w = $("work"); w.innerHTML = "";
+  w.appendChild(el("h2", null, "CORS doctor"));
+  w.appendChild(el("p", "sub", "Why the browser will or will not let this page talk to " + u.origin));
+  for (const [level, title, text] of findings) {
+    const cls = level === "bad" ? "note bad" : level === "warn" ? "note warn" : level === "ok" ? "note ok" : "note";
+    const n = el("div", cls);
+    n.innerHTML = "<h4>" + esc(title) + "</h4>" + text;
+    w.appendChild(n);
+  }
+  w.appendChild(el("div", "divide"));
+  w.appendChild(el("p", "eyebrow", "Response headers the MCP endpoint needs"));
+  const pre = el("pre", "out"); pre.textContent = fix; w.appendChild(pre);
+  const acts = el("div", "row"); acts.style.marginTop = "10px";
+  const c1 = el("button", "ghost", "Copy headers"); c1.onclick = () => copy(fix, "Headers");
+  const c2 = el("button", "ghost", "Copy Express config"); c2.onclick = () => copy(expressFix, "Express config");
+  const c3 = el("button", "ghost", "Copy FastAPI config"); c3.onclick = () => copy(pyFix, "FastAPI config");
+  acts.appendChild(c1); acts.appendChild(c2); acts.appendChild(c3);
+  w.appendChild(acts);
+  w.appendChild(Object.assign(el("div", "note"), {
+    innerHTML: "<h4>If you cannot change the server</h4>Run a tiny local relay and point this page at it. " +
+      "<code>npx @modelcontextprotocol/inspector</code> ships one, or put any reverse proxy in front that adds the headers above."
+  }));
+}
+window.doctor = doctor;
+
+/* =========================================================================
+   OAuth 2.1 — protected resource discovery, dynamic registration, PKCE
+   ========================================================================= */
+const oauth = {
+  prm: null,          // protected resource metadata
+  as: null,           // authorization server metadata
+  clientId: null,
+  clientSecret: null,
+  wwwAuth: null,
+  tokens: JSON.parse(store.get("mcpwi.tokens") || "{}"),
+  clients: JSON.parse(store.get("mcpwi.clients") || "{}")
+};
+
+function tokenKey() { try { return new URL(($("url").value || client.url).trim()).href; } catch { return "unknown"; } }
+function saveTokens() { store.set("mcpwi.tokens", JSON.stringify(oauth.tokens)); }
+function saveClients() { store.set("mcpwi.clients", JSON.stringify(oauth.clients)); }
+function redirectUri() { return location.origin + location.pathname; }
+
+function b64url(buf) {
+  let s = ""; const b = new Uint8Array(buf);
+  for (const x of b) s += String.fromCharCode(x);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function randomString(n) { return b64url(crypto.getRandomValues(new Uint8Array(n || 32))); }
+async function pkceChallenge(verifier) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  return b64url(digest);
+}
+
+async function fetchJson(url, init) {
+  const t0 = performance.now();
+  let res;
+  try { res = await fetch(url, Object.assign({ credentials: "omit", mode: "cors" }, init)); }
+  catch (e) {
+    logEntry("err", "GET " + url, "network", [["error", String(e)],
+      ["note", "Authorization endpoints must also send CORS headers for a browser client to read them."]]);
+    return { ok: false, network: true, error: String(e) };
+  }
+  const ms = Math.round(performance.now() - t0);
+  const text = await res.text();
+  let data = null; try { data = JSON.parse(text); } catch { }
+  logEntry(res.ok ? "in" : "err", (init && init.method ? init.method : "GET") + " " + url,
+    ms + "ms \u00b7 " + res.status, [["response", text.slice(0, 4000) || "(empty)"]]);
+  return { ok: res.ok, status: res.status, data, text };
+}
+
+function canonicalResource() {
+  const u = new URL(($("url").value || client.url).trim());
+  u.hash = "";
+  return u.href;
+}
+
+async function oauthDiscover(quiet) {
+  const info = $("oauthInfo");
+  const url = ($("url").value || "").trim();
+  if (!url) { toast("Enter a server URL first"); return false; }
+  const u = new URL(url);
+  info.innerHTML = '<div class="note">Discovering\u2026</div>';
+
+  // 1. Protected resource metadata
+  let prmUrls = [];
+  if (oauth.wwwAuth) {
+    const m = /resource_metadata="([^"]+)"/i.exec(oauth.wwwAuth);
+    if (m) prmUrls.push(m[1]);
+  }
+  const path = u.pathname.replace(/\/$/, "");
+  prmUrls.push(u.origin + "/.well-known/oauth-protected-resource" + path);
+  prmUrls.push(u.origin + "/.well-known/oauth-protected-resource");
+
+  let prm = null;
+  for (const pu of prmUrls) {
+    const r = await fetchJson(pu);
+    if (r.ok && r.data) { prm = r.data; break; }
+  }
+
+  let issuers = [];
+  if (prm && Array.isArray(prm.authorization_servers)) issuers = prm.authorization_servers;
+  else issuers = [u.origin];
+  oauth.prm = prm;
+
+  // 2. Authorization server metadata
+  let as = null;
+  for (const iss of issuers) {
+    const iu = new URL(iss);
+    const ipath = iu.pathname.replace(/\/$/, "");
+    const candidates = [
+      iu.origin + "/.well-known/oauth-authorization-server" + ipath,
+      iu.origin + ipath + "/.well-known/oauth-authorization-server",
+      iu.origin + "/.well-known/openid-configuration" + ipath,
+      iu.origin + ipath + "/.well-known/openid-configuration",
+      iu.origin + "/.well-known/oauth-authorization-server"
+    ];
+    for (const c of candidates) {
+      const r = await fetchJson(c);
+      if (r.ok && r.data && r.data.authorization_endpoint) { as = r.data; break; }
+    }
+    if (as) break;
+  }
+
+  if (!as) {
+    info.innerHTML = '<div class="note bad"><h4>No authorization server found</h4>' +
+      (prm ? "Found protected-resource metadata but could not read the authorization server's configuration. " : "No <code>/.well-known/oauth-protected-resource</code> document and no readable authorization server metadata. ") +
+      "Either the server does not use OAuth, or those documents are missing CORS headers so this page cannot read them.</div>";
+    $("authState").textContent = "not found";
+    return false;
+  }
+  oauth.as = as;
+
+  // 3. Client registration
+  const key = as.issuer || as.authorization_endpoint;
+  const override = $("oauthClientId").value.trim();
+  if (override) {
+    oauth.clientId = override;
+    oauth.clientSecret = $("oauthSecret").value.trim() || null;
+  } else if (oauth.clients[key]) {
+    oauth.clientId = oauth.clients[key].client_id;
+    oauth.clientSecret = oauth.clients[key].client_secret || null;
+  } else if (as.registration_endpoint) {
+    const reg = await fetchJson(as.registration_endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_name: "MCP Wire Inspector",
+        redirect_uris: [redirectUri()],
+        grant_types: ["authorization_code", "refresh_token"],
+        response_types: ["code"],
+        token_endpoint_auth_method: "none",
+        application_type: "web",
+        scope: ($("oauthScope").value.trim() || (prm && (prm.scopes_supported || []).join(" ")) || undefined)
+      })
+    });
+    if (reg.ok && reg.data && reg.data.client_id) {
+      oauth.clientId = reg.data.client_id;
+      oauth.clientSecret = reg.data.client_secret || null;
+      oauth.clients[key] = reg.data; saveClients();
+    } else {
+      info.innerHTML = '<div class="note bad"><h4>Dynamic registration was refused</h4>' +
+        "HTTP " + reg.status + ". Register this page manually with the authorization server, using redirect URI <code>" +
+        esc(redirectUri()) + "</code>, then paste the client ID above.</div>";
+      $("authState").textContent = "needs client id";
+      return false;
+    }
+  } else {
+    info.innerHTML = '<div class="note warn"><h4>No dynamic registration</h4>' +
+      "This authorization server has no registration endpoint. Create a client manually with redirect URI <code>" +
+      esc(redirectUri()) + "</code> and paste the client ID above.</div>";
+    $("authState").textContent = "needs client id";
+    return false;
+  }
+
+  const scopes = $("oauthScope").value.trim() || (prm && (prm.scopes_supported || []).join(" ")) || (as.scopes_supported || []).join(" ");
+  info.innerHTML = '<div class="note ok"><h4>Ready to authorize</h4>' +
+    "<div><b>Issuer</b> " + esc(as.issuer || "\u2014") + "</div>" +
+    "<div><b>Client</b> " + esc(oauth.clientId) + "</div>" +
+    (scopes ? "<div><b>Scopes</b> " + esc(scopes) + "</div>" : "") +
+    "<div><b>Redirect</b> " + esc(redirectUri()) + "</div></div>";
+  $("authState").textContent = "ready";
+  return true;
+}
+
+async function oauthAuthorize() {
+  if (location.protocol === "file:") {
+    $("oauthInfo").innerHTML = '<div class="note bad"><h4>Cannot redirect from disk</h4>Serve this page over http first \u2014 an authorization server will not accept a <code>file://</code> redirect URI.</div>';
+    return;
+  }
+  if (!oauth.as) { const ok = await oauthDiscover(); if (!ok) return; }
+  const as = oauth.as;
+  const verifier = randomString(48);
+  const challenge = await pkceChallenge(verifier);
+  const state = randomString(16);
+  const scopes = $("oauthScope").value.trim() || (oauth.prm && (oauth.prm.scopes_supported || []).join(" ")) || (as.scopes_supported || []).join(" ");
+
+  store.set("mcpwi.pending", JSON.stringify({
+    verifier, state, as, clientId: oauth.clientId, clientSecret: oauth.clientSecret,
+    resource: canonicalResource(), serverUrl: $("url").value.trim(), era: $("era").value,
+    headers: readHeaderRows()
+  }));
+
+  const p = new URLSearchParams({
+    response_type: "code",
+    client_id: oauth.clientId,
+    redirect_uri: redirectUri(),
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    state,
+    resource: canonicalResource()
+  });
+  if (scopes) p.set("scope", scopes);
+  location.href = as.authorization_endpoint + (as.authorization_endpoint.includes("?") ? "&" : "?") + p.toString();
+}
+
+async function oauthHandleReturn() {
+  const q = new URLSearchParams(location.search);
+  const code = q.get("code"), state = q.get("state"), err = q.get("error"), iss = q.get("iss");
+  if (!code && !err) return false;
+  history.replaceState({}, "", location.pathname);
+
+  const pendingRaw = store.get("mcpwi.pending");
+  const pending = pendingRaw ? JSON.parse(pendingRaw) : null;
+  store.del("mcpwi.pending");
+
+  if (err) {
+    $("secAuth").open = true;
+    $("oauthInfo").innerHTML = '<div class="note bad"><h4>Authorization denied</h4><code>' + esc(err) + "</code> " + esc(q.get("error_description") || "") + "</div>";
+    return true;
+  }
+  if (!pending) { toast("No pending authorization found"); return true; }
+  if (pending.state !== state) {
+    $("oauthInfo").innerHTML = '<div class="note bad"><h4>State mismatch</h4>The value returned does not match the one this page sent. The response was discarded.</div>';
+    return true;
+  }
+  // RFC 9207: if the AS returned an issuer, it must match the one we discovered.
+  if (iss && pending.as.issuer && iss !== pending.as.issuer) {
+    $("oauthInfo").innerHTML = '<div class="note bad"><h4>Issuer mismatch</h4>Expected <code>' + esc(pending.as.issuer) + "</code> but got <code>" + esc(iss) + "</code>. The code was not redeemed.</div>";
+    return true;
+  }
+
+  // restore connection form
+  $("url").value = pending.serverUrl || "";
+  $("era").value = pending.era || "auto";
+  setHeaderRows(pending.headers || {});
+  oauth.as = pending.as; oauth.clientId = pending.clientId; oauth.clientSecret = pending.clientSecret;
+
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    code, redirect_uri: redirectUri(),
+    client_id: pending.clientId,
+    code_verifier: pending.verifier,
+    resource: pending.resource
+  });
+  if (pending.clientSecret) body.set("client_secret", pending.clientSecret);
+
+  const r = await fetchJson(pending.as.token_endpoint, {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString()
+  });
+  $("secAuth").open = true;
+  if (!r.ok || !r.data || !r.data.access_token) {
+    $("oauthInfo").innerHTML = '<div class="note bad"><h4>Token exchange failed</h4>HTTP ' + r.status +
+      "<pre>" + esc((r.text || "").slice(0, 800)) + "</pre></div>";
+    return true;
+  }
+  oauth.tokens[pending.serverUrl] = Object.assign({ obtained: Date.now(), issuer: pending.as.issuer, token_endpoint: pending.as.token_endpoint, client_id: pending.clientId }, r.data);
+  saveTokens();
+  renderTokenState();
+  toast("Authorized \u2014 connecting");
+  connect();
+  return true;
+}
+
+async function oauthRefresh() {
+  const key = tokenKey();
+  const t = oauth.tokens[key];
+  if (!t || !t.refresh_token) { toast("No refresh token stored"); return; }
+  const body = new URLSearchParams({
+    grant_type: "refresh_token", refresh_token: t.refresh_token,
+    client_id: t.client_id, resource: canonicalResource()
+  });
+  const r = await fetchJson(t.token_endpoint, {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString()
+  });
+  if (r.ok && r.data && r.data.access_token) {
+    oauth.tokens[key] = Object.assign({}, t, r.data, { obtained: Date.now() });
+    saveTokens(); renderTokenState(); toast("Token refreshed");
+  } else {
+    $("oauthInfo").innerHTML = '<div class="note bad"><h4>Refresh failed</h4>HTTP ' + r.status + ". Run Authorize again.</div>";
+  }
+}
+
+function renderTokenState() {
+  const t = oauth.tokens[tokenKey()];
+  if (!t) { $("authState").textContent = oauth.as ? "ready" : "off"; return; }
+  const age = Math.round((Date.now() - t.obtained) / 1000);
+  const left = t.expires_in ? t.expires_in - age : null;
+  $("authState").textContent = left != null ? (left > 0 ? "token \u00b7 " + Math.round(left / 60) + "m left" : "token expired") : "token held";
+  const info = $("oauthInfo");
+  info.innerHTML = '<div class="note ok"><h4>Access token held</h4>' +
+    "<div><b>Type</b> " + esc(t.token_type || "Bearer") + "</div>" +
+    (t.scope ? "<div><b>Scope</b> " + esc(t.scope) + "</div>" : "") +
+    (left != null ? "<div><b>Expires</b> in " + Math.max(0, Math.round(left / 60)) + " min</div>" : "") +
+    "<div><b>Refresh</b> " + (t.refresh_token ? "available" : "none") + "</div>" +
+    "It is attached as an <code>Authorization</code> header on every request.</div>";
+}
+
+/* =========================================================================
+   Header rows, saved endpoints, persistence
+   ========================================================================= */
+function addHeaderRow(k, v) {
+  const row = el("div", "kv");
+  const ki = el("input"); ki.type = "text"; ki.placeholder = "Header"; ki.value = k || ""; ki.spellcheck = false;
+  const vi = el("input"); vi.type = "text"; vi.placeholder = "Value"; vi.value = v || ""; vi.spellcheck = false;
+  const rm = el("button", "mini", "\u00d7"); rm.title = "Remove"; rm.onclick = () => row.remove();
+  row.appendChild(ki); row.appendChild(vi); row.appendChild(rm);
+  $("hdrs").appendChild(row);
+}
+function readHeaderRows() {
+  const out = {};
+  $("hdrs").querySelectorAll(".kv").forEach((row) => {
+    const [k, v] = row.querySelectorAll("input");
+    if (k.value.trim()) out[k.value.trim()] = v.value;
+  });
+  return out;
+}
+function setHeaderRows(obj) {
+  $("hdrs").innerHTML = "";
+  const keys = Object.keys(obj || {});
+  if (!keys.length) { addHeaderRow("Authorization", ""); return; }
+  keys.forEach((k) => addHeaderRow(k, obj[k]));
+}
+
+function saveLast() {
+  store.set("mcpwi.last", JSON.stringify({ url: $("url").value.trim(), era: $("era").value, headers: readHeaderRows() }));
+}
+function loadSaved() {
+  const list = JSON.parse(store.get("mcpwi.saved") || "[]");
+  const ul = $("lSaved"); ul.innerHTML = "";
+  $("cSaved").textContent = list.length;
+  list.forEach((s, i) => {
+    const li = el("li");
+    const b = el("button", "item");
+    b.appendChild(el("div", "nm", s.name));
+    b.appendChild(el("div", "ds", s.url));
+    b.onclick = () => { $("url").value = s.url; $("era").value = s.era || "auto"; setHeaderRows(s.headers || {}); renderTokenState(); toast("Loaded " + s.name); };
+    const rm = el("button", "mini", "remove");
+    rm.style.cssText = "float:right;margin:-26px 8px 0 0;position:relative;z-index:2";
+    rm.onclick = (e) => { e.stopPropagation(); list.splice(i, 1); store.set("mcpwi.saved", JSON.stringify(list)); loadSaved(); };
+    li.appendChild(b); li.appendChild(rm); ul.appendChild(li);
+  });
+  if (!list.length) ul.appendChild(el("li", "empty", "Nothing saved."));
+}
+
+/* =========================================================================
+   Wiring
+   ========================================================================= */
+$("btnConnect").onclick = connect;
+$("addHdr").onclick = () => addHeaderRow("", "");
+$("btnDisconnect").onclick = () => {
+  client.connected = false; client.sessionId = null; client.server = null; client.version = null;
+  client.tools = []; client.resources = []; client.templates = []; client.prompts = [];
+  ["lTools", "lRes", "lPrompts"].forEach((id) => { $(id).innerHTML = '<li class="empty">Not loaded.</li>'; });
+  ["cTools", "cRes", "cPrompts"].forEach((id) => { $(id).textContent = "\u2014"; });
+  $("serverInfo").innerHTML = '<p class="hint">Connect to see identity and capabilities.</p>';
+  $("connMsg").innerHTML = "";
+  delete $("work").dataset.pinned;
+  setStatus("", "not connected"); renderWelcome();
+};
+$("btnRaw").onclick = openRaw;
+$("btnDoctor").onclick = () => doctor(false);
+$("btnRefresh").onclick = () => { if (client.connected) loadAll(); else toast("Connect first"); };
+$("btnPing").onclick = async () => {
+  if (!client.connected) { toast("Connect first"); return; }
+  const r = await rpc("ping", {});
+  toast(r.ok ? "Pong" : "Ping failed \u00b7 " + r.status);
+};
+$("btnSave").onclick = () => {
+  const name = $("saveName").value.trim() || new URL($("url").value.trim() || "http://x").host;
+  if (!$("url").value.trim()) { toast("Nothing to save"); return; }
+  const list = JSON.parse(store.get("mcpwi.saved") || "[]");
+  list.push({ name, url: $("url").value.trim(), era: $("era").value, headers: readHeaderRows() });
+  store.set("mcpwi.saved", JSON.stringify(list));
+  $("saveName").value = ""; loadSaved(); toast("Saved " + name);
+};
+$("btnOauthDisc").onclick = () => oauthDiscover();
+$("btnOauthGo").onclick = () => oauthAuthorize();
+$("btnOauthRefresh").onclick = () => oauthRefresh();
+$("btnOauthClear").onclick = () => {
+  delete oauth.tokens[tokenKey()]; saveTokens();
+  oauth.as = null; oauth.prm = null; oauth.clientId = null;
+  $("oauthInfo").innerHTML = ""; $("authState").textContent = "off"; toast("Token forgotten");
+};
+$("url").addEventListener("change", renderTokenState);
+$("url").addEventListener("keydown", (e) => { if (e.key === "Enter") connect(); });
+
+document.querySelectorAll(".tabbar button").forEach((b) => {
+  b.onclick = () => {
+    document.body.dataset.pane = b.dataset.pane;
+    document.querySelectorAll(".tabbar button").forEach((x) => x.classList.toggle("active", x === b));
+  };
+});
+function syncWireToggle() {
+  const narrow = window.matchMedia("(max-width:1180px)").matches;
+  $("btnWire").style.display = narrow ? "" : "none";
+  $("btnCloseWire").style.display = narrow ? "" : "none";
+  if (!narrow) document.body.classList.remove("wire-open");
+}
+$("btnWire").onclick = () => document.body.classList.toggle("wire-open");
+$("btnCloseWire").onclick = () => document.body.classList.remove("wire-open");
+window.addEventListener("resize", syncWireToggle);
+
+/* =========================================================================
+   Boot
+   ========================================================================= */
+(async function boot() {
+  syncWireToggle();
+  document.querySelector('.tabbar button[data-pane="work"]').classList.add("active");
+  loadSaved();
+
+  const last = JSON.parse(store.get("mcpwi.last") || "null");
+  if (last) { $("url").value = last.url || ""; $("era").value = last.era || "auto"; setHeaderRows(last.headers || {}); }
+  else setHeaderRows({});
+
+  if (!store.ok) logNote("Browser storage unavailable in this frame \u2014 saved endpoints and tokens live in memory only for this session.");
+
+  const returned = await oauthHandleReturn();
+  if (!returned) { renderTokenState(); renderWelcome(); }
+
+  const q = new URLSearchParams(location.search);
+  if (q.get("server")) { $("url").value = q.get("server"); connect(); }
+})();
+</script>
+</body>
+</html>
