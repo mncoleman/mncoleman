@@ -79,5 +79,14 @@
     "type": "text/html",
     "size": 85963,
     "uploadedAt": "2026-08-08T01:55:20.569Z"
+  },
+  {
+    "id": "a8de1136-a378-4985-aed9-4425f3a29a00",
+    "name": "The Whole Bible, One Canvas",
+    "filename": "bible-whiteboard.html",
+    "description": "The complete King James Bible laid out as a single zoomable whiteboard - all 66 books, 1,189 chapters and 31,102 verses packed into one near-square canvas you can pan, zoom and search.",
+    "type": "text/html",
+    "size": 6253636,
+    "uploadedAt": "2026-08-11T00:00:00.000Z"
   }
 ]
