@@ -151,3 +151,13 @@ Required env (see `.env.example`): `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `NOTION
 12. **No `btoa`/`atob` on the artifacts manifest.** `btoa` throws above U+00FF and `atob` decodes UTF-8 as Latin-1, so an em-dash in a description used to 500 the write *after* the file commit landed and corrupt the manifest on every edit. `worker/index.ts` has TextEncoder/TextDecoder base64 helpers — use those.
 13. **Animation loops must be gated.** `components/ui/dark-veil.tsx` is the reference: `prefers-reduced-motion` renders one static frame, plus an IntersectionObserver and a `visibilitychange` pause, plus demand-driven rAF that stops once motion settles. `components/Waves.tsx` follows it. Also keep `touchmove` listeners `passive: true` unless the handler genuinely calls `preventDefault()` — a non-passive one blocks every scroll frame on the page.
 ```
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

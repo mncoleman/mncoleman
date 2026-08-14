@@ -127,9 +127,10 @@ setInterval(() => {
 export interface CaptchaPuzzle {
     id: string;
     prompt: string;
-    /** 'slider' = drag a 1–9 handle (bots struggle to drag); 'solar' = click the right
+    /** 'slider' = drag a 1–9 handle (bots struggle to drag); 'rotary' = dial letters
+     *  around a rotary-phone circle (drag-only, no typing); 'solar' = click the right
      *  planet; 'choice' = buttons; 'text' = free text. */
-    type: 'slider' | 'solar' | 'choice' | 'text';
+    type: 'slider' | 'rotary' | 'solar' | 'choice' | 'text';
     choices?: string[];
     min?: number;
     max?: number;
@@ -145,7 +146,7 @@ function norm(s: string): string {
 
 const PUZZLES: PuzzleDef[] = [
     { id: 'math1', type: 'slider', min: 1, max: 9, prompt: "Slide to the answer: what's 2 + 3?", answer: '5' },
-    { id: 'globe-rev', type: 'text', prompt: 'Type “globe” backwards (robots hate this one):', answer: 'ebolg' },
+    { id: 'globe-rev', type: 'rotary', prompt: 'Dial “globe” backwards:', answer: 'ebolg' },
     { id: 'planet', type: 'solar', prompt: 'Click your home planet.', answer: 'Earth' },
     { id: 'pin-letters', type: 'slider', min: 1, max: 9, prompt: 'Slide to how many letters are in the word “pin”.', answer: '3' },
     { id: 'country', type: 'choice', prompt: "Pick the one that's an actual country:", choices: ['Canada', 'Narnia', 'Localhost'], answer: 'Canada' },

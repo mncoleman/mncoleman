@@ -29,7 +29,7 @@ export interface GeoResult {
     precision: 'country' | 'city' | 'address';
 }
 
-export type CaptchaType = 'slider' | 'solar' | 'choice' | 'text';
+export type CaptchaType = 'slider' | 'rotary' | 'solar' | 'choice' | 'text';
 
 export interface Challenge {
     token: string;

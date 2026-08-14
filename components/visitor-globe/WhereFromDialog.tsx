@@ -16,6 +16,7 @@ import {
     type Pin,
 } from './visitor-api';
 import CaptchaSlider from './CaptchaSlider';
+import CaptchaRotary from './CaptchaRotary';
 import CaptchaSolar from './CaptchaSolar';
 
 const FACT_MAX = 200;
@@ -352,6 +353,11 @@ export default function WhereFromDialog({ onSubmitted, className }: Props) {
                                 min={challenge.captcha.min}
                                 max={challenge.captcha.max}
                                 onChange={(n) => setCaptchaAnswer(String(n))}
+                            />
+                        ) : challenge.captcha.type === 'rotary' ? (
+                            <CaptchaRotary
+                                key={challenge.captcha.id + challenge.token}
+                                onChange={(word) => setCaptchaAnswer(word)}
                             />
                         ) : challenge.captcha.type === 'solar' ? (
                             <CaptchaSolar
