@@ -138,9 +138,8 @@ export default function CaptchaRotary({ onChange, className }: Props) {
                     className="relative select-none touch-none"
                     style={{ width: SIZE, height: SIZE }}
                 >
-                    {/* dial face */}
-                    <div className="absolute inset-0 rounded-full border border-border/60 bg-background/40 shadow-inner" />
-                    <div className="absolute inset-[26px] rounded-full border border-border/40" />
+                    {/* No dial face or arm — the ring of letters and the knob riding it
+                        are the whole affordance. */}
 
                     {/* letters */}
                     {LETTERS.map((ch, i) => {
@@ -175,16 +174,12 @@ export default function CaptchaRotary({ onChange, className }: Props) {
                         );
                     })}
 
-                    {/* selector arm — purely visual; it rotates so the knob rides the ring */}
+                    {/* selector knob — purely visual; the wrapper rotates so it rides the ring */}
                     <div
                         className="pointer-events-none absolute inset-0"
                         style={{ transform: `rotate(${angle}deg)`, transition }}
                         aria-hidden="true"
                     >
-                        <div
-                            className="absolute left-1/2 top-1/2 w-[2px] origin-top -translate-x-1/2 bg-primary/25"
-                            style={{ height: HANDLE_R - 14 }}
-                        />
                         <div
                             className="absolute left-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-primary bg-background shadow"
                             style={{ top: CENTER - HANDLE_R }}
