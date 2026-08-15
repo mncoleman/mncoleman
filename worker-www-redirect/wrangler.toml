@@ -1,0 +1,16 @@
+name = "mncoleman-www-redirect"
+main = "index.ts"
+compatibility_date = "2026-07-01"
+
+# Holds no secrets and reads nothing. Its only job is the www -> apex 301 that
+# GitHub Pages used to issue before the site moved to Cloudflare Pages.
+#
+# The route must stay ahead of the `www.mncoleman.com` Pages custom domain —
+# Worker routes take precedence over Pages custom domains on the same hostname,
+# which is what makes this work at all. Removing the Pages custom domain instead
+# would break www entirely rather than redirect it.
+routes = [
+  { pattern = "www.mncoleman.com/*", zone_name = "mncoleman.com" },
+]
+
+workers_dev = false

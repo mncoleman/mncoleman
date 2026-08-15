@@ -1,8 +1,0 @@
-# Cloudflare Pages redirects.
-#
-# GitHub Pages used to issue the www -> apex redirect for free. Cloudflare Pages
-# SERVES a custom domain rather than redirecting it, so without this rule the
-# whole site would answer on both hostnames — duplicate content against the
-# canonical URLs that sitemap.ts, the OG tags and lib/og-card.tsx all emit at
-# the apex. Splat preserves the path.
-https://www.mncoleman.com/* https://mncoleman.com/:splat 301
