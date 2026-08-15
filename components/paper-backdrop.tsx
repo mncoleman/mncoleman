@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -9,8 +9,7 @@ import { cn } from '@/lib/utils';
  * Light mode used to run the Waves line art, which read as noise on white. Rather
  * than replace it with nothing, the ground becomes an actual surface — a warm paper
  * grain — and the pointer leaves graphite on it. Nothing is persisted: a reload is
- * a fresh sheet, and the eraser (which only appears once there is something to
- * erase) clears it on demand.
+ * a fresh sheet, and the eraser in the corner control cluster clears it on demand.
  *
  * Everything is procedural. A paper photo would be a few hundred KB on the critical
  * path for a decorative background; a 128px noise tile generated once and used as a
@@ -28,11 +27,9 @@ const GRAPHITE = '46, 46, 44';
 export function PaperBackdrop() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const paintPaperRef = useRef<() => void>(() => {});
-    const [hasDrawn, setHasDrawn] = useState(false);
 
     const erase = useCallback(() => {
         paintPaperRef.current();
-        setHasDrawn(false);
     }, []);
 
     useEffect(() => {
@@ -91,7 +88,6 @@ export function PaperBackdrop() {
         let raf = 0;
         let queued: Array<[number, number]> = [];
         let tail: Array<[number, number]> = [];
-        let drew = false;
 
         /**
          * Draws this frame's samples as ONE smoothed path, in a few offset passes.
@@ -166,7 +162,6 @@ export function PaperBackdrop() {
         const onMove = (e: PointerEvent) => {
             if (!fine) return;
             queued.push([e.clientX, e.clientY]);
-            if (!drew) { drew = true; setHasDrawn(true); }
             if (!raf) raf = requestAnimationFrame(flush);
         };
 
@@ -205,11 +200,13 @@ export function PaperBackdrop() {
                     'fixed bottom-5 right-[8rem] z-40 hidden md:inline-flex h-10 w-10',
                     'items-center justify-center rounded-lg border backdrop-blur-xl',
                     'border-border/40 bg-background/40 text-muted-foreground',
-                    'transition-all duration-300 pwa-safe-bottom',
+                    'transition-colors duration-300 pwa-safe-bottom',
                     'hover:border-border hover:text-foreground',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    // Only offered once there is something to erase.
-                    hasDrawn ? 'opacity-100' : 'pointer-events-none opacity-0'
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+                    // Deliberately always visible. It used to appear only once something
+                    // had been drawn, which meant clicking it made it vanish — reading as
+                    // a broken control rather than a tidy one. The two neighbours in this
+                    // cluster are permanent; this matches them.
                 )}
             >
                 <EraserIcon />
