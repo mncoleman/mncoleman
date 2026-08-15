@@ -11,13 +11,13 @@ import { BlurText } from '@/components/ui/blur-text';
 import { FallInText } from '@/components/ui/fall-in-text';
 import { TextType } from '@/components/ui/text-type';
 import { DeferUntilIdle } from '@/components/defer';
+import { BackdropFade } from '@/components/backdrop-fade';
 import { cn } from '@/lib/utils';
 import type { ContactType, ParsedResume, ResumeExperience } from '@/lib/resume-parse';
 
 // WebGL and purely decorative — same treatment the home page gives it, so it
 // never lands in this route's initial JS.
 const DarkVeil = dynamic(() => import('@/components/ui/dark-veil'), { ssr: false });
-const Waves = dynamic(() => import('@/components/Waves'), { ssr: false });
 
 /** The site-wide frosted-glass card (see CLAUDE.md → Patterns). */
 const CARD =
@@ -317,7 +317,9 @@ function TiltFrame({ backdrop, children }: { backdrop: ReactNode; children: Reac
  * onto the same backdrop the home page uses, with the text leaning over it.
  *
  * Backdrop per theme follows `home-backdrop.tsx`: Dark Veil is built for a dark
- * surface and goes muddy on a light one, so light mode gets Waves instead.
+ * surface and goes muddy on a light one, so it renders in dark mode only. Light
+ * mode deliberately has no backdrop at all — the aperture becomes plain paper,
+ * which is the whole point of the light treatment.
  */
 function ResumeHero({ resume }: { resume: ParsedResume }) {
     const reducedMotion = useReducedMotion();
@@ -333,26 +335,20 @@ function ResumeHero({ resume }: { resume: ParsedResume }) {
     const backdrop = (
         <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none" aria-hidden>
             {/* Waits for idle like the home page backdrop — decoration behind
-                this page's LCP text should not compete with it. Both fade
-                themselves in, so arriving a beat late reads as intentional. */}
-            {mounted && (
+                this page's LCP text should not compete with it. Neither shader
+                fades itself in, so BackdropFade supplies it; arriving a beat
+                late then reads as intentional. It carries the layout here
+                (absolute inset-0) because the contained backdrops size against
+                their parent rather than the viewport. */}
+            {mounted && !isLight && (
                 <DeferUntilIdle>
-                    {isLight ? (
-                        <Waves
-                            lineColor="#2563eb"
-                            backgroundColor="transparent"
-                            waveAmpX={28}
-                            waveAmpY={14}
-                            xGap={12}
-                            yGap={28}
-                        />
-                    ) : (
-                        /* hueShift/speed copied verbatim from `home-backdrop.tsx` —
-                           40 is what produces the blue there. The shader's palette
-                           does not map to hue degrees in any way you can reason
-                           about, so this number is copied, not derived. */
+                    <BackdropFade className="absolute inset-0">
+                        {/* hueShift/speed copied verbatim from `home-backdrop.tsx` —
+                            40 is what produces the blue there. The shader's palette
+                            does not map to hue degrees in any way you can reason
+                            about, so this number is copied, not derived. */}
                         <DarkVeil contained hueShift={40} speed={0.5} resolutionScale={0.8} />
-                    )}
+                    </BackdropFade>
                 </DeferUntilIdle>
             )}
 

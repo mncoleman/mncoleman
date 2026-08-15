@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function BrandKit() {
     return (
         <>
-            {/* Same theme-aware backdrop as the home page: Dark Veil in dark, Waves in
+            {/* Same theme-aware backdrop as the home page: Dark Veil in dark, nothing in
                 light. Rendering Dark Veil unconditionally (as this did) left light-mode
                 text sitting invisibly on a dark backdrop. */}
             <HomeBackdrop />

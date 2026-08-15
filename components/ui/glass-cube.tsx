@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 
 interface GlassCubeProps {
   children: React.ReactNode;
@@ -30,6 +30,27 @@ export default function GlassCube({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const cubeRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef(0);
+
+  // The glass cube is a dark-mode treatment: translucent white fill, white hairline
+  // borders and a stack of extruded slices all need a dark ground to read as glass.
+  // On white they turn into a muddy grey box, so light mode gets a plain solid card
+  // with a lift-and-shadow hover instead — no tilt, no extrusion, no blur.
+  //
+  // Starts `false` so the light path (the one this exists to fix) is correct on the
+  // first frame; dark gets one flat frame before the load wobble starts, which is
+  // inside the wobble's own ramp and not visible. Colours come from `dark:` variants
+  // rather than this state, so nothing flashes the wrong palette either way.
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const read = () => setIsDark(document.documentElement.classList.contains('dark'));
+    read();
+    // next-themes flips a class on <html>; watch it so toggling the theme swaps
+    // treatments live rather than only on the next navigation.
+    const mo = new MutationObserver(read);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => mo.disconnect();
+  }, []);
   // Set by the main effect; lets the pulse trigger restart the (demand-driven) loop.
   const kickRef = useRef<() => void>(() => {});
 
@@ -71,6 +92,14 @@ export default function GlassCube({
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
+
+    // Light mode is a flat card: no tilt, so no listeners and no rAF loop at all.
+    // Clearing the transform matters on a theme toggle — otherwise the cube keeps
+    // whatever rotation it held when the theme changed.
+    if (!isDark) {
+      if (cubeRef.current) cubeRef.current.style.transform = '';
+      return;
+    }
 
     // Reduced motion: render the cube flat & centered — no listeners, no rAF loop.
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -195,7 +224,7 @@ export default function GlassCube({
       io.disconnect();
       kickRef.current = () => {};
     };
-  }, [tiltMax, depth]);
+  }, [tiltMax, depth, isDark]);
 
   const r = 16;
 
@@ -214,10 +243,14 @@ export default function GlassCube({
           height: '100%',
         }}
       >
-        {/* ── DEPTH SLICES — border-only layers forming the rounded extrusion ── */}
+        {/* ── DEPTH SLICES — border-only layers forming the rounded extrusion ──
+             `hidden dark:block` rather than a JS condition: rendering them in both
+             themes keeps the server and first client render identical, and the
+             extrusion is a dark-only effect anyway. */}
         {slices.map((z, i) => (
           <div
             key={i}
+            className="hidden dark:block"
             style={{
               position: 'absolute',
               inset: 0,
@@ -230,18 +263,24 @@ export default function GlassCube({
           />
         ))}
 
-        {/* ── FRONT FACE — on top at full depth ── */}
+        {/* ── FRONT FACE ──
+             Dark: the glass pane, sitting at full depth on top of the extrusion.
+             Light: a plain solid card that lifts on hover, its shadow blooming with
+             it. Colours are `dark:` variants so neither theme can render the other's
+             palette during hydration; only the translateZ depends on JS state, and
+             only because it has no meaning without the extrusion behind it. */}
         <div
+          className={
+            'relative h-full overflow-hidden rounded-2xl ' +
+            'border border-border bg-card shadow-sm ' +
+            'dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none dark:backdrop-blur-[10px] ' +
+            'transition-[transform,box-shadow,border-color] duration-300 ease-out ' +
+            'hover:shadow-xl hover:border-border/80 motion-safe:hover:-translate-y-1.5 ' +
+            'dark:hover:shadow-none dark:hover:translate-y-0 dark:hover:border-white/10'
+          }
           style={{
-            position: 'relative',
-            height: '100%',
             borderRadius: `${r}px`,
-            overflow: 'hidden',
-            background: 'rgba(255, 255, 255, 0.03)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.10)',
-            transform: `translateZ(${depth}px)`,
+            transform: isDark ? `translateZ(${depth}px)` : undefined,
           }}
         >
           {children}
