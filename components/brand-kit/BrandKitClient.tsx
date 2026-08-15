@@ -387,7 +387,7 @@ const MASTER_PROMPT = `You are a web developer AI assistant. I want you to build
 - **3D (optional)**: Three.js with React Three Fiber + Drei
 - **CMS**: Notion API (@notionhq/client + notion-to-md)
 - **Theme**: next-themes (class-based dark mode)
-- **Hosting**: GitHub Pages (static)
+- **Hosting**: Cloudflare Pages (static)
 - **Smooth Scrolling**: Lenis — https://github.com/darkroomengineering/lenis
 
 ## shadcn/ui Setup
