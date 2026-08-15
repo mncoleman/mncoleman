@@ -411,17 +411,20 @@
 }
 
 /* Bobbing scroll-down cue beneath the glass cards (desktop). */
+/* The cue is centred by its parent's flex `items-center`, so it carries no
+   horizontal translate — the bob is purely vertical. It used to be positioned
+   with `left-1/2` and pulled back by -50%, which is why this rule and the
+   keyframes both used to translate on X. */
 .vg-scroll-cue {
-  transform: translateX(-50%);
   animation: vg-bob 1.9s ease-in-out infinite;
 }
 @keyframes vg-bob {
   0%,
   100% {
-    transform: translate(-50%, 0);
+    transform: translateY(0);
   }
   50% {
-    transform: translate(-50%, 9px);
+    transform: translateY(9px);
   }
 }
 @media (prefers-reduced-motion: reduce) {

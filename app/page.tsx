@@ -190,7 +190,12 @@ function DesktopGrid() {
           the viewport and the MCP callout sits in the middle of the gap above it —
           no measurement, and it degrades to "stacked, nothing overlapping" when the
           viewport is too short to have spare room to distribute. */}
-      <div className="w-full max-w-5xl flex-1 flex items-center justify-center relative z-20">
+      {/* `min-h-20` floors this band. It is `flex-1`, so on a short viewport it was
+          collapsing until the callout sat almost against the header — and moving the
+          scroll cue into flow (below) took another 56px out of the same pool. The floor
+          keeps air around the callout and lets the container exceed its min-height
+          instead, which costs a few pixels of scroll rather than the layout. */}
+      <div className="w-full max-w-5xl min-h-20 flex-1 flex items-center justify-center relative z-20">
         <McpCallout />
       </div>
       <div className="w-full max-w-5xl relative z-10">
@@ -209,12 +214,20 @@ function DesktopGrid() {
       </div>
       <div className="flex-1" aria-hidden />
 
-      {/* Gentle scroll cue hinting at the visitor globe below the cards. */}
+      {/* Gentle scroll cue hinting at the visitor globe below the cards.
+
+          In flow, not `absolute bottom-8`: the balancing band above is `flex-1`,
+          so on a tall viewport the cue still sits at the bottom, but on a short
+          one the band collapses to nothing and an absolutely-positioned cue was
+          landing on top of the bottom row of cards. Being in flow is what makes
+          the "degrades to stacked, nothing overlapping" note above actually true.
+          Horizontal centring comes from the parent's `items-center`, which is why
+          `.vg-scroll-cue` no longer carries a -50% translate. */}
       <button
         type="button"
         onClick={() => smoothScrollTo('#visitor-globe')}
         aria-label="Scroll down to the visitor globe"
-        className="vg-scroll-cue absolute bottom-8 left-1/2 z-10 text-muted-foreground/50 hover:text-foreground transition-colors"
+        className="vg-scroll-cue mb-6 z-10 text-muted-foreground/50 hover:text-foreground transition-colors"
       >
         <ChevronDown className="h-8 w-8" strokeWidth={1.5} />
       </button>
