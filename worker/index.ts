@@ -23,6 +23,7 @@ export interface Env {
     GITHUB_TOKEN: string;
     GITHUB_REPO_OWNER: string;
     GITHUB_REPO_NAME: string;
+    PAGES_DEPLOY_HOOK: string;      // Cloudflare Pages deploy hook URL — rebuilds mncoleman.com
     N8N_WEBHOOK_URL: string;
     ADMIN_USERS: KVNamespace;       // KV store for multi-user access
     ARTIFACTS_SERVICE_URL: string;  // e.g. https://artifacts.mncoleman.com
@@ -43,6 +44,18 @@ interface AdminUser {
 }
 
 export default {
+    // Daily site rebuild so new Notion content goes live without a push.
+    // Cron lives in wrangler.toml (06:00 UTC) — it replaced the GitHub Actions
+    // `schedule:` trigger that shipped with the old GitHub Pages deploy.
+    async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+        ctx.waitUntil(
+            triggerRebuild(env, 'cron').then((r) => {
+                if (!r.ok) console.error('Scheduled rebuild failed:', JSON.stringify(r));
+                else console.log('Scheduled rebuild triggered', event.cron);
+            })
+        );
+    },
+
     async fetch(request: Request, env: Env): Promise<Response> {
         const allowedOrigins = ['https://mncoleman.com', 'https://www.mncoleman.com', 'http://localhost:3000'];
         const origin = request.headers.get('Origin');
@@ -317,10 +330,12 @@ export default {
                 const body = await request.json() as { action: string, data?: any };
 
                 // Handle actions
-                if (body.action === 'github_dispatch') {
+                // 'github_dispatch' is kept as an alias: the deployed admin UI still
+                // sends it, and a stale browser tab must not start failing mid-migration.
+                if (body.action === 'rebuild' || body.action === 'github_dispatch') {
                     const allowedEventTypes = ['admin_trigger', 'rebuild_site', 'sync_notion', 'content_update'];
-                    const eventType = allowedEventTypes.includes(body.data?.event_type) ? body.data.event_type : 'admin_trigger';
-                    const resp = await triggerGitHubDispatch(env, eventType);
+                    const reason = allowedEventTypes.includes(body.data?.event_type) ? body.data.event_type : 'admin_trigger';
+                    const resp = await triggerRebuild(env, reason);
                     if (!resp.ok) {
                         return new Response(JSON.stringify(resp), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                     }
@@ -1577,28 +1592,29 @@ function atobUrl(str: string): string {
     return atob(str);
 }
 
-async function triggerGitHubDispatch(env: Env, eventType: string) {
-    if (!env.GITHUB_TOKEN || !env.GITHUB_REPO_OWNER || !env.GITHUB_REPO_NAME) {
-        return { error: 'GitHub vars missing', ok: false };
+// Rebuilds the site by firing the Cloudflare Pages deploy hook.
+//
+// This replaced a GitHub `repository_dispatch` when the site moved off GitHub
+// Pages. Note that the site ALSO rebuilds on its own whenever this Worker
+// commits `data/artifacts.json` — the Pages Git integration sees that push. So
+// only call this for content-only rebuilds (Notion sync, the daily cron, a
+// manual admin rebuild); calling it after a manifest commit double-builds.
+//
+// `reason` is for logging only. The hook always builds `main`; unlike
+// repository_dispatch there is no event type to branch on.
+async function triggerRebuild(env: Env, reason: string) {
+    if (!env.PAGES_DEPLOY_HOOK) {
+        return { error: 'PAGES_DEPLOY_HOOK not configured', ok: false };
     }
 
-    const url = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/dispatches`;
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Authorization': `token ${env.GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'Cloudflare-Worker'
-        },
-        body: JSON.stringify({ event_type: eventType })
-    });
+    const response = await fetch(env.PAGES_DEPLOY_HOOK, { method: 'POST' });
 
     if (!response.ok) {
         const text = await response.text();
-        return { ok: false, status: response.status, error: text };
+        return { ok: false, status: response.status, error: text, reason };
     }
 
-    return { status: response.status, ok: response.ok };
+    return { status: response.status, ok: true, reason };
 }
 
 // --- Multi-User KV Helpers ---

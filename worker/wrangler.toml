@@ -7,7 +7,8 @@ compatibility_date = "2024-04-01"
 #   TELEGRAM_CLIENT_SECRET  — OIDC client secret from BotFather
 #   JWT_SECRET              — Signs session JWTs
 #   OWNER_SUB               — Owner's Telegram OIDC sub (always allowed)
-#   GITHUB_TOKEN            — GitHub API access
+#   GITHUB_TOKEN            — GitHub API access (artifacts manifest commits)
+#   PAGES_DEPLOY_HOOK       — Cloudflare Pages deploy hook URL; rebuilds mncoleman.com
 #   ARTIFACTS_JWT_SECRET    — Shared HS256 secret with the Oracle artifact service
 #   GA_SA_CLIENT_EMAIL      — Google service-account email (Viewer on the GA4 property)
 #   GA_SA_PRIVATE_KEY       — That service account's PKCS#8 private key (PEM)
@@ -19,6 +20,10 @@ GITHUB_REPO_NAME = "mncoleman"
 N8N_WEBHOOK_URL = ""
 ARTIFACTS_SERVICE_URL = "https://artifacts.mncoleman.com"
 GA_PROPERTY_ID = "515551096"    # GA4 numeric property id — not the G- measurement id
+
+# Daily content rebuild (06:00 UTC), replacing the old deploy.yml `schedule:`.
+[triggers]
+crons = ["0 6 * * *"]
 
 [[kv_namespaces]]
 binding = "ADMIN_USERS"
