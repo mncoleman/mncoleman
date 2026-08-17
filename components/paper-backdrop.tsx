@@ -245,7 +245,18 @@ export function PaperBackdrop() {
             if (!raf) raf = requestAnimationFrame(flush);
         };
 
-        // Leaving the window breaks the line rather than connecting across the gap.
+        /**
+         * Leaving the WINDOW breaks the line rather than connecting across the gap.
+         *
+         * This used to be wired to `pointerout`, which was wrong in a way that showed
+         * up as chunks missing from the drawing: `pointerout` bubbles, so it fired
+         * every time the cursor crossed from one element to another — over a card
+         * edge, over the MCP callout, over any span of text. Each one dropped the
+         * carried tail, and with it up to a frame of travel, so a fast drag came out
+         * as a series of disconnected runs. `mouseleave` on the document fires only
+         * when the pointer actually leaves, which is the case this exists for; a
+         * genuine re-entry is caught by the jump guard in `onMove` anyway.
+         */
         const onLeave = () => {
             tail = [];
             current = null;
@@ -369,14 +380,12 @@ export function PaperBackdrop() {
         eraseRef.current = runErase;
 
         window.addEventListener('pointermove', onMove, { passive: true });
-        window.addEventListener('pointerout', onLeave);
         window.addEventListener('click', onClick);
         document.addEventListener('mouseleave', onLeave);
 
         return () => {
             window.removeEventListener('resize', resize);
             window.removeEventListener('pointermove', onMove);
-            window.removeEventListener('pointerout', onLeave);
             window.removeEventListener('click', onClick);
             document.removeEventListener('mouseleave', onLeave);
             if (raf) cancelAnimationFrame(raf);
