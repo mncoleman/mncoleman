@@ -351,7 +351,9 @@ function ResumeHero({ resume }: { resume: ParsedResume }) {
     );
 
     const content = (
-        <div className="p-8 md:p-12">
+        // `data-print-flush`: the hero's generous inset is a screen affordance. On
+        // paper it left the name indented a centimetre past every heading below it.
+        <div data-print-flush className="p-8 md:p-12">
                 <h1 className="text-4xl md:text-5xl font-bold mb-2 text-foreground">
                     <FallInText text={resume.name} />
                 </h1>

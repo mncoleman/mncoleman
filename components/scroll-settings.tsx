@@ -129,6 +129,7 @@ export function ScrollSettings() {
             // Sits left of the fancy-cursor toggle (bottom-5 right-5, 40px wide),
             // with a 12px gap: at 0 the two active/focus outlines touched and read
             // as one control. Below the custom cursor's z-[9999] so it draws over both.
+            data-print-hide
             className="fixed bottom-5 right-[4.5rem] z-40 hidden md:block pwa-safe-bottom"
         >
             {open && (

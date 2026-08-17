@@ -16,7 +16,7 @@
 /fonts/*
   Cache-Control: public, max-age=31536000, immutable
 
-# Generated OG cards are content-addressed only by route, so they must revalidate
-# — but they are also large and rarely change. A day, with revalidation after.
-/*/opengraph-image.png
-  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+# No rule for the generated OG cards: they live at /<route>/opengraph-image.png,
+# which needs a wildcard in the MIDDLE of the path, and a mid-path glob is exactly
+# the kind of rule that parses, ships, and never fires. Pages' four-hour default is
+# fine for them anyway.

@@ -47,6 +47,7 @@ export function BlankCanvasToggle() {
         <button
             type="button"
             onClick={toggle}
+            data-print-hide
             aria-pressed={blank}
             aria-label={label}
             title={label}

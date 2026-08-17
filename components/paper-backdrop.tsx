@@ -260,7 +260,13 @@ export function PaperBackdrop() {
         const onClick = (e: MouseEvent) => {
             if (!fine || erasing) return;
             const el = e.target as HTMLElement | null;
-            if (el?.closest('a, button, input, textarea, select, label, [role="button"], header, footer, nav'))
+            // `[role="link"]` is in here because the bento cards are measured divs
+            // rather than anchors (see components/transition-link.tsx).
+            if (
+                el?.closest(
+                    'a, button, input, textarea, select, label, [role="button"], [role="link"], header, footer, nav'
+                )
+            )
                 return;
             ink = (ink + 1) % INKS.length;
         };
@@ -272,7 +278,10 @@ export function PaperBackdrop() {
             const el = mopRefs.current[i];
             if (!el) return;
             el.style.opacity = '1';
-            el.style.transform = `translate3d(${x - 22}px, ${y - 22}px, 0) rotate(${angle}deg)`;
+            // Offset to the HEAD, not the box centre: `MopIcon` draws the head
+            // around (16, 30) of its 44px box, so centring the box would leave the
+            // swath clearing paper a few pixels off from where the mop looks to be.
+            el.style.transform = `translate3d(${x - 16}px, ${y - 30}px, 0) rotate(${angle}deg)`;
         };
 
         const hideMops = () => {
@@ -411,7 +420,9 @@ export function PaperBackdrop() {
                             mopRefs.current[i] = el;
                         }}
                         className="absolute left-0 top-0 h-11 w-11 opacity-0 will-change-transform"
-                        style={{ transition: 'opacity 220ms ease-out' }}
+                        // Rotate about the head too, or leaning the mop into its
+                        // travel swings the head off the line it is wiping.
+                        style={{ transition: 'opacity 220ms ease-out', transformOrigin: '16px 30px' }}
                     >
                         <MopIcon />
                     </div>
@@ -421,6 +432,7 @@ export function PaperBackdrop() {
             <button
                 type="button"
                 onClick={erase}
+                data-print-hide
                 aria-label="Erase pencil marks"
                 title="Erase pencil marks"
                 className={cn(

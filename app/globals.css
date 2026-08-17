@@ -628,11 +628,22 @@ html.blank-canvas [data-blank-hide] {
     margin-bottom: 8pt !important;
     break-after: avoid;
   }
-  .resume-print [class*='rounded-2xl'] {
+  .resume-print [class*='rounded-2xl'],
+  .resume-print [data-print-flush] {
     border: 0 !important;
     border-radius: 0 !important;
     padding: 0 !important;
     break-inside: avoid;
+  }
+  /* `.resume-print *` cannot reach pseudo-elements, and both list styles put their
+   * marker in one. They need opposite treatment: the experience bullets are a
+   * coloured BOX, the skill ticks are a coloured GLYPH. Blanket-setting both
+   * properties turns each ✓ into a solid black block. */
+  .resume-print li[class*='before:bg-']::before {
+    background-color: #000 !important;
+  }
+  .resume-print li[class*='before:content']::before {
+    color: #000 !important;
   }
   .resume-print li,
   .resume-print p {

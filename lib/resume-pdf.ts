@@ -31,7 +31,19 @@ function plain(markdown: string): string {
         .trim();
 }
 
-export async function downloadResumePdf(resume: ParsedResume): Promise<void> {
+/** Filename stem, shared by the download and by anything that renders the doc. */
+export function resumeFileStem(resume: ParsedResume): string {
+    const slug = resume.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return slug || 'resume';
+}
+
+/**
+ * Lays the resume out and hands back the document without saving it.
+ *
+ * Split from the download so the layout can be exercised outside a browser —
+ * `jsPDF#save` needs a DOM, everything above it does not.
+ */
+export async function buildResumePdf(resume: ParsedResume) {
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
@@ -170,6 +182,10 @@ export async function downloadResumePdf(resume: ParsedResume): Promise<void> {
             .forEach((p) => text(p));
     });
 
-    const slug = resume.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    doc.save(`${slug || 'resume'}.pdf`);
+    return doc;
+}
+
+export async function downloadResumePdf(resume: ParsedResume): Promise<void> {
+    const doc = await buildResumePdf(resume);
+    doc.save(`${resumeFileStem(resume)}.pdf`);
 }

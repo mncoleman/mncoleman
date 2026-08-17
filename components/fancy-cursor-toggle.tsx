@@ -61,6 +61,7 @@ export function FancyCursorToggle() {
             aria-label={label}
             title={label}
             onClick={() => setFancy(!fancy)}
+            data-print-hide
             className={cn(
                 // Floats bottom-right, above the page but below the custom cursor itself
                 // (which sits at z-[9999]) so the cursor still draws over the button.
