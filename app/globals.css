@@ -214,6 +214,13 @@ html.blank-canvas .home-mobile,
 html.blank-canvas [data-blank-hide] {
   display: none;
 }
+/* With everything above hidden, `main` collapses and the footer rides straight up
+ * under the header — which is not "blank", it is just a shorter page. Holding main
+ * at a full viewport puts the footer back below the fold, still reachable by
+ * scrolling but out of the way of the sheet. */
+html.blank-canvas main {
+  min-height: 100vh;
+}
 
 /* PWA safe area support for notch/status bar */
 @supports (padding-top: env(safe-area-inset-top)) {
@@ -541,7 +548,10 @@ html.blank-canvas [data-blank-hide] {
 @media print {
   @page {
     size: letter;
-    margin: 0.55in 0.6in;
+    /* Tight on purpose — a resume wants the width. The browser's print dialog
+     * still lets a visitor override it; this only sets the default. Kept in step
+     * with `MARGIN` in lib/resume-pdf.ts so Print and Save stay the same document. */
+    margin: 0.25in;
   }
 
   html,

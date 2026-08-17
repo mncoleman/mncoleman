@@ -18,13 +18,14 @@ import { cn } from '@/lib/utils';
  * Two interactions sit on top of the drawing:
  *   • a click on bare paper advances the pencil through a muted rainbow, so the
  *     next marks come out in a new colour (existing marks keep theirs);
- *   • the eraser sends a small crew of mops out to trace what was drawn, wiping
- *     the sheet in three seconds rather than blanking it instantly.
+ *   • the eraser retraces what was drawn rather than blanking the sheet, clearing
+ *     the marks along their own paths over three seconds. Nothing is drawn doing
+ *     the clearing — the lines simply retreat the way they arrived.
  *
  * Cost control (see the animation-loop gotcha in CLAUDE.md): there is no ambient
  * rAF loop at all. Pointer samples are queued and flushed once per frame, and the
- * loop stops the moment the pointer stops. The mop loop runs only during the three
- * seconds of an erase. Fine pointers only — on touch, drawing would fight the
+ * loop stops the moment the pointer stops. The erase loop runs only during the three
+ * seconds it takes. Fine pointers only — on touch, drawing would fight the
  * scroll gesture, so it renders paper and nothing else.
  */
 
@@ -45,9 +46,9 @@ const INKS = [
     '112, 88, 132', // muted violet
 ];
 
-const MAX_MOPS = 8;
-const MOP_SWATH = 96; // CSS px of paper each mop wipes clean as it passes
-const MOP_SPEED = 1500; // px/s a single mop can cover before we send another one
+const MAX_WIPERS = 8;
+const WIPE_SWATH = 96; // CSS px of paper each wiper clears as it passes
+const WIPE_SPEED = 1500; // px/s one wiper can cover before we dispatch another
 const ERASE_MS = 3000;
 
 /** Points are cheap, but not free — a long session shouldn't grow without bound. */
@@ -65,7 +66,6 @@ function polylineLength(pts: Point[]): number {
 
 export function PaperBackdrop() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const mopRefs = useRef<Array<HTMLDivElement | null>>([]);
     const eraseRef = useRef<() => void>(() => {});
 
     const erase = useCallback(() => {
@@ -111,7 +111,7 @@ export function PaperBackdrop() {
         };
 
         /**
-         * Wipes one mop-width band of the sheet back to bare paper.
+         * Wipes one swath-width band of the sheet back to bare paper.
          *
          * Not `destination-out` — that punches a hole clean through the canvas and you
          * see the page background through it, not paper. Instead the band is stroked
@@ -127,7 +127,7 @@ export function PaperBackdrop() {
             ctx.globalAlpha = 1;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
-            ctx.lineWidth = MOP_SWATH * dpr;
+            ctx.lineWidth = WIPE_SWATH * dpr;
             ctx.beginPath();
             ctx.moveTo(from[0] * dpr, from[1] * dpr);
             ctx.lineTo(to[0] * dpr, to[1] * dpr);
@@ -159,7 +159,7 @@ export function PaperBackdrop() {
         let tail: Point[] = [];
         let ink = 0;
 
-        // Completed geometry, kept so the mops have something to trace. Drawing alone
+        // Completed geometry, kept so the erase has routes to retrace. Drawing alone
         // would not need it — the canvas is the only state the pencil requires.
         let strokes: Point[][] = [];
         let current: Point[] | null = null;
@@ -271,22 +271,8 @@ export function PaperBackdrop() {
             ink = (ink + 1) % INKS.length;
         };
 
-        // ── The mop crew ──────────────────────────────────────────────────────────
+        // ── The erase ─────────────────────────────────────────────────────────────
         let eraseRaf = 0;
-
-        const showMop = (i: number, x: number, y: number, angle: number) => {
-            const el = mopRefs.current[i];
-            if (!el) return;
-            el.style.opacity = '1';
-            // Offset to the HEAD, not the box centre: `MopIcon` draws the head
-            // around (16, 30) of its 44px box, so centring the box would leave the
-            // swath clearing paper a few pixels off from where the mop looks to be.
-            el.style.transform = `translate3d(${x - 16}px, ${y - 30}px, 0) rotate(${angle}deg)`;
-        };
-
-        const hideMops = () => {
-            for (const el of mopRefs.current) if (el) el.style.opacity = '0';
-        };
 
         const finishErase = () => {
             paintPaper();
@@ -294,7 +280,6 @@ export function PaperBackdrop() {
             current = null;
             stored = 0;
             tail = [];
-            hideMops();
             erasing = false;
         };
 
@@ -308,16 +293,16 @@ export function PaperBackdrop() {
             }
             erasing = true;
 
-            // Send however many mops it takes to cover the ink inside ERASE_MS, capped
-            // so a heavily-scribbled sheet doesn't turn into a swarm.
+            // Dispatch however many wipers it takes to clear the ink inside ERASE_MS,
+            // capped so a heavily-scribbled sheet doesn't spawn an unbounded number.
             const total = paths.reduce((sum, p) => sum + polylineLength(p), 0);
             const count = Math.max(
                 1,
-                Math.min(MAX_MOPS, Math.ceil(total / (MOP_SPEED * (ERASE_MS / 1000))))
+                Math.min(MAX_WIPERS, Math.ceil(total / (WIPE_SPEED * (ERASE_MS / 1000))))
             );
 
             // Longest-first into the emptiest bucket: a cheap balance that keeps every
-            // mop busy for roughly the same three seconds.
+            // wiper busy for roughly the same three seconds.
             const buckets: Array<{ pts: Point[]; len: number }> = Array.from(
                 { length: count },
                 () => ({ pts: [], len: 0 })
@@ -360,7 +345,6 @@ export function PaperBackdrop() {
             };
 
             const prev: Point[] = routes.map((r) => at(r, 0));
-            routes.forEach((r, i) => showMop(i, prev[i][0], prev[i][1], 0));
 
             const start = performance.now();
             const step = (now: number) => {
@@ -368,12 +352,6 @@ export function PaperBackdrop() {
                 routes.forEach((route, i) => {
                     const pos = at(route, route.total * t);
                     wipe(prev[i], pos);
-                    const dx = pos[0] - prev[i][0];
-                    const dy = pos[1] - prev[i][1];
-                    // Lean the mop into its travel, but only once it is actually moving —
-                    // atan2 on a zero vector snaps it to 0deg and makes it twitch.
-                    const angle = Math.hypot(dx, dy) > 1 ? (Math.atan2(dy, dx) * 180) / Math.PI : null;
-                    showMop(i, pos[0], pos[1], angle ?? 0);
                     prev[i] = pos;
                 });
                 if (t < 1) eraseRaf = requestAnimationFrame(step);
@@ -408,26 +386,6 @@ export function PaperBackdrop() {
                 aria-hidden
                 className="fixed inset-0 -z-10 h-screen w-screen pointer-events-none"
             />
-
-            {/* The mop crew. A fixed pool, hidden until an erase needs them — mounting
-                eight nodes once is cheaper than mounting and unmounting per erase, and
-                keeps the animation off React's render path entirely. */}
-            <div aria-hidden className="pointer-events-none fixed inset-0 z-30 overflow-hidden">
-                {Array.from({ length: MAX_MOPS }, (_, i) => (
-                    <div
-                        key={i}
-                        ref={(el) => {
-                            mopRefs.current[i] = el;
-                        }}
-                        className="absolute left-0 top-0 h-11 w-11 opacity-0 will-change-transform"
-                        // Rotate about the head too, or leaning the mop into its
-                        // travel swings the head off the line it is wiping.
-                        style={{ transition: 'opacity 220ms ease-out', transformOrigin: '16px 30px' }}
-                    >
-                        <MopIcon />
-                    </div>
-                ))}
-            </div>
 
             <button
                 type="button"
@@ -470,35 +428,3 @@ function EraserIcon() {
     );
 }
 
-/** One mop, drawn head-down: a handle running up-left, a collar, and a fringed head. */
-function MopIcon() {
-    return (
-        <svg width="44" height="44" viewBox="0 0 44 44" fill="none" aria-hidden>
-            <path
-                d="M38 4 24 22"
-                stroke="rgba(120, 96, 66, 0.85)"
-                strokeWidth="3"
-                strokeLinecap="round"
-            />
-            <path
-                d="M26 20 20 27"
-                stroke="rgba(70, 92, 112, 0.9)"
-                strokeWidth="5"
-                strokeLinecap="round"
-            />
-            <path
-                d="M22 25c-6 1-11 5-13 11 5 2 11 1 15-3 2-2 2-6 0-8z"
-                fill="rgba(196, 206, 214, 0.95)"
-                stroke="rgba(96, 112, 126, 0.9)"
-                strokeWidth="1.4"
-                strokeLinejoin="round"
-            />
-            <path
-                d="M17 28c-4 2-7 5-8 9M21 30c-3 2-5 5-6 8"
-                stroke="rgba(96, 112, 126, 0.7)"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-            />
-        </svg>
-    );
-}

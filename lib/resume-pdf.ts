@@ -16,7 +16,7 @@ import type { ParsedResume } from '@/lib/resume-parse';
  * "Print" and "Save" hand back recognisably the same document.
  */
 
-const MARGIN = 54; // 0.75in
+const MARGIN = 18; // 0.25in — matches the `@page` margin in globals.css
 const RULE = '#999999';
 const BODY = '#1a1a1a';
 const MUTED = '#555555';
