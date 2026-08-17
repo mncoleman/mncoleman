@@ -125,7 +125,14 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
                 height: '100vh',
                 borderRadius: 0,
               }}
-              exit={{ opacity: 0 }}
+              // Motion applies the same `transition` to exit unless the exit
+              // variant carries its own — so without this the clone spent a
+              // further 0.4s fading after the destination had already mounted,
+              // and the mask below held opaque for 0.2s before even starting.
+              // Between them the new page was revealed a third to two thirds of
+              // a second late, with its own entrance animations already burning
+              // frames behind the cover. Both exits now leave promptly.
+              exit={{ opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } }}
               transition={{
                 duration: 0.4,
                 ease: [0.32, 0.72, 0, 1], // ease-out cubic
@@ -146,7 +153,7 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
               key="bg-mask"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              exit={{ opacity: 0, transition: { duration: 0.22, delay: 0, ease: 'easeOut' } }}
               transition={{
                 duration: 0.15,
                 delay: 0.2,

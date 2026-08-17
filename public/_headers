@@ -1,0 +1,22 @@
+# Cloudflare Pages response headers.
+#
+# Pages' default for everything is `max-age=14400, must-revalidate`, which is the
+# right call for HTML but wrong for `/_next/static/*`: every file there carries a
+# content hash in its name, so its contents can never change — a new build means a
+# new URL. Revalidating ~140 of them every four hours is pure round trips. The
+# service worker already caches them for repeat visitors that have it installed;
+# this covers the first navigation and everyone else.
+#
+# NOTE: only the PATH is matched. A rule written against a full https:// URL
+# parses, ships, and silently never fires — see gotcha #15 in CLAUDE.md.
+
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Generated OG cards are content-addressed only by route, so they must revalidate
+# — but they are also large and rarely change. A day, with revalidation after.
+/*/opengraph-image.png
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

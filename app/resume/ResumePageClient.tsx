@@ -12,6 +12,7 @@ import { FallInText } from '@/components/ui/fall-in-text';
 import { TextType } from '@/components/ui/text-type';
 import { DeferUntilIdle } from '@/components/defer';
 import { BackdropFade } from '@/components/backdrop-fade';
+import { ResumeActions } from '@/components/resume-actions';
 import { cn } from '@/lib/utils';
 import type { ContactType, ParsedResume, ResumeExperience } from '@/lib/resume-parse';
 
@@ -68,10 +69,9 @@ function Reveal({
 /**
  * Section heading with the typewriter reveal.
  *
- * `TextType` starts empty and fills in after hydration, so the animated copy is
- * `aria-hidden` and the real heading text ships alongside it in a visually
- * hidden span — otherwise this statically-exported page would render `<h2>`
- * elements with no text at all for crawlers and screen readers.
+ * `TextType` now ships the real string in a visually hidden sibling itself, so
+ * the pairing this component used to do by hand lives there — and `/about`,
+ * which never had it, gets it too.
  */
 function SectionHeading({ text, delay = 0 }: { text: string; delay?: number }) {
     const reducedMotion = useReducedMotion();
@@ -79,16 +79,7 @@ function SectionHeading({ text, delay = 0 }: { text: string; delay?: number }) {
     return (
         <Reveal delay={delay}>
             <h2 className="text-2xl font-bold tracking-tight mb-6 min-h-[2rem]">
-                {reducedMotion ? (
-                    text
-                ) : (
-                    <>
-                        <span aria-hidden="true">
-                            <TextType text={text} delay={delay * 1000} />
-                        </span>
-                        <span className="sr-only">{text}</span>
-                    </>
-                )}
+                {reducedMotion ? text : <TextType text={text} delay={delay * 1000} />}
             </h2>
         </Reveal>
     );
@@ -419,11 +410,18 @@ function ResumeHero({ resume }: { resume: ParsedResume }) {
 
 export function ResumePageClient({ resume }: { resume: ParsedResume }) {
     return (
-        <div className="container mx-auto px-4 py-12 max-w-5xl">
+        // `resume-print` scopes the @media print block in globals.css — see the
+        // comment there for why those rules have to be as broad as they are.
+        <div className="resume-print container mx-auto px-4 py-12 max-w-5xl">
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* ---- Hero ---------------------------------------------------- */}
                 <Reveal>
                     <ResumeHero resume={resume} />
+                </Reveal>
+
+                {/* ---- Print / Save / Share ------------------------------------ */}
+                <Reveal delay={0.05}>
+                    <ResumeActions resume={resume} />
                 </Reveal>
 
                 {/* ---- Summary ------------------------------------------------- */}
