@@ -2,6 +2,17 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import {
+    INKS,
+    makeGrain,
+    paintPaper as paintSheet,
+    planErase,
+    pointAt,
+    strokePath,
+    wipeSwath,
+    type EraseRoute,
+    type Point,
+} from '@/lib/pencil';
 
 /**
  * Light mode's backdrop: a sheet of paper you can draw on.
@@ -11,40 +22,23 @@ import { cn } from '@/lib/utils';
  * grain — and the pointer leaves graphite on it. Nothing is persisted: a reload is
  * a fresh sheet, and the eraser in the corner control cluster clears it on demand.
  *
- * Everything is procedural. A paper photo would be a few hundred KB on the critical
- * path for a decorative background; a 128px noise tile generated once and used as a
- * repeating pattern costs nothing to ship and tiles seamlessly at any viewport.
+ * How graphite behaves lives in `lib/pencil.ts`, shared with the brand kit's
+ * contained demo. What stays here is everything about being a full-viewport page
+ * backdrop: sizing against the window, listening at the page level, the corner
+ * control.
  *
  * Two interactions sit on top of the drawing:
  *   • a click on bare paper advances the pencil through a muted rainbow, so the
  *     next marks come out in a new colour (existing marks keep theirs);
  *   • the eraser retraces what was drawn rather than blanking the sheet, clearing
- *     the marks along their own paths over three seconds. Nothing is drawn doing
- *     the clearing — the lines simply retreat the way they arrived.
+ *     the marks along their own paths over three seconds.
  *
  * Cost control (see the animation-loop gotcha in CLAUDE.md): there is no ambient
  * rAF loop at all. Pointer samples are queued and flushed once per frame, and the
- * loop stops the moment the pointer stops. The erase loop runs only during the three
- * seconds it takes. Fine pointers only — on touch, drawing would fight the
+ * loop stops the moment the pointer stops. The erase loop runs only during the
+ * three seconds it takes. Fine pointers only — on touch, drawing would fight the
  * scroll gesture, so it renders paper and nothing else.
  */
-
-const PAPER = '#f7f4ec';
-
-/**
- * The pencil's palette. Graphite first, so the sheet starts where it always did;
- * a click walks the rest. Deliberately desaturated — these are laid down with
- * `multiply` on warm paper, and saturated ink reads as marker, not pencil.
- */
-const INKS = [
-    '46, 46, 44', // graphite
-    '150, 74, 68', // brick
-    '166, 110, 56', // ochre
-    '132, 128, 58', // olive gold
-    '78, 120, 88', // sage
-    '66, 104, 132', // slate blue
-    '112, 88, 132', // muted violet
-];
 
 const MAX_WIPERS = 8;
 const WIPE_SWATH = 96; // CSS px of paper each wiper clears as it passes
@@ -53,16 +47,6 @@ const ERASE_MS = 3000;
 
 /** Points are cheap, but not free — a long session shouldn't grow without bound. */
 const MAX_POINTS = 24000;
-
-type Point = [number, number];
-
-function polylineLength(pts: Point[]): number {
-    let len = 0;
-    for (let i = 1; i < pts.length; i++) {
-        len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
-    }
-    return len;
-}
 
 export function PaperBackdrop() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -80,81 +64,15 @@ export function PaperBackdrop() {
 
         // Cap DPR at 2: past that the pixel count triples for grain nobody can see.
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-        // ── Paper grain, built once as a small tileable pattern ──
-        const tile = document.createElement('canvas');
-        tile.width = tile.height = 128;
-        const tctx = tile.getContext('2d')!;
-        const img = tctx.createImageData(128, 128);
-        for (let i = 0; i < img.data.length; i += 4) {
-            // Warm base with a little per-pixel tooth. The spread is deliberately
-            // small — visible as texture, never as static.
-            const n = (Math.random() - 0.5) * 18;
-            img.data[i] = 247 + n;
-            img.data[i + 1] = 244 + n;
-            img.data[i + 2] = 236 + n;
-            img.data[i + 3] = 255;
-        }
-        tctx.putImageData(img, 0, 0);
-        const grain = ctx.createPattern(tile, 'repeat')!;
-
-        const paintPaper = () => {
-            const w = canvas.width, h = canvas.height;
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.globalAlpha = 1;
-            ctx.fillStyle = PAPER;
-            ctx.fillRect(0, 0, w, h);
-            ctx.fillStyle = grain;
-            ctx.fillRect(0, 0, w, h);
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        };
-
-        /**
-         * Wipes one swath-width band of the sheet back to bare paper.
-         *
-         * Not `destination-out` — that punches a hole clean through the canvas and you
-         * see the page background through it, not paper. Instead the band is stroked
-         * with the paper fill and then the grain pattern, which repaints it exactly as
-         * `paintPaper` would. Both run at the identity transform (coordinates scaled by
-         * hand) because a canvas pattern lives in the *current* transform's space: at
-         * the dpr transform the grain would come out at a different scale and the wiped
-         * band would seam visibly against the untouched sheet.
-         */
-        const wipe = (from: Point, to: Point) => {
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.globalAlpha = 1;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.lineWidth = WIPE_SWATH * dpr;
-            ctx.beginPath();
-            ctx.moveTo(from[0] * dpr, from[1] * dpr);
-            ctx.lineTo(to[0] * dpr, to[1] * dpr);
-            ctx.strokeStyle = PAPER;
-            ctx.stroke();
-            ctx.strokeStyle = grain;
-            ctx.stroke();
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        };
-
-        const resize = () => {
-            // innerWidth/innerHeight, not parent dims — same reasoning as dark-veil.
-            canvas.width = Math.floor(window.innerWidth * dpr);
-            canvas.height = Math.floor(window.innerHeight * dpr);
-            canvas.style.width = `${window.innerWidth}px`;
-            canvas.style.height = `${window.innerHeight}px`;
-            paintPaper(); // a resize is a fresh sheet; scaling graphite would smear it
-            strokes = [];
-            current = null;
-            stored = 0;
-        };
+        const grain = makeGrain(ctx);
+        const paintPaper = () => paintSheet(ctx, canvas, dpr, grain);
 
         // Touch and coarse pointers skip drawing entirely — it would fight scrolling.
         const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         let raf = 0;
+        let eraseRaf = 0;
         let queued: Point[] = [];
         let tail: Point[] = [];
         let ink = 0;
@@ -164,53 +82,42 @@ export function PaperBackdrop() {
         let strokes: Point[][] = [];
         let current: Point[] | null = null;
         let stored = 0;
-
         let erasing = false;
+
+        const finishErase = () => {
+            // Unconditional repaint at the end, so the retrace is purely cosmetic: a
+            // wiper that missed a corner, a stroke laid down by a pending flush, and
+            // the transit segments between buckets are all cleaned up regardless.
+            paintPaper();
+            strokes = [];
+            current = null;
+            stored = 0;
+            tail = [];
+            erasing = false;
+        };
+
+        const resize = () => {
+            // innerWidth/innerHeight, not parent dims — same reasoning as dark-veil.
+            canvas.width = Math.floor(window.innerWidth * dpr);
+            canvas.height = Math.floor(window.innerHeight * dpr);
+            canvas.style.width = `${window.innerWidth}px`;
+            canvas.style.height = `${window.innerHeight}px`;
+            paintPaper(); // a resize is a fresh sheet; scaling graphite would smear it
+            // A resize mid-erase would otherwise leave wipers retracing coordinates
+            // from a sheet that no longer exists, with drawing locked out until they
+            // finished. The sheet is already clean, so end the erase now.
+            if (erasing) {
+                if (eraseRaf) cancelAnimationFrame(eraseRaf);
+                finishErase();
+                return;
+            }
+            strokes = [];
+            current = null;
+            stored = 0;
+        };
 
         resize();
         window.addEventListener('resize', resize);
-
-        /**
-         * Draws this frame's samples as ONE smoothed path, in a few offset passes.
-         *
-         * Per-segment strokes were the first attempt and they beaded: every sample got
-         * its own round-capped line, so the caps stacked at each join and a fast drag
-         * came out as a string of dots. Curving through the points with the midpoints as
-         * anchors gives a single continuous path instead, and offsetting the WHOLE path
-         * per pass (rather than jittering each segment) keeps the pencil's tooth without
-         * reintroducing lumps.
-         */
-        const drawPath = (pts: Point[]) => {
-            if (pts.length < 2) return;
-
-            // Faster movement leaves a lighter, thinner line, the way a real pencil does.
-            const speed = Math.min(polylineLength(pts) / (pts.length - 1) / 22, 1);
-            const width = 3.2 - speed * 1.6;
-            // Colour needs more of itself than graphite does to survive `multiply` on a
-            // warm ground — at graphite's alpha the muted hues barely register.
-            const alpha = (ink === 0 ? 0.14 : 0.2) - speed * 0.05;
-
-            ctx.globalCompositeOperation = 'multiply';
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-
-            for (let p = 0; p < 3; p++) {
-                const ox = (Math.random() - 0.5) * 1.5;
-                const oy = (Math.random() - 0.5) * 1.5;
-                ctx.strokeStyle = `rgba(${INKS[ink]}, ${alpha})`;
-                ctx.lineWidth = width * (0.7 + Math.random() * 0.5);
-                ctx.beginPath();
-                ctx.moveTo(pts[0][0] + ox, pts[0][1] + oy);
-                for (let i = 1; i < pts.length - 1; i++) {
-                    const mx = (pts[i][0] + pts[i + 1][0]) / 2;
-                    const my = (pts[i][1] + pts[i + 1][1]) / 2;
-                    ctx.quadraticCurveTo(pts[i][0] + ox, pts[i][1] + oy, mx + ox, my + oy);
-                }
-                const end = pts[pts.length - 1];
-                ctx.lineTo(end[0] + ox, end[1] + oy);
-                ctx.stroke();
-            }
-        };
 
         const flush = () => {
             raf = 0;
@@ -218,7 +125,7 @@ export function PaperBackdrop() {
             // smoothly instead of restarting the curve every 16ms.
             const pts = tail.concat(queued);
             queued = [];
-            drawPath(pts);
+            strokePath(ctx, pts, ink);
             tail = pts.slice(-2);
             // Demand-driven: nothing is scheduled until the next pointer sample.
         };
@@ -288,87 +195,27 @@ export function PaperBackdrop() {
             ink = (ink + 1) % INKS.length;
         };
 
-        // ── The erase ─────────────────────────────────────────────────────────────
-        let eraseRaf = 0;
-
-        const finishErase = () => {
-            paintPaper();
-            strokes = [];
-            current = null;
-            stored = 0;
-            tail = [];
-            erasing = false;
-        };
-
         const runErase = () => {
             if (erasing) return;
-            const paths = strokes.filter((s) => s.length >= 2);
+            const routes: EraseRoute[] = planErase(strokes, {
+                maxWipers: MAX_WIPERS,
+                speed: WIPE_SPEED,
+                durationMs: ERASE_MS,
+            });
             // Nothing drawn, or motion is unwelcome: just hand back a clean sheet.
-            if (!paths.length || reduced) {
+            if (!routes.length || reduced) {
                 finishErase();
                 return;
             }
             erasing = true;
 
-            // Dispatch however many wipers it takes to clear the ink inside ERASE_MS,
-            // capped so a heavily-scribbled sheet doesn't spawn an unbounded number.
-            const total = paths.reduce((sum, p) => sum + polylineLength(p), 0);
-            const count = Math.max(
-                1,
-                Math.min(MAX_WIPERS, Math.ceil(total / (WIPE_SPEED * (ERASE_MS / 1000))))
-            );
-
-            // Longest-first into the emptiest bucket: a cheap balance that keeps every
-            // wiper busy for roughly the same three seconds.
-            const buckets: Array<{ pts: Point[]; len: number }> = Array.from(
-                { length: count },
-                () => ({ pts: [], len: 0 })
-            );
-            [...paths]
-                .sort((a, b) => polylineLength(b) - polylineLength(a))
-                .forEach((path) => {
-                    const target = buckets.reduce((min, b) => (b.len < min.len ? b : min));
-                    target.pts.push(...path);
-                    target.len += polylineLength(path);
-                });
-
-            // Precompute cumulative arc length so each frame is a lookup, not a re-walk.
-            const routes = buckets
-                .filter((b) => b.pts.length >= 2)
-                .map((b) => {
-                    const cum = [0];
-                    for (let i = 1; i < b.pts.length; i++) {
-                        cum.push(
-                            cum[i - 1] +
-                                Math.hypot(
-                                    b.pts[i][0] - b.pts[i - 1][0],
-                                    b.pts[i][1] - b.pts[i - 1][1]
-                                )
-                        );
-                    }
-                    return { pts: b.pts, cum, total: cum[cum.length - 1], cursor: 0 };
-                });
-
-            const at = (route: (typeof routes)[number], dist: number): Point => {
-                const { pts, cum } = route;
-                while (route.cursor < cum.length - 2 && cum[route.cursor + 1] < dist) route.cursor++;
-                const i = route.cursor;
-                const span = cum[i + 1] - cum[i];
-                const t = span > 0 ? (dist - cum[i]) / span : 0;
-                return [
-                    pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t,
-                    pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t,
-                ];
-            };
-
-            const prev: Point[] = routes.map((r) => at(r, 0));
-
+            const prev: Point[] = routes.map((r) => pointAt(r, 0));
             const start = performance.now();
             const step = (now: number) => {
                 const t = Math.min((now - start) / ERASE_MS, 1);
                 routes.forEach((route, i) => {
-                    const pos = at(route, route.total * t);
-                    wipe(prev[i], pos);
+                    const pos = pointAt(route, route.total * t);
+                    wipeSwath(ctx, dpr, grain, prev[i], pos, WIPE_SWATH);
                     prev[i] = pos;
                 });
                 if (t < 1) eraseRaf = requestAnimationFrame(step);
@@ -429,7 +276,7 @@ export function PaperBackdrop() {
     );
 }
 
-function EraserIcon() {
+export function EraserIcon() {
     return (
         <svg
             width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -442,4 +289,3 @@ function EraserIcon() {
         </svg>
     );
 }
-

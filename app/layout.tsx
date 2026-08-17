@@ -20,6 +20,7 @@ import { FooterMcp } from '@/components/footer-mcp';
 import { Analytics } from '@/components/analytics';
 import { FancyCursorToggle } from '@/components/fancy-cursor-toggle';
 import { SelectionInk } from '@/components/selection-ink';
+import { SiteVersion } from '@/components/site-version';
 import { PullChainToggle } from '@/components/pull-chain-toggle';
 import { CursorPreferenceProvider, cursorPreferenceScript } from '@/components/cursor-preference';
 import searchIndex from '@/data/search-index.json';
@@ -198,6 +199,8 @@ export default async function RootLayout({
                     <span aria-hidden="true">·</span>
                     <FooterMcp />
                   </div>
+                  {/* Deployed version, commit and start date — quiet on purpose. */}
+                  <SiteVersion />
                 </div>
               </footer>
             </div>

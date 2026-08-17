@@ -101,9 +101,14 @@
  * Kept OUTSIDE @layer so the pseudo-element rule is not competing with Tailwind's
  * layered utilities.
  *
- * Only `background-color` is set: naming a `color` too would fight every themed
- * text colour on the site for no gain, and browsers keep the element's own colour
- * when the highlight leaves it alone. */
+ * `color` is set as well, and has to be. Without it the tint darkens whatever was
+ * underneath: measured against every palette entry, `text-muted-foreground` — the
+ * colour of every card description, date and excerpt on the site — drops to
+ * 2.9–3.5:1 in light mode and 3.4–4.5:1 in dark, i.e. below WCAG AA at every
+ * single colour, where unselected it passes. Lowering the alpha cannot rescue it
+ * (graphite still lands near 3.7:1 at 0.15). Pinning selected text to the theme's
+ * full-contrast foreground is what the OS highlight does too, and it puts every
+ * combination back over 12:1 in light and 8:1 in dark. */
 :root {
   --selection-ink: 46, 46, 44; /* graphite — LIGHT[0] in selection-ink.tsx */
   --selection-ink-alpha: 0.25;
@@ -115,6 +120,7 @@
 
 ::selection {
   background-color: rgba(var(--selection-ink), var(--selection-ink-alpha));
+  color: hsl(var(--foreground));
 }
 
 /* Hide the OS cursor on devices that support hover so the CustomCursor can take over.
@@ -571,11 +577,13 @@ html.blank-canvas main {
  * `[aria-hidden]`) can't leak into any other page's print output.
  * ───────────────────────────────────────────────────────────────────────── */
 @media print {
+  /* `@page` cannot be scoped to a selector — CSS has no mechanism for it — so
+   * everything here applies to printing ANY page of the site, not just the resume.
+   * That rules out `size: letter`, which would have asked for US Letter from an A4
+   * printer on a blog post. The margin is deliberate and global: tight suits every
+   * page here, and the print dialog still lets a visitor override it. Kept in step
+   * with `MARGIN` in lib/resume-pdf.ts so Print and Save stay the same document. */
   @page {
-    size: letter;
-    /* Tight on purpose — a resume wants the width. The browser's print dialog
-     * still lets a visitor override it; this only sets the default. Kept in step
-     * with `MARGIN` in lib/resume-pdf.ts so Print and Save stay the same document. */
     margin: 0.25in;
   }
 

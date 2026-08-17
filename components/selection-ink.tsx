@@ -104,9 +104,17 @@ export function SelectionInk() {
          * inside the selection's own rectangles, and never over something interactive
          * or over an editable field, where suppressing the default would eat caret
          * placement. Every other click keeps the browser's normal deselect.
+         *
+         * Known trade-off, accepted deliberately: mousedown-inside-a-selection is
+         * also how a browser starts DRAGGING selected text somewhere else, so that
+         * gesture is gone on this site. The alternative — let the click through and
+         * restore the range on mouseup — makes the highlight blink out and back on
+         * every re-roll, which is worse for the thing this exists to do.
          */
         const onMouseDown = (e: MouseEvent) => {
-            if (e.button !== 0 || e.detail > 1) return;
+            // Shift-click is how a selection gets extended or shrunk. Freezing it and
+            // recolouring instead would take a standard text gesture away.
+            if (e.button !== 0 || e.detail > 1 || e.shiftKey) return;
             const selection = document.getSelection();
             if (!selection || selection.isCollapsed || !selection.toString().trim()) return;
             const target = e.target as HTMLElement | null;

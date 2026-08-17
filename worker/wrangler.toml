@@ -12,6 +12,9 @@ compatibility_date = "2024-04-01"
 #   ARTIFACTS_JWT_SECRET    — Shared HS256 secret with the Oracle artifact service
 #   GA_SA_CLIENT_EMAIL      — Google service-account email (Viewer on the GA4 property)
 #   GA_SA_PRIVATE_KEY       — That service account's PKCS#8 private key (PEM)
+#   BUILD_TOKEN             — Shared secret the Cloudflare Pages build sends to claim
+#                             a CalVer deployment number (same value as the Pages
+#                             project's BUILD_TOKEN build variable)
 [vars]
 TELEGRAM_BOT_ID = "8681257901"  # mncolemandotcombot — OIDC client_id
 FRONTEND_URL = "https://mncoleman.com"

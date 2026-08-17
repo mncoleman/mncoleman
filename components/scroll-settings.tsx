@@ -106,7 +106,11 @@ export function ScrollSettings() {
             if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
         };
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setOpen(false);
+            // preventDefault marks the press as handled — see the note in search.tsx.
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setOpen(false);
+            }
         };
         document.addEventListener('mousedown', onDown);
         document.addEventListener('keydown', onKey);

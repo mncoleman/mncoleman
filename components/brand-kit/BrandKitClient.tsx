@@ -31,6 +31,8 @@ import GlassCube from '@/components/ui/glass-cube';
 import { BlurText } from '@/components/ui/blur-text';
 import { FallInText } from '@/components/ui/fall-in-text';
 import { TextType } from '@/components/ui/text-type';
+import { PencilDemo } from '@/components/brand-kit/PencilDemo';
+import { SelectionInkDemo } from '@/components/brand-kit/SelectionInkDemo';
 
 
 const noScrollbarStyle: React.CSSProperties = {
@@ -1174,6 +1176,18 @@ export default function BrandKitClient() {
             description: 'Typewriter text animation.',
             file: '/components/ui/text-type.tsx',
             preview: 'font-mono'
+        },
+        {
+            name: 'Paper & Pencil',
+            description: "Light mode's ground: procedural paper grain you draw graphite on, and an eraser that retraces the strokes instead of blanking them.",
+            file: '/lib/pencil.ts',
+            preview: 'bg-[#f7f4ec]'
+        },
+        {
+            name: 'Selection Ink',
+            description: 'Text selection recoloured through the pencil palette — a new colour on every highlight, re-rolled by clicking the highlight itself.',
+            file: '/components/selection-ink.tsx',
+            preview: 'bg-foreground/10'
         }
     ];
 
@@ -1504,7 +1518,13 @@ export default function BrandKitClient() {
                                     <>
                                         {/* Smooth Scroll gets a taller box: you can't feel the
                                             difference between the two panes through a 128px slit. */}
-                                        <div className={`relative rounded-xl overflow-hidden border border-border/40 bg-transparent ${selectedComponent === 'Smooth Scroll' ? 'h-64' : 'h-32'}`}>
+                                        <div className={`relative rounded-xl overflow-hidden border border-border/40 bg-transparent ${selectedComponent === 'Smooth Scroll'
+                                                ? 'h-64'
+                                                // These two bring their own controls below the
+                                                // canvas, so a fixed height would clip them.
+                                                : selectedComponent === 'Paper & Pencil' || selectedComponent === 'Selection Ink'
+                                                    ? 'h-auto p-3'
+                                                    : 'h-32'}`}>
                                             {selectedComponent === 'Dark Veil' && (
                                                 <div className="relative w-full h-full" />
                                             )}
@@ -1592,6 +1612,8 @@ export default function BrandKitClient() {
                                                     />
                                                 </div>
                                             )}
+                                            {selectedComponent === 'Paper & Pencil' && <PencilDemo />}
+                                            {selectedComponent === 'Selection Ink' && <SelectionInkDemo />}
                                             {selectedComponent === 'Text Type' && (
                                                 <div className="flex items-center justify-center h-full">
                                                     <TextType

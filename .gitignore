@@ -49,3 +49,7 @@ public/data/site-content.json
 
 # Wrangler local build cache
 .wrangler/
+
+# Regenerated on every build (scripts/generate-build-info.ts). Committing it would
+# churn on every commit, and a rebuild is not a source change.
+data/build-info.json

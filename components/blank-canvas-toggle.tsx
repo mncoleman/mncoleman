@@ -35,7 +35,10 @@ export function BlankCanvasToggle() {
     useEffect(() => {
         if (!blank) return;
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setBlank(false);
+            // Last out of the room: anything layered above this — the search palette,
+            // the scroll-settings popover — marks Escape handled, so one press closes
+            // that and leaves blank mode alone.
+            if (e.key === 'Escape' && !e.defaultPrevented) setBlank(false);
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);

@@ -164,6 +164,10 @@ export function Search({ items }: SearchProps) {
 
             if (isOpen) {
                 if (e.key === 'Escape') {
+                    // Marked handled so one Escape closes one thing. Blank-canvas mode
+                    // also listens on the document, and without this a single press
+                    // dismissed the search AND left blank mode.
+                    e.preventDefault();
                     setIsOpen(false);
                 } else if (e.key === 'ArrowDown') {
                     e.preventDefault();

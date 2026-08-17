@@ -29,6 +29,7 @@ export interface Env {
     ARTIFACTS_SERVICE_URL: string;  // e.g. https://artifacts.mncoleman.com
     ARTIFACTS_JWT_SECRET: string;   // Shared HS256 secret with the Oracle artifact service
     GA_PROPERTY_ID: string;         // GA4 numeric property id (not the G- measurement id)
+    BUILD_TOKEN: string;            // Shared secret the Pages build sends to claim a deployment number
     GA_SA_CLIENT_EMAIL: string;     // Google service-account email, granted Viewer on the property
     GA_SA_PRIVATE_KEY: string;      // Service-account PKCS#8 private key (PEM)
 }
@@ -66,7 +67,7 @@ export default {
 
         const corsHeaders: Record<string, string> = {
             'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, X-Build-Token',
             'Vary': 'Origin',
             'X-Content-Type-Options': 'nosniff',
             'X-Frame-Options': 'DENY',
@@ -306,6 +307,105 @@ export default {
                         'Cache-Control': 'private, max-age=3600',
                     },
                 });
+            }
+
+            // ── Public: the site's own version and metrics ──────────────────────
+            //
+            // Both sit above the auth wall on purpose. Neither reads or writes
+            // anything about a person: one hands out an ordinal, the other returns
+            // averages the site already prints in its own footer.
+
+            /**
+             * Claims the next deployment number for a given day.
+             *
+             * The CalVer version is `YYYY.MM.DD.N`, and the build cannot work out N
+             * for itself — a cron rebuild ships the same commit as the deploy before
+             * it, so nothing in the repository distinguishes them. This is the only
+             * piece of state that does.
+             *
+             * Guarded by a shared secret rather than left open: the cost of abuse is
+             * only a silly version number, but a counter anyone can advance is not a
+             * counter. KV has no compare-and-swap, so two builds inside the same
+             * read-modify-write would collide — Pages serialises builds per project,
+             * and a duplicate ordinal is cosmetic, so a lock would cost more than it
+             * saves.
+             */
+            if (url.pathname === '/api/build/number' && request.method === 'POST') {
+                if (!env.BUILD_TOKEN || request.headers.get('X-Build-Token') !== env.BUILD_TOKEN) {
+                    return new Response(JSON.stringify({ error: 'unauthorized' }), {
+                        status: 401,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+                const body = (await request.json().catch(() => ({}))) as { date?: string };
+                // Trust the build's own date only if it looks like one.
+                const day = /^\d{4}-\d{2}-\d{2}$/.test(body.date || '')
+                    ? body.date!
+                    : new Date().toISOString().slice(0, 10);
+                const key = `build:n:${day}`;
+                const current = parseInt((await env.ADMIN_USERS.get(key)) || '0', 10) || 0;
+                const next = current + 1;
+                // Four days: long enough to survive clock skew or a late retry, short
+                // enough that the namespace does not keep a key per day forever.
+                await env.ADMIN_USERS.put(key, String(next), { expirationTtl: 345600 });
+                return new Response(JSON.stringify({ date: day, n: next }), {
+                    status: 200,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+            }
+
+            /**
+             * Coarse visitor averages for the site's own metrics dialog.
+             *
+             * Deliberately a separate endpoint rather than an unauthenticated mode of
+             * `/api/analytics/summary`: that one returns top pages, traffic sources and
+             * per-country breakdowns, none of which belong on a public URL. This
+             * returns three averages and the window they came from.
+             *
+             * Cached for an hour — the GA4 Data API has a per-property quota, and a
+             * 90-day average does not move within one.
+             */
+            if (url.pathname === '/api/stats/visitors' && request.method === 'GET') {
+                if (!env.GA_PROPERTY_ID || !env.GA_SA_CLIENT_EMAIL || !env.GA_SA_PRIVATE_KEY) {
+                    return new Response(JSON.stringify({ error: 'not_configured' }), {
+                        status: 503,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+                const cacheKey = 'public:visitors:90';
+                const cached = await env.ADMIN_USERS.get(cacheKey);
+                if (cached) {
+                    return new Response(cached, {
+                        status: 200,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=1800', 'X-Cache': 'HIT' },
+                    });
+                }
+                try {
+                    const days = 90;
+                    const summary = await fetchGaSummary(env, days);
+                    const users = summary.totals.activeUsers || 0;
+                    const perDay = users / days;
+                    const payload = JSON.stringify({
+                        windowDays: days,
+                        totalVisitors: users,
+                        perDay: Math.round(perDay * 10) / 10,
+                        perWeek: Math.round(perDay * 7 * 10) / 10,
+                        perMonth: Math.round(perDay * 30.44 * 10) / 10,
+                        pageViews: summary.totals.pageViews || 0,
+                        updatedAt: summary.updatedAt,
+                    });
+                    await env.ADMIN_USERS.put(cacheKey, payload, { expirationTtl: 3600 });
+                    return new Response(payload, {
+                        status: 200,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=1800', 'X-Cache': 'MISS' },
+                    });
+                } catch {
+                    // A GA outage should cost the dialog three numbers, not the page.
+                    return new Response(JSON.stringify({ error: 'unavailable' }), {
+                        status: 502,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
             }
 
             // Authenticated Endpoints — fail-closed: reject if no valid token
