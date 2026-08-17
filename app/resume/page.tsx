@@ -1,9 +1,23 @@
+import type { Metadata } from 'next';
 import { getResume } from '@/lib/resume';
 import { hasStructure, parseResume } from '@/lib/resume-parse';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { PageEntrance } from '@/components/page-entrance';
 import { ResumePageClient } from './ResumePageClient';
+
+// Explicit, because the Share button exists to get this link pasted somewhere —
+// `opengraph-image.tsx` supplies the picture, this supplies the words beside it.
+export const metadata: Metadata = {
+    title: 'Resume',
+    description: 'Matthew Coleman — professional experience, skills and qualifications.',
+    openGraph: {
+        title: 'Matthew Coleman — Resume',
+        description: 'Professional experience, skills and qualifications.',
+        url: 'https://mncoleman.com/resume/',
+        type: 'profile',
+    },
+};
 
 export default async function ResumePage() {
     const resume = await getResume();

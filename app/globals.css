@@ -523,3 +523,124 @@ html.blank-canvas [data-blank-hide] {
     opacity: 1 !important;
   }
 }
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * Print / Save-as-PDF layout for the resume.
+ *
+ * The screen page is built almost entirely out of things that are invisible
+ * until JavaScript animates them in — motion's `initial={{opacity:0}}`, inline
+ * `animation: fadeSlideIn ... forwards` on the contact chips, and the
+ * experience cards' collapsed `grid-template-rows: 0fr`. A printer never runs
+ * any of that, so without this block the resume prints as a stack of empty
+ * cards. Everything here therefore leans on `!important`: the values being
+ * overridden are inline styles, which nothing else can beat.
+ *
+ * Scoped to `.resume-print` so the broad rules (un-hiding `.sr-only`, hiding
+ * `[aria-hidden]`) can't leak into any other page's print output.
+ * ───────────────────────────────────────────────────────────────────────── */
+@media print {
+  @page {
+    size: letter;
+    margin: 0.55in 0.6in;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Chrome the page doesn't need on paper. The backdrop canvases are fixed and
+   * would otherwise tile onto every sheet. */
+  header,
+  footer,
+  nav,
+  canvas,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  .resume-print {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .resume-print * {
+    /* Undo motion's entrance state, the blur-in text effect, and the hero tilt
+     * in one sweep — all three are inline styles or utility classes that only
+     * ever resolve on screen. */
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    animation: none !important;
+    transition: none !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: transparent !important;
+    text-shadow: none !important;
+  }
+
+  /* The typewriter headings render their animated copy in an `aria-hidden` span
+   * with the real text alongside in `.sr-only`. On paper that is backwards:
+   * hide the half-typed copy, print the real one. Same rule retires the hero's
+   * decorative backdrop layer, which is also `aria-hidden`. */
+  .resume-print [aria-hidden='true'],
+  .resume-print [aria-hidden]:not([aria-hidden='false']) {
+    display: none !important;
+  }
+  .resume-print .sr-only {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    clip: auto !important;
+    clip-path: none !important;
+    white-space: normal !important;
+  }
+
+  /* Every experience card prints in full, whatever its disclosure state — the
+   * collapsed height is an inline `grid-template-rows: 0fr`. */
+  .resume-print .grid[style*='grid-template-rows'] {
+    grid-template-rows: 1fr !important;
+  }
+  .resume-print .overflow-hidden {
+    overflow: visible !important;
+  }
+
+  /* Cards become ruled sections: a hairline above each, no fill, no radius. */
+  .resume-print section {
+    break-inside: auto;
+    margin-top: 1.1rem !important;
+  }
+  .resume-print h1 {
+    font-size: 26pt !important;
+    margin-bottom: 2pt !important;
+  }
+  .resume-print h2 {
+    font-size: 13pt !important;
+    border-bottom: 0.5pt solid #999 !important;
+    padding-bottom: 3pt !important;
+    margin-bottom: 8pt !important;
+    break-after: avoid;
+  }
+  .resume-print [class*='rounded-2xl'] {
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    break-inside: avoid;
+  }
+  .resume-print li,
+  .resume-print p {
+    font-size: 10pt !important;
+    line-height: 1.45 !important;
+    break-inside: avoid;
+  }
+  .resume-print a {
+    text-decoration: none !important;
+  }
+}
