@@ -92,6 +92,34 @@
   }
 }
 
+/* Text selection is drawn in the pencil's current ink.
+ *
+ * `--pencil-ink` is an RGB triplet rather than a colour so the alpha can vary per
+ * theme. `components/paper-backdrop.tsx` overwrites it on `<html>` as the pencil
+ * cycles, so selecting text after a click on the paper highlights in whatever the
+ * pencil is holding — and clears the override on unmount, which is what returns
+ * dark mode to its own value. Kept OUTSIDE @layer so the pseudo-element rule is
+ * not competing with Tailwind's layered utilities.
+ *
+ * Only `background-color` is set: naming a `color` too would fight every themed
+ * text colour on the site for no gain, and browsers keep the element's own colour
+ * when the highlight leaves it alone. */
+:root {
+  --pencil-ink: 46, 46, 44; /* graphite — INKS[0] in paper-backdrop.tsx */
+  --pencil-ink-alpha: 0.25;
+}
+.dark {
+  /* Graphite on a near-black page is an invisible highlight, so dark mode gets a
+   * light neutral instead. It does not follow the pencil: the paper backdrop, and
+   * therefore the pencil, only exists in light mode. */
+  --pencil-ink: 226, 232, 240;
+  --pencil-ink-alpha: 0.22;
+}
+
+::selection {
+  background-color: rgba(var(--pencil-ink), var(--pencil-ink-alpha));
+}
+
 /* Hide the OS cursor on devices that support hover so the CustomCursor can take over.
  * Kept OUTSIDE @layer base so the !important wins against any layered utility class
  * (Tailwind v3 emits `cursor-*` utilities into the utilities layer; layered !important

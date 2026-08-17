@@ -252,6 +252,17 @@ export function PaperBackdrop() {
         };
 
         /**
+         * Publishes the current ink to CSS, which is what makes text selection across
+         * the whole site highlight in whatever the pencil is holding (`::selection` in
+         * globals.css reads `--pencil-ink`). An RGB triplet rather than a colour so the
+         * stylesheet can pick its own alpha.
+         */
+        const publishInk = () => {
+            document.documentElement.style.setProperty('--pencil-ink', INKS[ink]);
+        };
+        publishInk();
+
+        /**
          * A click on bare paper advances the pencil. Gated on the target because the
          * canvas is `pointer-events-none` — the listener has to sit on the window, which
          * means every card, nav link and corner control would otherwise change colour on
@@ -269,6 +280,7 @@ export function PaperBackdrop() {
             )
                 return;
             ink = (ink + 1) % INKS.length;
+            publishInk();
         };
 
         // ── The erase ─────────────────────────────────────────────────────────────
@@ -373,6 +385,9 @@ export function PaperBackdrop() {
             window.removeEventListener('pointerout', onLeave);
             window.removeEventListener('click', onClick);
             document.removeEventListener('mouseleave', onLeave);
+            // An inline property beats the stylesheet, so leaving it set would carry
+            // graphite into dark mode's selection highlight, where it is invisible.
+            document.documentElement.style.removeProperty('--pencil-ink');
             if (raf) cancelAnimationFrame(raf);
             if (eraseRaf) cancelAnimationFrame(eraseRaf);
             eraseRef.current = () => {};
