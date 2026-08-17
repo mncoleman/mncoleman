@@ -17,6 +17,7 @@ import { motion } from 'motion/react';
 import dynamic from 'next/dynamic';
 import GlassCube from '@/components/ui/glass-cube';
 import { HomeBackdrop } from '@/components/home-backdrop';
+import { BlankCanvasToggle } from '@/components/blank-canvas-toggle';
 import { McpCallout } from '@/components/mcp-callout';
 import { DeferUntilVisible } from '@/components/defer';
 import { TransitionLink } from '@/components/transition-link';
@@ -320,15 +321,20 @@ export default function Home() {
   return (
     <>
       <HomeBackdrop />
+      <BlankCanvasToggle />
       <DesktopGrid />
       <MobileStack />
       {/* The globe is well below the fold, but `dynamic(ssr:false)` still downloaded cobe,
           booted a WebGL canvas and hit the visitors API during hydration — inside the LCP
           window, for a section many visitors never scroll to. Gate it on the viewport.
-          minHeight reserves the space so revealing it can't shift layout. */}
-      <DeferUntilVisible rootMargin="300px" minHeight={600}>
-        <VisitorSection />
-      </DeferUntilVisible>
+          minHeight reserves the space so revealing it can't shift layout.
+          `data-blank-hide` is on the wrapper, not inside it, so blank-canvas mode also
+          collapses that 600px reservation instead of leaving dead space behind. */}
+      <div data-blank-hide>
+        <DeferUntilVisible rootMargin="300px" minHeight={600}>
+          <VisitorSection />
+        </DeferUntilVisible>
+      </div>
     </>
   );
 }

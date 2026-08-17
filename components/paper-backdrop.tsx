@@ -15,21 +15,61 @@ import { cn } from '@/lib/utils';
  * path for a decorative background; a 128px noise tile generated once and used as a
  * repeating pattern costs nothing to ship and tiles seamlessly at any viewport.
  *
+ * Two interactions sit on top of the drawing:
+ *   • a click on bare paper advances the pencil through a muted rainbow, so the
+ *     next marks come out in a new colour (existing marks keep theirs);
+ *   • the eraser sends a small crew of mops out to trace what was drawn, wiping
+ *     the sheet in three seconds rather than blanking it instantly.
+ *
  * Cost control (see the animation-loop gotcha in CLAUDE.md): there is no ambient
  * rAF loop at all. Pointer samples are queued and flushed once per frame, and the
- * loop stops the moment the pointer stops. Fine pointers only — on touch, drawing
- * would fight the scroll gesture, so it renders paper and nothing else.
+ * loop stops the moment the pointer stops. The mop loop runs only during the three
+ * seconds of an erase. Fine pointers only — on touch, drawing would fight the
+ * scroll gesture, so it renders paper and nothing else.
  */
 
 const PAPER = '#f7f4ec';
-const GRAPHITE = '46, 46, 44';
+
+/**
+ * The pencil's palette. Graphite first, so the sheet starts where it always did;
+ * a click walks the rest. Deliberately desaturated — these are laid down with
+ * `multiply` on warm paper, and saturated ink reads as marker, not pencil.
+ */
+const INKS = [
+    '46, 46, 44', // graphite
+    '150, 74, 68', // brick
+    '166, 110, 56', // ochre
+    '132, 128, 58', // olive gold
+    '78, 120, 88', // sage
+    '66, 104, 132', // slate blue
+    '112, 88, 132', // muted violet
+];
+
+const MAX_MOPS = 8;
+const MOP_SWATH = 96; // CSS px of paper each mop wipes clean as it passes
+const MOP_SPEED = 1500; // px/s a single mop can cover before we send another one
+const ERASE_MS = 3000;
+
+/** Points are cheap, but not free — a long session shouldn't grow without bound. */
+const MAX_POINTS = 24000;
+
+type Point = [number, number];
+
+function polylineLength(pts: Point[]): number {
+    let len = 0;
+    for (let i = 1; i < pts.length; i++) {
+        len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    }
+    return len;
+}
 
 export function PaperBackdrop() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const paintPaperRef = useRef<() => void>(() => {});
+    const mopRefs = useRef<Array<HTMLDivElement | null>>([]);
+    const eraseRef = useRef<() => void>(() => {});
 
     const erase = useCallback(() => {
-        paintPaperRef.current();
+        eraseRef.current();
     }, []);
 
     useEffect(() => {
@@ -69,7 +109,34 @@ export function PaperBackdrop() {
             ctx.fillRect(0, 0, w, h);
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         };
-        paintPaperRef.current = paintPaper;
+
+        /**
+         * Wipes one mop-width band of the sheet back to bare paper.
+         *
+         * Not `destination-out` — that punches a hole clean through the canvas and you
+         * see the page background through it, not paper. Instead the band is stroked
+         * with the paper fill and then the grain pattern, which repaints it exactly as
+         * `paintPaper` would. Both run at the identity transform (coordinates scaled by
+         * hand) because a canvas pattern lives in the *current* transform's space: at
+         * the dpr transform the grain would come out at a different scale and the wiped
+         * band would seam visibly against the untouched sheet.
+         */
+        const wipe = (from: Point, to: Point) => {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 1;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = MOP_SWATH * dpr;
+            ctx.beginPath();
+            ctx.moveTo(from[0] * dpr, from[1] * dpr);
+            ctx.lineTo(to[0] * dpr, to[1] * dpr);
+            ctx.strokeStyle = PAPER;
+            ctx.stroke();
+            ctx.strokeStyle = grain;
+            ctx.stroke();
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        };
 
         const resize = () => {
             // innerWidth/innerHeight, not parent dims — same reasoning as dark-veil.
@@ -78,16 +145,30 @@ export function PaperBackdrop() {
             canvas.style.width = `${window.innerWidth}px`;
             canvas.style.height = `${window.innerHeight}px`;
             paintPaper(); // a resize is a fresh sheet; scaling graphite would smear it
+            strokes = [];
+            current = null;
+            stored = 0;
         };
-        resize();
-        window.addEventListener('resize', resize);
 
         // Touch and coarse pointers skip drawing entirely — it would fight scrolling.
         const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         let raf = 0;
-        let queued: Array<[number, number]> = [];
-        let tail: Array<[number, number]> = [];
+        let queued: Point[] = [];
+        let tail: Point[] = [];
+        let ink = 0;
+
+        // Completed geometry, kept so the mops have something to trace. Drawing alone
+        // would not need it — the canvas is the only state the pencil requires.
+        let strokes: Point[][] = [];
+        let current: Point[] | null = null;
+        let stored = 0;
+
+        let erasing = false;
+
+        resize();
+        window.addEventListener('resize', resize);
 
         /**
          * Draws this frame's samples as ONE smoothed path, in a few offset passes.
@@ -99,17 +180,15 @@ export function PaperBackdrop() {
          * per pass (rather than jittering each segment) keeps the pencil's tooth without
          * reintroducing lumps.
          */
-        const drawPath = (pts: Array<[number, number]>) => {
+        const drawPath = (pts: Point[]) => {
             if (pts.length < 2) return;
 
-            let len = 0;
-            for (let i = 1; i < pts.length; i++) {
-                len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
-            }
             // Faster movement leaves a lighter, thinner line, the way a real pencil does.
-            const speed = Math.min(len / (pts.length - 1) / 22, 1);
+            const speed = Math.min(polylineLength(pts) / (pts.length - 1) / 22, 1);
             const width = 3.2 - speed * 1.6;
-            const alpha = 0.14 - speed * 0.05;
+            // Colour needs more of itself than graphite does to survive `multiply` on a
+            // warm ground — at graphite's alpha the muted hues barely register.
+            const alpha = (ink === 0 ? 0.14 : 0.2) - speed * 0.05;
 
             ctx.globalCompositeOperation = 'multiply';
             ctx.lineCap = 'round';
@@ -118,7 +197,7 @@ export function PaperBackdrop() {
             for (let p = 0; p < 3; p++) {
                 const ox = (Math.random() - 0.5) * 1.5;
                 const oy = (Math.random() - 0.5) * 1.5;
-                ctx.strokeStyle = `rgba(${GRAPHITE}, ${alpha})`;
+                ctx.strokeStyle = `rgba(${INKS[ink]}, ${alpha})`;
                 ctx.lineWidth = width * (0.7 + Math.random() * 0.5);
                 ctx.beginPath();
                 ctx.moveTo(pts[0][0] + ox, pts[0][1] + oy);
@@ -139,46 +218,177 @@ export function PaperBackdrop() {
             // smoothly instead of restarting the curve every 16ms.
             const pts = tail.concat(queued);
             queued = [];
-
-            // A jump this large means the pointer left and re-entered; start a new line
-            // rather than drawing a stroke across the gap.
-            const broken: Array<[number, number]>[] = [];
-            let run: Array<[number, number]> = [];
-            for (const pt of pts) {
-                const prev = run[run.length - 1];
-                if (prev && Math.hypot(pt[0] - prev[0], pt[1] - prev[1]) > 220) {
-                    broken.push(run);
-                    run = [];
-                }
-                run.push(pt);
-            }
-            broken.push(run);
-            for (const seg of broken) drawPath(seg);
-
+            drawPath(pts);
             tail = pts.slice(-2);
             // Demand-driven: nothing is scheduled until the next pointer sample.
         };
 
         const onMove = (e: PointerEvent) => {
-            if (!fine) return;
-            queued.push([e.clientX, e.clientY]);
+            if (!fine || erasing) return;
+            const p: Point = [e.clientX, e.clientY];
+
+            // A jump this large means the pointer left and re-entered; start a new line
+            // rather than drawing a stroke across the gap.
+            const prev = current?.[current.length - 1];
+            if (!current || (prev && Math.hypot(p[0] - prev[0], p[1] - prev[1]) > 220)) {
+                if (prev) tail = [];
+                current = [];
+                strokes.push(current);
+            }
+            current.push(p);
+            stored++;
+            while (stored > MAX_POINTS && strokes.length > 1) {
+                stored -= strokes.shift()!.length;
+            }
+
+            queued.push(p);
             if (!raf) raf = requestAnimationFrame(flush);
         };
 
         // Leaving the window breaks the line rather than connecting across the gap.
-        const onLeave = () => { tail = []; };
+        const onLeave = () => {
+            tail = [];
+            current = null;
+        };
+
+        /**
+         * A click on bare paper advances the pencil. Gated on the target because the
+         * canvas is `pointer-events-none` — the listener has to sit on the window, which
+         * means every card, nav link and corner control would otherwise change colour on
+         * the way to doing its own job.
+         */
+        const onClick = (e: MouseEvent) => {
+            if (!fine || erasing) return;
+            const el = e.target as HTMLElement | null;
+            if (el?.closest('a, button, input, textarea, select, label, [role="button"], header, footer, nav'))
+                return;
+            ink = (ink + 1) % INKS.length;
+        };
+
+        // ── The mop crew ──────────────────────────────────────────────────────────
+        let eraseRaf = 0;
+
+        const showMop = (i: number, x: number, y: number, angle: number) => {
+            const el = mopRefs.current[i];
+            if (!el) return;
+            el.style.opacity = '1';
+            el.style.transform = `translate3d(${x - 22}px, ${y - 22}px, 0) rotate(${angle}deg)`;
+        };
+
+        const hideMops = () => {
+            for (const el of mopRefs.current) if (el) el.style.opacity = '0';
+        };
+
+        const finishErase = () => {
+            paintPaper();
+            strokes = [];
+            current = null;
+            stored = 0;
+            tail = [];
+            hideMops();
+            erasing = false;
+        };
+
+        const runErase = () => {
+            if (erasing) return;
+            const paths = strokes.filter((s) => s.length >= 2);
+            // Nothing drawn, or motion is unwelcome: just hand back a clean sheet.
+            if (!paths.length || reduced) {
+                finishErase();
+                return;
+            }
+            erasing = true;
+
+            // Send however many mops it takes to cover the ink inside ERASE_MS, capped
+            // so a heavily-scribbled sheet doesn't turn into a swarm.
+            const total = paths.reduce((sum, p) => sum + polylineLength(p), 0);
+            const count = Math.max(
+                1,
+                Math.min(MAX_MOPS, Math.ceil(total / (MOP_SPEED * (ERASE_MS / 1000))))
+            );
+
+            // Longest-first into the emptiest bucket: a cheap balance that keeps every
+            // mop busy for roughly the same three seconds.
+            const buckets: Array<{ pts: Point[]; len: number }> = Array.from(
+                { length: count },
+                () => ({ pts: [], len: 0 })
+            );
+            [...paths]
+                .sort((a, b) => polylineLength(b) - polylineLength(a))
+                .forEach((path) => {
+                    const target = buckets.reduce((min, b) => (b.len < min.len ? b : min));
+                    target.pts.push(...path);
+                    target.len += polylineLength(path);
+                });
+
+            // Precompute cumulative arc length so each frame is a lookup, not a re-walk.
+            const routes = buckets
+                .filter((b) => b.pts.length >= 2)
+                .map((b) => {
+                    const cum = [0];
+                    for (let i = 1; i < b.pts.length; i++) {
+                        cum.push(
+                            cum[i - 1] +
+                                Math.hypot(
+                                    b.pts[i][0] - b.pts[i - 1][0],
+                                    b.pts[i][1] - b.pts[i - 1][1]
+                                )
+                        );
+                    }
+                    return { pts: b.pts, cum, total: cum[cum.length - 1], cursor: 0 };
+                });
+
+            const at = (route: (typeof routes)[number], dist: number): Point => {
+                const { pts, cum } = route;
+                while (route.cursor < cum.length - 2 && cum[route.cursor + 1] < dist) route.cursor++;
+                const i = route.cursor;
+                const span = cum[i + 1] - cum[i];
+                const t = span > 0 ? (dist - cum[i]) / span : 0;
+                return [
+                    pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t,
+                    pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t,
+                ];
+            };
+
+            const prev: Point[] = routes.map((r) => at(r, 0));
+            routes.forEach((r, i) => showMop(i, prev[i][0], prev[i][1], 0));
+
+            const start = performance.now();
+            const step = (now: number) => {
+                const t = Math.min((now - start) / ERASE_MS, 1);
+                routes.forEach((route, i) => {
+                    const pos = at(route, route.total * t);
+                    wipe(prev[i], pos);
+                    const dx = pos[0] - prev[i][0];
+                    const dy = pos[1] - prev[i][1];
+                    // Lean the mop into its travel, but only once it is actually moving —
+                    // atan2 on a zero vector snaps it to 0deg and makes it twitch.
+                    const angle = Math.hypot(dx, dy) > 1 ? (Math.atan2(dy, dx) * 180) / Math.PI : null;
+                    showMop(i, pos[0], pos[1], angle ?? 0);
+                    prev[i] = pos;
+                });
+                if (t < 1) eraseRaf = requestAnimationFrame(step);
+                else finishErase();
+            };
+            eraseRaf = requestAnimationFrame(step);
+        };
+
+        eraseRef.current = runErase;
 
         window.addEventListener('pointermove', onMove, { passive: true });
         window.addEventListener('pointerout', onLeave);
+        window.addEventListener('click', onClick);
         document.addEventListener('mouseleave', onLeave);
 
         return () => {
             window.removeEventListener('resize', resize);
             window.removeEventListener('pointermove', onMove);
             window.removeEventListener('pointerout', onLeave);
+            window.removeEventListener('click', onClick);
             document.removeEventListener('mouseleave', onLeave);
             if (raf) cancelAnimationFrame(raf);
-            paintPaperRef.current = () => {};
+            if (eraseRaf) cancelAnimationFrame(eraseRaf);
+            eraseRef.current = () => {};
         };
     }, []);
 
@@ -189,15 +399,34 @@ export function PaperBackdrop() {
                 aria-hidden
                 className="fixed inset-0 -z-10 h-screen w-screen pointer-events-none"
             />
+
+            {/* The mop crew. A fixed pool, hidden until an erase needs them — mounting
+                eight nodes once is cheaper than mounting and unmounting per erase, and
+                keeps the animation off React's render path entirely. */}
+            <div aria-hidden className="pointer-events-none fixed inset-0 z-30 overflow-hidden">
+                {Array.from({ length: MAX_MOPS }, (_, i) => (
+                    <div
+                        key={i}
+                        ref={(el) => {
+                            mopRefs.current[i] = el;
+                        }}
+                        className="absolute left-0 top-0 h-11 w-11 opacity-0 will-change-transform"
+                        style={{ transition: 'opacity 220ms ease-out' }}
+                    >
+                        <MopIcon />
+                    </div>
+                ))}
+            </div>
+
             <button
                 type="button"
                 onClick={erase}
                 aria-label="Erase pencil marks"
                 title="Erase pencil marks"
                 className={cn(
-                    // Third slot in the existing corner cluster: the cursor toggle sits
-                    // at right-5 and scroll settings at right-[4.5rem].
-                    'fixed bottom-5 right-[8rem] z-40 hidden md:inline-flex h-10 w-10',
+                    // Fourth slot in the corner cluster: cursor toggle at right-5,
+                    // scroll settings at right-[4.5rem], blank canvas at right-[8rem].
+                    'fixed bottom-5 right-[11.5rem] z-40 hidden md:inline-flex h-10 w-10',
                     'items-center justify-center rounded-lg border backdrop-blur-xl',
                     'border-border/40 bg-background/40 text-muted-foreground',
                     'transition-colors duration-300 pwa-safe-bottom',
@@ -205,7 +434,7 @@ export function PaperBackdrop() {
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
                     // Deliberately always visible. It used to appear only once something
                     // had been drawn, which meant clicking it made it vanish — reading as
-                    // a broken control rather than a tidy one. The two neighbours in this
+                    // a broken control rather than a tidy one. The neighbours in this
                     // cluster are permanent; this matches them.
                 )}
             >
@@ -225,6 +454,39 @@ function EraserIcon() {
             <path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4l9.6-9.6a2 2 0 0 1 2.8 0l4.9 4.9a2 2 0 0 1 0 2.8L13 21" />
             <path d="M22 21H7" />
             <path d="m5 11 9 9" />
+        </svg>
+    );
+}
+
+/** One mop, drawn head-down: a handle running up-left, a collar, and a fringed head. */
+function MopIcon() {
+    return (
+        <svg width="44" height="44" viewBox="0 0 44 44" fill="none" aria-hidden>
+            <path
+                d="M38 4 24 22"
+                stroke="rgba(120, 96, 66, 0.85)"
+                strokeWidth="3"
+                strokeLinecap="round"
+            />
+            <path
+                d="M26 20 20 27"
+                stroke="rgba(70, 92, 112, 0.9)"
+                strokeWidth="5"
+                strokeLinecap="round"
+            />
+            <path
+                d="M22 25c-6 1-11 5-13 11 5 2 11 1 15-3 2-2 2-6 0-8z"
+                fill="rgba(196, 206, 214, 0.95)"
+                stroke="rgba(96, 112, 126, 0.9)"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+            />
+            <path
+                d="M17 28c-4 2-7 5-8 9M21 30c-3 2-5 5-6 8"
+                stroke="rgba(96, 112, 126, 0.7)"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+            />
         </svg>
     );
 }

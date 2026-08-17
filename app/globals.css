@@ -204,6 +204,17 @@
   }
 }
 
+/* Blank-canvas mode (components/blank-canvas-toggle.tsx): strips the homepage back
+ * to its backdrop. `display: none` rather than `visibility`/opacity so the visitor
+ * section's reserved 600px placeholder collapses too and there is no dead scroll
+ * below the fold. Outside @layer for the same reason as the rules above — these
+ * have to beat Tailwind's layered display utilities. */
+html.blank-canvas .home-desktop,
+html.blank-canvas .home-mobile,
+html.blank-canvas [data-blank-hide] {
+  display: none;
+}
+
 /* PWA safe area support for notch/status bar */
 @supports (padding-top: env(safe-area-inset-top)) {
   .pwa-safe-top {
