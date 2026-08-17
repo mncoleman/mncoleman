@@ -19,6 +19,7 @@ import { FooterButtons } from '@/components/footer-buttons';
 import { FooterMcp } from '@/components/footer-mcp';
 import { Analytics } from '@/components/analytics';
 import { FancyCursorToggle } from '@/components/fancy-cursor-toggle';
+import { SelectionInk } from '@/components/selection-ink';
 import { PullChainToggle } from '@/components/pull-chain-toggle';
 import { CursorPreferenceProvider, cursorPreferenceScript } from '@/components/cursor-preference';
 import searchIndex from '@/data/search-index.json';
@@ -203,6 +204,8 @@ export default async function RootLayout({
             <CustomCursor />
             {/* Floating, bottom-right. Desktop only: the custom cursor never mounts on
                 touch, so on a phone this would control nothing. */}
+            {/* Renders nothing; recolours the text-selection highlight site-wide. */}
+            <SelectionInk />
             <FancyCursorToggle />
             {/* Lenis controls, parked immediately left of the cursor toggle. */}
             <ScrollSettings />

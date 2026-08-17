@@ -92,32 +92,29 @@
   }
 }
 
-/* Text selection is drawn in the pencil's current ink.
+/* Text selection is drawn in a colour that moves on with every new highlight.
  *
- * `--pencil-ink` is an RGB triplet rather than a colour so the alpha can vary per
- * theme. `components/paper-backdrop.tsx` overwrites it on `<html>` as the pencil
- * cycles, so selecting text after a click on the paper highlights in whatever the
- * pencil is holding — and clears the override on unmount, which is what returns
- * dark mode to its own value. Kept OUTSIDE @layer so the pseudo-element rule is
- * not competing with Tailwind's layered utilities.
+ * `components/selection-ink.tsx` owns the triplet and writes it to `<html>`; these
+ * are the values before it mounts, and the per-theme alpha it does not set. A
+ * triplet rather than a colour precisely so the alpha can differ: the same tint
+ * needs more of itself to register on a near-black ground than on a white one.
+ * Kept OUTSIDE @layer so the pseudo-element rule is not competing with Tailwind's
+ * layered utilities.
  *
  * Only `background-color` is set: naming a `color` too would fight every themed
  * text colour on the site for no gain, and browsers keep the element's own colour
  * when the highlight leaves it alone. */
 :root {
-  --pencil-ink: 46, 46, 44; /* graphite — INKS[0] in paper-backdrop.tsx */
-  --pencil-ink-alpha: 0.25;
+  --selection-ink: 46, 46, 44; /* graphite — LIGHT[0] in selection-ink.tsx */
+  --selection-ink-alpha: 0.25;
 }
 .dark {
-  /* Graphite on a near-black page is an invisible highlight, so dark mode gets a
-   * light neutral instead. It does not follow the pencil: the paper backdrop, and
-   * therefore the pencil, only exists in light mode. */
-  --pencil-ink: 226, 232, 240;
-  --pencil-ink-alpha: 0.22;
+  --selection-ink: 226, 232, 240; /* DARK[0] */
+  --selection-ink-alpha: 0.3;
 }
 
 ::selection {
-  background-color: rgba(var(--pencil-ink), var(--pencil-ink-alpha));
+  background-color: rgba(var(--selection-ink), var(--selection-ink-alpha));
 }
 
 /* Hide the OS cursor on devices that support hover so the CustomCursor can take over.

@@ -252,17 +252,6 @@ export function PaperBackdrop() {
         };
 
         /**
-         * Publishes the current ink to CSS, which is what makes text selection across
-         * the whole site highlight in whatever the pencil is holding (`::selection` in
-         * globals.css reads `--pencil-ink`). An RGB triplet rather than a colour so the
-         * stylesheet can pick its own alpha.
-         */
-        const publishInk = () => {
-            document.documentElement.style.setProperty('--pencil-ink', INKS[ink]);
-        };
-        publishInk();
-
-        /**
          * A click on bare paper advances the pencil. Gated on the target because the
          * canvas is `pointer-events-none` — the listener has to sit on the window, which
          * means every card, nav link and corner control would otherwise change colour on
@@ -270,6 +259,12 @@ export function PaperBackdrop() {
          */
         const onClick = (e: MouseEvent) => {
             if (!fine || erasing) return;
+            // A click that lands on selected text belongs to the selection — it
+            // re-rolls the highlight colour (components/selection-ink.tsx), and
+            // advancing the pencil at the same time reads as one click doing two
+            // unrelated things.
+            const selection = document.getSelection();
+            if (selection && !selection.isCollapsed && selection.toString().trim()) return;
             const el = e.target as HTMLElement | null;
             // `[role="link"]` is in here because the bento cards are measured divs
             // rather than anchors (see components/transition-link.tsx).
@@ -280,7 +275,6 @@ export function PaperBackdrop() {
             )
                 return;
             ink = (ink + 1) % INKS.length;
-            publishInk();
         };
 
         // ── The erase ─────────────────────────────────────────────────────────────
@@ -385,9 +379,6 @@ export function PaperBackdrop() {
             window.removeEventListener('pointerout', onLeave);
             window.removeEventListener('click', onClick);
             document.removeEventListener('mouseleave', onLeave);
-            // An inline property beats the stylesheet, so leaving it set would carry
-            // graphite into dark mode's selection highlight, where it is invisible.
-            document.documentElement.style.removeProperty('--pencil-ink');
             if (raf) cancelAnimationFrame(raf);
             if (eraseRaf) cancelAnimationFrame(eraseRaf);
             eraseRef.current = () => {};
