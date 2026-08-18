@@ -16,6 +16,12 @@
 /fonts/*
   Cache-Control: public, max-age=31536000, immutable
 
+# The click-sound sprite. Same reasoning as the fonts: it is a fixed asset that
+# only changes if it is replaced wholesale, and it is fetched on an idle callback
+# where a revalidation round trip is the whole cost.
+/sounds/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # No rule for the generated OG cards: they live at /<route>/opengraph-image.png,
 # which needs a wildcard in the MIDDLE of the path, and a mid-path glob is exactly
 # the kind of rule that parses, ships, and never fires. Pages' four-hour default is

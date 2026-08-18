@@ -20,6 +20,7 @@ import { FooterMcp } from '@/components/footer-mcp';
 import { Analytics } from '@/components/analytics';
 import { FancyCursorToggle } from '@/components/fancy-cursor-toggle';
 import { SelectionInk } from '@/components/selection-ink';
+import { ClickSound } from '@/components/click-sound';
 import { SiteVersion } from '@/components/site-version';
 import { PullChainToggle } from '@/components/pull-chain-toggle';
 import { CursorPreferenceProvider, cursorPreferenceScript } from '@/components/cursor-preference';
@@ -209,6 +210,8 @@ export default async function RootLayout({
                 touch, so on a phone this would control nothing. */}
             {/* Renders nothing; recolours the text-selection highlight site-wide. */}
             <SelectionInk />
+            {/* Also renders nothing; one delegated listener that sounds every click. */}
+            <ClickSound />
             <FancyCursorToggle />
             {/* Lenis controls, parked immediately left of the cursor toggle. */}
             <ScrollSettings />

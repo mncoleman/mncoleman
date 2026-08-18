@@ -56,7 +56,7 @@ self.addEventListener('fetch', (event) => {
 
   const immutable =
     url.pathname.startsWith('/_next/static/') ||
-    /\.(?:woff2?|png|svg|ico|jpe?g|webp|avif)$/.test(url.pathname);
+    /\.(?:woff2?|png|svg|ico|jpe?g|webp|avif|wav)$/.test(url.pathname);
 
   const cachePut = (response) => {
     if (response && response.status === 200 && response.type === 'basic') {
