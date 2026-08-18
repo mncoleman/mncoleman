@@ -49,6 +49,9 @@ const CLICKABLE = [
     '[data-click-sound]:not([data-click-sound="off"])',
 ].join(',');
 
+/** Keys that produce nothing on their own, so should sound like nothing. */
+const MODIFIERS = new Set(['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Dead']);
+
 function shouldSound(target: EventTarget | null): boolean {
     if (!(target instanceof Element)) return false;
 
@@ -83,14 +86,33 @@ export function ClickSound() {
             if (shouldSound(e.target)) playClick();
         };
 
-        // Keyboard activation, restricted to the two keys that actually activate
-        // a control. Typing must never make this noise — the site search is a
-        // text input inside a dialog full of clickable results, and sounding on
-        // every keystroke there would be intolerable.
         const onKeyDown = (e: KeyboardEvent) => {
-            if (e.repeat || (e.key !== 'Enter' && e.key !== ' ')) return;
-            const target = e.target as HTMLElement | null;
-            if (!target) return;
+            // A held key repeats; a real switch does not re-click while held.
+            if (e.repeat) return;
+            // Not `as HTMLElement`: with nothing focused the target can be the
+            // Document itself, which has no `closest` — and this listener runs
+            // in the capture phase, so throwing here would take out every
+            // keydown handler on the page, not just the sound.
+            const target = e.target;
+            if (!(target instanceof HTMLElement)) return;
+
+            // A field that opts in sounds like a keyboard: every key, including
+            // backspace and the arrows, because that is what a keyboard does.
+            // Only the bare modifiers are silent — nothing moves when you press
+            // Shift on its own.
+            if (target.closest('[data-click-sound-typing]')) {
+                if (MODIFIERS.has(e.key)) return;
+                // A shade under the click level. The same sound at the same
+                // volume ten times a second is the difference between a texture
+                // and a nuisance.
+                playClick(0.7);
+                return;
+            }
+
+            // Everywhere else, only the two keys that actually activate a
+            // control — and never inside a text field, or typing anywhere on the
+            // site would trip it.
+            if (e.key !== 'Enter' && e.key !== ' ') return;
             if (
                 target.isContentEditable ||
                 target.tagName === 'INPUT' ||

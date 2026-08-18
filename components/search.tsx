@@ -219,6 +219,11 @@ export function Search({ items }: SearchProps) {
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Search resources, blogs, projects..."
+                        // The one field on the site that types out loud. See
+                        // components/click-sound.tsx — every other input stays
+                        // silent, because a form you have to fill in is not the
+                        // place to be playing with this.
+                        data-click-sound-typing
                         className="flex-1 h-12 bg-transparent outline-none text-sm"
                     />
                     {query && (
