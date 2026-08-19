@@ -53,3 +53,7 @@ public/data/site-content.json
 # Regenerated on every build (scripts/generate-build-info.ts). Committing it would
 # churn on every commit, and a rebuild is not a source change.
 data/build-info.json
+
+# Local Worker secrets (never commit)
+.dev.vars
+**/.dev.vars

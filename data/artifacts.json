@@ -88,5 +88,14 @@
     "type": "text/html",
     "size": 6253636,
     "uploadedAt": "2026-08-11T00:00:00.000Z"
+  },
+  {
+    "id": "00ae6c55-9c45-4be5-958d-1b5fe04838b5",
+    "name": "Skill Lens",
+    "filename": "skill-lens.html",
+    "description": "Drop in a Claude skill folder or .zip and see it the way Claude does: what loads always vs on demand, measured token cost per disclosure level, and where to optimise.",
+    "type": "text/html",
+    "size": 71623,
+    "uploadedAt": "2026-08-19T00:00:00.000Z"
   }
 ]

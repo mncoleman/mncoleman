@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skill Lens — See a Skill the Way Claude Does</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-body:'Inter',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono','Fira Code','SF Mono',Menlo,monospace;
+  --text-xs:clamp(0.75rem,0.7rem + 0.25vw,0.875rem);
+  --text-sm:clamp(0.875rem,0.8rem + 0.35vw,1rem);
+  --text-base:clamp(1rem,0.95rem + 0.25vw,1.125rem);
+  --text-lg:clamp(1.125rem,1rem + 0.75vw,1.5rem);
+  --text-xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem);
+  --text-2xl:clamp(2rem,1.2rem + 2.5vw,3.5rem);
+  --space-1:.25rem;--space-2:.5rem;--space-3:.75rem;--space-4:1rem;--space-5:1.25rem;
+  --space-6:1.5rem;--space-8:2rem;--space-10:2.5rem;--space-12:3rem;--space-16:4rem;
+  --radius-sm:.375rem;--radius-md:.5rem;--radius-lg:.75rem;--radius-xl:1rem;--radius-full:9999px;
+  --trans:160ms cubic-bezier(.16,1,.3,1);
+  --sidebar-w:290px;--header-h:60px;
+}
+:root,[data-theme="light"]{
+  --bg:#f7f6f2;--surface:#faf9f7;--surface-2:#fcfcfb;--surface-off:#eeecea;--surface-dyn:#e5e2de;
+  --divider:#dcdad6;--border:#d4d2ce;
+  --text:#1a1915;--text-muted:#6b6966;--text-faint:#a8a7a4;--text-inv:#f9f8f5;
+  --primary:#016b72;--primary-hov:#0c5058;--primary-hl:#cddcda;--primary-dim:rgba(1,107,114,.08);
+  --green:#2f7d34;--green-bg:rgba(47,125,52,.09);
+  --orange:#b35d00;--orange-bg:rgba(179,93,0,.09);
+  --red:#c0302a;--red-bg:rgba(192,48,42,.09);
+  --blue:#0a5fa0;--blue-bg:rgba(10,95,160,.09);
+  --code-bg:#1a1915;--code-text:#d4d2ce;--code-c:#6b6966;--code-g:#6dbc6d;--code-o:#e8a24a;--code-p:#b48ef5;
+  --sh-sm:0 1px 2px rgba(26,25,21,.06);--sh-md:0 4px 12px rgba(26,25,21,.08);
+}
+[data-theme="dark"]{
+  --bg:#161512;--surface:#1c1a17;--surface-2:#201e1b;--surface-off:#1f1d1a;--surface-dyn:#2a2826;
+  --divider:#2b2927;--border:#363432;
+  --text:#cccac6;--text-muted:#7a7876;--text-faint:#57554f;--text-inv:#2a2826;
+  --primary:#4a9da8;--primary-hov:#21808c;--primary-hl:#2d3d3d;--primary-dim:rgba(74,157,168,.1);
+  --green:#65af65;--green-bg:rgba(101,175,101,.1);
+  --orange:#e09840;--orange-bg:rgba(224,152,64,.1);
+  --red:#d96b65;--red-bg:rgba(217,107,101,.1);
+  --blue:#5290c5;--blue-bg:rgba(82,144,197,.1);
+  --code-bg:#0f0e0c;--code-text:#cccac6;--code-c:#6b6966;--code-g:#6dbc6d;--code-o:#e8a24a;--code-p:#b48ef5;
+  --sh-sm:0 1px 2px rgba(0,0,0,.25);--sh-md:0 4px 12px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme]){
+  --bg:#161512;--surface:#1c1a17;--surface-2:#201e1b;--surface-off:#1f1d1a;--surface-dyn:#2a2826;
+  --divider:#2b2927;--border:#363432;--text:#cccac6;--text-muted:#7a7876;--text-faint:#57554f;--text-inv:#2a2826;
+  --primary:#4a9da8;--primary-hov:#21808c;--primary-hl:#2d3d3d;--primary-dim:rgba(74,157,168,.1);
+  --green:#65af65;--green-bg:rgba(101,175,101,.1);--orange:#e09840;--orange-bg:rgba(224,152,64,.1);
+  --red:#d96b65;--red-bg:rgba(217,107,101,.1);--blue:#5290c5;--blue-bg:rgba(82,144,197,.1);
+  --code-bg:#0f0e0c;--code-text:#cccac6;--sh-sm:0 1px 2px rgba(0,0,0,.25);--sh-md:0 4px 12px rgba(0,0,0,.35);
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--header-h) + 1rem)}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:var(--text-sm);
+  line-height:1.65;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+h1,h2,h3,h4{text-wrap:balance;line-height:1.25;font-weight:600}
+p{text-wrap:pretty}
+a{color:var(--primary);text-decoration:none}
+a:hover{color:var(--primary-hov);text-decoration:underline}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:2px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-faint)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* ---------- header ---------- */
+.hdr{position:sticky;top:0;z-index:150;height:var(--header-h);display:flex;align-items:center;
+  gap:var(--space-4);padding:0 var(--space-5);background:var(--surface);border-bottom:1px solid var(--border)}
+.hdr .brand{display:flex;align-items:center;gap:.55rem;font-weight:700;font-size:var(--text-base);letter-spacing:-.02em}
+.hdr .brand svg{width:20px;height:20px;color:var(--primary)}
+.hdr .spacer{flex:1}
+.iconbtn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
+  border:1px solid var(--border);background:var(--surface-2);color:var(--text-muted);
+  border-radius:var(--radius-md);cursor:pointer;transition:var(--trans)}
+.iconbtn:hover{color:var(--primary);border-color:var(--primary)}
+.iconbtn svg{width:16px;height:16px}
+.menubtn{display:none}
+/* ---------- shell ---------- */
+.shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr;align-items:start;
+  width:100%}
+.sidebar{position:sticky;top:var(--header-h);height:calc(100vh - var(--header-h));overflow-y:auto;
+  padding:var(--space-5) var(--space-4);border-right:1px solid var(--border);background:var(--surface)}
+.sidebar-header{display:none;align-items:center;justify-content:space-between;margin-bottom:var(--space-4)}
+.back-home{display:flex;align-items:center;gap:.5rem;padding:.6rem .85rem;margin-bottom:1rem;
+  border:1px solid rgba(128,128,128,.32);border-radius:.5rem;background:rgba(128,128,128,.08);
+  color:inherit;font-size:.88rem;font-weight:600;letter-spacing:.01em;text-decoration:none;opacity:.82;
+  transition:opacity .15s ease,background .15s ease}
+.back-home:hover{opacity:1;background:rgba(128,128,128,.16);text-decoration:none}
+.back-home svg{width:14px;height:14px;flex-shrink:0}
+.nav-title{font-size:.76rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--text-faint);margin:var(--space-5) 0 var(--space-2)}
+.nav-title:first-of-type{margin-top:0}
+.nav a{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.55rem .7rem;
+  border-radius:var(--radius-md);color:var(--text-muted);font-size:.95rem;transition:var(--trans)}
+.nav a:hover{background:var(--surface-dyn);color:var(--text);text-decoration:none}
+.nav a.active{background:var(--primary-dim);color:var(--primary);font-weight:600}
+.nav a .n{font-family:var(--font-mono);font-size:.78rem;color:var(--text-faint)}
+.sidebar-overlay{display:none}
+main{padding:var(--space-8) var(--space-8) var(--space-16);min-width:0;max-width:none}
+section{margin-bottom:var(--space-12);scroll-margin-top:calc(var(--header-h) + 1rem)}
+.sec-h{display:flex;align-items:baseline;gap:.7rem;padding-bottom:.6rem;margin-bottom:var(--space-5);
+  border-bottom:1px solid var(--divider)}
+.sec-h .num{font-family:var(--font-mono);font-size:.78rem;color:var(--primary);font-weight:600}
+.sec-h h2{font-size:var(--text-lg);letter-spacing:-.02em}
+.sec-intro{color:var(--text-muted);margin-bottom:var(--space-5);max-width:70ch}
+/* ---------- hero / dropzone ---------- */
+.hero{margin-bottom:var(--space-8)}
+.hero h1{font-size:var(--text-2xl);letter-spacing:-.03em;margin-bottom:var(--space-3)}
+.hero p.lede{font-size:var(--text-base);color:var(--text-muted);max-width:68ch}
+.drop{margin-top:var(--space-6);border:2px dashed var(--border);border-radius:var(--radius-xl);
+  background:var(--surface);padding:var(--space-12) var(--space-6);text-align:center;
+  transition:var(--trans);cursor:pointer}
+.drop:hover{border-color:var(--primary);background:var(--primary-dim)}
+.drop.over{border-color:var(--primary);background:var(--primary-dim);transform:scale(1.005)}
+.drop svg.big{width:40px;height:40px;color:var(--primary);margin-bottom:var(--space-3)}
+.drop h3{font-size:var(--text-base);margin-bottom:.35rem}
+.drop p{color:var(--text-muted);font-size:.85rem;max-width:52ch;margin:0 auto}
+.drop .or{margin-top:var(--space-4);display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:.45rem;padding:.5rem .9rem;border-radius:var(--radius-md);
+  border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-family:inherit;
+  font-size:.82rem;font-weight:600;cursor:pointer;transition:var(--trans)}
+.btn:hover{border-color:var(--primary);color:var(--primary)}
+.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn.primary:hover{background:var(--primary-hov);color:#fff}
+.btn svg{width:14px;height:14px}
+.privacy{margin-top:var(--space-4);font-size:.76rem;color:var(--text-faint);display:flex;
+  align-items:center;justify-content:center;gap:.4rem}
+.privacy svg{width:13px;height:13px;flex-shrink:0}
+/* ---------- cards / stats ---------- */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  transition:var(--trans);overflow:hidden}
+.card:hover{border-color:var(--primary);box-shadow:var(--sh-sm)}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+  padding:.7rem var(--space-4);border-bottom:1px solid var(--divider);background:var(--surface-2)}
+.card-h h4{font-size:.85rem;font-weight:600}
+.card-b{padding:var(--space-4)}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--space-3)}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:var(--space-4);position:relative;overflow:hidden}
+.stat .lbl{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-faint);font-weight:700}
+.stat .val{font-family:var(--font-mono);font-size:1.65rem;font-weight:600;letter-spacing:-.03em;
+  line-height:1.15;margin-top:.25rem}
+.stat .sub{font-size:.75rem;color:var(--text-muted);margin-top:.15rem}
+.stat.l1{border-left:3px solid var(--red)}
+.stat.l2{border-left:3px solid var(--orange)}
+.stat.l3{border-left:3px solid var(--green)}
+.stat.tot{border-left:3px solid var(--primary)}
+/* ---------- level bar ---------- */
+.levelbar{display:flex;height:30px;border-radius:var(--radius-md);overflow:hidden;
+  border:1px solid var(--border);margin:var(--space-4) 0 var(--space-2)}
+.levelbar div{display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;
+  color:#fff;font-family:var(--font-mono);min-width:0;overflow:hidden;transition:var(--trans)}
+.lb1{background:var(--red)}.lb2{background:var(--orange)}.lb3{background:var(--green)}
+.legend{display:flex;gap:var(--space-4);flex-wrap:wrap;font-size:.75rem;color:var(--text-muted)}
+.legend span{display:inline-flex;align-items:center;gap:.35rem}
+.dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.d1{background:var(--red)}.d2{background:var(--orange)}.d3{background:var(--green)}
+/* ---------- disclosure levels ---------- */
+.lvl{border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:var(--space-4);
+  background:var(--surface);overflow:hidden}
+.lvl-h{display:flex;align-items:center;gap:.7rem;padding:var(--space-4);cursor:pointer;
+  border-left:4px solid transparent;transition:var(--trans)}
+.lvl-h:hover{background:var(--surface-dyn)}
+.lvl.n1 .lvl-h{border-left-color:var(--red)}
+.lvl.n2 .lvl-h{border-left-color:var(--orange)}
+.lvl.n3 .lvl-h{border-left-color:var(--green)}
+.lvl-h .chev{transition:transform var(--trans);color:var(--text-faint);flex-shrink:0}
+.lvl-h .chev svg{width:15px;height:15px;display:block}
+.lvl.open .lvl-h .chev{transform:rotate(90deg)}
+.lvl-t{flex:1;min-width:0}
+.lvl-t .k{font-size:.66rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.lvl.n1 .k{color:var(--red)}.lvl.n2 .k{color:var(--orange)}.lvl.n3 .k{color:var(--green)}
+.lvl-t h3{font-size:.92rem;margin-top:.1rem}
+.lvl-t p{font-size:.78rem;color:var(--text-muted);margin-top:.15rem}
+.lvl-tok{font-family:var(--font-mono);font-size:.95rem;font-weight:600;text-align:right;flex-shrink:0}
+.lvl-tok small{display:block;font-size:.66rem;color:var(--text-faint);font-weight:400;font-family:var(--font-body)}
+.lvl-b{display:none;padding:0 var(--space-4) var(--space-4);border-top:1px solid var(--divider)}
+.lvl.open .lvl-b{display:block}
+.when{margin:var(--space-3) 0;padding:.6rem .8rem;border-radius:var(--radius-md);font-size:.79rem;
+  background:var(--surface-off);border-left:3px solid var(--text-faint)}
+.when b{color:var(--text)}
+/* ---------- file rows ---------- */
+.frow{display:flex;align-items:center;gap:.6rem;padding:.45rem .6rem;border-radius:var(--radius-sm);
+  font-size:.79rem;border-bottom:1px solid var(--divider)}
+.frow:last-child{border-bottom:0}
+.frow:hover{background:var(--surface-dyn)}
+.frow .path{font-family:var(--font-mono);font-size:.75rem;flex:1;min-width:0;overflow-wrap:anywhere}
+.frow .tk{font-family:var(--font-mono);font-size:.75rem;color:var(--text-muted);flex-shrink:0}
+.frow .bar{width:70px;height:5px;border-radius:3px;background:var(--surface-off);overflow:hidden;flex-shrink:0}
+.frow .bar i{display:block;height:100%;background:var(--green)}
+/* ---------- callouts ---------- */
+.callout{display:flex;gap:.7rem;padding:.75rem .9rem;border-radius:var(--radius-md);
+  font-size:.82rem;margin:var(--space-3) 0;border:1px solid transparent}
+.callout svg{width:16px;height:16px;flex-shrink:0;margin-top:.12rem}
+.callout.warn{background:var(--red-bg);border-color:rgba(192,48,42,.25);color:var(--text)}
+.callout.warn svg{color:var(--red)}
+.callout.tip{background:var(--blue-bg);border-color:rgba(10,95,160,.25)}
+.callout.tip svg{color:var(--blue)}
+.callout.note{background:var(--orange-bg);border-color:rgba(179,93,0,.25)}
+.callout.note svg{color:var(--orange)}
+.callout.fc{background:var(--green-bg);border-color:rgba(47,125,52,.25)}
+.callout.fc svg{color:var(--green)}
+/* ---------- tips ---------- */
+.tip-item{display:flex;gap:.8rem;padding:var(--space-4);border:1px solid var(--border);
+  border-radius:var(--radius-lg);background:var(--surface);margin-bottom:var(--space-3);transition:var(--trans)}
+.tip-item:hover{box-shadow:var(--sh-sm)}
+.tip-item .sev{width:5px;border-radius:3px;flex-shrink:0}
+.sev-high{background:var(--red)}.sev-med{background:var(--orange)}.sev-low{background:var(--blue)}
+.sev-ok{background:var(--green)}
+.tip-item .body{flex:1;min-width:0}
+.tip-item h4{font-size:.86rem;margin-bottom:.25rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.pill{font-size:.63rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  padding:.12rem .45rem;border-radius:var(--radius-full)}
+.pill.high{background:var(--red-bg);color:var(--red)}
+.pill.med{background:var(--orange-bg);color:var(--orange)}
+.pill.low{background:var(--blue-bg);color:var(--blue)}
+.pill.ok{background:var(--green-bg);color:var(--green)}
+.tip-item p{font-size:.8rem;color:var(--text-muted)}
+.tip-item p .m{font-family:var(--font-mono);font-size:.75rem;color:var(--text);
+  background:var(--surface-off);padding:.05rem .3rem;border-radius:3px}
+/* ---------- controls ---------- */
+.controls{display:flex;gap:var(--space-4);flex-wrap:wrap;align-items:flex-end;
+  padding:var(--space-4);background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-lg);margin-bottom:var(--space-5)}
+.ctl{display:flex;flex-direction:column;gap:.3rem}
+.ctl label{font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-faint)}
+.ctl select,.ctl input{font-family:var(--font-mono);font-size:.8rem;padding:.4rem .55rem;
+  background:var(--surface-off);border:1px solid var(--border);border-radius:var(--radius-md);
+  color:var(--text);min-width:0}
+.ctl select:focus,.ctl input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-dim)}
+.ctl input[type=number]{width:88px}
+.ctl .hint{font-size:.68rem;color:var(--text-faint)}
+/* ---------- code ---------- */
+.cbwrap{position:relative;margin:var(--space-3) 0}
+pre.cb{background:var(--code-bg);color:var(--code-text);padding:.85rem 1rem;padding-right:5.5rem;
+  border-radius:var(--radius-md);font-family:var(--font-mono);font-size:.76rem;line-height:1.75;
+  white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2;max-height:340px;overflow:auto}
+pre.cb .c{color:var(--code-c)}pre.cb .g{color:var(--code-g)}
+pre.cb .o{color:var(--code-o)}pre.cb .p{color:var(--code-p)}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;display:inline-flex;align-items:center;gap:.3rem;
+  padding:.28rem .55rem;font-size:.68rem;font-weight:600;font-family:var(--font-body);
+  background:rgba(255,255,255,.09);color:#d4d2ce;border:1px solid rgba(255,255,255,.16);
+  border-radius:var(--radius-sm);cursor:pointer;transition:var(--trans)}
+.copy-btn:hover{background:rgba(255,255,255,.16);color:#fff}
+.copy-btn.done{border-color:var(--code-g);color:var(--code-g)}
+.copy-btn svg{width:12px;height:12px}
+code.inl{background:var(--surface-off);color:var(--primary);padding:.08rem .32rem;
+  border-radius:3px;font-family:var(--font-mono);font-size:.85em;border:1px solid var(--border)}
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:.8rem;margin:var(--space-3) 0;min-width:340px}
+th,td{text-align:left;padding:.5rem .6rem;border-bottom:1px solid var(--divider)}
+th{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text-faint);font-weight:700}
+td.mono{font-family:var(--font-mono);font-size:.75rem}
+.hidden{display:none!important}
+.empty{color:var(--text-faint);font-size:.82rem;font-style:italic;padding:var(--space-4) 0}
+/* ---------- stepper ---------- */
+.steps{display:flex;flex-direction:column;gap:var(--space-3)}
+.step{display:none;gap:var(--space-4);align-items:flex-start;padding:var(--space-5);
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  animation:rise .28s cubic-bezier(.16,1,.3,1)}
+.step.show{display:flex}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.step-n{flex-shrink:0;width:30px;height:30px;border-radius:var(--radius-full);
+  background:var(--primary-dim);color:var(--primary);display:flex;align-items:center;
+  justify-content:center;font-family:var(--font-mono);font-size:.82rem;font-weight:700}
+.step-b{min-width:0;flex:1}
+.step-b h3{font-size:1rem;margin-bottom:.4rem;letter-spacing:-.015em}
+.step-b p{font-size:.88rem;color:var(--text-muted);max-width:66ch}
+.step-b p b,.step-b p em{color:var(--text)}
+.step-ctl{display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-4);flex-wrap:wrap}
+.step-count{font-family:var(--font-mono);font-size:.75rem;color:var(--text-faint)}
+.step-ctl.done #moreStep,.step-ctl.done #allSteps{display:none}
+.deep{margin-top:var(--space-6);border:1px solid var(--border);border-radius:var(--radius-lg);
+  background:var(--surface);overflow:hidden}
+.deep summary{padding:var(--space-4);cursor:pointer;font-size:.86rem;font-weight:600;
+  list-style:none;display:flex;align-items:center;gap:.5rem}
+.deep summary::-webkit-details-marker{display:none}
+.deep summary::before{content:'';width:0;height:0;border-left:5px solid var(--text-faint);
+  border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform var(--trans)}
+.deep[open] summary::before{transform:rotate(90deg)}
+.deep summary:hover{background:var(--surface-dyn)}
+.deep-b{padding:0 var(--space-4) var(--space-4);border-top:1px solid var(--divider)}
+/* ---------- responsive ---------- */
+@media (min-width:981px){.sidebar-overlay{display:none!important}.sidebar-header{display:none}}
+@media (max-width:980px){
+  .shell{grid-template-columns:1fr}
+  .menubtn{display:inline-flex}
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:270px;height:100vh;z-index:200;
+    transform:translateX(-100%);transition:transform var(--trans);border-right:1px solid var(--border)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-header{display:flex}
+  .sidebar-overlay{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);
+    backdrop-filter:blur(2px);z-index:199;opacity:0;pointer-events:none;transition:opacity var(--trans)}
+  .sidebar-overlay.show{opacity:1;pointer-events:auto}
+  main{padding:var(--space-6) var(--space-4) var(--space-12)}
+  .lvl-h{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <button class="iconbtn menubtn" id="menuBtn" aria-label="Open navigation">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+  </button>
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
+    Skill Lens
+  </div>
+  <div class="spacer"></div>
+  <button class="iconbtn" id="resetBtn" title="Clear and start over" aria-label="Clear">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+  </button>
+  <button class="iconbtn" data-theme-toggle title="Toggle theme" aria-label="Toggle colour theme">
+    <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    <svg class="ico-moon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+  </button>
+</header>
+<div class="sidebar-overlay" id="overlay"></div>
+<div class="shell">
+<aside class="sidebar" id="sidebar">
+  <a class="back-home" href="https://mncoleman.com/artifacts/">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+    Back to Artifacts
+  </a>
+  <div class="sidebar-header">
+    <strong style="font-size:.85rem">Navigation</strong>
+    <button class="iconbtn" id="closeSb" aria-label="Close navigation">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <nav class="nav">
+    <div class="nav-title">Analyse</div>
+    <a href="#load" class="active">Load a skill</a>
+    <a href="#summary">Summary <span class="n" id="navTotal"></span></a>
+    <a href="#disclosure">Progressive disclosure</a>
+    <a href="#files">File breakdown <span class="n" id="navFiles"></span></a>
+    <a href="#tips">Optimisation <span class="n" id="navTips"></span></a>
+    <div class="nav-title">Understand</div>
+    <a href="#how">Start here: how skills work</a>
+    <a href="#method">Token method &amp; accuracy</a>
+  </nav>
+</aside>
+<main>
+  <div class="hero" id="load">
+    <h1>See a skill the way Claude does</h1>
+    <p class="lede">Drop a skill folder or <code class="inl">.zip</code> below. Skill Lens parses the frontmatter,
+    splits the content into the three levels of progressive disclosure, estimates the tokens each level costs,
+    and tells you <em>when</em> in a session each one is actually paid for.</p>
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Drop a skill folder or zip file here">
+      <svg class="big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20 16.7A5 5 0 0 0 18 7h-1.3A8 8 0 1 0 3 14.9"/></svg>
+      <h3>Drop a skill folder or .zip here</h3>
+      <p>Needs a <code class="inl">SKILL.md</code> at the root (or one level down). Reference files, scripts and assets are all counted.</p>
+      <div class="or">
+        <button class="btn primary" id="pickDir" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+          Choose folder
+        </button>
+        <button class="btn" id="pickZip" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
+          Choose .zip
+        </button>
+      </div>
+      <div class="privacy">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Everything is parsed in your browser. Nothing is uploaded, stored, or sent anywhere.
+      </div>
+    </div>
+    <input type="file" id="dirInput" webkitdirectory directory multiple class="hidden">
+    <input type="file" id="zipInput" accept=".zip,application/zip" class="hidden">
+    <div id="loadErr"></div>
+  </div>
+  <div id="results" class="hidden">
+  <section id="summary">
+    <div class="sec-h"><span class="num">01</span><h2>Summary</h2></div>
+    <div class="controls">
+      <div class="ctl">
+        <label for="modelSel">Model</label>
+        <select id="modelSel">
+          <option value="2.65" selected>Claude 5 family — Opus / Sonnet / Fable (2.65)</option>
+          <option value="3.68">Haiku 4.5 (3.68)</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <span class="hint">Measured against the real count_tokens API</span>
+      </div>
+      <div class="ctl">
+        <label for="cpt">Chars / token</label>
+        <input type="number" id="cpt" value="2.65" step="0.01" min="1" max="12">
+        <span class="hint">Edit to recalculate everything</span>
+      </div>
+      <div class="ctl">
+        <label>Exact count</label>
+        <button class="btn" id="calBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.9 2.9M16.2 16.2l2.9 2.9M2 12h4M18 12h4M4.9 19.1l2.9-2.9M16.2 7.8l2.9-2.9"/></svg>
+          Measure exactly</button>
+        <span class="hint" id="calHint">Replaces the estimate with a real count</span>
+      </div>
+      <div class="ctl" style="flex:1;min-width:180px">
+        <label>Skill</label>
+        <div id="skillName" style="font-family:var(--font-mono);font-size:.9rem;font-weight:600;padding:.4rem 0"></div>
+      </div>
+    </div>
+    <div class="statgrid">
+      <div class="stat l1"><div class="lbl">Level 1 · Always on</div><div class="val" id="s1">—</div><div class="sub" id="s1s">every session</div></div>
+      <div class="stat l2"><div class="lbl">Level 2 · On invoke</div><div class="val" id="s2">—</div><div class="sub" id="s2s">when triggered</div></div>
+      <div class="stat l3"><div class="lbl">Level 3 · On demand</div><div class="val" id="s3">—</div><div class="sub" id="s3s">if Claude reads it</div></div>
+      <div class="stat tot"><div class="lbl">Worst case total</div><div class="val" id="st">—</div><div class="sub">all files read</div></div>
+    </div>
+    <div class="levelbar" id="levelbar"></div>
+    <div class="legend">
+      <span><i class="dot d1"></i> Level 1 — name + description</span>
+      <span><i class="dot d2"></i> Level 2 — SKILL.md body</span>
+      <span><i class="dot d3"></i> Level 3 — bundled files</span>
+    </div>
+    <div id="summaryNote"></div>
+  </section>
+  <section id="disclosure">
+    <div class="sec-h"><span class="num">02</span><h2>Progressive disclosure</h2></div>
+    <p class="sec-intro">Claude does not read your whole skill up front. It arrives in three stages, and
+    only the first is paid for unconditionally. This is what each stage costs and when it lands.</p>
+    <div id="levels"></div>
+  </section>
+  <section id="files">
+    <div class="sec-h"><span class="num">03</span><h2>File breakdown</h2></div>
+    <p class="sec-intro">Every file found, with its estimated token cost and its share of the bundle.
+    Level 3 files are only paid for if Claude actually opens them.</p>
+    <div class="card"><div class="card-b" id="fileList"></div></div>
+  </section>
+  <section id="tips">
+    <div class="sec-h"><span class="num">04</span><h2>Optimisation</h2></div>
+    <p class="sec-intro">Findings are ordered by impact. Anything touching Level 1 matters most, because
+    you pay it in every single session whether or not the skill is ever used.</p>
+    <div id="tipList"></div>
+  </section>
+  </div>
+  <section id="how">
+    <div class="sec-h"><span class="num">05</span><h2>Start here: how a skill actually works</h2></div>
+    <p class="sec-intro">No jargon. Seven short steps, and each one appears only when you ask for it —
+    which is the exact thing skills do, so you will have felt it by the end.</p>
+    <div class="steps" id="steps">
+      <div class="step show" data-step="1">
+        <div class="step-n">1</div>
+        <div class="step-b">
+          <h3>A skill is just a folder you hand to Claude</h3>
+          <p>Inside it is a file called <code class="inl">SKILL.md</code>: plain writing that says
+          "here is how to do this particular job." It might be how your company writes a bug report,
+          or how to deploy a site. Nothing clever — instructions, in a folder.</p>
+        </div>
+      </div>
+      <div class="step" data-step="2">
+        <div class="step-n">2</div>
+        <div class="step-b">
+          <h3>Claude cannot hold everything at once</h3>
+          <p>There is a limit to how much text Claude can have in front of it at any moment.
+          Think of it as a desk, not a warehouse. Everything you put on the desk takes up room,
+          and room spent on one thing is room unavailable for another.</p>
+        </div>
+      </div>
+      <div class="step" data-step="3">
+        <div class="step-n">3</div>
+        <div class="step-b">
+          <h3>So skills arrive in three stages, not all at once</h3>
+          <p>If you have thirty skills installed, loading all thirty in full would bury the desk before
+          you had even asked a question. Instead each skill shows up in three stages, and most of the
+          time only the first stage is ever paid for.</p>
+          <p style="margin-top:.5rem">Picture a shelf of cookbooks.</p>
+        </div>
+      </div>
+      <div class="step" data-step="4">
+        <div class="step-n">4</div>
+        <div class="step-b">
+          <h3>Stage one: the title on the spine</h3>
+          <p>Walk into the kitchen and you read every spine on the shelf at a glance —
+          <em>Bread</em>, <em>Thai Cooking</em>, <em>Desserts</em>. That is all Claude gets up front for each
+          skill: its <b>name</b> and its <b>description</b>. One line, for every skill you own, every single time.</p>
+          <div class="callout note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <div>This is the part people get wrong. A long description is a long spine label that you re-read
+          every time you enter the room — whether or not you ever open the book. It is the one part of a skill
+          you always pay for, so it should be short and should say plainly <em>when to reach for this</em>.</div></div>
+        </div>
+      </div>
+      <div class="step" data-step="5">
+        <div class="step-n">5</div>
+        <div class="step-b">
+          <h3>Stage two: taking the book off the shelf</h3>
+          <p>You decide the bread book is the right one, so you pull it down and open it.
+          Now you are reading the actual recipe — the rest of <code class="inl">SKILL.md</code>, the real instructions.</p>
+          <p style="margin-top:.5rem">This only happens when the skill is genuinely needed. Which means a long
+          <code class="inl">SKILL.md</code> is much cheaper than a long description: you pay for it on the runs that use it,
+          and not at all on the runs that don't.</p>
+        </div>
+      </div>
+      <div class="step" data-step="6">
+        <div class="step-n">6</div>
+        <div class="step-b">
+          <h3>Stage three: the appendix you only sometimes flip to</h3>
+          <p>The recipe says "for the folding technique, see page 240." You turn there only if you need it.
+          Those are the extra files bundled with a skill — often in a <code class="inl">references/</code> folder.</p>
+          <p style="margin-top:.5rem">This is the trick that lets a small skill front an enormous amount of material.
+          One skill on this machine has a 9KB instruction file pointing at 1.4MB of references. Almost none of that
+          1.4MB is ever loaded on any given run — but it is there the moment it is wanted.</p>
+          <div class="callout warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <div>With one catch: Claude only turns to page 240 <em>because the recipe told it to</em>.
+          A bundled file that nothing points at is a page no one will ever turn to. That is what this tool means
+          when it says a file is "never mentioned".</div></div>
+        </div>
+      </div>
+      <div class="step" data-step="7">
+        <div class="step-n">7</div>
+        <div class="step-b">
+          <h3>That is the whole idea</h3>
+          <p>Spine, book, appendix. Always / when needed / rarely. When you drop a skill into this page,
+          the three numbers at the top are just those three stages, measured.</p>
+          <p style="margin-top:.5rem">And the useful question is almost never "how big is this skill?" —
+          it is <b>"how much of it am I paying for when I'm not using it?"</b></p>
+          <div class="callout fc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          <div><b>You just used progressive disclosure.</b> This section did not dump seven steps on you at once —
+          you asked for each one. That is precisely how Claude reads a skill, and why a well-built skill feels small
+          even when it contains a great deal.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="step-ctl">
+      <button class="btn primary" id="moreStep">Show me the next bit
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>
+      <button class="btn" id="allSteps">Show all seven</button>
+      <span class="step-count" id="stepCount">1 of 7</span>
+    </div>
+    <details class="deep">
+      <summary>The precise version, for when you want the exact rules</summary>
+      <div class="deep-b">
+        <table>
+          <thead><tr><th>Stage</th><th>What loads</th><th>When</th></tr></thead>
+          <tbody>
+            <tr><td><b>1</b></td><td class="mono">name</code> + <code class="inl">description</td><td>Session start, for every installed skill</td></tr>
+            <tr><td><b>2</b></td><td>Everything below the frontmatter in <span class="mono">SKILL.md</span></td><td>When the skill is triggered</td></tr>
+            <tr><td><b>3</b></td><td>Bundled files the body points at</td><td>Only when Claude opens that file</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:.82rem;color:var(--text-muted);margin-top:.6rem">"Frontmatter" is the little block at the very top of
+        <code class="inl">SKILL.md</code> fenced by <code class="inl">---</code> lines, holding the name, description and similar settings.</p>
+        <p style="font-size:.82rem;color:var(--text-muted);margin-top:.6rem"><b>Only <code class="inl">name</code> and <code class="inl">description</code>
+        reach the model at stage 1.</b> Other frontmatter keys — <code class="inl">allowed-tools</code>, <code class="inl">metadata</code>,
+        <code class="inl">argument-hint</code>, <code class="inl">user-invocable</code> — are read by the surrounding software, not shown to Claude.
+        This was checked by comparing skill files on disk against the skill list inside a live session's system prompt.</p>
+        <p style="font-size:.82rem;color:var(--text-muted);margin-top:.6rem">The same applies to hand-rolled keys like
+        <code class="inl">references:</code> or <code class="inl">resources:</code>, which some skill libraries use to list their extra files.
+        Those lists are useful to the tooling around Claude, but Claude itself never sees them — so a file that is <em>only</em> listed there,
+        and never named in the body, is one Claude has no way to know about. This page flags those separately.</p>
+      </div>
+    </details>
+  </section>
+  <section id="method">
+    <div class="sec-h"><span class="num">06</span><h2>Token method &amp; accuracy</h2></div>
+    <p class="sec-intro">These are calibrated estimates, not exact counts — here is exactly how they are produced,
+    and how far off they are likely to be.</p>
+    <div class="callout note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+    <div><b>Estimate by default, exact on request.</b> Anthropic publishes no client-side tokenizer, so these figures start as a
+    calibrated estimate. Press <b>Measure exactly</b> at the top and the page asks a small server-side endpoint for a real
+    <code class="inl">count_tokens</code> result, then recalculates everything from your file's own true ratio. The API key lives on
+    that endpoint, never in this page — a key shipped in public HTML is readable by anyone who views the source.</div></div>
+    <h3 style="font-size:.9rem;margin:var(--space-5) 0 var(--space-2)">Where the ratio comes from</h3>
+    <p style="font-size:.82rem;color:var(--text-muted)">Rather than guessing at the usual "about 4 characters per token", these defaults were <b>measured</b>:
+    28 real samples taken from actual skill files, 204 to 4,000 characters each, sent to Anthropic's
+    <code class="inl">count_tokens</code> endpoint and fitted by least squares.</p>
+    <div class="tblwrap"><table>
+      <thead><tr><th>Model</th><th>Chars / token</th><th>Median error</th><th>90th pct error</th></tr></thead>
+      <tbody>
+        <tr><td>Opus 5 / Sonnet 5 / Fable 5</td><td class="mono">2.65</td><td class="mono">6.5%</td><td class="mono">14.6%</td></tr>
+        <tr><td>Haiku 4.5</td><td class="mono">3.68</td><td class="mono">7.4%</td><td class="mono">13.5%</td></tr>
+      </tbody>
+    </table></div>
+    <p style="font-size:.82rem;color:var(--text-muted)"><b>Opus 5, Sonnet 5 and Fable 5 share one tokenizer</b> — given identical input they return identical counts
+    (299/299 and 349/349 on two test strings, 222 vs 223 on a third). Only Haiku 4.5 differs, and it is notably less dense.
+    If you have read that the Opus and Sonnet families tokenize differently, that is not true of the current 5-series.</p>
+    <p style="font-size:.82rem;color:var(--text-muted)">Note how far 2.65 sits from the familiar "4 characters per token". That rule
+    describes ordinary prose; skill files are markdown thick with punctuation, paths, code fences and YAML, all of which tokenize much
+    denser. Measured on the same model: plain prose 2.43, markdown with code 2.31, YAML frontmatter 1.90. <b>Content type moves the
+    number more than the model does</b> — which is why no single constant gets below roughly 6% median error, and why measuring your
+    actual file beats any constant.</p>
+    <div class="callout fc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    <div><b>What this is good for.</b> Every judgement this tool makes is a <em>comparison</em> — is the description too long,
+    what share is always-on, which file dominates the bundle. Those rankings and ratios hold regardless of the exact constant,
+    so a few percent of drift does not change any of the advice. Treat the absolute numbers as a well-grounded estimate and the
+    relative ones as solid.</div></div>
+    <h3 style="font-size:.9rem;margin:var(--space-5) 0 var(--space-2)">Want exact numbers?</h3>
+    <p style="font-size:.82rem;color:var(--text-muted)">Run the text through the API and compare against the estimate here:</p>
+    <div class="cbwrap">
+      <pre class="cb"><span class="c"># exact token count for a skill's always-on cost</span>
+curl https://api.anthropic.com/v1/messages/count_tokens \
+  -H <span class="g">"x-api-key: $ANTHROPIC_API_KEY"</span> \
+  -H <span class="g">"anthropic-version: 2023-06-01"</span> \
+  -H <span class="g">"content-type: application/json"</span> \
+  -d @- &lt;&lt;<span class="o">JSON</span>
+{"model":"claude-sonnet-4-6",
+ "messages":[{"role":"user","content":"PASTE THE DESCRIPTION HERE"}]}
+<span class="o">JSON</span></pre>
+      <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy code">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button>
+    </div>
+    <div class="callout tip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+    <div>If you calibrate, put the measured number straight into the <b>Chars / token</b> box at the top — every figure on the page recalculates from it.</div></div>
+  </section>
+</main>
+</div>
+<script>
+'use strict';
+/* ============ theme ============ */
+const root=document.documentElement;
+function applyTheme(t){
+  if(t) root.setAttribute('data-theme',t); else root.removeAttribute('data-theme');
+  const dark = t==='dark' || (!t && matchMedia('(prefers-color-scheme:dark)').matches);
+  document.querySelectorAll('[data-theme-toggle]').forEach(b=>{
+    b.querySelector('.ico-sun').classList.toggle('hidden',dark);
+    b.querySelector('.ico-moon').classList.toggle('hidden',!dark);
+  });
+}
+try{applyTheme(localStorage.getItem('sl-theme'))}catch(e){applyTheme(null)}
+document.querySelectorAll('[data-theme-toggle]').forEach(b=>b.addEventListener('click',()=>{
+  const cur=root.getAttribute('data-theme');
+  const dark=cur? cur==='dark' : matchMedia('(prefers-color-scheme:dark)').matches;
+  const next=dark?'light':'dark';
+  applyTheme(next); try{localStorage.setItem('sl-theme',next)}catch(e){}
+}));
+/* ============ sidebar ============ */
+const sb=document.getElementById('sidebar'), ov=document.getElementById('overlay');
+function closeSb(){sb.classList.remove('open');ov.classList.remove('show');document.body.style.overflow=''}
+document.getElementById('menuBtn').addEventListener('click',()=>{
+  sb.classList.add('open');ov.classList.add('show');document.body.style.overflow='hidden'});
+document.getElementById('closeSb').addEventListener('click',closeSb);
+ov.addEventListener('click',closeSb);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSb()});
+document.querySelectorAll('.nav a').forEach(a=>a.addEventListener('click',closeSb));
+/* scroll spy */
+const navLinks=[...document.querySelectorAll('.nav a')];
+const io=new IntersectionObserver(es=>{
+  es.forEach(e=>{ if(!e.isIntersecting) return;
+    navLinks.forEach(l=>l.classList.toggle('active', l.getAttribute('href')==='#'+e.target.id));
+  });},{rootMargin:'-20% 0px -70% 0px'});
+document.querySelectorAll('section[id], div[id="load"]').forEach(s=>io.observe(s));
+/* ============ copy ============ */
+function flash(btn){const o=btn.innerHTML;btn.classList.add('done');
+  btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Copied!';
+  setTimeout(()=>{btn.classList.remove('done');btn.innerHTML=o},2000)}
+function copyCode(btn){
+  const pre=btn.parentElement.querySelector('pre');
+  const txt=pre.innerText.split('\n').filter(l=>!/^\s*#/.test(l)).map(l=>l.replace(/^\s*\$\s/,'')).join('\n').trim();
+  navigator.clipboard.writeText(txt).then(()=>flash(btn)).catch(()=>{});
+}
+function copyRaw(btn,id){
+  navigator.clipboard.writeText(document.getElementById(id).innerText).then(()=>flash(btn)).catch(()=>{});
+}
+/* ============ zip reader (no dependencies) ============ */
+async function inflateRaw(bytes){
+  const ds=new DecompressionStream('deflate-raw');
+  const stream=new Blob([bytes]).stream().pipeThrough(ds);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function readZip(buf){
+  const dv=new DataView(buf), u8=new Uint8Array(buf);
+  // locate End Of Central Directory
+  let eocd=-1;
+  for(let i=u8.length-22;i>=0 && i>u8.length-66000;i--){
+    if(dv.getUint32(i,true)===0x06054b50){eocd=i;break}
+  }
+  if(eocd<0) throw new Error('Not a valid .zip file (no end-of-central-directory record found).');
+  const count=dv.getUint16(eocd+10,true);
+  let off=dv.getUint32(eocd+16,true);
+  const out=[];
+  for(let n=0;n<count;n++){
+    if(dv.getUint32(off,true)!==0x02014b50) break;
+    const method=dv.getUint16(off+10,true);
+    const csize=dv.getUint32(off+20,true);
+    const nameLen=dv.getUint16(off+28,true);
+    const extraLen=dv.getUint16(off+30,true);
+    const cmtLen=dv.getUint16(off+32,true);
+    const lho=dv.getUint32(off+42,true);
+    const name=new TextDecoder().decode(u8.subarray(off+46,off+46+nameLen));
+    off+=46+nameLen+extraLen+cmtLen;
+    if(name.endsWith('/')) continue;
+    // local header -> data start
+    if(dv.getUint32(lho,true)!==0x04034b50) continue;
+    const lNameLen=dv.getUint16(lho+26,true), lExtraLen=dv.getUint16(lho+28,true);
+    const dataStart=lho+30+lNameLen+lExtraLen;
+    const raw=u8.subarray(dataStart,dataStart+csize);
+    let data;
+    if(method===0){ data=raw; }
+    else if(method===8){ try{ data=await inflateRaw(raw); }catch(e){ continue } }
+    else { continue; }
+    out.push({path:name,bytes:data.length,text:new TextDecoder('utf-8',{fatal:false}).decode(data)});
+  }
+  if(!out.length) throw new Error('That .zip contained no readable files.');
+  return out;
+}
+/* ============ folder / file intake ============ */
+const BINARY=/\.(png|jpe?g|gif|webp|svg|ico|pdf|zip|gz|tar|woff2?|ttf|otf|mp4|mov|mp3|wav|so|dylib|bin|db|sqlite)$/i;
+function readFile(file){
+  return new Promise(res=>{
+    if(BINARY.test(file.name)){ res({path:file.webkitRelativePath||file.name,bytes:file.size,text:null}); return }
+    const fr=new FileReader();
+    fr.onload=()=>res({path:file.webkitRelativePath||file.name,bytes:file.size,text:fr.result});
+    fr.onerror=()=>res({path:file.webkitRelativePath||file.name,bytes:file.size,text:null});
+    fr.readAsText(file);
+  });
+}
+async function walkEntry(entry,out,depth){
+  if(depth>12) return;
+  if(entry.isFile){
+    const f=await new Promise(r=>entry.file(r,()=>r(null)));
+    if(f){ const rec=await readFile(f); rec.path=entry.fullPath.replace(/^\//,''); out.push(rec) }
+    return;
+  }
+  if(entry.isDirectory){
+    const rd=entry.createReader();
+    let batch;
+    do{ batch=await new Promise(r=>rd.readEntries(r,()=>r([])));
+        for(const e of batch) await walkEntry(e,out,depth+1);
+    }while(batch.length);
+  }
+}
+/* ============ frontmatter ============ */
+function parseFrontmatter(text){
+  const m=/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(text||'');
+  if(!m) return {fm:{},raw:'',body:text||'',hasFm:false};
+  const raw=m[1], body=m[2], fm={}; let key=null;
+  raw.split(/\r?\n/).forEach(line=>{
+    const kv=/^([A-Za-z_][A-Za-z0-9_-]*):\s*(.*)$/.exec(line);
+    if(kv){ key=kv[1]; fm[key]=kv[2].trim(); }
+    else if(key && line.trim()){
+      const li=/^\s*-\s*(.*)$/.exec(line);
+      fm[key]=(fm[key]?fm[key]+(li?', ':' '):'')+(li?li[1]:line.trim());
+    }
+  });
+  Object.keys(fm).forEach(k=>{fm[k]=fm[k].replace(/^["']|["']$/g,'').trim()});
+  return {fm,raw,body,hasFm:true};
+}
+/* ============ analysis ============ */
+let MODEL_CPT=2.65, CURRENT=null;
+const tok=n=>Math.max(0,Math.round(n/MODEL_CPT));
+const fmtN=n=>n>=1000?(n/1000).toFixed(n>=100000?0:1).replace(/\.0$/,'')+'k':String(n);
+function analyse(files){
+  // find SKILL.md at shallowest depth
+  const cands=files.filter(f=>/(^|\/)SKILL\.md$/i.test(f.path))
+    .sort((a,b)=>a.path.split('/').length-b.path.split('/').length);
+  if(!cands.length) throw new Error('No SKILL.md found. A skill needs a SKILL.md file at its root.');
+  const skillFile=cands[0];
+  const extraSkills=cands.length-1;
+  const rootDir=skillFile.path.replace(/SKILL\.md$/i,'');
+  const inScope=files.filter(f=>!rootDir||f.path.startsWith(rootDir));
+  const {fm,raw,body,hasFm}=parseFrontmatter(skillFile.text||'');
+  const name=fm.name||rootDir.replace(/\/$/,'').split('/').pop()||'(unnamed)';
+  const desc=fm.description||'';
+  const refs=inScope.filter(f=>f!==skillFile)
+    .map(f=>({...f,rel:rootDir?f.path.slice(rootDir.length):f.path}))
+    .filter(f=>!/(^|\/)\.DS_Store$/.test(f.rel) && !/(^|\/)__MACOSX\//.test(f.rel))
+    .sort((a,b)=>b.bytes-a.bytes);
+  const l1chars=name.length+desc.length+4;
+  const l2chars=body.length;
+  const l3chars=refs.reduce((s,f)=>s+(f.text!=null?f.text.length:0),0);
+  // which refs are actually mentioned in SKILL.md?
+  const declared=new Set((fm.references||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean));
+  // `resources:` (Dovito Hub convention) — entries may be bare paths or "path: x, lazy: true"
+  const resPaths=new Set();
+  {   // walk the indented block under a `resources:` (or `references:`) key
+    const lines=raw.split(/\r?\n/); let inBlock=false;
+    for(const l of lines){
+      if(/^(resources|references):/i.test(l)){ inBlock=true; continue; }
+      if(inBlock){
+        if(/^[A-Za-z_][A-Za-z0-9_-]*:/.test(l)){ inBlock=false; continue; }   // next top-level key
+        if(!l.trim()) continue;
+        const m2=/(?:^\s*-\s*(?:path:\s*)?|^\s*path:\s*)["']?([^"',\s]+)["']?/.exec(l);
+        if(m2) resPaths.add(m2[1].replace(/^\.\//,'').toLowerCase());
+      }
+    }
+  }
+  refs.forEach(f=>{
+    const base=f.rel.split('/').pop();
+    const stem=base.replace(/\.[^.]+$/,'').toLowerCase();
+    f.mentioned = body.includes(f.rel) || body.includes(base)
+      ;
+    const rl=f.rel.toLowerCase();
+    f.viaResources = [...resPaths].some(rp=>rl===rp||rl.endsWith('/'+rp)||rp.endsWith('/'+rl)||rp.endsWith(base.toLowerCase()));
+    f.declaredOnly = !f.mentioned && (declared.has(stem)||declared.has(base.toLowerCase())||f.viaResources);
+    f.binary = f.text==null;
+    f.tokens = f.binary?null:tok(f.text.length);
+  });
+  return {name,desc,fm,hasFm,body,raw,refs,l1chars,l2chars,l3chars,extraSkills,
+          skillPath:skillFile.path,fileCount:refs.length+1};
+}
+/* ============ tips engine (generic thresholds) ============ */
+const T={descIdeal:500,descLong:800,descMax:1024,bodyBig:20000,bodyHuge:35000,refBig:40000};
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function buildTips(a){
+  const t=[], d=a.desc.length, add=(sev,title,body)=>t.push({sev,title,body});
+  if(!a.hasFm) add('high','No YAML frontmatter','SKILL.md has no <span class="m">---</span> frontmatter block, so it has no name or description. Claude will not know when to trigger this skill.');
+  if(!a.fm.name) add('high','Missing <span class="m">name</span>','Add a <span class="m">name:</span> field. Without it the skill has no stable identifier.');
+  if(!a.desc) add('high','Missing <span class="m">description</span>','The description is the <em>only</em> thing Claude sees for an uninvoked skill. With none, it will essentially never fire on its own.');
+  else{
+    if(d>T.descMax) add('high','Description exceeds 1024 characters',`Yours is <span class="m">${d}</span>. This is the field you pay for in every session — trim it to the trigger conditions and drop the how-to into the body.`);
+    else if(d>T.descLong) add('med','Description is long',`<span class="m">${d}</span> characters, costing about <span class="m">${tok(d)}</span> tokens in <em>every</em> session whether or not the skill runs. Aim under ${T.descIdeal}.`);
+    else if(d<80) add('med','Description is very short',`<span class="m">${d}</span> characters is rarely enough to describe when the skill applies. Vague descriptions are the main reason a skill never triggers.`);
+    else add('ok','Description is well sized',`<span class="m">${d}</span> characters, roughly <span class="m">${tok(d)}</span> always-on tokens. That is a reasonable always-on cost.`);
+    const hasTrigger=/\b(use|load|invoke|apply|reach for|run)\b[^.]{0,40}\bwhen\b|\btriggers? on\b|\bfires on\b|\bwhen (the )?(user|matthew|someone|asked|you)\b|\buse (this |it )?for\b/i.test(a.desc);
+    if(!hasTrigger) add('med','Description does not state when to use the skill','Claude matches on this text to decide whether to fire. Add an explicit trigger clause — "Use when…", "Triggers on…" — including the words a user would actually type.');
+    else add('ok','Description states its trigger conditions','It contains an explicit "use when" style clause, which is what Claude matches against.');
+  }
+  const b=a.l2chars;
+  if(b>T.bodyHuge) add('high','SKILL.md body is very large',`<span class="m">${fmtN(b)}</span> characters (~<span class="m">${fmtN(tok(b))}</span> tokens) all arrive the moment the skill fires. Split the parts that are only sometimes needed into <span class="m">references/</span> files.`);
+  else if(b>T.bodyBig) add('med','SKILL.md body is large',`<span class="m">${fmtN(b)}</span> characters (~<span class="m">${fmtN(tok(b))}</span> tokens) on every invocation. Consider moving optional detail to Level 3.`);
+  if(b>T.bodyBig && a.refs.length===0) add('high','Large body with no reference files','Everything sits at Level 2, so every run pays for all of it. This is the single clearest candidate for splitting — move the sections that only some runs need into separate files and point at them from the body.');
+  const declOnly=a.refs.filter(f=>f.declaredOnly && !f.binary);
+  const unment=a.refs.filter(f=>!f.mentioned && !f.declaredOnly && !f.binary);
+  const key=a.refs.some(f=>f.viaResources)?'resources:':'references:';
+  if(declOnly.length) add('med',`${declOnly.length} file${declOnly.length>1?'s are':' is'} declared only in a <span class="m">${key}</span> frontmatter key`,`Frontmatter other than <span class="m">name</span> and <span class="m">description</span> is never shown to the model, so a <span class="m">${key}</span> list does not tell Claude these files exist: <span class="m">${declOnly.slice(0,4).map(f=>esc(f.rel)).join('</span>, <span class="m">')}</span>${declOnly.length>4?` and ${declOnly.length-4} more`:''}. Name the paths in the body instead, with a line on when each applies.`);
+  if(unment.length) add('med',`${unment.length} reference file${unment.length>1?'s are':' is'} never mentioned in SKILL.md`,`Claude only opens a Level 3 file if the body tells it to. Unreferenced files are dead weight: <span class="m">${unment.slice(0,4).map(f=>esc(f.rel)).join('</span>, <span class="m">')}</span>${unment.length>4?` and ${unment.length-4} more`:''}.`);
+  const big=a.refs.filter(f=>!f.binary && f.text.length>T.refBig);
+  if(big.length) add('low',`${big.length} large reference file${big.length>1?'s':''}`,`<span class="m">${esc(big[0].rel)}</span> is ~<span class="m">${fmtN(tok(big[0].text.length))}</span> tokens on its own. That is fine if it is genuinely read as a unit, but splitting lets Claude take only the part it needs.`);
+  if(a.refs.length>0 && b<=T.bodyBig) add('ok','Good progressive disclosure shape',`A ${fmtN(b)}-character body fronting ${a.refs.length} file${a.refs.length>1?'s':''}. Most runs pay only for the body.`);
+  if(a.fm.name && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(a.fm.name)) add('low','Name is not kebab-case',`<span class="m">${esc(a.fm.name)}</span> — lowercase-with-hyphens is the convention and keeps slash-command invocation predictable.`);
+  if(a.desc && /:\s/.test(a.desc) && !/^["']/.test(a.fm.description||'')) add('med','Description contains ": " and is unquoted','In YAML a colon-space inside an unquoted value can break parsing silently, which makes the whole skill fail to load. Wrap the description in quotes.');
+  const order={high:0,med:1,low:2,ok:3};
+  return t.sort((x,y)=>order[x.sev]-order[y.sev]);
+}
+/* ============ render ============ */
+const $=id=>document.getElementById(id);
+const CHEV='<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span>';
+function render(){
+  const a=CURRENT; if(!a) return;
+  const t1=tok(a.l1chars), t2=tok(a.l2chars), t3=tok(a.l3chars), tt=t1+t2+t3;
+  $('skillName').textContent=a.name;
+  $('s1').textContent=fmtN(t1); $('s1s').textContent=a.l1chars+' chars · every session';
+  $('s2').textContent=fmtN(t2); $('s2s').textContent=fmtN(a.l2chars)+' chars · when triggered';
+  $('s3').textContent=fmtN(t3); $('s3s').textContent=a.refs.length+' file'+(a.refs.length===1?'':'s')+' · if read';
+  $('st').textContent=fmtN(tt);
+  $('navTotal').textContent=fmtN(tt); $('navFiles').textContent=a.fileCount;
+  const pct=v=>tt?Math.max(v>0?2:0,Math.round(v/tt*100)):0;
+  $('levelbar').innerHTML=
+    `<div class="lb1" style="flex:0 0 ${pct(t1)}%" title="Level 1: ${t1} tokens">${pct(t1)>7?pct(t1)+'%':''}</div>`+
+    `<div class="lb2" style="flex:0 0 ${pct(t2)}%" title="Level 2: ${t2} tokens">${pct(t2)>7?pct(t2)+'%':''}</div>`+
+    `<div class="lb3" style="flex:1" title="Level 3: ${t3} tokens">${pct(t3)>7?pct(t3)+'%':''}</div>`;
+  const share=tt?Math.round(t1/tt*100):0;
+  $('summaryNote').innerHTML=(a.extraSkills>0?`<div class="callout warn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+    <div><b>${a.extraSkills+1} skills were found in what you dropped.</b> Only <span class="m">${esc(a.skillPath)}</span> is analysed below —
+    the other ${a.extraSkills} ${a.extraSkills===1?'is':'are'} ignored. Drop a single skill folder for accurate numbers.</div></div>`:'')
+    +`<div class="callout ${share>25?'note':'fc'}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+    <div>Only <b>${fmtN(t1)} tokens</b> (${share}% of this skill) are paid unconditionally. The other
+    <b>${fmtN(tt-t1)}</b> are paid only if the skill fires${a.refs.length?', and the Level 3 files only if Claude opens them':''}.</div></div>`;
+  // levels
+  const tools=a.fm['allowed-tools'];
+  $('levels').innerHTML=`
+  <div class="lvl n1 open"><div class="lvl-h">${CHEV}<div class="lvl-t"><div class="k">Level 1 · always on</div>
+    <h3>name + description</h3><p>In the system prompt from the moment the session starts.</p></div>
+    <div class="lvl-tok">${fmtN(t1)}<small>tokens</small></div></div>
+    <div class="lvl-b"><div class="when"><b>When:</b> before your first message — and in every session, used or not.</div>
+      <div class="cbwrap"><pre class="cb" id="l1raw"><span class="o">name:</span> ${esc(a.name)}
+<span class="o">description:</span> ${esc(a.desc)||'<span class="c">(none)</span>'}</pre>
+      <button class="copy-btn" onclick="copyRaw(this,'l1raw')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div>
+      ${tools?`<p style="font-size:.78rem;color:var(--text-muted)"><b>Not</b> injected at this level, though present in your frontmatter:
+        <code class="inl">allowed-tools</code> (${esc(tools).split(',').length} entries)${a.fm['argument-hint']?', <code class="inl">argument-hint</code>':''}${a.fm.metadata?', <code class="inl">metadata</code>':''}. These are used by the harness, not shown to the model here.</p>`:''}
+    </div></div>
+  <div class="lvl n2"><div class="lvl-h">${CHEV}<div class="lvl-t"><div class="k">Level 2 · on invoke</div>
+    <h3>SKILL.md body</h3><p>${fmtN(a.l2chars)} characters below the frontmatter.</p></div>
+    <div class="lvl-tok">${fmtN(t2)}<small>tokens</small></div></div>
+    <div class="lvl-b"><div class="when"><b>When:</b> the skill triggers — description matched, or you typed its command.</div>
+      <div class="cbwrap"><pre class="cb" id="l2raw">${esc(a.body.slice(0,4000))}${a.body.length>4000?'\n\n<span class="c">… '+fmtN(a.body.length-4000)+' more characters</span>':''}</pre>
+      <button class="copy-btn" onclick="copyRaw(this,'l2raw')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div>
+    </div></div>
+  <div class="lvl n3"><div class="lvl-h">${CHEV}<div class="lvl-t"><div class="k">Level 3 · on demand</div>
+    <h3>${a.refs.length} bundled file${a.refs.length===1?'':'s'}</h3><p>${a.refs.length?'Read only when the body points Claude at them.':'None — everything in this skill is at Level 1 or 2.'}</p></div>
+    <div class="lvl-tok">${fmtN(t3)}<small>tokens</small></div></div>
+    <div class="lvl-b"><div class="when"><b>When:</b> only if Claude opens that specific file. Often never in a given run.</div>
+      ${a.refs.length?`<div class="tblwrap"><table><thead><tr><th>File</th><th>Tokens</th><th>Referenced in SKILL.md?</th></tr></thead><tbody>
+      ${a.refs.slice(0,40).map(f=>`<tr><td class="mono">${esc(f.rel)}</td>
+        <td class="mono">${f.binary?'<span style="color:var(--text-faint)">binary</span>':fmtN(tok(f.text.length))}</td>
+        <td>${f.binary?'&mdash;':(f.mentioned?'<span class="pill ok">yes</span>':(f.declaredOnly?'<span class="pill med">frontmatter only</span>':'<span class="pill med">no</span>'))}</td></tr>`).join('')}
+      </tbody></table></div>${a.refs.length>40?`<p class="empty">… and ${a.refs.length-40} more files</p>`:''}`
+      :'<p class="empty">No bundled files.</p>'}
+    </div></div>`;
+  document.querySelectorAll('#levels .lvl-h, #how .lvl-h').forEach(h=>{
+    h.onclick=()=>h.parentElement.classList.toggle('open');
+  });
+  // file list
+  // scale EVERY bar against the same maximum, SKILL.md included
+  const skillChars=a.l1chars+a.l2chars;
+  const maxT=Math.max(1,skillChars,...a.refs.filter(f=>!f.binary).map(f=>f.text.length));
+  const pctOf=c=>Math.max(1,Math.round(c/maxT*100));
+  $('fileList').innerHTML=
+    `<div class="frow"><span class="path" style="font-weight:600">${esc(a.skillPath)}</span>
+      <span class="tk">${fmtN(t1+t2)} tok</span>
+      <span class="bar" title="${pctOf(skillChars)}% of the largest file"><i style="width:${pctOf(skillChars)}%;background:var(--orange)"></i></span></div>`+
+    (a.refs.length?a.refs.map(f=>`<div class="frow"><span class="path">${esc(f.rel)}</span>
+      <span class="tk">${f.binary?(f.bytes/1024).toFixed(0)+' KB':fmtN(tok(f.text.length))+' tok'}</span>
+      <span class="bar" title="${f.binary?'binary':pctOf(f.text.length)+'% of the largest file'}"><i style="width:${f.binary?0:pctOf(f.text.length)}%"></i></span></div>`).join('')
+      :'<p class="empty">No additional files in this skill.</p>');
+  // tips
+  const tips=buildTips(a);
+  $('navTips').textContent=tips.filter(t=>t.sev!=='ok').length||'0';
+  const label={high:'fix',med:'improve',low:'minor',ok:'good'};
+  $('tipList').innerHTML=tips.map(t=>`<div class="tip-item"><div class="sev sev-${t.sev}"></div>
+    <div class="body"><h4>${t.title} <span class="pill ${t.sev}">${label[t.sev]}</span></h4><p>${t.body}</p></div></div>`).join('');
+}
+/* ============ wiring ============ */
+function showErr(msg){
+  $('loadErr').innerHTML=`<div class="callout warn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+    <div>${esc(msg)}</div></div>`;
+}
+function load(files){
+  $('loadErr').innerHTML='';
+  try{
+    if(!files.length) throw new Error('No files were read. If you dropped a folder, try the "Choose folder" button instead.');
+    CURRENT=analyse(files);
+    render();
+    $('results').classList.remove('hidden');
+    $('summary').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){ $('results').classList.add('hidden'); showErr(e.message||String(e)); }
+}
+const drop=$('drop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{
+  e.preventDefault();e.stopPropagation();drop.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{
+  e.preventDefault();e.stopPropagation();if(ev==='dragleave'&&drop.contains(e.relatedTarget))return;drop.classList.remove('over')}));
+drop.addEventListener('drop',async e=>{
+  const dt=e.dataTransfer; if(!dt) return;
+  const items=[...(dt.items||[])];
+  const entries=items.map(i=>i.webkitGetAsEntry&&i.webkitGetAsEntry()).filter(Boolean);
+  try{
+    if(entries.length && entries.some(en=>en.isDirectory)){
+      const out=[]; for(const en of entries) await walkEntry(en,out,0);
+      load(out); return;
+    }
+    const fl=[...(dt.files||[])];
+    if(fl.length===1 && /\.zip$/i.test(fl[0].name)){ load(await readZip(await fl[0].arrayBuffer())); return }
+    if(fl.length){ load(await Promise.all(fl.map(readFile))); return }
+    if(entries.length){ const out=[]; for(const en of entries) await walkEntry(en,out,0); load(out); return }
+    showErr('Nothing usable was dropped.');
+  }catch(err){ showErr(err.message||String(err)) }
+});
+drop.addEventListener('click',e=>{ if(e.target.closest('button'))return; $('dirInput').click() });
+drop.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();$('dirInput').click()} });
+$('pickDir').addEventListener('click',e=>{e.stopPropagation();$('dirInput').click()});
+$('pickZip').addEventListener('click',e=>{e.stopPropagation();$('zipInput').click()});
+$('dirInput').addEventListener('change',async e=>{
+  const fl=[...e.target.files]; if(fl.length) load(await Promise.all(fl.map(readFile))); e.target.value='';
+});
+$('zipInput').addEventListener('change',async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{ load(await readZip(await f.arrayBuffer())) }catch(err){ showErr(err.message||String(err)) }
+  e.target.value='';
+});
+$('resetBtn').addEventListener('click',()=>{
+  CURRENT=null; $('results').classList.add('hidden'); $('loadErr').innerHTML='';
+  $('navTotal').textContent=''; $('navFiles').textContent=''; $('navTips').textContent='';
+  $('load').scrollIntoView({behavior:'smooth'});
+});
+/* ---- exact counts via the token-count Worker, with graceful fallback ---- */
+const COUNT_ENDPOINT='https://mncoleman.com/api/count-tokens';
+$('calBtn').addEventListener('click',async()=>{
+  if(!CURRENT) return;
+  const btn=$('calBtn'), hint=$('calHint'), original=btn.innerHTML;
+  // Measure the SKILL.md body — the largest representative sample of this skill's prose.
+  const sample=(CURRENT.body&&CURRENT.body.length>200)?CURRENT.body:(CURRENT.desc+' '+CURRENT.body);
+  if(!sample.trim()){ hint.textContent='Nothing to measure.'; return; }
+  btn.disabled=true; btn.textContent='Measuring…'; hint.textContent='Calling the API…';
+  const modelId=(Math.abs(MODEL_CPT-3.68)<0.2)?'claude-haiku-4-5':'claude-sonnet-5';
+  try{
+    const r=await fetch(COUNT_ENDPOINT,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({text:sample,model:modelId})});
+    const d=await r.json().catch(()=>({}));
+    const ok = r.ok && Number.isFinite(d.input_tokens) && Number.isFinite(d.chars)
+               && d.input_tokens>0 && d.chars>0;
+    if(!ok){
+      hint.textContent = r.status===429 ? 'Rate limited — try again shortly. Estimate kept.'
+        : 'Exact count unavailable. Estimate kept.';
+    }else{
+      const measured=d.chars/d.input_tokens;
+      if(!Number.isFinite(measured)||measured<0.5||measured>20){
+        hint.textContent='Got an implausible measurement — estimate kept.';
+        btn.disabled=false; btn.innerHTML=original; return;
+      }
+      const before=MODEL_CPT;
+      MODEL_CPT=measured; $('cpt').value=measured.toFixed(3);
+      $('modelSel').value='custom';
+      render();
+      const drift=Math.abs(measured-before)/before*100;
+      hint.innerHTML=`Measured <b>${measured.toFixed(2)}</b> chars/token on ${d.input_tokens.toLocaleString()} real tokens `
+        +`(estimate was ${before.toFixed(2)}, off by ${drift.toFixed(1)}%). All figures recalculated.`;
+    }
+  }catch(e){
+    hint.textContent='Could not reach the counting service — estimate kept.';
+  }finally{ btn.disabled=false; btn.innerHTML=original; }
+});
+$('modelSel').addEventListener('change',e=>{
+  if(e.target.value==='custom'){ $('cpt').focus(); return }
+  MODEL_CPT=parseFloat(e.target.value); $('cpt').value=MODEL_CPT; render();
+});
+$('cpt').addEventListener('input',e=>{
+  const v=parseFloat(e.target.value);
+  if(v>0.5&&v<20){ MODEL_CPT=v;
+    const sel=$('modelSel'); sel.value=[...sel.options].some(o=>o.value===String(v))?String(v):'custom';
+    render(); }
+});
+/* ---- progressive reveal of the explainer (the page eats its own dog food) ---- */
+(function(){
+  const steps=[...document.querySelectorAll('#steps .step')];
+  const more=$('moreStep'), all=$('allSteps'), count=$('stepCount'), ctl=document.querySelector('.step-ctl');
+  if(!steps.length||!more) return;
+  const shown=()=>steps.filter(s=>s.classList.contains('show')).length;
+  function sync(){
+    const n=shown();
+    count.textContent=n+' of '+steps.length;
+    if(n>=steps.length){ ctl.classList.add('done'); count.textContent='all '+steps.length+' shown'; }
+  }
+  more.addEventListener('click',()=>{
+    const next=steps.find(s=>!s.classList.contains('show'));
+    if(next){ next.classList.add('show'); next.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+    sync();
+  });
+  all.addEventListener('click',()=>{ steps.forEach(s=>s.classList.add('show')); sync(); });
+  sync();
+})();
+</script>
+</body>
+</html>

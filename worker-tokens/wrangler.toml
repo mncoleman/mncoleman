@@ -1,0 +1,40 @@
+name = "mncoleman-token-count"
+main = "index.ts"
+compatibility_date = "2026-07-01"
+
+# Token-counting proxy for the Skill Lens artifact (/artifacts/skill-lens.html).
+#
+# Why this exists: Skill Lens estimates tokens from a chars-per-token constant
+# because a static page cannot hold an API key. This Worker holds the key
+# instead, so the page can ask for a REAL count from
+# POST /v1/messages/count_tokens without the credential ever reaching a browser.
+#
+# Deliberately a separate Worker from `worker/` (mncoleman-admin-auth): that one
+# gates every POST behind an Origin allowlist + CSRF header, which is right for
+# the admin panel and wrong for a public endpoint. And separate from
+# `worker-mcp/`, which documents itself as holding NO secrets — this one does.
+#
+# The apex is Cloudflare-proxied, so this route intercepts /api/count-tokens
+# while every other path still falls through to Cloudflare Pages.
+routes = [
+  { pattern = "mncoleman.com/api/count-tokens", zone_name = "mncoleman.com" },
+]
+
+workers_dev = true
+
+# Server-side rate limiting. A limiter in page JS is decoration — the key would
+# be extractable and callable directly. This one cannot be bypassed by the page.
+[[unsafe.bindings]]
+name = "RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
+
+[vars]
+# Hard ceiling on how much text one request may submit. count_tokens costs us
+# money per call, and an unbounded body is the obvious abuse vector.
+MAX_CHARS = "200000"
+ALLOWED_ORIGIN = "https://mncoleman.com"
+
+# Secret (never in this file, never in the bundle):
+#   cd worker-tokens && npx wrangler secret put ANTHROPIC_API_KEY
