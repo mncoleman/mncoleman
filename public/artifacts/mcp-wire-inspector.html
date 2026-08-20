@@ -24,10 +24,14 @@
   --r:3px;
 }
 *{box-sizing:border-box}
+/* Scrollbars off everywhere. Scrolling still works — this hides the chrome
+   only, so nothing becomes unreachable. */
+*{scrollbar-width:none;-ms-overflow-style:none}
+*::-webkit-scrollbar{width:0;height:0;display:none}
 html,body{height:100%}
 body{
   margin:0;background:var(--ink);color:var(--text);
-  font-family:var(--sans);font-size:13px;line-height:1.5;
+  font-family:var(--sans);font-size:14px;line-height:1.55;
   -webkit-font-smoothing:antialiased;
 }
 button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
@@ -93,7 +97,7 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 label.f{display:block;margin:9px 0 4px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
   text-transform:uppercase;color:var(--dim)}
 label.f .req{color:var(--out)}
-.hint{color:var(--dim-2);font-size:11.5px;margin:3px 0 0;font-family:var(--sans);text-transform:none;letter-spacing:0}
+.hint{color:var(--dim-2);font-size:12.5px;margin:3px 0 0;font-family:var(--sans);text-transform:none;letter-spacing:0}
 input[type=text],input[type=number],input[type=url],select,textarea{
   width:100%;background:var(--ink);border:1px solid var(--line);border-radius:var(--r);
   padding:6px 8px;font-family:var(--mono);font-size:12px;
@@ -136,7 +140,7 @@ button.mini:hover{color:var(--text)}
 .note h4{margin:0 0 5px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text)}
 .note pre{margin:7px 0 0;background:var(--ink);border:1px solid var(--line);border-radius:var(--r);
   padding:8px;overflow-x:auto;font-family:var(--mono);font-size:11px;color:var(--text);white-space:pre}
-.note code{font-family:var(--mono);font-size:11.5px;color:var(--text)}
+.note code{font-family:var(--mono);font-size:12.5px;color:var(--text)}
 
 /* ---------- rail lists ---------- */
 .list{margin:0;padding:0;list-style:none}
@@ -146,17 +150,17 @@ button.mini:hover{color:var(--text)}
 }
 .list button.item:hover{background:var(--panel-2)}
 .list button.item.sel{background:var(--panel-2);box-shadow:inset 2px 0 0 var(--out)}
-.item .nm{font-family:var(--mono);font-size:12px;color:var(--text-strong);word-break:break-all}
-.item .ds{color:var(--dim);font-size:11.5px;margin-top:2px;
+.item .nm{font-family:var(--mono);font-size:13px;color:var(--text-strong);word-break:break-all}
+.item .ds{color:var(--dim);font-size:12.5px;margin-top:2px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .item .tag{font-family:var(--mono);font-size:9.5px;color:var(--dim-2);letter-spacing:.06em}
 
-.empty{padding:14px 12px;color:var(--dim-2);font-size:12px}
+.empty{padding:14px 12px;color:var(--dim-2);font-size:13px}
 
 /* ---------- work surface ---------- */
 .work{padding:18px 22px 60px;max-width:900px}
-.work h2{margin:0 0 2px;font-family:var(--mono);font-size:16px;font-weight:600;color:var(--text-strong);word-break:break-all}
-.work .sub{color:var(--dim);font-size:12.5px;margin:0 0 16px}
+.work h2{margin:0 0 2px;font-family:var(--mono);font-size:17px;font-weight:600;color:var(--text-strong);word-break:break-all}
+.work .sub{color:var(--dim);font-size:13.5px;margin:0 0 16px}
 .divide{height:1px;background:var(--line);margin:20px 0}
 .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:0 0 8px}
 pre.out{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;
@@ -165,13 +169,13 @@ pre.out{background:var(--panel);border:1px solid var(--line);border-radius:var(-
 .block{border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
 .block .bh{padding:5px 10px;border-bottom:1px solid var(--line-soft);font-family:var(--mono);
   font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);display:flex;gap:8px}
-.block .bb{padding:10px;font-size:13px;white-space:pre-wrap;word-break:break-word;line-height:1.55}
+.block .bb{padding:10px;font-size:14px;white-space:pre-wrap;word-break:break-word;line-height:1.55}
 .block .bb.mono{font-family:var(--mono);font-size:12px}
 .block img{max-width:100%;display:block;border-radius:2px}
 
 .welcome{max-width:640px}
-.welcome h1{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--text-strong);margin:0 0 4px;letter-spacing:-.01em}
-.welcome p{color:var(--dim);font-size:13px}
+.welcome h1{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--text-strong);margin:0 0 4px;letter-spacing:-.01em}
+.welcome p{color:var(--dim);font-size:14px}
 .welcome ol{color:var(--dim);padding-left:18px}
 .welcome li{margin:6px 0}
 .welcome kbd{font-family:var(--mono);font-size:11px;background:var(--panel-2);border:1px solid var(--line);
@@ -186,7 +190,7 @@ pre.out{background:var(--panel);border:1px solid var(--line);border-radius:var(-
 .entry.in{border-left-color:var(--in)}
 .entry.err{border-left-color:var(--err)}
 .entry.note{border-left-color:var(--dim-2)}
-.entry > .eh{display:flex;gap:8px;align-items:baseline;padding:6px 10px;cursor:pointer;font-family:var(--mono);font-size:11px}
+.entry > .eh{display:flex;gap:8px;align-items:baseline;padding:6px 10px;cursor:pointer;font-family:var(--mono);font-size:12px}
 .entry > .eh:hover{background:var(--panel-2)}
 .eh .arrow{color:var(--dim-2);width:9px;flex:none}
 .entry.out .eh .arrow{color:var(--out)}
@@ -208,15 +212,15 @@ pre.out{background:var(--panel);border:1px solid var(--line);border-radius:var(-
 .toast.show{opacity:1}
 
 /* ---------- cost report ---------- */
-.chk{display:flex;align-items:center;gap:7px;font-family:var(--sans);font-size:11.5px;color:var(--dim);
+.chk{display:flex;align-items:center;gap:7px;font-family:var(--sans);font-size:12.5px;color:var(--dim);
      margin:4px 0;text-transform:none;letter-spacing:0;cursor:pointer}
 .chk input{width:auto;margin:0;accent-color:var(--out)}
 .mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px;margin:0 0 16px}
 .metric{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);padding:11px 12px}
 .metric .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim-2)}
-.metric .val{font-family:var(--mono);font-size:21px;color:var(--text-strong);margin-top:5px;line-height:1.1}
+.metric .val{font-family:var(--mono);font-size:23px;color:var(--text-strong);margin-top:5px;line-height:1.1}
 .metric .val small{font-size:11px;color:var(--dim);margin-left:4px;letter-spacing:0}
-.metric .sub2{font-size:11px;color:var(--dim);margin-top:5px;line-height:1.4}
+.metric .sub2{font-size:12px;color:var(--dim);margin-top:5px;line-height:1.4}
 .metric.hot .val{color:var(--err)}
 .metric.warm .val{color:var(--warn)}
 .metric.cool .val{color:var(--in)}
@@ -226,7 +230,7 @@ pre.out{background:var(--panel);border:1px solid var(--line);border-radius:var(-
 .legend{display:flex;flex-wrap:wrap;gap:14px;font-family:var(--mono);font-size:10px;color:var(--dim);margin:0 0 18px}
 .legend s{width:8px;height:8px;display:inline-block;border-radius:1px;margin-right:6px;text-decoration:none;vertical-align:0}
 .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
-table.ct{width:100%;border-collapse:collapse;font-size:12px;min-width:520px}
+table.ct{width:100%;border-collapse:collapse;font-size:13px;min-width:540px}
 table.ct th{text-align:left;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
             color:var(--dim-2);border-bottom:1px solid var(--line);padding:6px 10px 6px 0;font-weight:400;
             cursor:pointer;user-select:none;white-space:nowrap}
@@ -245,14 +249,43 @@ table.ct .mini{padding:1px 6px}
 .find.med{border-left-color:var(--warn)}
 .find.low{border-left-color:var(--out)}
 .find.good{border-left-color:var(--in)}
-.find h5{margin:0 0 4px;font-size:12.5px;color:var(--text-strong);font-weight:600;
+.find h5{margin:0 0 4px;font-size:13.5px;color:var(--text-strong);font-weight:600;
          display:flex;gap:10px;align-items:baseline}
 .find h5 em{font-style:normal;font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
             color:var(--dim-2);margin-left:auto;flex:none}
-.find p{margin:0;font-size:12px;color:var(--dim);line-height:1.55}
-.find code{font-family:var(--mono);font-size:11.5px;color:var(--text)}
+.find p{margin:0;font-size:13px;color:var(--dim);line-height:1.55}
+.find code{font-family:var(--mono);font-size:12.5px;color:var(--text)}
 .tokpill{font-family:var(--mono);font-size:10px;color:var(--out);border:1px solid rgba(208,161,69,.35);
          border-radius:9px;padding:1px 8px;margin-left:8px;white-space:nowrap}
+
+/* ---------- oauth flow walkthrough ---------- */
+.fstep{border:1px solid var(--line);border-left:2px solid var(--line);border-radius:var(--r);
+       background:var(--panel);margin-bottom:9px;overflow:hidden}
+.fstep.running{border-left-color:var(--out)}
+.fstep.ok{border-left-color:var(--in)}
+.fstep.warn{border-left-color:var(--warn)}
+.fstep.fail{border-left-color:var(--err)}
+.fstep.skip{opacity:.55}
+.fh{display:flex;align-items:baseline;gap:11px;padding:9px 13px;border-bottom:1px solid var(--line-soft)}
+.fh .fn{font-family:var(--mono);font-size:10px;color:var(--dim-2);letter-spacing:.1em;flex:none}
+.fh .ft{font-family:var(--mono);font-size:13.5px;color:var(--text-strong)}
+.fb{margin-left:auto;flex:none;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--dim-2);border:1px solid var(--line);border-radius:9px;padding:1px 8px}
+.fb.ok{color:var(--in);border-color:rgba(99,179,162,.4)}
+.fb.warn{color:var(--warn);border-color:rgba(201,144,63,.4)}
+.fb.fail{color:var(--err);border-color:rgba(226,102,78,.4)}
+.fb.running{color:var(--out);border-color:rgba(208,161,69,.45)}
+.fbdy{padding:11px 13px 13px}
+.fblurb{margin:0 0 10px;font-size:13px;color:var(--dim);line-height:1.55}
+.fblurb code{font-family:var(--mono);font-size:12px;color:var(--text)}
+.fkv{display:flex;gap:10px;font-size:12.5px;margin-bottom:4px;align-items:baseline}
+.fkv b{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+       color:var(--dim-2);font-weight:400;flex:0 0 132px}
+.fkv span{min-width:0;word-break:break-all;color:var(--text)}
+.fkv code{font-family:var(--mono);font-size:12px}
+ul.ftry{margin:9px 0 0;padding:0;list-style:none;font-family:var(--mono);font-size:11.5px;
+        color:var(--dim-2);line-height:1.7}
+ul.ftry code{font-size:11.5px;word-break:break-all}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -314,6 +347,7 @@ table.ct .mini{padding:1px 6px}
           <button class="ghost" id="btnOauthDisc" style="flex:1">Discover</button>
           <button class="ghost" id="btnOauthGo" style="flex:1">Authorize</button>
         </div>
+        <button class="btn" id="btnOauthFlow" style="width:100%;margin-top:8px">Open the guided flow</button>
         <div class="row" style="margin-top:6px">
           <button class="ghost" id="btnOauthRefresh" style="flex:1">Refresh token</button>
           <button class="ghost danger" id="btnOauthClear">Forget</button>
@@ -864,9 +898,11 @@ function handleUnauthorized(r) {
   setStatus("err", "unauthorized");
   showConnErr("The server returned <b>" + r.status + "</b>." +
     (wa ? " It sent <code>WWW-Authenticate: " + esc(wa) + "</code>." : "") +
-    " Either paste a token under Headers, or open the OAuth section and run Discover.");
+    " Either paste a token under Headers, or walk the OAuth flow \u2014 it reports which step fails and why." +
+    ' <button class="ghost" id="btnFlowFromErr" style="margin-top:8px">Open the guided flow</button>');
   $("secAuth").open = true;
   oauth.wwwAuth = wa || null;
+  const b = $("btnFlowFromErr"); if (b) b.onclick = openOauthFlow;
 }
 
 /* =========================================================================
@@ -1067,7 +1103,7 @@ function renderWelcome() {
    ========================================================================= */
 function openTool(tool) {
   pin();
-  const w = $("work"); w.innerHTML = "";
+  const w = $("work"); w.innerHTML = ""; delete w.dataset.view;
   w.appendChild(el("h2", null, tool.name));
   if (tool.title && tool.title !== tool.name) w.appendChild(el("p", "sub", tool.title));
   if (tool.description) w.appendChild(el("p", "sub", tool.description));
@@ -2169,7 +2205,7 @@ function buildFindings(rows, totals) {
    ========================================================================= */
 function analyzeCost(msg) {
   pin();
-  const w = $("work"); w.innerHTML = "";
+  const w = $("work"); w.innerHTML = ""; delete w.dataset.view;
   const tools = surfaceTools();
 
   w.appendChild(el("h2", null, "Token cost"));
@@ -2597,6 +2633,302 @@ function openPasteSurface() {
 }
 
 /* =========================================================================
+   OAuth, as a walkthrough instead of four buttons
+   =========================================================================
+   The rail's Discover/Authorize pair works, but when it fails it fails as a
+   single red box that does not say WHICH of five network round-trips died, or
+   why. Almost every real failure here is one specific thing — an authorization
+   endpoint that does not send CORS headers — and that is invisible unless the
+   UI separates the steps and reports each one's transport.
+
+   So this runs the same protocol as one visible stage at a time, and every
+   stage prints the URL it tried, what came back, and what to do about it.
+   ========================================================================= */
+
+const FLOW_STEPS = [
+  { id: "challenge", n: "01", title: "Challenge",
+    blurb: "Ask the server for something and read how it refuses. A spec-compliant MCP server answers 401 with <code>WWW-Authenticate: Bearer resource_metadata=\"…\"</code>, which names the document describing its authorization server." },
+  { id: "prm", n: "02", title: "Protected resource metadata",
+    blurb: "Fetch that document (RFC 9728). It names the resource and the authorization servers that guard it." },
+  { id: "as", n: "03", title: "Authorization server metadata",
+    blurb: "Fetch the issuer's configuration to learn its authorize, token and registration endpoints." },
+  { id: "client", n: "04", title: "Client identity",
+    blurb: "Reuse a client ID for this issuer, or register this page dynamically (RFC 7591)." },
+  { id: "authorize", n: "05", title: "Authorize",
+    blurb: "Redirect to the authorization server with PKCE. You come back with a code." },
+  { id: "token", n: "06", title: "Token",
+    blurb: "Exchange the code for an access token, then reconnect with it." }
+];
+
+const flow = { state: {}, running: false };
+
+function flowSet(id, status, detail, actions) {
+  flow.state[id] = { status, detail: detail || "", actions: actions || [] };
+  renderFlow();
+}
+function flowReset() { flow.state = {}; FLOW_STEPS.forEach((s) => { flow.state[s.id] = { status: "idle", detail: "", actions: [] }; }); }
+
+/* A browser cannot see a cross-origin response that lacks CORS headers — the
+   fetch rejects before any status code exists. That is the single most common
+   reason this flow dies, and it is worth saying out loud every time. */
+function corsNote(url) {
+  let host = url; try { host = new URL(url).origin; } catch { }
+  return "<b>The browser blocked this before a status code existed.</b> " +
+    esc(host) + " did not return an <code>Access-Control-Allow-Origin</code> header this page&#39;s origin (<code>" +
+    esc(location.origin) + "</code>) is allowed by. There is no proxy in this tool, so this is a fix on the server, " +
+    "not something the page can route around. Until it is fixed, paste a bearer token under <b>Headers</b> instead.";
+}
+
+function openOauthFlow() {
+  pin();
+  if (!Object.keys(flow.state).length) flowReset();
+  renderFlow();
+}
+
+function renderFlow() {
+  const w = $("work");
+  if (w.dataset.view !== "oauth") { w.innerHTML = ""; w.dataset.view = "oauth"; }
+  else { w.innerHTML = ""; }
+
+  w.appendChild(el("h2", null, "OAuth flow"));
+  w.appendChild(el("p", "sub", ($("url").value || "no endpoint set") + " · redirect " + redirectUri()));
+
+  const bar = el("div", "row"); bar.style.margin = "0 0 18px";
+  const run = el("button", "btn", flow.running ? "Running…" : "Run the flow");
+  run.disabled = flow.running;
+  run.onclick = runFlow;
+  const reset = el("button", "ghost", "Reset");
+  reset.onclick = () => { flowReset(); renderFlow(); };
+  const forget = el("button", "ghost danger", "Forget token");
+  forget.onclick = () => { delete oauth.tokens[tokenKey()]; saveTokens(); renderTokenState(); toast("Token forgotten"); renderFlow(); };
+  bar.appendChild(run); bar.appendChild(reset); bar.appendChild(forget);
+  w.appendChild(bar);
+
+  const tok = oauth.tokens[tokenKey()];
+  if (tok && tok.access_token) {
+    const n = el("div", "note ok");
+    n.innerHTML = "<h4>Holding a token for this endpoint</h4>" +
+      (tok.scope ? "<div><b>Scope</b> " + esc(tok.scope) + "</div>" : "") +
+      (tok.expires_at ? "<div><b>Expires</b> " + esc(new Date(tok.expires_at).toLocaleString()) + "</div>" : "") +
+      "<div>Press Connect on the left and it will be sent automatically.</div>";
+    w.appendChild(n);
+  }
+
+  FLOW_STEPS.forEach((s) => {
+    const st = flow.state[s.id] || { status: "idle" };
+    const card = el("div", "fstep " + st.status);
+    const head = el("div", "fh");
+    head.appendChild(el("span", "fn", s.n));
+    head.appendChild(el("span", "ft", s.title));
+    const badge = el("span", "fb " + st.status);
+    badge.textContent = { idle: "waiting", running: "running", ok: "ok", warn: "check", fail: "failed", skip: "skipped" }[st.status] || st.status;
+    head.appendChild(badge);
+    card.appendChild(head);
+    const body = el("div", "fbdy");
+    body.innerHTML = '<p class="fblurb">' + s.blurb + "</p>" + (st.detail || "");
+    card.appendChild(body);
+    if (st.actions && st.actions.length) {
+      const ab = el("div", "row"); ab.style.marginTop = "10px";
+      st.actions.forEach((a) => { const b = el("button", a.kind || "ghost", a.label); b.onclick = a.on; ab.appendChild(b); });
+      body.appendChild(ab);
+    }
+    w.appendChild(card);
+  });
+}
+
+const kv = (k, v) => "<div class='fkv'><b>" + esc(k) + "</b><span>" + v + "</span></div>";
+
+async function runFlow() {
+  const url = ($("url").value || "").trim();
+  if (!url) { toast("Enter a server URL first"); return; }
+  flow.running = true; flowReset(); renderFlow();
+  try {
+    const ok = await flowChallenge(url) && await flowPrm(url) && await flowAs() && await flowClient();
+    if (ok) await flowAuthorizeReady();
+  } finally { flow.running = false; renderFlow(); }
+}
+
+/* ---- 01 ---- */
+async function flowChallenge(url) {
+  flowSet("challenge", "running");
+  let res;
+  try {
+    res = await fetch(url, {
+      method: "POST", mode: "cors", credentials: "omit",
+      headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize",
+        params: { protocolVersion: LEGACY_PREFERRED, capabilities: {}, clientInfo: CLIENT_INFO } })
+    });
+  } catch (e) {
+    flowSet("challenge", "fail", '<div class="note bad"><h4>Could not reach the endpoint</h4>' + corsNote(url) + "</div>");
+    return false;
+  }
+  const wa = res.headers.get("www-authenticate");
+  oauth.wwwAuth = wa || null;
+  if (res.status !== 401 && res.status !== 403) {
+    flowSet("challenge", "warn", '<div class="note warn"><h4>The server did not ask for a token</h4>HTTP <b>' + res.status +
+      "</b>. It may not need OAuth at all — try <b>Connect</b> first. Running the rest of this flow anyway is harmless.</div>");
+    return true;
+  }
+  const hasRm = wa && /resource_metadata=/i.test(wa);
+  flowSet("challenge", hasRm ? "ok" : "warn",
+    '<div class="note ' + (hasRm ? "ok" : "warn") + '">' + kv("Status", "HTTP " + res.status) +
+    kv("WWW-Authenticate", wa ? "<code>" + esc(wa) + "</code>" : "<i>absent</i>") +
+    (hasRm ? "" : "<div style='margin-top:7px'>The challenge carries no <code>resource_metadata</code> parameter, " +
+      "which the MCP specification asks for. Not fatal here — the next step guesses the well-known path instead — " +
+      "but a stricter client may refuse to continue.</div>") + "</div>");
+  return true;
+}
+
+/* ---- 02 ---- */
+async function flowPrm(url) {
+  flowSet("prm", "running");
+  const u = new URL(url);
+  const path = u.pathname.replace(/\/$/, "");
+  const tried = [];
+  if (oauth.wwwAuth) { const m = /resource_metadata="([^"]+)"/i.exec(oauth.wwwAuth); if (m) tried.push(m[1]); }
+  tried.push(u.origin + "/.well-known/oauth-protected-resource" + path);
+  tried.push(u.origin + "/.well-known/oauth-protected-resource");
+
+  const log = [];
+  let prm = null, hit = null, blocked = false;
+  for (const p of tried) {
+    const r = await fetchJson(p);
+    log.push("<li>" + (r.ok ? "&#10003;" : "&#215;") + " <code>" + esc(p) + "</code> — " +
+      (r.network ? "blocked by CORS" : "HTTP " + r.status) + "</li>");
+    if (r.network) blocked = true;
+    if (r.ok && r.data) { prm = r.data; hit = p; break; }
+  }
+  if (!prm) {
+    flowSet("prm", "fail", '<div class="note bad"><h4>No protected-resource metadata</h4><ul class="ftry">' + log.join("") + "</ul>" +
+      (blocked ? corsNote(u.origin) : "None of these paths returned a document. The server may not advertise OAuth at all.") + "</div>");
+    return false;
+  }
+  oauth.prm = prm;
+
+  // The path-less well-known can belong to a DIFFERENT resource on the same
+  // host. Silently authorizing against the wrong one is the trap worth catching.
+  const declared = prm.resource || "";
+  const mismatch = declared && declared.replace(/\/$/, "") !== canonicalResource().replace(/\/$/, "");
+  flowSet("prm", mismatch ? "warn" : "ok",
+    '<div class="note ' + (mismatch ? "warn" : "ok") + '">' +
+    kv("Read from", "<code>" + esc(hit) + "</code>") +
+    kv("Resource", "<code>" + esc(declared || "—") + "</code>") +
+    kv("Authorization servers", (prm.authorization_servers || []).map((x) => "<code>" + esc(x) + "</code>").join(", ") || "—") +
+    (prm.scopes_supported ? kv("Scopes", esc((prm.scopes_supported || []).join(" "))) : "") +
+    (mismatch ? "<div style='margin-top:7px'><b>This document describes a different resource</b> than the endpoint you " +
+      "entered. That happens when a host serves several MCP endpoints and the path-less well-known belongs to whichever " +
+      "one is default. Authorizing on it would get you a token for the wrong resource.</div>" : "") +
+    '<ul class="ftry">' + log.join("") + "</ul></div>");
+  return true;
+}
+
+/* ---- 03 ---- */
+async function flowAs() {
+  flowSet("as", "running");
+  const issuers = (oauth.prm && oauth.prm.authorization_servers) || [];
+  if (!issuers.length) { flowSet("as", "fail", '<div class="note bad">No issuer to ask.</div>'); return false; }
+  const log = [];
+  let as = null, blocked = false, blockedHost = "";
+  for (const iss of issuers) {
+    const iu = new URL(iss);
+    const ip = iu.pathname.replace(/\/$/, "");
+    for (const c of [iu.origin + "/.well-known/oauth-authorization-server" + ip,
+                     iu.origin + ip + "/.well-known/oauth-authorization-server",
+                     iu.origin + "/.well-known/openid-configuration" + ip,
+                     iu.origin + ip + "/.well-known/openid-configuration",
+                     iu.origin + "/.well-known/oauth-authorization-server"]) {
+      const r = await fetchJson(c);
+      log.push("<li>" + (r.ok && r.data && r.data.authorization_endpoint ? "&#10003;" : "&#215;") + " <code>" + esc(c) + "</code> — " +
+        (r.network ? "blocked by CORS" : "HTTP " + r.status) + "</li>");
+      if (r.network) { blocked = true; blockedHost = iu.origin; }
+      if (r.ok && r.data && r.data.authorization_endpoint) { as = r.data; break; }
+    }
+    if (as) break;
+  }
+  if (!as) {
+    flowSet("as", "fail", '<div class="note bad"><h4>Could not read the authorization server</h4><ul class="ftry">' + log.join("") + "</ul>" +
+      (blocked
+        ? corsNote(blockedHost) + "<div style='margin-top:7px'>Note the metadata may well exist — <code>curl</code> can " +
+          "read what this page cannot. A browser client needs the CORS header; curl does not.</div>"
+        : "The issuer advertises no readable configuration document.") + "</div>");
+    return false;
+  }
+  oauth.as = as;
+  flowSet("as", "ok", '<div class="note ok">' +
+    kv("Issuer", "<code>" + esc(as.issuer || "—") + "</code>") +
+    kv("Authorize", "<code>" + esc(as.authorization_endpoint) + "</code>") +
+    kv("Token", "<code>" + esc(as.token_endpoint || "—") + "</code>") +
+    kv("Register", as.registration_endpoint ? "<code>" + esc(as.registration_endpoint) + "</code>" : "<i>none — manual client needed</i>") +
+    "</div>");
+  return true;
+}
+
+/* ---- 04 ---- */
+async function flowClient() {
+  flowSet("client", "running");
+  const as = oauth.as;
+  const key = as.issuer || as.authorization_endpoint;
+  const override = $("oauthClientId").value.trim();
+  if (override) {
+    oauth.clientId = override; oauth.clientSecret = $("oauthSecret").value.trim() || null;
+    flowSet("client", "ok", '<div class="note ok">' + kv("Client", "<code>" + esc(override) + "</code>") + kv("Source", "pasted by you") + "</div>");
+    return true;
+  }
+  if (oauth.clients[key]) {
+    oauth.clientId = oauth.clients[key].client_id;
+    oauth.clientSecret = oauth.clients[key].client_secret || null;
+    flowSet("client", "ok", '<div class="note ok">' + kv("Client", "<code>" + esc(oauth.clientId) + "</code>") +
+      kv("Source", "registered earlier, stored in this browser") + "</div>");
+    return true;
+  }
+  if (!as.registration_endpoint) {
+    flowSet("client", "fail", '<div class="note warn"><h4>No dynamic registration</h4>' +
+      "Create a client with the authorization server by hand, using redirect URI <code>" + esc(redirectUri()) +
+      "</code>, then paste its ID into <b>Client ID override</b> on the left and run this again.</div>");
+    return false;
+  }
+  const reg = await fetchJson(as.registration_endpoint, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_name: "MCP Wire Inspector", redirect_uris: [redirectUri()],
+      grant_types: ["authorization_code", "refresh_token"], response_types: ["code"],
+      token_endpoint_auth_method: "none", application_type: "web",
+      scope: ($("oauthScope").value.trim() || (oauth.prm && (oauth.prm.scopes_supported || []).join(" ")) || undefined)
+    })
+  });
+  if (reg.ok && reg.data && reg.data.client_id) {
+    oauth.clientId = reg.data.client_id;
+    oauth.clientSecret = reg.data.client_secret || null;
+    oauth.clients[key] = reg.data; saveClients();
+    flowSet("client", "ok", '<div class="note ok">' + kv("Client", "<code>" + esc(oauth.clientId) + "</code>") +
+      kv("Source", "registered just now") + "</div>");
+    return true;
+  }
+  flowSet("client", "fail", '<div class="note bad"><h4>Registration did not succeed</h4>' +
+    (reg.network
+      ? corsNote(as.registration_endpoint)
+      : "HTTP " + reg.status + ". " + (reg.text ? "<pre>" + esc(reg.text.slice(0, 600)) + "</pre>" : "") +
+        "Register by hand with redirect URI <code>" + esc(redirectUri()) + "</code> and paste the client ID on the left.") +
+    "</div>");
+  return false;
+}
+
+/* ---- 05 ---- */
+async function flowAuthorizeReady() {
+  const as = oauth.as;
+  const scopes = $("oauthScope").value.trim() || (oauth.prm && (oauth.prm.scopes_supported || []).join(" ")) || (as.scopes_supported || []).join(" ");
+  flowSet("authorize", "ok", '<div class="note ok"><h4>Ready</h4>' +
+    kv("Client", "<code>" + esc(oauth.clientId) + "</code>") +
+    kv("Scopes", esc(scopes || "(none requested)")) +
+    kv("Redirect", "<code>" + esc(redirectUri()) + "</code>") +
+    kv("Resource", "<code>" + esc(canonicalResource()) + "</code>") +
+    "<div style='margin-top:7px'>This leaves the page. You will land back here with a code, and step 06 runs on its own.</div></div>",
+    [{ label: "Authorize →", kind: "btn", on: () => oauthAuthorize() }]);
+  flowSet("token", "idle", '<div class="note">Runs automatically when you return.</div>');
+}
+
+/* =========================================================================
    Wiring
    ========================================================================= */
 $("btnConnect").onclick = connect;
@@ -2657,6 +2989,7 @@ $("btnSave").onclick = () => {
   $("saveName").value = ""; loadSaved(); toast("Saved " + name);
 };
 $("btnOauthDisc").onclick = () => oauthDiscover();
+$("btnOauthFlow").onclick = openOauthFlow;
 $("btnOauthGo").onclick = () => oauthAuthorize();
 $("btnOauthRefresh").onclick = () => oauthRefresh();
 $("btnOauthClear").onclick = () => {
