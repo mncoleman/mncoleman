@@ -365,11 +365,11 @@ table.ct .mini{padding:1px 6px}
         <div class="row" style="margin-top:8px">
           <div style="flex:1;min-width:0">
             <label class="f" for="cptDef">c/tok &#183; definitions</label>
-            <input type="number" id="cptDef" value="2.79" step="0.01" min="0.5" max="20">
+            <input type="number" id="cptDef" value="2.78" step="0.01" min="0.5" max="20">
           </div>
           <div style="flex:1;min-width:0">
             <label class="f" for="cptName">c/tok &#183; names</label>
-            <input type="number" id="cptName" value="1.96" step="0.01" min="0.5" max="20">
+            <input type="number" id="cptName" value="1.95" step="0.01" min="0.5" max="20">
           </div>
         </div>
         <p class="hint">Seeded from a real <code>count_tokens</code> measurement. Namespaced tool names
@@ -1898,27 +1898,31 @@ function loadSaved() {
    POST /v1/messages/count_tokens (through mncoleman.com/api/count-tokens), on
    one real ten-tool surface:
 
-       compact tool blocks   2.79 c/tok (Claude 5)   3.95 (Haiku 4.5)
-       mcp__server__names    1.96 c/tok (Claude 5)   2.61 (Haiku 4.5)
+       compact tool blocks   2.78 c/tok (Claude 5)   3.95 (Haiku 4.5)
+       mcp__server__names    1.95 c/tok (Claude 5)   2.59 (Haiku 4.5)
 
    Names are dense because they are nearly all underscores and word fragments.
    One surface is a seed, not a law: these ARE fitted from somebody else's JSON
    and have no claim on yours, which is exactly why "Exact count" exists — press
    it and the estimate is replaced by a real measurement of your own surface.
 
-   The counting service submits the text as a user message, and a message costs
-   about seven tokens before its content does (measured: a one-character body
-   comes back at seven). Every count here subtracts that, so the numbers are the
-   cost of the text and not of the envelope it travelled in.
+   The counting service submits the text as a user message, and the message
+   envelope costs about six tokens before its content does. That was measured by
+   counting a text and then counting it concatenated with itself: 2·T(x) − T(2x)
+   cancels the content and leaves the envelope, and it came out +7, +5 and +6 on
+   three unrelated corpora. Fitting a line through samples of DIFFERENT text does
+   NOT recover it — the intercept absorbs composition drift instead, and lands
+   anywhere from −11 to +7 depending on the corpus. Every count here subtracts
+   the six, so the numbers price the text and not the envelope it travelled in.
    ========================================================================= */
 
 const COUNT_ENDPOINT = "https://mncoleman.com/api/count-tokens";
 const COUNT_MAX_CHARS = 200000;   // the counting Worker's body cap
 
-const MESSAGE_OVERHEAD = 7;   // measured: a one-character body counts as 7 tokens
+const MESSAGE_OVERHEAD = 6;   // measured by self-concatenation; see the comment above
 const CPT = {
-  claude5: { def: 2.79, name: 1.96, model: "claude-sonnet-5" },
-  haiku45: { def: 3.95, name: 2.61, model: "claude-haiku-4-5" }
+  claude5: { def: 2.78, name: 1.95, model: "claude-sonnet-5" },
+  haiku45: { def: 3.95, name: 2.59, model: "claude-haiku-4-5" }
 };
 
 let cptDef = CPT.claude5.def;
@@ -2411,7 +2415,7 @@ function analyzeCost(msg) {
     "separating commas, so the per-tool column sums to a few tokens under it &mdash; that gap is the punctuation between tools, " +
     "plus rounding. Pretty-printing a schema-heavy surface inflates it by about a third " +
     "(measured: 3,188 characters became 4,377, and 1,140 tokens became 1,501), so it would be a flattering lie.<br><br>" +
-    "One honest caveat: that text is priced as message content, and the message envelope&#39;s own ~7 tokens are subtracted " +
+    "One honest caveat: that text is priced as message content, and the message envelope&#39;s own ~6 tokens are subtracted " +
     "before any ratio is taken. It is a close proxy for how the API renders a <code>tools</code> parameter into the system " +
     "prompt, not a byte-identical reproduction of it. Treat these as good numbers, not audited invoices.<br><br>" +
     "Token counts are " + (exactness === "measured"
@@ -2423,7 +2427,7 @@ function analyzeCost(msg) {
         " for namespaced names. Press <b>Exact count</b> to replace the estimate with a real measurement of this surface.") +
     "<br><br>" +
     "The defaults came from measuring <b>one real ten-tool surface</b> against <code>count_tokens</code> on 2026-08-20: " +
-    "2.79 chars/token for Claude 5 definitions, 3.95 for Haiku 4.5, and 1.96 / 2.61 for <code>mcp__server__tool</code> names, " +
+    "2.78 chars/token for Claude 5 definitions, 3.95 for Haiku 4.5, and 1.95 / 2.59 for <code>mcp__server__tool</code> names, " +
     "which are dense because they are almost entirely underscores and word fragments. Opus 5, Sonnet 5 and Fable 5 share one " +
     "tokenizer; Haiku 4.5 does not. One surface is a seed, not an error bar — a constant fitted on somebody else\u2019s JSON " +
     "has no claim on yours, and content type moves the ratio further than the model does. That is what the exact-count button " +
