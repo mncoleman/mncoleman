@@ -207,6 +207,53 @@ pre.out{background:var(--panel);border:1px solid var(--line);border-radius:var(-
   z-index:99;opacity:0;pointer-events:none;transition:opacity .15s}
 .toast.show{opacity:1}
 
+/* ---------- cost report ---------- */
+.chk{display:flex;align-items:center;gap:7px;font-family:var(--sans);font-size:11.5px;color:var(--dim);
+     margin:4px 0;text-transform:none;letter-spacing:0;cursor:pointer}
+.chk input{width:auto;margin:0;accent-color:var(--out)}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px;margin:0 0 16px}
+.metric{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);padding:11px 12px}
+.metric .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim-2)}
+.metric .val{font-family:var(--mono);font-size:21px;color:var(--text-strong);margin-top:5px;line-height:1.1}
+.metric .val small{font-size:11px;color:var(--dim);margin-left:4px;letter-spacing:0}
+.metric .sub2{font-size:11px;color:var(--dim);margin-top:5px;line-height:1.4}
+.metric.hot .val{color:var(--err)}
+.metric.warm .val{color:var(--warn)}
+.metric.cool .val{color:var(--in)}
+.stack{display:flex;height:13px;border-radius:2px;overflow:hidden;background:var(--panel-2);
+       border:1px solid var(--line);margin:0 0 7px}
+.stack i{display:block;height:100%;min-width:0}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-family:var(--mono);font-size:10px;color:var(--dim);margin:0 0 18px}
+.legend s{width:8px;height:8px;display:inline-block;border-radius:1px;margin-right:6px;text-decoration:none;vertical-align:0}
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+table.ct{width:100%;border-collapse:collapse;font-size:12px;min-width:520px}
+table.ct th{text-align:left;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+            color:var(--dim-2);border-bottom:1px solid var(--line);padding:6px 10px 6px 0;font-weight:400;
+            cursor:pointer;user-select:none;white-space:nowrap}
+table.ct th:hover{color:var(--text)}
+table.ct th.on{color:var(--out)}
+table.ct th.n,table.ct td.n{text-align:right;padding-right:0}
+table.ct td{border-bottom:1px solid var(--line-soft);padding:7px 10px 7px 0;vertical-align:top}
+table.ct td.nm{font-family:var(--mono);color:var(--text-strong);word-break:break-all;min-width:150px}
+table.ct td.n{font-family:var(--mono);color:var(--text);white-space:nowrap}
+table.ct td .bar{height:3px;background:var(--out);border-radius:2px;margin-top:5px;opacity:.5;min-width:1px}
+table.ct td .why{color:var(--dim-2);font-size:10.5px;font-family:var(--sans);margin-top:3px}
+table.ct .mini{padding:1px 6px}
+.find{border:1px solid var(--line);border-left:2px solid var(--dim-2);border-radius:var(--r);
+      padding:9px 12px;margin-bottom:7px;background:var(--panel)}
+.find.high{border-left-color:var(--err)}
+.find.med{border-left-color:var(--warn)}
+.find.low{border-left-color:var(--out)}
+.find.good{border-left-color:var(--in)}
+.find h5{margin:0 0 4px;font-size:12.5px;color:var(--text-strong);font-weight:600;
+         display:flex;gap:10px;align-items:baseline}
+.find h5 em{font-style:normal;font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+            color:var(--dim-2);margin-left:auto;flex:none}
+.find p{margin:0;font-size:12px;color:var(--dim);line-height:1.55}
+.find code{font-family:var(--mono);font-size:11.5px;color:var(--text)}
+.tokpill{font-family:var(--mono);font-size:10px;color:var(--out);border:1px solid rgba(208,161,69,.35);
+         border-radius:9px;padding:1px 8px;margin-left:8px;white-space:nowrap}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -299,6 +346,57 @@ pre.out{background:var(--panel);border:1px solid var(--line);border-radius:var(-
     <details class="sect" id="secPrompts">
       <summary>Prompts <span class="count" id="cPrompts">—</span></summary>
       <ul class="list" id="lPrompts"><li class="empty">Not loaded.</li></ul>
+    </details>
+
+    <details class="sect" id="secCost">
+      <summary>Token cost <span class="count" id="cCost">&#8212;</span></summary>
+      <div class="body">
+        <p class="hint" style="margin:6px 0 10px">
+          What this server costs a model before a single tool is called.
+        </p>
+
+        <label class="f" for="costModel">Tokenizer</label>
+        <select id="costModel">
+          <option value="claude5" selected>Claude 5 &#8212; Opus / Sonnet / Fable</option>
+          <option value="haiku45">Haiku 4.5</option>
+          <option value="custom">Custom&#8230;</option>
+        </select>
+
+        <div class="row" style="margin-top:8px">
+          <div style="flex:1;min-width:0">
+            <label class="f" for="cptDef">c/tok &#183; definitions</label>
+            <input type="number" id="cptDef" value="2.79" step="0.01" min="0.5" max="20">
+          </div>
+          <div style="flex:1;min-width:0">
+            <label class="f" for="cptName">c/tok &#183; names</label>
+            <input type="number" id="cptName" value="1.96" step="0.01" min="0.5" max="20">
+          </div>
+        </div>
+        <p class="hint">Seeded from a real <code>count_tokens</code> measurement. Namespaced tool names
+        tokenize far denser than prose, so they get their own ratio.</p>
+
+        <label class="f" for="nsPrefix">Namespace prefix</label>
+        <input type="text" id="nsPrefix" placeholder="mcp__server__" spellcheck="false">
+        <p class="hint">What the host renames these tools to. Claude Code uses
+        <code>mcp__&lt;server&gt;__&lt;tool&gt;</code>.</p>
+
+        <label class="f">Count in the definition</label>
+        <label class="chk"><input type="checkbox" id="incOut"> outputSchema</label>
+        <label class="chk"><input type="checkbox" id="incAnn" checked> annotations &amp; title</label>
+
+        <label class="f" for="ctxWin">Context window</label>
+        <select id="ctxWin">
+          <option value="1000000" selected>1M</option>
+          <option value="200000">200K</option>
+        </select>
+
+        <button class="btn" id="btnCost" style="width:100%;margin-top:12px">Analyze tool surface</button>
+        <div class="row" style="margin-top:6px">
+          <button class="ghost" id="btnCostExact" style="flex:1">Exact count</button>
+          <button class="ghost" id="btnCostPaste" style="flex:1">Paste a surface</button>
+        </div>
+        <div id="costMsg"></div>
+      </div>
     </details>
 
     <details class="sect" id="secRaw">
@@ -822,6 +920,8 @@ async function loadAll() {
       client.prompts.length ? null : "No prompts exposed.");
   } else { renderList("lPrompts", "cPrompts", [], null, null, null, "Server does not advertise prompts."); }
 
+  $("nsPrefix").placeholder = defaultPrefix();
+  refreshCostPill();
   if (!$("work").dataset.pinned) renderWelcome();
 }
 
@@ -1032,6 +1132,7 @@ function openTool(tool) {
     outWrap.innerHTML = "";
     const extra = client.isModern ? mirrorHeaders(tool, args) : {};
     const r = await rpc("tools/call", { name: tool.name, arguments: args }, { extraHeaders: extra });
+    r.__toolName = tool.name;
     run.disabled = false; run.textContent = "Call tool";
     renderToolResult(outWrap, r);
   };
@@ -1057,7 +1158,16 @@ function renderToolResult(host, r) {
     host.appendChild(n);
   }
 
-  host.appendChild(el("p", "eyebrow", "Content"));
+  /* What the call actually cost. Definitions are the advertised price; this is
+     the bill, and it is usually the larger of the two. */
+  const respChars = compact(res).length;
+  const respBytes = new TextEncoder().encode(compact(res)).length;
+  const respTokens = tokDef(respChars);
+  if (r.__toolName) ledger.push({ name: r.__toolName, tokens: respTokens, chars: respChars, at: Date.now() });
+  const costLine = el("p", "eyebrow");
+  costLine.innerHTML = "Content" +
+    '<span class="tokpill">~' + fmtN(respTokens) + " tok returned \u00b7 " + bytes(respBytes) + "</span>";
+  host.appendChild(costLine);
   const blocks = el("div", "blocks");
   const content = Array.isArray(res.content) ? res.content : [];
   if (!content.length) blocks.appendChild(Object.assign(el("div", "note"), { textContent: "No content blocks returned." }));
@@ -1771,6 +1881,718 @@ function loadSaved() {
 }
 
 /* =========================================================================
+   Token cost — what this server costs a model before it is ever called
+   =========================================================================
+   Every tool a server exposes is text somebody's model has to carry. This
+   section prices that text.
+
+   Two numbers, because hosts differ. Some clients paste every tool definition
+   into the prompt eagerly. Others defer: they keep only the namespaced NAME
+   resident and pull the schema in on demand through a tool search. Claude Code
+   does this for LARGE surfaces — deferral is gated on how much of the context
+   window the tools would occupy, so a small server is still loaded eagerly and
+   the always-on floor does not describe it. We report both and let you decide
+   which one your host is actually paying.
+
+   The chars/token defaults were MEASURED on 2026-08-20 against
+   POST /v1/messages/count_tokens (through mncoleman.com/api/count-tokens), on
+   one real ten-tool surface:
+
+       compact tool blocks   2.79 c/tok (Claude 5)   3.95 (Haiku 4.5)
+       mcp__server__names    1.96 c/tok (Claude 5)   2.61 (Haiku 4.5)
+
+   Names are dense because they are nearly all underscores and word fragments.
+   One surface is a seed, not a law: these ARE fitted from somebody else's JSON
+   and have no claim on yours, which is exactly why "Exact count" exists — press
+   it and the estimate is replaced by a real measurement of your own surface.
+
+   The counting service submits the text as a user message, and a message costs
+   about seven tokens before its content does (measured: a one-character body
+   comes back at seven). Every count here subtracts that, so the numbers are the
+   cost of the text and not of the envelope it travelled in.
+   ========================================================================= */
+
+const COUNT_ENDPOINT = "https://mncoleman.com/api/count-tokens";
+const COUNT_MAX_CHARS = 200000;   // the counting Worker's body cap
+
+const MESSAGE_OVERHEAD = 7;   // measured: a one-character body counts as 7 tokens
+const CPT = {
+  claude5: { def: 2.79, name: 1.96, model: "claude-sonnet-5" },
+  haiku45: { def: 3.95, name: 2.61, model: "claude-haiku-4-5" }
+};
+
+let cptDef = CPT.claude5.def;
+let cptName = CPT.claude5.name;
+let exactDef = null;      // { chars, tokens } for the whole definition block
+let exactName = null;     // { chars, tokens } for the concatenated namespaced names
+const exactByTool = new Map();   // serialized block -> measured tokens, survives re-analysis
+let pastedTools = null;   // a tools/list pasted in for a server we cannot reach
+let pastedFrom = "";
+const ledger = [];        // real tools/call response sizes, this session
+let costSort = { key: "block", dir: -1 };
+
+const compact = (v) => { try { return JSON.stringify(v); } catch { return ""; } };
+const fmtN = (n) => Math.round(n).toLocaleString();
+const tokDef = (chars) => Math.round(chars / cptDef);
+const tokName = (chars) => Math.round(chars / cptName);
+const pctOf = (a, b) => b > 0 ? (a / b) * 100 : 0;
+
+function surfaceTools() { return pastedTools || client.tools || []; }
+
+/* Claude Code namespaces MCP tools as mcp__<server>__<tool> — observed directly
+   in its own tool list. Seed the prefix from the server's advertised name. */
+function serverSlug() {
+  // A pasted surface names itself; only fall back to the live connection when
+  // there is no pasted surface, or the paste arrived without a name.
+  if (pastedTools) return pastedFrom || "server";
+  const s = client.server || {};
+  const raw = s.name || (s.serverInfo && s.serverInfo.name) || "";
+  return String(raw).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "server";
+}
+function defaultPrefix() { return "mcp__" + serverSlug() + "__"; }
+function nsPrefix() { const v = ($("nsPrefix").value || "").trim(); return v || defaultPrefix(); }
+
+/* ---- serialization: compact, and shaped like an Anthropic tool block ----
+   Pretty-printing a schema-heavy surface inflates it badly (measured: 3,188
+   compact chars became 4,377 pretty, 1,140 tokens became 1,501 — a 31% lie).
+   So everything below is JSON.stringify with no spacing, which is the shape
+   that goes over the wire. Note the counting service prices that text as
+   message content, which is a close proxy for — not identical to — how the API
+   renders a `tools` parameter into the system prompt. */
+function toolBlock(t) {
+  const b = { name: t.name, description: t.description || "", input_schema: t.inputSchema || {} };
+  if ($("incOut").checked && t.outputSchema) b.output_schema = t.outputSchema;
+  if ($("incAnn").checked) {
+    if (t.title) b.title = t.title;
+    if (t.annotations) b.annotations = t.annotations;
+  }
+  return b;
+}
+function costOf(t) {
+  const pre = nsPrefix();
+  const core = { name: t.name, description: t.description || "", input_schema: t.inputSchema || {} };
+  // Key an individual measurement by the exact bytes that were measured, so it
+  // survives a re-analysis and invalidates itself the moment a toggle changes
+  // what the block contains. A stale number wearing an "exact" badge would be
+  // the one failure this whole feature exists to prevent.
+  const blockText = compact(toolBlock(t));
+  const blockChars = blockText.length;
+  return {
+    blockText,
+    t,
+    name: t.name,
+    fullName: pre + t.name,
+    nameChars: (pre + t.name).length,
+    descChars: (t.description || "").length,
+    schemaChars: compact(t.inputSchema || {}).length,
+    extraChars: Math.max(0, blockChars - compact(core).length),
+    blockChars,
+    exact: exactByTool.has(blockText) ? exactByTool.get(blockText) : null
+  };
+}
+
+/* ---- schema walkers, used by the findings engine ---- */
+function schemaDepth(s, d) {
+  d = d || 0;
+  if (!s || typeof s !== "object" || d > 12) return d;
+  let max = d;
+  const kids = [];
+  if (s.properties) kids.push(...Object.values(s.properties));
+  if (s.items) kids.push(...(Array.isArray(s.items) ? s.items : [s.items]));
+  ["anyOf", "oneOf", "allOf"].forEach((k) => { if (Array.isArray(s[k])) kids.push(...s[k]); });
+  if (s.additionalProperties && typeof s.additionalProperties === "object") kids.push(s.additionalProperties);
+  for (const k of kids) max = Math.max(max, schemaDepth(k, d + 1));
+  return max;
+}
+function walkSchema(s, fn, d) {
+  d = d || 0;
+  if (!s || typeof s !== "object" || d > 12) return;
+  fn(s, d);
+  const kids = [];
+  if (s.properties) kids.push(...Object.values(s.properties));
+  if (s.items) kids.push(...(Array.isArray(s.items) ? s.items : [s.items]));
+  ["anyOf", "oneOf", "allOf"].forEach((k) => { if (Array.isArray(s[k])) kids.push(...s[k]); });
+  if (s.additionalProperties && typeof s.additionalProperties === "object") kids.push(s.additionalProperties);
+  kids.forEach((k) => walkSchema(k, fn, d + 1));
+}
+function topProps(s) { return (s && s.properties) ? Object.entries(s.properties) : []; }
+
+/* =========================================================================
+   Findings — heuristics, and labelled as such
+   =========================================================================
+   None of these are protocol limits. The MCP spec does not cap description
+   length or schema depth, and this page does not pretend it does. They are
+   thresholds that separate the tool surfaces that read cleanly from the ones
+   that bury the model. Argue with any of them.
+   ========================================================================= */
+const H = {
+  descShort: 40, descLong: 1200, nameLong: 40,
+  schemaRatio: 2.5, enumBig: 20, depth: 4,
+  toolCount: 30, hogShare: 25, windowShare: 5,
+  fatResponse: 10000
+};
+
+function buildFindings(rows, totals) {
+  const f = [];
+  const add = (sev, title, body, tag) => f.push({ sev, title, body, tag: tag || "heuristic" });
+  const tools = rows.map((r) => r.t);
+  const n = rows.length;
+  if (!n) return f;
+
+  const noDesc = rows.filter((r) => r.descChars < H.descShort);
+  if (noDesc.length) {
+    add(noDesc.length > n / 3 ? "high" : "med", noDesc.length + " tool" + (noDesc.length > 1 ? "s" : "") + " barely described",
+      "<code>" + noDesc.slice(0, 4).map((r) => esc(r.name)).join("</code>, <code>") + "</code>" +
+      (noDesc.length > 4 ? " and " + (noDesc.length - 4) + " more" : "") +
+      " carry under " + H.descShort + " characters of description. The model picks tools by reading these. " +
+      "A cheap definition that gets chosen wrongly costs more than a verbose one that does not.");
+  }
+
+  const longDesc = rows.filter((r) => r.descChars > H.descLong);
+  if (longDesc.length) {
+    add("med", longDesc.length + " very long description" + (longDesc.length > 1 ? "s" : ""),
+      "<code>" + esc(longDesc[0].name) + "</code> spends " + fmtN(longDesc[0].descChars) + " characters (~" +
+      fmtN(tokDef(longDesc[0].descChars)) + " tokens) on prose alone. Long is not automatically wrong &mdash; " +
+      "but if the detail is only needed once the tool is chosen, it belongs in the tool's own output or in a resource, " +
+      "not in the always-loaded definition.");
+  }
+
+  const heavy = rows.filter((r) => r.descChars > 0 && r.schemaChars / Math.max(1, r.descChars) > H.schemaRatio && r.schemaChars > 600);
+  if (heavy.length) {
+    add("med", heavy.length + " schema-heavy tool" + (heavy.length > 1 ? "s" : ""),
+      "<code>" + esc(heavy[0].name) + "</code> spends " + fmtN(heavy[0].schemaChars) + " characters on its input schema against " +
+      fmtN(heavy[0].descChars) + " on description. When the schema outweighs the explanation by more than " + H.schemaRatio +
+      "&times;, the model usually knows the shape of the call better than it knows when to make it.");
+  }
+
+  const bigEnums = [];
+  const deep = [];
+  const undocumented = [];
+  tools.forEach((t) => {
+    const s = t.inputSchema || {};
+    walkSchema(s, (node) => {
+      if (Array.isArray(node.enum) && node.enum.length > H.enumBig) bigEnums.push({ t, n: node.enum.length });
+    });
+    if (schemaDepth(s) > H.depth) deep.push(t);
+    const props = topProps(s);
+    if (props.length >= 3 && props.every(([, v]) => !v || !v.description)) undocumented.push(t);
+  });
+  if (bigEnums.length) {
+    add("low", "Large inline enums",
+      "<code>" + esc(bigEnums[0].t.name) + "</code> inlines an enum of " + bigEnums[0].n + " values" +
+      (bigEnums.length > 1 ? " (and " + (bigEnums.length - 1) + " more elsewhere)" : "") +
+      ". Every value is paid for on every request. If the list is long, dynamic, or self-evident from the domain, " +
+      "a free-form string plus a validating error message is usually cheaper and ages better.");
+  }
+  if (deep.length) {
+    add("low", deep.length + " deeply nested schema" + (deep.length > 1 ? "s" : ""),
+      "<code>" + esc(deep[0].name) + "</code> nests more than " + H.depth + " levels deep. Deep schemas cost tokens twice: " +
+      "once in the definition, and again in the argument JSON the model has to construct without a mistake.");
+  }
+  if (undocumented.length) {
+    add("low", undocumented.length + " tool" + (undocumented.length > 1 ? "s" : "") + " with undocumented parameters",
+      "<code>" + esc(undocumented[0].name) + "</code> has parameters with no <code>description</code>. " +
+      "Per-property descriptions are the cheapest tokens on this page &mdash; they replace a failed call and a retry.");
+  }
+
+  if (n > H.toolCount) {
+    add("med", n + " tools on one server",
+      "This page prices tokens, and on tokens alone " + n + " tools may be perfectly affordable. The reason to flag it " +
+      "is judgement, not measurement: a long menu of similar options is harder to choose correctly from than a short one, " +
+      "and a wrong call costs more than the definition ever did. If they split cleanly by domain, split them; if several " +
+      "are near-identical, one tool with a mode parameter reads better than five.");
+  }
+
+  const seen = new Map();
+  const dups = [];
+  rows.forEach((r) => {
+    const key = (r.t.description || "").slice(0, 60).toLowerCase().trim();
+    if (!key) return;
+    if (seen.has(key)) dups.push([seen.get(key), r.name]); else seen.set(key, r.name);
+  });
+  if (dups.length) {
+    add("med", "Tools that describe themselves identically",
+      "<code>" + esc(dups[0][0]) + "</code> and <code>" + esc(dups[0][1]) + "</code> open with the same sentence. " +
+      "If a human cannot tell them apart from the first line, the model is guessing between them on every turn.");
+  }
+
+  const annotated = tools.filter((t) => t.annotations && Object.keys(t.annotations).length).length;
+  if (!annotated && n) {
+    add("low", "No tool annotations anywhere",
+      "Not one tool sets <code>readOnlyHint</code>, <code>destructiveHint</code>, <code>idempotentHint</code> or " +
+      "<code>openWorldHint</code>. They cost a handful of tokens and let a host auto-approve the safe calls " +
+      "instead of interrupting for all of them.");
+  } else if (annotated && annotated < n) {
+    add("low", "Annotations on only " + annotated + " of " + n + " tools",
+      "A partly-annotated surface is worse than an unannotated one: a host that trusts <code>readOnlyHint</code> " +
+      "has no way to read the silence on the rest.");
+  }
+
+  const top = rows.slice().sort((a, b) => b.blockChars - a.blockChars)[0];
+  if (top && pctOf(top.blockChars, totals.blockChars) > H.hogShare && n > 3) {
+    add("med", "One tool is " + Math.round(pctOf(top.blockChars, totals.blockChars)) + "% of the surface",
+      "<code>" + esc(top.name) + "</code> alone accounts for ~" + fmtN(tokDef(top.blockChars)) +
+      " tokens. Splitting its schema, or moving its rarely-used branches behind a second tool, buys back the most " +
+      "context for the least work of anything on this page.");
+  }
+
+  const share = pctOf(totals.fullTokens, totals.window);
+  if (share > H.windowShare) {
+    add(share > H.windowShare * 3 ? "high" : "med", "Definitions occupy " + share.toFixed(1) + "% of the context window",
+      "The full surface is ~" + fmtN(totals.fullTokens) + " tokens against a " + fmtN(totals.window) +
+      "-token window, paid on every request in a host that loads tools eagerly. A host that defers a surface this " +
+      "size behind a tool search would hold only the names resident: ~" + fmtN(totals.nameTokens) + " tokens. " +
+      "Which of those you are paying depends on the host, and on whether it considers this surface large enough " +
+      "to bother deferring.");
+  } else if (n) {
+    add("good", "The surface is proportionate",
+      "~" + fmtN(totals.fullTokens) + " tokens of definitions, " + share.toFixed(2) + "% of a " + fmtN(totals.window) +
+      "-token window. Nothing here needs cutting on size grounds.");
+  }
+
+  const fat = ledger.filter((c) => c.tokens > H.fatResponse);
+  if (fat.length) {
+    add("high", fat.length + " call" + (fat.length > 1 ? "s" : "") + " returned more than " + fmtN(H.fatResponse) + " tokens",
+      "<code>" + esc(fat[0].name) + "</code> returned ~" + fmtN(fat[0].tokens) + " tokens in one response. " +
+      "This is where MCP servers actually get expensive: a tool with a 200-token definition and a 40,000-token reply " +
+      "costs two hundred times more to use than to advertise. Paginate it, or add a field selector.");
+  }
+  return f;
+}
+
+/* =========================================================================
+   The report
+   ========================================================================= */
+function analyzeCost(msg) {
+  pin();
+  const w = $("work"); w.innerHTML = "";
+  const tools = surfaceTools();
+
+  w.appendChild(el("h2", null, "Token cost"));
+  w.appendChild(el("p", "sub", pastedTools
+    ? "Pasted surface · " + tools.length + " tools · not connected to a live server"
+    : (client.server && (client.server.name || (client.server.serverInfo && client.server.serverInfo.name)) || "This server")
+      + " · " + tools.length + " tools"));
+
+  if (!tools.length) {
+    w.appendChild(Object.assign(el("div", "note warn"), {
+      innerHTML: "<h4>No tool surface to price</h4>Connect to a server, or use <b>Paste a surface</b> " +
+        "to drop in a <code>tools/list</code> result from a server this page cannot reach through CORS."
+    }));
+    return;
+  }
+
+  const rows = tools.map(costOf);
+  const window_ = parseInt($("ctxWin").value, 10) || 1000000;
+
+  const blockChars = compact(tools.map(toolBlock)).length;   // includes array punctuation
+  const namesChars = tools.map((r) => nsPrefix() + r.name).join("").length;
+  const sumBlocks = rows.reduce((s, r) => s + r.blockChars, 0);
+
+  // If a real measurement exists for this surface, use it and distribute it
+  // across tools by their share of the characters. Estimating the split of a
+  // measured total is honest; measuring every tool separately is not worth
+  // twenty requests to a rate-limited endpoint.
+  let fullTokens, nameTokens, exactness;
+  if (exactDef && exactDef.chars === blockChars) {
+    fullTokens = exactDef.tokens; exactness = "measured";
+  } else { fullTokens = tokDef(blockChars); exactness = "estimated"; }
+  if (exactName && exactName.chars === namesChars) nameTokens = exactName.tokens;
+  else nameTokens = tokName(namesChars);
+
+  // Distribute the surface total across tools by their share of the characters,
+  // but hold any tool that was measured individually at its real count and split
+  // only what is left over. The column keeps summing to the headline.
+  const measuredRows = rows.filter((r) => r.exact != null);
+  const restRows = rows.filter((r) => r.exact == null);
+  const restChars = restRows.reduce((s, r) => s + r.blockChars, 0);
+  const restTokens = Math.max(0, fullTokens - measuredRows.reduce((s, r) => s + r.exact, 0));
+  const holdsExact = measuredRows.length > 0 && restChars > 0;
+  rows.forEach((r) => {
+    r.tokens = r.exact != null ? r.exact
+      : ((exactness === "measured" || holdsExact) && restChars > 0)
+        ? Math.round(restTokens * (r.blockChars / restChars))
+        : tokDef(r.blockChars);
+    r.nameTokens = tokName(r.nameChars);
+  });
+
+  const totals = { blockChars, namesChars, fullTokens, nameTokens, window: window_ };
+
+  /* ---- headline ---- */
+  const share = pctOf(fullTokens, window_);
+  const grid = el("div", "mgrid");
+  const metric = (lbl, val, unit, sub, cls) => {
+    const m = el("div", "metric" + (cls ? " " + cls : ""));
+    m.appendChild(el("div", "lbl", lbl));
+    const v = el("div", "val"); v.textContent = val;
+    if (unit) { const s = el("small"); s.textContent = unit; v.appendChild(s); }
+    m.appendChild(v);
+    if (sub) { const p = el("div", "sub2"); p.innerHTML = sub; m.appendChild(p); }
+    return m;
+  };
+  grid.appendChild(metric("Always on", fmtN(nameTokens), "tok",
+    "Namespaced names only &mdash; the floor, if the host defers this surface.", "cool"));
+  grid.appendChild(metric("Full definitions", fmtN(fullTokens), "tok",
+    exactness === "measured"
+      ? "<b>Measured</b> against <code>count_tokens</code>."
+      : "Estimated at " + cptDef.toFixed(2) + " chars/token.",
+    share > H.windowShare * 3 ? "hot" : share > H.windowShare ? "warm" : ""));
+  grid.appendChild(metric("Of the window", share.toFixed(share < 1 ? 2 : 1), "%",
+    "Against " + fmtN(window_) + " tokens, if the host loads tools eagerly."));
+  // A long enough custom prefix can make the names outweigh the definitions on
+  // a tiny surface. That is a real result, not a negative saving.
+  const saved = fullTokens - nameTokens;
+  grid.appendChild(metric("Deferral saves", saved > 0 ? fmtN(saved) : "none", saved > 0 ? "tok" : "",
+    saved > 0
+      ? Math.round(100 - pctOf(nameTokens, fullTokens)) + "% of the surface, until a tool is searched for."
+      : "With this prefix the names cost as much as the definitions. Deferring would buy nothing."));
+  w.appendChild(grid);
+
+  /* ---- composition ---- */
+  const sumDesc = rows.reduce((s, r) => s + r.descChars, 0);
+  const sumSchema = rows.reduce((s, r) => s + r.schemaChars, 0);
+  const sumExtra = Math.max(0, blockChars - sumDesc - sumSchema - rows.reduce((s, r) => s + r.name.length, 0));
+  const parts = [
+    ["Names", rows.reduce((s, r) => s + r.name.length, 0), "var(--in)"],
+    ["Descriptions", sumDesc, "var(--out)"],
+    ["Input schemas", sumSchema, "var(--err)"],
+    ["Structure, titles, annotations", sumExtra, "var(--dim-2)"]
+  ];
+  w.appendChild(el("p", "eyebrow", "Where the characters go"));
+  const stack = el("div", "stack");
+  parts.forEach(([, c, col]) => {
+    const i = document.createElement("i");
+    i.style.cssText = "flex:0 0 " + pctOf(c, blockChars).toFixed(2) + "%;background:" + col;
+    stack.appendChild(i);
+  });
+  w.appendChild(stack);
+  const leg = el("div", "legend");
+  parts.forEach(([lbl, c, col]) => {
+    const s = el("span");
+    s.innerHTML = '<s style="background:' + col + '"></s>' + esc(lbl) + " · " +
+      pctOf(c, blockChars).toFixed(1) + "% · " + fmtN(tokDef(c)) + " tok";
+    leg.appendChild(s);
+  });
+  w.appendChild(leg);
+
+  /* ---- per-tool table ---- */
+  w.appendChild(el("p", "eyebrow", "Per tool"));
+  const tblScroll = el("div", "tblwrap");
+  const tblHost = el("div");
+  tblScroll.appendChild(tblHost);
+  w.appendChild(tblScroll);
+  const maxTok = Math.max.apply(null, rows.map((r) => r.tokens));
+
+  function drawTable() {
+    tblHost.innerHTML = "";
+    const cols = [
+      ["Tool", "name", "nm"], ["Name", "nameTokens", "n"], ["Desc", "descChars", "n"],
+      ["Schema", "schemaChars", "n"], ["Total", "block", "n"], ["Share", "share", "n"], ["", "", "n"]
+    ];
+    const tbl = el("table", "ct");
+    const thead = el("thead"); const tr = el("tr");
+    cols.forEach(([label, key, cls]) => {
+      const th = el("th", cls + (costSort.key === key ? " on" : ""), label);
+      if (key) th.onclick = () => {
+        if (costSort.key === key) costSort.dir *= -1;
+        else { costSort.key = key; costSort.dir = key === "name" ? 1 : -1; }
+        drawTable();
+      };
+      tr.appendChild(th);
+    });
+    thead.appendChild(tr); tbl.appendChild(thead);
+
+    const val = (r) => costSort.key === "name" ? r.name
+      : costSort.key === "block" || costSort.key === "share" ? r.tokens
+        : costSort.key === "nameTokens" ? r.nameTokens
+          : r[costSort.key];
+    const sorted = rows.slice().sort((a, b) => {
+      const x = val(a), y = val(b);
+      return (typeof x === "string" ? x.localeCompare(y) : x - y) * costSort.dir;
+    });
+
+    const tb = el("tbody");
+    sorted.forEach((r) => {
+      const row = el("tr");
+      const c1 = el("td", "nm");
+      c1.appendChild(el("div", null, r.fullName));
+      if (r.descChars < H.descShort) c1.appendChild(Object.assign(el("div", "why"), { textContent: "no usable description" }));
+      const bar = el("div", "bar"); bar.style.width = (r.tokens / maxTok * 100).toFixed(1) + "%";
+      c1.appendChild(bar);
+      row.appendChild(c1);
+      row.appendChild(el("td", "n", fmtN(r.nameTokens)));
+      row.appendChild(el("td", "n", fmtN(tokDef(r.descChars))));
+      row.appendChild(el("td", "n", fmtN(tokDef(r.schemaChars))));
+      const tot = el("td", "n");
+      tot.appendChild(el("span", null, fmtN(r.tokens)));
+      if (r.exact != null) tot.appendChild(Object.assign(el("span", "pill ok"), { textContent: "exact", style: "margin-left:6px" }));
+      row.appendChild(tot);
+      row.appendChild(el("td", "n", pctOf(r.tokens, fullTokens).toFixed(1) + "%"));
+      const act = el("td", "n");
+      const b = el("button", "mini", "measure");
+      b.onclick = () => measureOne(r, b);
+      act.appendChild(b);
+      row.appendChild(act);
+      tb.appendChild(row);
+    });
+    tbl.appendChild(tb);
+    tblHost.appendChild(tbl);
+  }
+  drawTable();
+
+  /* ---- resources and prompts ---- */
+  const resAll = pastedTools ? [] : (client.resources || []).concat(client.templates || []);
+  const prompts = pastedTools ? [] : (client.prompts || []);
+  if (resAll.length || prompts.length) {
+    const rc = compact(resAll).length, pc = compact(prompts).length;
+    w.appendChild(el("div", "divide"));
+    w.appendChild(el("p", "eyebrow", "Beyond tools"));
+    const n = el("div", "note");
+    n.innerHTML = "<h4>Resources and prompts</h4>" +
+      "The resource list is ~" + fmtN(tokDef(rc)) + " tokens and the prompt list ~" + fmtN(tokDef(pc)) +
+      " tokens if a host inlines them. Most hosts do not: they are fetched on request, which is why they are " +
+      "kept out of the headline above. Resource <em>contents</em> are unbounded and are not counted here at all.";
+    w.appendChild(n);
+  }
+
+  /* ---- call ledger ---- */
+  w.appendChild(el("div", "divide"));
+  w.appendChild(el("p", "eyebrow", "Response cost, this session"));
+  if (!ledger.length) {
+    w.appendChild(Object.assign(el("div", "note"), {
+      innerHTML: "Nothing called yet. Definitions are the advertised price; responses are the bill. " +
+        "Call a few tools and their real response sizes land here."
+    }));
+  } else {
+    const tbl = el("table", "ct");
+    tbl.innerHTML = "<thead><tr><th>Call</th><th class='n'>Response</th><th class='n'>Definition</th><th class='n'>Ratio</th></tr></thead>";
+    const tb = el("tbody");
+    ledger.slice().reverse().forEach((c) => {
+      const def = rows.find((r) => r.name === c.name);
+      const tr = el("tr");
+      tr.appendChild(el("td", "nm", c.name));
+      const a = el("td", "n"); a.textContent = fmtN(c.tokens) + " tok";
+      if (c.tokens > H.fatResponse) a.style.color = "var(--err)";
+      tr.appendChild(a);
+      tr.appendChild(el("td", "n", def ? fmtN(def.tokens) + " tok" : "—"));
+      tr.appendChild(el("td", "n", def && def.tokens ? (c.tokens / def.tokens).toFixed(1) + "×" : "—"));
+      tb.appendChild(tr);
+    });
+    tbl.appendChild(tb);
+    const lw = el("div", "tblwrap"); lw.appendChild(tbl); w.appendChild(lw);
+    w.appendChild(Object.assign(el("p", "sub"), {
+      style: "margin-top:8px",
+      innerHTML: "Ratio is what one call costs against what the tool cost to advertise. A tool you call twice " +
+        "at 20&times; has already outspent its own definition forty times over."
+    }));
+  }
+
+  /* ---- findings ---- */
+  const findings = buildFindings(rows, totals);
+  w.appendChild(el("div", "divide"));
+  w.appendChild(el("p", "eyebrow", "Findings · " + findings.length));
+  findings.forEach((f) => {
+    const d = el("div", "find " + f.sev);
+    const h = el("h5"); h.appendChild(el("span", null, f.title));
+    h.appendChild(Object.assign(el("em"), { textContent: f.tag }));
+    d.appendChild(h);
+    d.appendChild(Object.assign(el("p"), { innerHTML: f.body }));
+    w.appendChild(d);
+  });
+
+  /* ---- method ---- */
+  w.appendChild(el("div", "divide"));
+  w.appendChild(el("p", "eyebrow", "Method"));
+  const m = el("div", "note");
+  m.innerHTML =
+    "<h4>How these numbers are made</h4>" +
+    "Each tool is serialized the way an Anthropic tool block is serialized — <code>{name, description, input_schema}</code>, " +
+    "compact <code>JSON.stringify</code>, no pretty-printing. The headline counts the whole array including its brackets and " +
+    "separating commas, so the per-tool column sums to a few tokens under it &mdash; that gap is the punctuation between tools, " +
+    "plus rounding. Pretty-printing a schema-heavy surface inflates it by about a third " +
+    "(measured: 3,188 characters became 4,377, and 1,140 tokens became 1,501), so it would be a flattering lie.<br><br>" +
+    "One honest caveat: that text is priced as message content, and the message envelope&#39;s own ~7 tokens are subtracted " +
+    "before any ratio is taken. It is a close proxy for how the API renders a <code>tools</code> parameter into the system " +
+    "prompt, not a byte-identical reproduction of it. Treat these as good numbers, not audited invoices.<br><br>" +
+    "Token counts are " + (exactness === "measured"
+      ? "<b>measured</b>: the whole block went to <code>/v1/messages/count_tokens</code> and came back at " +
+        fmtN(exactDef.tokens) + " tokens for " + fmtN(exactDef.chars) + " characters, a real ratio of <b>" +
+        (exactDef.chars / exactDef.tokens).toFixed(2) + "</b> chars/token. Per-tool figures divide that measured total " +
+        "by each tool's share of the characters."
+      : "<b>estimated</b> at " + cptDef.toFixed(2) + " chars/token for definitions and " + cptName.toFixed(2) +
+        " for namespaced names. Press <b>Exact count</b> to replace the estimate with a real measurement of this surface.") +
+    "<br><br>" +
+    "The defaults came from measuring <b>one real ten-tool surface</b> against <code>count_tokens</code> on 2026-08-20: " +
+    "2.79 chars/token for Claude 5 definitions, 3.95 for Haiku 4.5, and 1.96 / 2.61 for <code>mcp__server__tool</code> names, " +
+    "which are dense because they are almost entirely underscores and word fragments. Opus 5, Sonnet 5 and Fable 5 share one " +
+    "tokenizer; Haiku 4.5 does not. One surface is a seed, not an error bar — a constant fitted on somebody else\u2019s JSON " +
+    "has no claim on yours, and content type moves the ratio further than the model does. That is what the exact-count button " +
+    "is for, and why every figure on this page says which of the two it is.<br><br>" +
+    "The two headline numbers exist because hosts disagree. Loading every definition eagerly is the simple approach; " +
+    "the alternative is to keep the namespaced names resident and fetch schemas on demand through a tool search. " +
+    "Claude Code does the second, but only past a threshold — deferral is gated on how much of the context window the " +
+    "tools would take, so a small server is still loaded whole and its always-on figure below is academic. " +
+    "This page does not guess which regime you are in. It prints both.";
+  w.appendChild(m);
+
+  if (msg) toast(msg);
+  updateCostPill(nameTokens, fullTokens);
+}
+
+function updateCostPill(nameTokens, fullTokens) {
+  const c = $("cCost");
+  if (fullTokens == null) { c.textContent = "—"; return; }
+  c.textContent = (fullTokens >= 1000 ? (fullTokens / 1000).toFixed(1) + "k" : fullTokens) + " tok";
+}
+function refreshCostPill() {
+  const tools = surfaceTools();
+  if (!tools.length) { updateCostPill(null, null); return; }
+  updateCostPill(0, tokDef(compact(tools.map(toolBlock)).length));
+}
+
+/* ---- exact counts, through the counting Worker ---- */
+async function countTokens(text) {
+  const model = CPT[$("costModel").value] ? CPT[$("costModel").value].model : "claude-sonnet-5";
+  const r = await fetch(COUNT_ENDPOINT, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ text, model })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !Number.isFinite(d.input_tokens) || !Number.isFinite(d.chars) || d.input_tokens <= 0) {
+    const e = new Error(r.status === 429 ? "Rate limited — try again shortly." : "Counting service unavailable.");
+    e.status = r.status; throw e;
+  }
+  // The service counts the text as a user message, and the message envelope
+  // costs about seven tokens on its own. Charge the text for the text only.
+  return { tokens: Math.max(1, d.input_tokens - MESSAGE_OVERHEAD), chars: d.chars };
+}
+
+async function measureSurface() {
+  const tools = surfaceTools();
+  const box = $("costMsg");
+  if (!tools.length) { box.innerHTML = '<div class="note warn">Nothing to measure.</div>'; return; }
+  const blockText = compact(tools.map(toolBlock));
+  const nameText = tools.map((t) => nsPrefix() + t.name).join("");
+  if (blockText.length > COUNT_MAX_CHARS) {
+    box.innerHTML = '<div class="note warn"><h4>Surface too large to measure</h4>' + fmtN(blockText.length) +
+      " characters exceeds the counting service's " + fmtN(COUNT_MAX_CHARS) +
+      "-character cap. The estimate stands; measure individual tools instead.</div>";
+    return;
+  }
+  const btn = $("btnCostExact"); btn.disabled = true; btn.textContent = "Measuring…";
+  box.innerHTML = '<div class="note">Calling <code>count_tokens</code>…</div>';
+  try {
+    // Two requests, not one per tool: the definition block and the name block.
+    const d = await countTokens(blockText);
+    const nm = await countTokens(nameText);
+    exactDef = d; exactName = nm;
+    cptDef = d.chars / d.tokens;
+    cptName = nm.chars / nm.tokens;
+    $("cptDef").value = cptDef.toFixed(2);
+    $("cptName").value = cptName.toFixed(2);
+    $("costModel").value = "custom";
+    box.innerHTML = '<div class="note ok"><h4>Measured</h4>' + fmtN(d.tokens) + " tokens of definitions and " +
+      fmtN(nm.tokens) + " of names. Real ratios: <b>" + cptDef.toFixed(2) + "</b> and <b>" + cptName.toFixed(2) +
+      "</b> chars/token. Every figure recalculated.</div>";
+    logNote("Measured tool surface exactly", d.tokens + " definition tokens, " + nm.tokens + " name tokens");
+    analyzeCost();
+  } catch (e) {
+    // The counting service allowlists a single origin on purpose — it holds an
+    // API key, and a wide-open CORS policy would make it a free proxy for it.
+    // Served from anywhere else, exact counting is simply unavailable.
+    const blocked = /Failed to fetch|NetworkError|Load failed/i.test(e.message || "");
+    box.innerHTML = '<div class="note ' + (blocked ? "warn" : "bad") + '"><h4>Could not measure</h4>' +
+      (blocked
+        ? "The counting service only accepts requests from <code>mncoleman.com</code>, and this page is served " +
+          "from <code>" + esc(location.origin) + "</code>. Exact counts need the hosted copy; the estimate stands, " +
+          "and you can still calibrate by hand:" +
+          "<pre>curl -s https://api.anthropic.com/v1/messages/count_tokens \\\n" +
+          "  -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" \\\n" +
+          "  -H 'content-type: application/json' -d @surface.json</pre>" +
+          "Divide characters by the token count and put the result in <b>c/tok &middot; definitions</b>."
+        : esc(e.message) + " The estimate is unchanged.") + "</div>";
+  } finally { btn.disabled = false; btn.textContent = "Exact count"; }
+}
+
+async function measureOne(row, btn) {
+  btn.disabled = true; btn.textContent = "…";
+  try {
+    const d = await countTokens(row.blockText);
+    exactByTool.set(row.blockText, d.tokens);
+    toast(row.name + " · " + fmtN(d.tokens) + " tokens exactly");
+    analyzeCost();          // recompute: this tool is now held at its real count
+  } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = "measure"; }
+}
+
+/* ---- paste a surface for a server this page cannot reach ----
+   There is no proxy here, so a server without permissive CORS is unreachable.
+   That is most of them. Pasting a tools/list result keeps the analysis useful
+   anyway, which is the whole point of separating pricing from calling. */
+function openPasteSurface() {
+  pin();
+  const w = $("work"); w.innerHTML = "";
+  w.appendChild(el("h2", null, "Paste a tool surface"));
+  w.appendChild(el("p", "sub", "For servers this page cannot reach. No connection required."));
+  const n = el("div", "note");
+  n.innerHTML = "<h4>What to paste</h4>Any of these works: a full JSON-RPC response, a bare " +
+    "<code>{\"tools\": […]}</code> object, or just the array. Get one with:" +
+    "<pre>curl -s $URL -H 'content-type: application/json' \\\n  -H 'accept: application/json, text/event-stream' \\\n" +
+    "  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}}'</pre>";
+  w.appendChild(n);
+  w.appendChild(el("label", "f", "tools/list result"));
+  const ta = el("textarea"); ta.rows = 14; ta.placeholder = '{"tools":[{"name":"search","description":"…","inputSchema":{}}]}';
+  w.appendChild(ta);
+  w.appendChild(el("label", "f", "Server name (for the mcp__ prefix)"));
+  const nameIn = el("input"); nameIn.type = "text"; nameIn.placeholder = "acme";
+  w.appendChild(nameIn);
+  const bar = el("div", "row"); bar.style.marginTop = "14px";
+  const go = el("button", "btn", "Price it");
+  const clear = el("button", "ghost", "Clear pasted surface");
+  bar.appendChild(go); bar.appendChild(clear);
+  w.appendChild(bar);
+  const out = el("div"); out.style.marginTop = "14px"; w.appendChild(out);
+
+  clear.onclick = () => {
+    pastedTools = null; pastedFrom = ""; exactDef = exactName = null;
+    exactByTool.clear(); ledger.length = 0;
+    $("nsPrefix").placeholder = defaultPrefix();
+    refreshCostPill(); toast("Pasted surface cleared"); renderWelcome();
+  };
+  go.onclick = () => {
+    let v;
+    try { v = JSON.parse(ta.value); }
+    catch (e) { out.innerHTML = '<div class="note bad"><h4>Not valid JSON</h4>' + esc(String(e)) + "</div>"; return; }
+    if (v === null || typeof v !== "object") {
+      out.innerHTML = '<div class="note bad"><h4>Not a tool surface</h4>Expected an object or an array, got <code>' +
+        esc(typeof v === "object" ? "null" : typeof v) + "</code>.</div>";
+      return;
+    }
+    const list = Array.isArray(v) ? v
+      : (v.tools || (v.result && v.result.tools) || (v.params && v.params.tools));
+    if (!Array.isArray(list) || !list.length) {
+      out.innerHTML = '<div class="note bad"><h4>No tools found</h4>Expected an array of tools, a ' +
+        '<code>tools</code> key, or a JSON-RPC result containing one.</div>';
+      return;
+    }
+    const bad = list.filter((t) => !t || typeof t.name !== "string");
+    if (bad.length) {
+      out.innerHTML = '<div class="note bad"><h4>Malformed entries</h4>' + bad.length +
+        " item(s) have no <code>name</code>. Nothing loaded.</div>";
+      return;
+    }
+    pastedTools = list;
+    pastedFrom = (nameIn.value || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    $("nsPrefix").value = ""; $("nsPrefix").placeholder = defaultPrefix();
+    exactDef = exactName = null; exactByTool.clear();
+    // Calls made against the live server are not this surface's calls. Keeping
+    // them would ratio one server's responses against another's definitions.
+    ledger.length = 0;
+    refreshCostPill();
+    analyzeCost("Loaded " + list.length + " tools");
+  };
+}
+
+/* =========================================================================
    Wiring
    ========================================================================= */
 $("btnConnect").onclick = connect;
@@ -1780,12 +2602,41 @@ $("btnDisconnect").onclick = () => {
   client.tools = []; client.resources = []; client.templates = []; client.prompts = [];
   ["lTools", "lRes", "lPrompts"].forEach((id) => { $(id).innerHTML = '<li class="empty">Not loaded.</li>'; });
   ["cTools", "cRes", "cPrompts"].forEach((id) => { $(id).textContent = "\u2014"; });
+  ledger.length = 0; exactDef = exactName = null; exactByTool.clear();
+  pastedTools = null; pastedFrom = "";
+  $("nsPrefix").value = ""; $("nsPrefix").placeholder = "mcp__server__";
+  $("costMsg").innerHTML = ""; refreshCostPill();
   $("serverInfo").innerHTML = '<p class="hint">Connect to see identity and capabilities.</p>';
   $("connMsg").innerHTML = "";
   delete $("work").dataset.pinned;
   setStatus("", "not connected"); renderWelcome();
 };
 $("btnRaw").onclick = openRaw;
+$("btnCost").onclick = () => analyzeCost();
+$("btnCostExact").onclick = measureSurface;
+$("btnCostPaste").onclick = openPasteSurface;
+$("costModel").onchange = (e) => {
+  const m = CPT[e.target.value];
+  if (!m) { $("cptDef").focus(); return; }
+  cptDef = m.def; cptName = m.name;
+  $("cptDef").value = cptDef.toFixed(2); $("cptName").value = cptName.toFixed(2);
+  exactDef = exactName = null;
+  refreshCostPill();
+  if ($("work").querySelector("table.ct")) analyzeCost();
+};
+["cptDef", "cptName"].forEach((id) => $(id).addEventListener("input", (e) => {
+  const v = parseFloat(e.target.value);
+  if (!(v > 0.5 && v < 20)) return;
+  if (id === "cptDef") { cptDef = v; exactDef = null; } else { cptName = v; exactName = null; }
+  $("costModel").value = "custom";
+  refreshCostPill();
+  if ($("work").querySelector("table.ct")) analyzeCost();
+}));
+["nsPrefix", "ctxWin", "incOut", "incAnn"].forEach((id) => $(id).addEventListener("change", () => {
+  exactDef = exactName = null;   // per-tool exacts self-invalidate: they are keyed by block text
+  refreshCostPill();
+  if ($("work").querySelector("table.ct")) analyzeCost();
+}));
 $("btnDoctor").onclick = () => doctor(false);
 $("btnRefresh").onclick = () => { if (client.connected) loadAll(); else toast("Connect first"); };
 $("btnPing").onclick = async () => {
