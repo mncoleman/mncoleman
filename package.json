@@ -10,8 +10,9 @@
     "dev:artifacts": "tsx scripts/dev-artifacts-server.ts",
     "build-info": "tsx scripts/generate-build-info.ts",
     "generate-search-index": "tsx scripts/generate-search-index.ts",
+    "generate-factbook": "tsx scripts/generate-factbook-artifact.ts",
     "stamp-sw-version": "tsx scripts/stamp-sw-version.ts",
-    "build": "npm run build-info && npm run generate-search-index && next build && tsx scripts/finalize-og-images.ts && npm run stamp-sw-version",
+    "build": "npm run build-info && npm run generate-search-index && npm run generate-factbook && next build && tsx scripts/finalize-og-images.ts && npm run stamp-sw-version",
     "start": "next start",
     "lint": "eslint .",
     "export": "next build"

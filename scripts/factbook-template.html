@@ -1,0 +1,503 @@
+<title>World Factbook Explorer</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Searchable explorer for the CIA World Factbook — population, leaders, languages, religions, geography, and economy for every country, territory, and ocean.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300..900;1,300..900&family=Work+Sans:wght@300..700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f6f2;--surface:#faf9f7;--surface-2:#fcfcfb;--surface-off:#eeecea;--surface-dyn:#e5e2de;
+  --divider:#dcdad6;--border:#d4d2ce;--text:#1a1915;--text-muted:#6b6966;--text-faint:#a8a7a4;
+  --primary:#016b72;--primary-hov:#0c5058;--primary-hl:#cddcda;--primary-dim:rgba(1,107,114,.08);--on-primary:#ffffff;
+  --green:#2f7d34;--orange:#b35d00;--blue:#0a5fa0;
+  --sh-sm:0 1px 2px rgba(26,25,21,.06);--sh-md:0 4px 12px rgba(26,25,21,.08);
+  --text-xs:clamp(.75rem,.7rem + .25vw,.875rem);--text-sm:clamp(.875rem,.8rem + .35vw,1rem);
+  --text-base:clamp(1rem,.95rem + .25vw,1.0625rem);--text-lg:clamp(1.125rem,1rem + .75vw,1.5rem);
+  --text-xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem);--text-2xl:clamp(2rem,1.2rem + 2.5vw,3.25rem);
+  --radius-sm:.375rem;--radius-md:.5rem;--radius-lg:.75rem;--radius-full:9999px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#161512;--surface:#1c1a17;--surface-2:#201e1b;--surface-off:#242220;--surface-dyn:#2b2926;
+    --divider:#2e2c2a;--border:#363432;--text:#cccac6;--text-muted:#918f8c;--text-faint:#8a8885;
+    --primary:#4a9da8;--primary-hov:#21808c;--primary-hl:#1f3a3c;--primary-dim:rgba(74,157,168,.12);--on-primary:#10201f;
+    --green:#65af65;--orange:#e09840;--blue:#5290c5;
+    --sh-sm:0 1px 2px rgba(0,0,0,.25);--sh-md:0 4px 12px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#1c1a17;--surface-2:#201e1b;--surface-off:#242220;--surface-dyn:#2b2926;
+  --divider:#2e2c2a;--border:#363432;--text:#cccac6;--text-muted:#918f8c;--text-faint:#8a8885;
+  --primary:#4a9da8;--primary-hov:#21808c;--primary-hl:#1f3a3c;--primary-dim:rgba(74,157,168,.12);--on-primary:#10201f;
+  --green:#65af65;--orange:#e09840;--blue:#5290c5;
+  --sh-sm:0 1px 2px rgba(0,0,0,.25);--sh-md:0 4px 12px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:5rem}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+body{background:var(--bg);color:var(--text);font-family:'Work Sans',system-ui,-apple-system,sans-serif;font-size:var(--text-base);line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+a{color:var(--primary)}
+a:hover{color:var(--primary-hov)}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:var(--radius-full)}
+h1,h2,h3{font-family:'Crimson Pro',Georgia,serif;text-wrap:balance;line-height:1.15}
+p{text-wrap:pretty}
+.eyebrow{font-size:var(--text-xs);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint)}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--divider)}
+.back-home{display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;border:1px solid rgba(128,128,128,.32);border-radius:.5rem;background:rgba(128,128,128,.08);color:inherit;font-size:.78rem;font-weight:600;letter-spacing:.01em;text-decoration:none;opacity:.82;transition:opacity .15s ease,background .15s ease}
+.back-home:hover{opacity:1;background:rgba(128,128,128,.16);color:inherit}
+.back-home svg{width:14px;height:14px;flex-shrink:0}
+.topbar-title{font-family:'Crimson Pro',Georgia,serif;font-weight:600;font-size:1.05rem;color:var(--text-muted)}
+.topbar .spacer{flex:1}
+.icon-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);color:var(--text-muted);cursor:pointer;transition:border-color .15s,color .15s}
+.icon-btn:hover{border-color:var(--primary);color:var(--primary)}
+.icon-btn svg{width:17px;height:17px}
+
+/* ===== landing ===== */
+#landing{max-width:960px;margin:0 auto;padding:clamp(2rem,8vh,5.5rem) 1.25rem 4rem}
+.hero{text-align:center;margin-bottom:2.25rem}
+.hero h1{font-size:var(--text-2xl);font-weight:700}
+.hero h1 em{color:var(--primary);font-style:italic}
+.hero p{color:var(--text-muted);font-size:var(--text-sm);margin-top:.6rem;max-width:46rem;margin-inline:auto}
+.searchwrap{position:relative;max-width:600px;margin:2rem auto 0}
+.searchwrap svg{position:absolute;left:1.05rem;top:50%;transform:translateY(-50%);width:19px;height:19px;color:var(--text-faint);pointer-events:none}
+#search{width:100%;padding:1rem 1.15rem 1rem 3rem;font:inherit;font-size:var(--text-base);color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--sh-sm);transition:border-color .15s,box-shadow .15s}
+#search:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-dim)}
+#search::placeholder{color:var(--text-faint)}
+.hint{margin-top:.6rem;font-size:var(--text-xs);color:var(--text-faint);text-align:center}
+kbd{font-family:inherit;border:1px solid var(--border);border-bottom-width:2px;border-radius:.3rem;padding:.05rem .35rem;font-size:.72rem;background:var(--surface)}
+
+/* region chips */
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin:1.5rem 0 2rem}
+.chip{padding:.38rem .85rem;border:1px solid var(--border);border-radius:var(--radius-full);background:var(--surface);color:var(--text-muted);font-size:var(--text-xs);font-weight:500;cursor:pointer;transition:all .15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.chip:hover{border-color:var(--primary);color:var(--primary)}
+.chip.active{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+
+/* results / browse grid */
+.count-line{font-size:var(--text-xs);color:var(--text-faint);margin-bottom:.75rem}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:.75rem}
+.ccard{display:flex;align-items:center;gap:.7rem;padding:.7rem .85rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);cursor:pointer;text-align:left;font:inherit;color:var(--text);transition:border-color .15s,box-shadow .15s,transform .15s}
+.ccard:hover,.ccard.kbd-sel{border-color:var(--primary);box-shadow:var(--sh-sm)}
+.ccard.kbd-sel{box-shadow:0 0 0 3px var(--primary-dim)}
+.ccard .cflag{font-size:1.6rem;line-height:1;flex-shrink:0;width:2rem;text-align:center}
+.ccard .cname{font-weight:600;font-size:var(--text-sm);line-height:1.25}
+.ccard .cmeta{font-size:var(--text-xs);color:var(--text-muted);line-height:1.3;margin-top:.1rem}
+.empty{padding:3rem 1rem;text-align:center;color:var(--text-muted)}
+
+/* ===== country view ===== */
+#country{display:none}
+.cv-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:2rem;max-width:1180px;margin:0 auto;padding:1.5rem 1.25rem 4rem}
+.cv-side{position:sticky;top:4.4rem;align-self:start;max-height:calc(100vh - 5.5rem);overflow-y:auto;padding-right:.25rem}
+.cv-side nav{display:flex;flex-direction:column;gap:.15rem;margin-top:.75rem}
+.cv-side a.navlink{display:block;padding:.42rem .7rem;border-radius:var(--radius-md);font-size:var(--text-xs);font-weight:500;color:var(--text-muted);text-decoration:none;transition:background .15s,color .15s}
+.cv-side a.navlink:hover{background:var(--surface-dyn);color:var(--text)}
+.cv-side a.navlink.active{background:var(--primary-dim);color:var(--primary);font-weight:600}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.55rem .9rem;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);color:var(--text);font:inherit;font-size:var(--text-xs);font-weight:600;cursor:pointer;text-decoration:none;transition:border-color .15s,color .15s}
+.btn:hover{border-color:var(--primary);color:var(--primary)}
+.btn svg{width:14px;height:14px}
+
+.chead{display:flex;align-items:flex-start;gap:1.1rem;margin-bottom:1.4rem;flex-wrap:wrap}
+.bigflag{font-size:3.4rem;line-height:1.1}
+.chead h1{font-size:var(--text-xl);font-weight:700}
+.chead .official{color:var(--text-muted);font-size:var(--text-sm);font-style:italic;font-family:'Crimson Pro',Georgia,serif}
+.badges{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.5rem}
+.badge{padding:.18rem .6rem;border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:600;background:var(--primary-dim);color:var(--primary)}
+.badge.alt{background:var(--surface-off);color:var(--text-muted)}
+
+.ffilterwrap{position:relative;margin-bottom:1.25rem;max-width:430px}
+.ffilterwrap svg{position:absolute;left:.8rem;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--text-faint);pointer-events:none}
+#ffilter{width:100%;padding:.55rem .8rem .55rem 2.3rem;font:inherit;font-size:var(--text-sm);color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md)}
+#ffilter:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-dim)}
+
+/* stat cards */
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.85rem;margin-bottom:1.75rem}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:.85rem 1rem;transition:border-color .15s}
+.stat:hover{border-color:var(--primary)}
+.stat .lbl{font-size:var(--text-xs);font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint);margin-bottom:.3rem}
+.stat .val{font-size:var(--text-sm);line-height:1.5;white-space:pre-line}
+.stat .val.big{font-size:var(--text-lg);font-family:'Crimson Pro',Georgia,serif;font-weight:600;font-variant-numeric:tabular-nums}
+.stat.wide{grid-column:1/-1}
+
+/* leaders */
+.leaders{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:.85rem}
+.leader{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:var(--radius-lg);padding:.85rem 1rem}
+.leader .lbl{font-size:var(--text-xs);font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint)}
+.leader .who{font-family:'Crimson Pro',Georgia,serif;font-size:var(--text-lg);font-weight:600;margin:.2rem 0 .15rem}
+.leader .raw{font-size:var(--text-xs);color:var(--text-muted)}
+.leader a.learn{display:inline-flex;align-items:center;gap:.3rem;margin-top:.45rem;font-size:var(--text-xs);font-weight:600;text-decoration:none}
+.leader a.learn svg{width:12px;height:12px}
+
+/* collapsible sections */
+section.cs{border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);margin-bottom:.85rem;overflow:hidden}
+section.cs>h2{margin:0}
+.cs-toggle{width:100%;display:flex;align-items:center;gap:.65rem;padding:.85rem 1.1rem;background:none;border:none;font:inherit;color:var(--text);cursor:pointer;text-align:left}
+.cs-toggle:hover{background:var(--surface-dyn)}
+.cs-toggle .t{font-family:'Crimson Pro',Georgia,serif;font-size:var(--text-lg);font-weight:600;flex:1}
+.cs-toggle .n{font-size:var(--text-xs);color:var(--text-faint);font-weight:500}
+.cs-toggle svg{width:16px;height:16px;color:var(--text-faint);transition:transform .2s;flex-shrink:0}
+section.cs.open .cs-toggle svg{transform:rotate(90deg)}
+.cs-body{display:none;padding:.25rem 1.1rem 1.1rem;border-top:1px solid var(--divider)}
+section.cs.open .cs-body{display:block}
+.row{display:grid;grid-template-columns:170px minmax(0,1fr);gap:1rem;padding:.65rem 0;border-bottom:1px solid var(--divider)}
+.row:last-child{border-bottom:none}
+.row .k{font-size:var(--text-xs);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);padding-top:.15rem}
+.row .v{font-size:var(--text-sm);white-space:pre-line;overflow-wrap:anywhere}
+.row.hidden{display:none!important}
+.prose{font-size:var(--text-sm);line-height:1.7;white-space:pre-line;max-width:70ch;padding-top:.6rem}
+mark{background:var(--primary-hl);color:inherit;border-radius:.15rem;padding:0 .1rem}
+
+.src-note{margin-top:2rem;font-size:var(--text-xs);color:var(--text-faint);max-width:70ch}
+.src-note a{color:inherit}
+
+@media (max-width:860px){
+  .cv-layout{grid-template-columns:1fr;padding-top:1rem}
+  .cv-side{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
+  .cv-side nav{flex-direction:row;flex-wrap:wrap;margin-top:0}
+  .row{grid-template-columns:1fr;gap:.15rem;padding:.55rem 0}
+  .bigflag{font-size:2.6rem}
+}
+</style>
+
+<div class="topbar">
+  <a class="back-home" href="https://mncoleman.com/artifacts/">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+    Back to Artifacts
+  </a>
+  <span class="topbar-title" id="tb-title">World Factbook Explorer</span>
+  <span class="spacer"></span>
+  <button class="icon-btn" id="themeToggle" aria-label="Toggle theme">
+    <svg id="sunIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"/></svg>
+    <svg id="moonIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" hidden><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+  </button>
+</div>
+
+<main id="landing">
+  <div class="hero">
+    <p class="eyebrow">CIA World Factbook · data as of __DATA_DATE__</p>
+    <h1>Search the <em>world</em></h1>
+    <p>Every country, territory, and ocean in the World Factbook — population, leaders, languages, religions, geography, economy, and more. Type a country, capital, or region to begin.</p>
+    <div class="searchwrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" type="search" placeholder="Try “Japan”, “Nairobi”, or “Middle East”…" autocomplete="off" autofocus>
+    </div>
+    <p class="hint">Press <kbd>Enter</kbd> to open the first result · <kbd>Esc</kbd> to clear</p>
+  </div>
+  <div class="chips" id="chips" role="group" aria-label="Filter by region"></div>
+  <p class="count-line" id="countLine"></p>
+  <div id="grid"></div>
+</main>
+
+<main id="country">
+  <div class="cv-layout">
+    <aside class="cv-side">
+      <button class="btn" id="backBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        All countries
+      </button>
+      <nav id="secNav" aria-label="Country sections"></nav>
+    </aside>
+    <article id="cbody"></article>
+  </div>
+</main>
+
+<script id="fb-data" type="application/json">__DATA__</script>
+<script>
+(function(){
+'use strict';
+var DATA = JSON.parse(document.getElementById('fb-data').textContent);
+var byId = {};
+DATA.forEach(function(c){ byId[c.id] = c; });
+
+/* ---------- theme ---------- */
+var root = document.documentElement;
+var themeBtn = document.getElementById('themeToggle');
+function isDark(){
+  var t = root.getAttribute('data-theme');
+  if (t) return t === 'dark';
+  return matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function paintThemeBtn(){
+  document.getElementById('sunIcon').hidden = !isDark();
+  document.getElementById('moonIcon').hidden = isDark();
+}
+themeBtn.addEventListener('click', function(){
+  root.setAttribute('data-theme', isDark() ? 'light' : 'dark');
+  paintThemeBtn();
+});
+paintThemeBtn();
+
+/* ---------- helpers ---------- */
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function el(html){ var d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
+function wiki(q){ return 'https://en.wikipedia.org/wiki/Special:Search?search=' + encodeURIComponent(q); }
+function norm(s){ return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+
+/* ---------- landing: search + region chips + grid ---------- */
+var landing = document.getElementById('landing');
+var countryView = document.getElementById('country');
+var searchEl = document.getElementById('search');
+var grid = document.getElementById('grid');
+var countLine = document.getElementById('countLine');
+var activeRegion = null;
+
+var REGIONS = [];
+DATA.forEach(function(c){ if (REGIONS.indexOf(c.region) < 0) REGIONS.push(c.region); });
+REGIONS.sort();
+
+var chipsEl = document.getElementById('chips');
+chipsEl.appendChild(el('<button class="chip active" data-r="">All regions</button>'));
+REGIONS.forEach(function(r){
+  chipsEl.appendChild(el('<button class="chip" data-r="' + esc(r) + '">' + esc(r) + '</button>'));
+});
+chipsEl.addEventListener('click', function(e){
+  var b = e.target.closest('.chip');
+  if (!b) return;
+  activeRegion = b.getAttribute('data-r') || null;
+  chipsEl.querySelectorAll('.chip').forEach(function(c){ c.classList.toggle('active', c === b); });
+  renderGrid();
+});
+
+function matches(c, q){
+  if (!q) return { hit: true, score: 0 };
+  var n = norm(c.name), cap = norm(c.capital || ''), reg = norm(c.region), off = norm(c.official || '');
+  if (n.indexOf(q) === 0) return { hit: true, score: 100 };
+  if (n.indexOf(q) >= 0) return { hit: true, score: 80 };
+  if (off.indexOf(q) >= 0) return { hit: true, score: 60 };
+  if (cap.indexOf(q) >= 0) return { hit: true, score: 50 };
+  if (reg.indexOf(q) >= 0) return { hit: true, score: 20 };
+  return { hit: false, score: 0 };
+}
+
+var currentList = [];
+function renderGrid(){
+  var q = norm(searchEl.value.trim());
+  var rows = [];
+  DATA.forEach(function(c){
+    if (activeRegion && c.region !== activeRegion) return;
+    var m = matches(c, q);
+    if (m.hit) rows.push({ c: c, s: m.score });
+  });
+  rows.sort(function(a,b){ return b.s - a.s || a.c.name.localeCompare(b.c.name); });
+  currentList = rows.map(function(r){ return r.c; });
+  countLine.textContent = rows.length + ' of ' + DATA.length + ' entries' + (q ? ' matching “' + searchEl.value.trim() + '”' : '');
+  var html = '';
+  rows.forEach(function(r, i){
+    var c = r.c;
+    var cap = c.capital ? c.capital.split('\n')[0].split(';')[0].split(' (')[0] : null;
+    if (cap && cap.length > 32) cap = cap.slice(0, 31) + '…';
+    var meta = [cap ? 'Capital: ' + cap : null, c.region].filter(Boolean).join(' · ');
+    html += '<button class="ccard' + (q && i === 0 ? ' kbd-sel' : '') + '" data-id="' + esc(c.id) + '">'
+      + '<span class="cflag" aria-hidden="true">' + (c.flag || '🌐') + '</span>'
+      + '<span><span class="cname">' + esc(c.name) + '</span><br><span class="cmeta">' + esc(meta) + '</span></span>'
+      + '</button>';
+  });
+  grid.innerHTML = html || '';
+  if (!rows.length) grid.innerHTML = '<div class="empty">No matches. Try a country name, capital city, or region.</div>';
+}
+grid.addEventListener('click', function(e){
+  var b = e.target.closest('.ccard');
+  if (b) location.hash = '#/c/' + b.getAttribute('data-id');
+});
+searchEl.addEventListener('input', renderGrid);
+searchEl.addEventListener('keydown', function(e){
+  if (e.key === 'Enter' && currentList.length && searchEl.value.trim()) {
+    location.hash = '#/c/' + currentList[0].id;
+  } else if (e.key === 'Escape') {
+    searchEl.value = '';
+    renderGrid();
+  }
+});
+
+/* ---------- country view ---------- */
+var cbody = document.getElementById('cbody');
+var secNav = document.getElementById('secNav');
+document.getElementById('backBtn').addEventListener('click', function(){ location.hash = ''; });
+
+function statCard(lbl, val, big, wide){
+  if (!val) return '';
+  return '<div class="stat' + (wide ? ' wide' : '') + '"><div class="lbl">' + esc(lbl) + '</div><div class="val' + (big ? ' big' : '') + '">' + esc(val) + '</div></div>';
+}
+function rowsFor(obj){
+  var html = '';
+  Object.keys(obj || {}).forEach(function(k){
+    var v = obj[k];
+    if (!v) return;
+    html += '<div class="row"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div></div>';
+  });
+  return html;
+}
+function section(id, title, inner, open){
+  if (!inner) return '';
+  var n = (inner.match(/class="row"/g) || []).length;
+  return '<section class="cs' + (open ? ' open' : '') + '" id="sec-' + id + '">'
+    + '<h2><button class="cs-toggle" aria-expanded="' + (open ? 'true' : 'false') + '">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>'
+    + '<span class="t">' + esc(title) + '</span>'
+    + (n ? '<span class="n">' + n + ' fields</span>' : '')
+    + '</button></h2><div class="cs-body">' + inner + '</div></section>';
+}
+
+var SECTION_DEFS = [
+  { id:'people',  title:'People & Society',    get:function(c){ return rowsFor(c.people); } },
+  { id:'geo',     title:'Geography',           get:function(c){ return rowsFor(c.geo); } },
+  { id:'gov',     title:'Government & Symbols',get:function(c){ return rowsFor({ 'Government type':c.govType, 'Independence':c.independence, 'National holiday':c.natHoliday, 'Flag':c.flagDesc, 'National symbols':c.symbols, 'National anthem':c.anthem }); } },
+  { id:'econ',    title:'Economy',             get:function(c){ return rowsFor(c.econ); } },
+  { id:'infra',   title:'Communications & Transport', get:function(c){ return rowsFor(c.infra); } },
+  { id:'mil',     title:'Military & Security', get:function(c){ return rowsFor(c.military); } },
+  { id:'bg',      title:'Background & History',get:function(c){ return c.background ? '<p class="prose">' + esc(c.background) + '</p>' : ''; } }
+];
+
+function showCountry(id){
+  var c = byId[id];
+  if (!c) { location.hash = ''; return; }
+  landing.style.display = 'none';
+  countryView.style.display = 'block';
+  document.getElementById('tb-title').textContent = c.name + ' — World Factbook Explorer';
+  document.title = c.name + ' — World Factbook Explorer';
+
+  var html = '<header class="chead">'
+    + '<span class="bigflag" aria-hidden="true">' + (c.flag || '🌐') + '</span>'
+    + '<div><h1>' + esc(c.name) + '</h1>'
+    + (c.official ? '<div class="official">' + esc(c.official) + '</div>' : '')
+    + '<div class="badges"><span class="badge">' + esc(c.region) + '</span>'
+    + (c.capital ? '<span class="badge alt">Capital: ' + esc(c.capital.split('\n')[0]) + '</span>' : '')
+    + '<a class="badge" style="text-decoration:none" href="' + wiki(c.name) + '" target="_blank" rel="noopener">Wikipedia ↗</a>'
+    + '</div></div></header>';
+
+  html += '<div class="ffilterwrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>'
+    + '<input id="ffilter" type="search" placeholder="Filter fields — try “religion”, “gdp”, “border”…" autocomplete="off"></div>';
+
+  /* priority stats */
+  html += '<div class="stats" id="statgrid">';
+  html += statCard('Population', c.population, true);
+  html += statCard('Area', c.area + (c.areaComp ? '\n' + c.areaComp : ''), false);
+  html += statCard('Languages', c.languages);
+  html += statCard('Religions', c.religions);
+  html += statCard('Ethnic groups', c.ethnic);
+  html += statCard('Largest cities', c.cities, false, true);
+  html += '</div>';
+
+  /* leaders */
+  if (c.leaders && c.leaders.length) {
+    var seen = {};
+    html += '<div class="leaders" id="leadergrid">';
+    c.leaders.forEach(function(l){
+      var key = l.role + '|' + l.text;
+      if (seen[key]) return;
+      seen[key] = 1;
+      html += '<div class="leader"><div class="lbl">' + esc(l.role) + '</div>'
+        + '<div class="who">' + esc(l.name || l.text) + '</div>'
+        + (l.name ? '<div class="raw">' + esc(l.text) + '</div>' : '')
+        + (l.name ? '<a class="learn" href="' + wiki(l.name) + '" target="_blank" rel="noopener">Learn more on Wikipedia'
+          + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></a>' : '')
+        + '</div>';
+    });
+    html += '</div><div style="height:1.5rem"></div>';
+  }
+
+  var navHtml = '<a class="navlink active" href="#top-of-country" data-sec="statgrid">Overview</a>';
+  SECTION_DEFS.forEach(function(def, i){
+    var inner = def.get(c);
+    if (!inner) return;
+    html += section(def.id, def.title, inner, i === 0);
+    navHtml += '<a class="navlink" href="#sec-' + def.id + '" data-sec="sec-' + def.id + '">' + esc(def.title) + '</a>';
+  });
+
+  html += '<p class="src-note">Source: <a href="https://www.cia.gov/the-world-factbook/" target="_blank" rel="noopener">CIA World Factbook</a> (public domain), via the <a href="https://github.com/factbook/factbook.json" target="_blank" rel="noopener">factbook.json</a> mirror. Data snapshot: __DATA_DATE__ — regenerated automatically on every site build.</p>';
+
+  cbody.innerHTML = html;
+  secNav.innerHTML = navHtml;
+  window.scrollTo(0, 0);
+
+  /* collapsible toggles */
+  cbody.querySelectorAll('.cs-toggle').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var sec = btn.closest('section.cs');
+      var open = sec.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  });
+
+  /* nav links: open target section */
+  secNav.querySelectorAll('a.navlink').forEach(function(a){
+    a.addEventListener('click', function(e){
+      var target = a.getAttribute('data-sec');
+      if (target === 'statgrid') { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      var sec = document.getElementById(target);
+      if (sec && !sec.classList.contains('open')) sec.classList.add('open');
+    });
+  });
+
+  /* scroll-spy */
+  var spyTargets = [];
+  secNav.querySelectorAll('a.navlink').forEach(function(a){
+    var t = document.getElementById(a.getAttribute('data-sec'));
+    if (t) spyTargets.push({ a: a, t: t });
+  });
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (!en.isIntersecting) return;
+        spyTargets.forEach(function(s){ s.a.classList.toggle('active', s.t === en.target); });
+      });
+    }, { rootMargin: '-15% 0px -70% 0px' });
+    spyTargets.forEach(function(s){ io.observe(s.t); });
+  }
+
+  /* field filter */
+  var ff = document.getElementById('ffilter');
+  ff.addEventListener('input', function(){
+    var q = norm(ff.value.trim());
+    cbody.querySelectorAll('section.cs').forEach(function(sec){
+      var any = false;
+      sec.querySelectorAll('.row').forEach(function(r){
+        var hit = !q || norm(r.textContent).indexOf(q) >= 0;
+        r.classList.toggle('hidden', !hit);
+        if (hit) any = true;
+      });
+      var prose = sec.querySelector('.prose');
+      if (prose) { var ph = !q || norm(prose.textContent).indexOf(q) >= 0; prose.style.display = ph ? '' : 'none'; if (ph) any = true; }
+      sec.style.display = any ? '' : 'none';
+      if (q && any && !sec.classList.contains('open')) sec.classList.add('open');
+    });
+    cbody.querySelectorAll('.stat').forEach(function(s){
+      s.style.display = (!q || norm(s.textContent).indexOf(q) >= 0) ? '' : 'none';
+    });
+  });
+}
+
+function showLanding(){
+  countryView.style.display = 'none';
+  landing.style.display = 'block';
+  document.getElementById('tb-title').textContent = 'World Factbook Explorer';
+  document.title = 'World Factbook Explorer';
+  searchEl.focus();
+}
+
+/* ---------- hash routing ---------- */
+function route(){
+  var m = location.hash.match(/^#\/c\/([a-z]{2})$/);
+  if (m && byId[m[1]]) showCountry(m[1]);
+  else showLanding();
+}
+window.addEventListener('hashchange', route);
+
+renderGrid();
+route();
+
+/* keyboard: "/" focuses search on landing */
+document.addEventListener('keydown', function(e){
+  if (e.key === '/' && landing.style.display !== 'none' && document.activeElement !== searchEl) {
+    e.preventDefault();
+    searchEl.focus();
+  }
+});
+})();
+</script>

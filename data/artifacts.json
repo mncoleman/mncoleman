@@ -97,5 +97,14 @@
     "type": "text/html",
     "size": 71623,
     "uploadedAt": "2026-08-19T00:00:00.000Z"
+  },
+  {
+    "id": "6733f08e-df6c-40b1-a9ff-1fb9d72904a0",
+    "name": "World Factbook Explorer",
+    "filename": "world-factbook-explorer.html",
+    "description": "Search every country, territory, and ocean in the CIA World Factbook — population, leaders, languages, religions, geography, economy, and more, with filterable collapsible sections.",
+    "type": "text/html",
+    "size": 1847269,
+    "uploadedAt": "2026-08-30T21:24:39.500Z"
   }
 ]
