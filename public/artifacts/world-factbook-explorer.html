@@ -86,12 +86,16 @@ kbd{font-family:inherit;border:1px solid var(--border);border-bottom-width:2px;b
 /* results / browse grid */
 .count-line{font-size:var(--text-xs);color:var(--text-faint);margin-bottom:.75rem}
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:.75rem}
-.ccard{display:flex;align-items:center;gap:.7rem;padding:.7rem .85rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);cursor:pointer;text-align:left;font:inherit;color:var(--text);transition:border-color .15s,box-shadow .15s,transform .15s}
+.ccard{display:flex;flex-direction:column;padding:.75rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);cursor:pointer;text-align:left;font:inherit;color:var(--text);transition:border-color .15s,box-shadow .15s}
 .ccard:hover,.ccard.kbd-sel{border-color:var(--primary);box-shadow:var(--sh-sm)}
 .ccard.kbd-sel{box-shadow:0 0 0 3px var(--primary-dim)}
-.ccard .cflag{font-size:1.6rem;line-height:1;flex-shrink:0;width:2rem;text-align:center}
+.ccard .ch{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem}
+.ccard .cflag{font-size:1.5rem;line-height:1;flex-shrink:0}
 .ccard .cname{font-weight:600;font-size:var(--text-sm);line-height:1.25}
-.ccard .cmeta{font-size:var(--text-xs);color:var(--text-muted);line-height:1.3;margin-top:.1rem}
+.ccard .cm{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem;padding:.22rem 0;border-top:1px dotted var(--divider);font-size:var(--text-xs)}
+.ccard .cml{color:var(--text-faint);text-transform:uppercase;letter-spacing:.07em;font-size:.68rem;font-weight:600;flex-shrink:0}
+.ccard .cmv{color:var(--text-muted);text-align:right;overflow-wrap:anywhere}
+.ccard .cm:last-child{padding-bottom:0}
 .empty{padding:3rem 1rem;text-align:center;color:var(--text-muted)}
 
 /* ===== country view ===== */
@@ -272,6 +276,18 @@ chipsEl.addEventListener('click', function(e){
   renderGrid();
 });
 
+function compactPop(p){
+  if (!p) return null;
+  var m = String(p).match(/^([\d,]+)/);
+  if (!m) return null;
+  var n = parseInt(m[1].replace(/,/g, ''), 10);
+  if (!isFinite(n) || n <= 0) return null;
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return Math.round(n / 1e3) + 'K';
+  return String(n);
+}
+
 function matches(c, q){
   if (!q) return { hit: true, score: 0 };
   var n = norm(c.name), cap = norm(c.capital || ''), reg = norm(c.region), off = norm(c.official || '');
@@ -299,11 +315,13 @@ function renderGrid(){
   rows.forEach(function(r, i){
     var c = r.c;
     var cap = c.capital ? c.capital.split('\n')[0].split(';')[0].split(' (')[0] : null;
-    if (cap && cap.length > 32) cap = cap.slice(0, 31) + '…';
-    var meta = [cap ? 'Capital: ' + cap : null, c.region].filter(Boolean).join(' · ');
+    if (cap && cap.length > 28) cap = cap.slice(0, 27) + '…';
+    var pop = compactPop(c.population);
     html += '<button class="ccard' + (q && i === 0 ? ' kbd-sel' : '') + '" data-id="' + esc(c.id) + '">'
-      + '<span class="cflag" aria-hidden="true">' + (c.flag || '🌐') + '</span>'
-      + '<span><span class="cname">' + esc(c.name) + '</span><br><span class="cmeta">' + esc(meta) + '</span></span>'
+      + '<span class="ch"><span class="cflag" aria-hidden="true">' + (c.flag || '🌐') + '</span><span class="cname">' + esc(c.name) + '</span></span>'
+      + (cap ? '<span class="cm"><span class="cml">Capital</span><span class="cmv">' + esc(cap) + '</span></span>' : '')
+      + '<span class="cm"><span class="cml">Region</span><span class="cmv">' + esc(c.region) + '</span></span>'
+      + (pop ? '<span class="cm"><span class="cml">Population</span><span class="cmv">' + esc(pop) + '</span></span>' : '')
       + '</button>';
   });
   grid.innerHTML = html || '';
