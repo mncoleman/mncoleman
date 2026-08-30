@@ -116,23 +116,14 @@ kbd{font-family:inherit;border:1px solid var(--border);border-bottom-width:2px;b
 #ffilter{width:100%;padding:.55rem .8rem .55rem 2.3rem;font:inherit;font-size:var(--text-sm);color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md)}
 #ffilter:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-dim)}
 
-/* stat cards */
-.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.85rem;margin-bottom:1.75rem}
-.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:.85rem 1rem;transition:border-color .15s}
-.stat:hover{border-color:var(--primary)}
-.stat .lbl{font-size:var(--text-xs);font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint);margin-bottom:.3rem}
-.stat .val{font-size:var(--text-sm);line-height:1.5;white-space:pre-line}
-.stat .val.big{font-size:var(--text-lg);font-family:'Crimson Pro',Georgia,serif;font-weight:600;font-variant-numeric:tabular-nums}
-.stat.wide{grid-column:1/-1}
-
-/* leaders */
-.leaders{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:.85rem}
-.leader{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:var(--radius-lg);padding:.85rem 1rem}
-.leader .lbl{font-size:var(--text-xs);font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint)}
-.leader .who{font-family:'Crimson Pro',Georgia,serif;font-size:var(--text-lg);font-weight:600;margin:.2rem 0 .15rem}
-.leader .raw{font-size:var(--text-xs);color:var(--text-muted)}
-.leader a.learn{display:inline-flex;align-items:center;gap:.3rem;margin-top:.45rem;font-size:var(--text-xs);font-weight:600;text-decoration:none}
-.leader a.learn svg{width:12px;height:12px}
+/* overview panel: one key/value table instead of uneven cards */
+.ovpanel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:.35rem 1.1rem;margin-bottom:1rem}
+.row .v.big{font-size:var(--text-lg);font-family:'Crimson Pro',Georgia,serif;font-weight:600;font-variant-numeric:tabular-nums}
+.row .who{font-family:'Crimson Pro',Georgia,serif;font-size:var(--text-lg);font-weight:600;line-height:1.3}
+.row .raw{font-size:var(--text-xs);color:var(--text-muted);margin-top:.1rem}
+.row a.learn{display:inline-flex;align-items:center;gap:.3rem;margin-top:.3rem;font-size:var(--text-xs);font-weight:600;text-decoration:none}
+.row a.learn svg{width:12px;height:12px}
+.row.lead{border-left:3px solid var(--primary);padding-left:.85rem;margin-left:-.15rem}
 
 /* collapsible sections */
 section.cs{border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);margin-bottom:.85rem;overflow:hidden}
@@ -320,9 +311,9 @@ var cbody = document.getElementById('cbody');
 var secNav = document.getElementById('secNav');
 document.getElementById('backBtn').addEventListener('click', function(){ location.hash = ''; });
 
-function statCard(lbl, val, big, wide){
+function ovRow(lbl, val, big){
   if (!val) return '';
-  return '<div class="stat' + (wide ? ' wide' : '') + '"><div class="lbl">' + esc(lbl) + '</div><div class="val' + (big ? ' big' : '') + '">' + esc(val) + '</div></div>';
+  return '<div class="row"><div class="k">' + esc(lbl) + '</div><div class="v' + (big ? ' big' : '') + '">' + esc(val) + '</div></div>';
 }
 function rowsFor(obj){
   var html = '';
@@ -374,33 +365,29 @@ function showCountry(id){
   html += '<div class="ffilterwrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>'
     + '<input id="ffilter" type="search" placeholder="Filter fields — try “religion”, “gdp”, “border”…" autocomplete="off"></div>';
 
-  /* priority stats */
-  html += '<div class="stats" id="statgrid">';
-  html += statCard('Population', c.population, true);
-  html += statCard('Area', c.area + (c.areaComp ? '\n' + c.areaComp : ''), false);
-  html += statCard('Languages', c.languages);
-  html += statCard('Religions', c.religions);
-  html += statCard('Ethnic groups', c.ethnic);
-  html += statCard('Largest cities', c.cities, false, true);
-  html += '</div>';
-
-  /* leaders */
+  /* overview: leaders + priority stats as one key/value table */
+  html += '<div class="ovpanel" id="statgrid">';
   if (c.leaders && c.leaders.length) {
     var seen = {};
-    html += '<div class="leaders" id="leadergrid">';
     c.leaders.forEach(function(l){
       var key = l.role + '|' + l.text;
       if (seen[key]) return;
       seen[key] = 1;
-      html += '<div class="leader"><div class="lbl">' + esc(l.role) + '</div>'
+      html += '<div class="row lead"><div class="k">' + esc(l.role) + '</div><div class="v">'
         + '<div class="who">' + esc(l.name || l.text) + '</div>'
         + (l.name ? '<div class="raw">' + esc(l.text) + '</div>' : '')
         + (l.name ? '<a class="learn" href="' + wiki(l.name) + '" target="_blank" rel="noopener">Learn more on Wikipedia'
           + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></a>' : '')
-        + '</div>';
+        + '</div></div>';
     });
-    html += '</div><div style="height:1.5rem"></div>';
   }
+  html += ovRow('Population', c.population, true);
+  html += ovRow('Area', c.area + (c.areaComp ? '\n' + c.areaComp : ''));
+  html += ovRow('Languages', c.languages);
+  html += ovRow('Religions', c.religions);
+  html += ovRow('Ethnic groups', c.ethnic);
+  html += ovRow('Largest cities', c.cities);
+  html += '</div>';
 
   var navHtml = '<a class="navlink active" href="#top-of-country" data-sec="statgrid">Overview</a>';
   SECTION_DEFS.forEach(function(def, i){
@@ -467,9 +454,16 @@ function showCountry(id){
       sec.style.display = any ? '' : 'none';
       if (q && any && !sec.classList.contains('open')) sec.classList.add('open');
     });
-    cbody.querySelectorAll('.stat').forEach(function(s){
-      s.style.display = (!q || norm(s.textContent).indexOf(q) >= 0) ? '' : 'none';
-    });
+    var ov = document.getElementById('statgrid');
+    if (ov) {
+      var ovAny = false;
+      ov.querySelectorAll('.row').forEach(function(r){
+        var hit = !q || norm(r.textContent).indexOf(q) >= 0;
+        r.classList.toggle('hidden', !hit);
+        if (hit) ovAny = true;
+      });
+      ov.style.display = ovAny ? '' : 'none';
+    }
   });
 }
 
