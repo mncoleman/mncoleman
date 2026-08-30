@@ -53,6 +53,20 @@ const GEC_TO_ISO: Record<string, string | null> = {
   wa:'NA',we:'PS',wf:'WF',wi:'EH',ws:'WS',wz:'SZ',ym:'YE',za:'ZM',zi:'ZW',
 };
 
+// ISO 3166-1 alpha-2 -> numeric id of the country's shape in scripts/factbook-world-map.json
+// (Natural Earth 110m via world-atlas; only ids that exist in that file are listed)
+const ISO2_TO_MAP: Record<string, string> = {
+  AE:'784',AF:'004',AL:'008',AM:'051',AO:'024',AQ:'010',AR:'032',AT:'040',AU:'036',AZ:'031',BA:'070',BD:'050',BE:'056',BF:'854',BG:'100',BI:'108',BJ:'204',BN:'096',BO:'068',BR:'076',BS:'044',BT:'064',BW:'072',BY:'112',BZ:'084',
+  CA:'124',CD:'180',CF:'140',CG:'178',CH:'756',CI:'384',CL:'152',CM:'120',CN:'156',CO:'170',CR:'188',CU:'192',CY:'196',CZ:'203',DE:'276',DJ:'262',DK:'208',DO:'214',DZ:'012',EC:'218',EE:'233',EG:'818',EH:'732',ER:'232',ES:'724',ET:'231',
+  FI:'246',FJ:'242',FK:'238',FR:'250',GA:'266',GB:'826',GE:'268',GH:'288',GL:'304',GM:'270',GN:'324',GQ:'226',GR:'300',GT:'320',GW:'624',GY:'328',HN:'340',HR:'191',HT:'332',HU:'348',ID:'360',IE:'372',IL:'376',IN:'356',IQ:'368',IR:'364',IS:'352',IT:'380',
+  JM:'388',JO:'400',JP:'392',KE:'404',KG:'417',KH:'116',KP:'408',KR:'410',KW:'414',KZ:'398',LA:'418',LB:'422',LK:'144',LR:'430',LS:'426',LT:'440',LU:'442',LV:'428',LY:'434',MA:'504',MD:'498',ME:'499',MG:'450',MK:'807',ML:'466',MM:'104',MN:'496',MR:'478',MW:'454',MX:'484',MY:'458',MZ:'508',
+  NA:'516',NC:'540',NE:'562',NG:'566',NI:'558',NL:'528',NO:'578',NP:'524',NZ:'554',OM:'512',PA:'591',PE:'604',PG:'598',PH:'608',PK:'586',PL:'616',PR:'630',PS:'275',PT:'620',PY:'600',QA:'634',RO:'642',RS:'688',RU:'643',RW:'646',
+  SA:'682',SB:'090',SD:'729',SE:'752',SI:'705',SK:'703',SL:'694',SN:'686',SO:'706',SR:'740',SS:'728',SV:'222',SY:'760',SZ:'748',TD:'148',TF:'260',TG:'768',TH:'764',TJ:'762',TL:'626',TM:'795',TN:'788',TR:'792',TT:'780',TW:'158',TZ:'834',
+  UA:'804',UG:'800',US:'840',UY:'858',UZ:'860',VE:'862',VN:'704',VU:'548',YE:'887',ZA:'710',ZM:'894',ZW:'716',
+};
+// shapes without an ISO2 in the map source, keyed by factbook GEC code
+const GEC_TO_MAP: Record<string, string> = { kv: 'undefined' /* Kosovo ships with a null id in world-atlas */ };
+
 const TITLE_WORDS = new Set([
   'president','prime','minister','premier','king','queen','sultan','emir','amir',
   'chancellor','supreme','leader','grand','duke','duchess','prince','princess','crown',
@@ -242,12 +256,14 @@ function buildDataset(fbDir: string) {
       }
 
       const area = flat(get(d, 'Geography', 'Area', 'total')) || flat(get(d, 'Geography', 'Area'));
+      const iso2 = GEC_TO_ISO[code];
       const c: Record<string, unknown> = {
         id: code,
         name,
         official,
         region: REGION_NAMES[regionDir] ?? regionDir,
-        flag: flagEmoji(GEC_TO_ISO[code]),
+        flag: flagEmoji(iso2),
+        mapId: GEC_TO_MAP[code] ?? (iso2 ? ISO2_TO_MAP[iso2] : undefined),
         capital: flat(get(d, 'Government', 'Capital', 'name')),
         population: flat(get(d, 'People and Society', 'Population', 'total')) || flat(get(d, 'People and Society', 'Population')),
         area,
@@ -331,14 +347,15 @@ async function main() {
     if (countries.length < 200) throw new Error(`only ${countries.length} countries extracted — refusing to overwrite`);
 
     const json = JSON.stringify(countries).replace(/<\//g, '<\\/');
+    const mapJson = fs.readFileSync(path.join(process.cwd(), 'scripts', 'factbook-world-map.json'), 'utf-8').replace(/<\//g, '<\\/');
     const dateLabel = new Date(`${dataDate}T12:00:00Z`).toLocaleDateString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
     });
     const tpl = fs.readFileSync(TEMPLATE, 'utf-8');
     // date first so it can never touch the data blob; function replacement so `$`
     // sequences inside the JSON are inserted literally, not as replacement patterns
-    const page = tpl.replace(/__DATA_DATE__/g, dateLabel).replace('__DATA__', () => json);
-    if (page.includes('__DATA__') || page.includes('__DATA_DATE__')) throw new Error('template placeholders not fully replaced');
+    const page = tpl.replace(/__DATA_DATE__/g, dateLabel).replace('__DATA__', () => json).replace('__MAPDATA__', () => mapJson);
+    if (page.includes('__DATA__') || page.includes('__DATA_DATE__') || page.includes('__MAPDATA__')) throw new Error('template placeholders not fully replaced');
 
     const headEnd = page.indexOf('<div class="topbar">');
     if (headEnd < 0) throw new Error('template missing topbar marker');

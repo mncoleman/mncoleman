@@ -37,6 +37,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
 html{scroll-behavior:smooth;scroll-padding-top:5rem}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
 body{background:var(--bg);color:var(--text);font-family:'Work Sans',system-ui,-apple-system,sans-serif;font-size:var(--text-base);line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
@@ -160,6 +161,12 @@ section.cs.open .cs-body{display:block}
 .prose{font-size:var(--text-sm);line-height:1.7;white-space:pre-line;max-width:70ch;padding-top:.6rem}
 mark{background:var(--primary-hl);color:inherit;border-radius:.15rem;padding:0 .1rem}
 
+.mapwrap{max-width:640px;margin:0 0 1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:.6rem}
+.mapwrap svg{display:block;width:100%;height:auto}
+.msphere{fill:var(--surface-off);opacity:.45;stroke:var(--divider);stroke-width:1}
+.mc{fill:var(--surface-dyn);stroke:var(--bg);stroke-width:.5}
+.mc.sel{fill:var(--primary);stroke:var(--primary-hov);stroke-width:.75}
+.mring{fill:none;stroke:var(--primary);stroke-width:1.5;opacity:.8}
 .src-note{margin-top:2rem;font-size:var(--text-xs);color:var(--text-faint);max-width:70ch}
 .src-note a{color:inherit}
 
@@ -214,11 +221,18 @@ mark{background:var(--primary-hl);color:inherit;border-radius:.15rem;padding:0 .
   </div>
 </main>
 
+<script id="fb-map" type="application/json">__MAPDATA__</script>
 <script id="fb-data" type="application/json">__DATA__</script>
 <script>
 (function(){
 'use strict';
 var DATA = JSON.parse(document.getElementById('fb-data').textContent);
+var MAP = null, mapBase = '', mapByN = {};
+try {
+  MAP = JSON.parse(document.getElementById('fb-map').textContent);
+  mapBase = '<path class="msphere" d="' + MAP.sphere + '"/>';
+  MAP.countries.forEach(function(p){ mapByN[p.n] = p; mapBase += '<path class="mc" d="' + p.d + '"/>'; });
+} catch (e) { MAP = null; }
 var byId = {};
 DATA.forEach(function(c){ byId[c.id] = c; });
 
@@ -458,6 +472,15 @@ function showCountry(id){
     + (c.capital ? '<span class="badge alt">Capital: ' + esc(c.capital.split('\n')[0]) + '</span>' : '')
     + '<a class="badge" style="text-decoration:none" href="' + wiki(c.name) + '" target="_blank" rel="noopener">Wikipedia ↗</a>'
     + '</div></div></header>';
+
+  var mp = MAP && c.mapId ? mapByN[c.mapId] : null;
+  if (mp) {
+    html += '<div class="mapwrap"><svg viewBox="0 0 ' + MAP.w + ' ' + MAP.h + '" role="img" aria-label="Map location of ' + esc(c.name) + '">'
+      + mapBase
+      + '<path class="mc sel" d="' + mp.d + '"/>'
+      + '<circle class="mring" cx="' + mp.c[0] + '" cy="' + mp.c[1] + '" r="12"/>'
+      + '</svg></div>';
+  }
 
   html += '<div class="ffilterwrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>'
     + '<input id="ffilter" type="search" placeholder="Filter fields — try “religion”, “gdp”, “border”…" autocomplete="off"></div>';
