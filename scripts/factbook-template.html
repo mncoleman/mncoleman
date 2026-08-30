@@ -359,7 +359,24 @@ function splitTop(s){
   return parts.map(function(p){ return p.trim(); }).filter(Boolean);
 }
 
+function fmtNum(v){
+  if (v >= 100) return Math.round(v).toLocaleString('en-US');
+  if (v >= 10) return (Math.round(v * 10) / 10).toLocaleString('en-US');
+  return (Math.round(v * 100) / 100).toLocaleString('en-US');
+}
+/* append imperial twins to metric measurements: sq km -> sq mi, km -> mi, m -> ft */
+function convertUnits(s){
+  return String(s).replace(/([\d,]+(?:\.\d+)?)\s*(sq km|km\b|m\b)(?!\s*\((?:[\d,.]+ )?(?:sq mi|mi|ft)\))/g, function(match, num, unit){
+    var v = parseFloat(num.replace(/,/g, ''));
+    if (!isFinite(v)) return match;
+    if (unit === 'sq km') return match + ' (' + fmtNum(v * 0.386102) + ' sq mi)';
+    if (unit === 'km') return match + ' (' + fmtNum(v * 0.621371) + ' mi)';
+    return match + ' (' + fmtNum(v * 3.28084) + ' ft)';
+  });
+}
+
 function richVal(key, val){
+  val = convertUnits(val);
   if (!LISTIFY[key]) return esc(val);
   var lines = val.split('\n');
   var main = lines[0];
@@ -422,7 +439,7 @@ var SECTION_DEFS = [
   { id:'econ',    title:'Economy',             get:function(c){ return rowsFor(c.econ); } },
   { id:'infra',   title:'Communications & Transport', get:function(c){ return rowsFor(c.infra); } },
   { id:'mil',     title:'Military & Security', get:function(c){ return rowsFor(c.military); } },
-  { id:'bg',      title:'Background & History',get:function(c){ return c.background ? '<p class="prose">' + esc(c.background) + '</p>' : ''; } }
+  { id:'bg',      title:'Background & History',get:function(c){ return c.background ? '<p class="prose">' + esc(convertUnits(c.background)) + '</p>' : ''; } }
 ];
 
 function showCountry(id){
