@@ -143,6 +143,18 @@ section.cs.open .cs-body{display:block}
 .row:last-child{border-bottom:none}
 .row .k{font-size:var(--text-xs);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);padding-top:.15rem}
 .row .v{font-size:var(--text-sm);white-space:pre-line;overflow-wrap:anywhere}
+/* wikipedia-infobox-style value lists */
+.vlist{list-style:none;margin:0;padding:0;white-space:normal}
+.vlist li{padding:.3rem 0;border-bottom:1px dotted var(--divider)}
+.vlist li:last-child{border-bottom:none}
+.vlist .li-top{display:flex;align-items:baseline;gap:.75rem;justify-content:space-between}
+.vlist .li-n{min-width:0}
+.vlist .li-v{font-weight:600;font-variant-numeric:tabular-nums;color:var(--primary);white-space:nowrap}
+.vlist .li-sub{font-size:var(--text-xs);color:var(--text-muted);margin-top:.05rem}
+.vlist .li-bar{height:2px;background:var(--surface-off);border-radius:1px;margin-top:.3rem;overflow:hidden}
+.vlist .li-bar>span{display:block;height:100%;background:var(--primary);opacity:.65}
+.v-est{display:block;font-size:var(--text-xs);color:var(--text-faint);margin-top:.35rem}
+.v-note{display:block;font-size:var(--text-xs);color:var(--text-muted);margin-top:.35rem;white-space:pre-line}
 .row.hidden{display:none!important}
 .prose{font-size:var(--text-sm);line-height:1.7;white-space:pre-line;max-width:70ch;padding-top:.6rem}
 mark{background:var(--primary-hl);color:inherit;border-radius:.15rem;padding:0 .1rem}
@@ -316,16 +328,66 @@ var cbody = document.getElementById('cbody');
 var secNav = document.getElementById('secNav');
 document.getElementById('backBtn').addEventListener('click', function(){ location.hash = ''; });
 
+/* fields rendered as wikipedia-infobox-style item lists */
+var LISTIFY = {'Languages':1,'Religions':1,'Ethnic groups':1,'Largest cities':1,'Industries':1,
+  'Agricultural products':1,'Natural resources':1,'Exports - partners':1,'Exports - commodities':1,
+  'Imports - partners':1,'National symbols':1};
+
+function splitTop(s){
+  var parts = [], depth = 0, cur = '';
+  for (var i = 0; i < s.length; i++) {
+    var ch = s[i];
+    if (ch === '(') depth++;
+    else if (ch === ')') depth = Math.max(0, depth - 1);
+    if (ch === ',' && depth === 0) { parts.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  parts.push(cur);
+  return parts.map(function(p){ return p.trim(); }).filter(Boolean);
+}
+
+function richVal(key, val){
+  if (!LISTIFY[key]) return esc(val);
+  var lines = val.split('\n');
+  var main = lines[0];
+  var rest = lines.slice(1).join('\n').trim();
+  var est = '';
+  var em = main.match(/\s*\(([^()]*(?:19|20)\d\d[^()]*)\)\s*$/);
+  if (em) { est = em[1]; main = main.slice(0, em.index); }
+  var items = splitTop(main);
+  if (items.length < 2) return esc(val);
+  var html = '<ul class="vlist">';
+  items.forEach(function(it){
+    var pm = it.match(/^(.+?)\s+(<?\s*\d+(?:\.\d+)?)\s*%\s*(\(.+\))?$/);
+    var cm = pm ? null : it.match(/^([\d.,]+\s+(?:million|billion))\s+(.+)$/);
+    if (pm) {
+      var pct = parseFloat(pm[2].replace('<', ''));
+      html += '<li><div class="li-top"><span class="li-n">' + esc(pm[1]) + '</span><span class="li-v">' + esc(pm[2].replace(/\s+/g, '')) + '%</span></div>'
+        + (pm[3] ? '<div class="li-sub">' + esc(pm[3].slice(1, -1)) + '</div>' : '')
+        + (pct <= 100 ? '<div class="li-bar" aria-hidden="true"><span style="width:' + pct + '%"></span></div>' : '')
+        + '</li>';
+    } else if (cm) {
+      html += '<li><div class="li-top"><span class="li-n">' + esc(cm[2]) + '</span><span class="li-v">' + esc(cm[1]) + '</span></div></li>';
+    } else {
+      html += '<li><div class="li-top"><span class="li-n">' + esc(it) + '</span></div></li>';
+    }
+  });
+  html += '</ul>';
+  if (est) html += '<span class="v-est">' + esc(est) + '</span>';
+  if (rest) html += '<span class="v-note">' + esc(rest) + '</span>';
+  return html;
+}
+
 function ovRow(lbl, val, big){
   if (!val) return '';
-  return '<div class="row"><div class="k">' + esc(lbl) + '</div><div class="v' + (big ? ' big' : '') + '">' + esc(val) + '</div></div>';
+  return '<div class="row"><div class="k">' + esc(lbl) + '</div><div class="v' + (big ? ' big' : '') + '">' + richVal(lbl, val) + '</div></div>';
 }
 function rowsFor(obj){
   var html = '';
   Object.keys(obj || {}).forEach(function(k){
     var v = obj[k];
     if (!v) return;
-    html += '<div class="row"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div></div>';
+    html += '<div class="row"><div class="k">' + esc(k) + '</div><div class="v">' + richVal(k, v) + '</div></div>';
   });
   return html;
 }
@@ -417,13 +479,17 @@ function showCountry(id){
     });
   });
 
-  /* nav links: open target section */
+  /* nav links: open + scroll to the target section without touching the hash
+     (a hash change would re-route back to the search view) */
   secNav.querySelectorAll('a.navlink').forEach(function(a){
     a.addEventListener('click', function(e){
+      e.preventDefault();
       var target = a.getAttribute('data-sec');
-      if (target === 'statgrid') { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      if (target === 'statgrid') { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
       var sec = document.getElementById(target);
-      if (sec && !sec.classList.contains('open')) sec.classList.add('open');
+      if (!sec) return;
+      if (!sec.classList.contains('open')) sec.classList.add('open');
+      sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
 
