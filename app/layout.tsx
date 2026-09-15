@@ -74,6 +74,10 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'mncoleman',
   },
+  other: {
+    // Pinterest domain claim.
+    'p:domain_verify': '4b27fcbc7d4516a6fb3ddf37e84efca2',
+  },
   icons: {
     icon: [
       { url: `${basePath}/icon-192.png`, sizes: '192x192', type: 'image/png' },
