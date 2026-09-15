@@ -22,8 +22,10 @@ const TRANSIENT_CODES = new Set([
     'conflict_error',
 ]);
 
-const MAX_ATTEMPTS = 3;
+const MAX_ATTEMPTS = 5;
 const BASE_DELAY_MS = 600;
+/** Notion's hint is ~29s under sustained limiting; don't let a bad value stall the build. */
+const MAX_DELAY_MS = 60_000;
 
 function isTransient(error: unknown): boolean {
     const code = (error as { code?: string } | null)?.code;
@@ -35,9 +37,18 @@ function isTransient(error: unknown): boolean {
 
 /** Honour Notion's own back-off hint when it sends one, else exponential. */
 function delayFor(error: unknown, attempt: number): number {
-    const headers = (error as { headers?: Record<string, string> } | null)?.headers;
-    const retryAfter = Number(headers?.['retry-after']);
-    if (Number.isFinite(retryAfter) && retryAfter > 0) return retryAfter * 1000;
+    // The SDK hands back a fetch `Headers` instance, not a plain object — indexing it
+    // silently yields undefined, which is how a 429 asking for 29s used to back off
+    // 600ms and fail the build three attempts later. Read it both ways.
+    const headers = (error as { headers?: Headers | Record<string, string> } | null)?.headers;
+    const raw =
+        headers && typeof (headers as Headers).get === 'function'
+            ? (headers as Headers).get('retry-after')
+            : (headers as Record<string, string> | undefined)?.['retry-after'];
+    const retryAfter = Number(raw);
+    if (Number.isFinite(retryAfter) && retryAfter > 0) {
+        return Math.min(retryAfter * 1000, MAX_DELAY_MS);
+    }
     return BASE_DELAY_MS * 2 ** (attempt - 1);
 }
 
