@@ -1,16 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import {
-    AlertTriangle, Check, ExternalLink, ImagePlus, Loader2, Pencil, Plus, RefreshCw, Search, Trash2, X,
-} from 'lucide-react';
+import { AlertTriangle, Check, ExternalLink, Loader2, Pencil, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
 import { cn, slugify } from '@/lib/utils';
-import { PasteInput, PasteTextarea, insertAtCaret } from '@/components/admin/PasteField';
+import { PasteInput, PasteTextarea } from '@/components/admin/PasteField';
+import { TagPicker } from '@/components/admin/TagPicker';
+import { MonthPicker } from '@/components/admin/MonthPicker';
+import { MarkdownEditor } from '@/components/admin/MarkdownEditor';
 
 /**
  * Editor for the two JSON-backed collections, `data/resources.json` and
@@ -69,101 +70,6 @@ function tagsOf(item: Item, field: TagsField): string[] {
     return Array.isArray(v) ? (v as string[]) : [];
 }
 
-const ADD_NEW = '__add_new__';
-
-/**
- * Multi-select built from the values already in use across the collection, with an
- * "Add new…" choice that opens a text box. Chosen values sit above as removable chips.
- */
-function TagPicker({
-    label,
-    singular,
-    value,
-    options,
-    onChange,
-}: {
-    label: string;
-    singular: string;
-    value: string[];
-    options: string[];
-    onChange: (next: string[]) => void;
-}) {
-    const [adding, setAdding] = useState(false);
-    const [draft, setDraft] = useState('');
-    const available = options.filter((o) => !value.includes(o));
-
-    const add = (tag: string) => {
-        const t = tag.trim();
-        if (!t || value.includes(t)) return;
-        onChange([...value, t]);
-    };
-
-    const commitDraft = () => {
-        add(draft);
-        setDraft('');
-        setAdding(false);
-    };
-
-    return (
-        <div className="space-y-2">
-            <Label>{label}</Label>
-            {value.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                    {value.map((t) => (
-                        <span key={t} className="inline-flex items-center gap-1 rounded-full border border-border bg-accent px-2 py-0.5 text-xs text-accent-foreground">
-                            {t}
-                            <button type="button" onClick={() => onChange(value.filter((v) => v !== t))} aria-label={`Remove ${t}`} className="text-muted-foreground hover:text-foreground">
-                                <X size={12} />
-                            </button>
-                        </span>
-                    ))}
-                </div>
-            )}
-            {adding ? (
-                <div className="flex gap-2">
-                    <PasteInput
-                        autoFocus
-                        value={draft}
-                        placeholder={`New ${singular}`}
-                        onChange={(e) => setDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                commitDraft();
-                            } else if (e.key === 'Escape') {
-                                setAdding(false);
-                                setDraft('');
-                            }
-                        }}
-                        wrapperClassName="flex-1"
-                    />
-                    <Button type="button" size="sm" onClick={commitDraft} disabled={!draft.trim()} className="gap-1">
-                        <Plus size={14} /> Add
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => { setAdding(false); setDraft(''); }}>
-                        Cancel
-                    </Button>
-                </div>
-            ) : (
-                <select
-                    value=""
-                    onChange={(e) => {
-                        if (e.target.value === ADD_NEW) setAdding(true);
-                        else if (e.target.value) add(e.target.value);
-                    }}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                    <option value="">{available.length ? `Add a ${singular}…` : `No more existing ${label.toLowerCase()}`}</option>
-                    {available.map((o) => (
-                        <option key={o} value={o}>{o}</option>
-                    ))}
-                    <option value={ADD_NEW}>+ Add new {singular}…</option>
-                </select>
-            )}
-        </div>
-    );
-}
-
 function readAsBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -193,10 +99,6 @@ function ItemForm({
     const cfg = COLLECTIONS[collection];
     const [draft, setDraft] = useState<Item>(initial);
     const [tags, setTags] = useState<string[]>(tagsOf(initial, cfg.tagsField));
-    const [upload, setUpload] = useState<{ state: 'busy' | 'error'; text: string } | null>(null);
-    const [dragging, setDragging] = useState(false);
-    const bodyRef = useRef<HTMLTextAreaElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const set = (patch: Partial<ResourceItem & ProjectItem>) => setDraft((d) => ({ ...d, ...patch }) as Item);
 
@@ -204,38 +106,20 @@ function ItemForm({
     // builds its routes from slugify(name), so renaming a record moves its page.
     const slug = slugify(draft.name);
     const duplicate = existingIds.includes(slug);
-    const valid = draft.name.trim().length > 0 && !duplicate && !upload;
+    const valid = draft.name.trim().length > 0 && !duplicate;
 
-    const uploadImages = useCallback(async (files: File[]) => {
-        const images = files.filter((f) => f.type.startsWith('image/'));
-        if (images.length === 0) return;
-        setUpload({ state: 'busy', text: `Uploading ${images.length === 1 ? images[0].name : `${images.length} images`}…` });
-        try {
-            for (const file of images) {
-                const res = await fetch(`${workerUrl}/api/collections/images`, {
-                    method: 'POST',
-                    headers: authHeaders({ 'Content-Type': 'application/json' }),
-                    credentials: 'include',
-                    body: JSON.stringify({ filename: file.name, type: file.type, content: await readAsBase64(file) }),
-                });
-                const json = await res.json();
-                if (!res.ok) throw new Error(json.error || `Upload failed (${res.status})`);
-                const alt = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
-                const md = `![${alt}](${json.path})`;
-                const el = bodyRef.current;
-                if (el) {
-                    // Through the caret path so the controlled textarea sees it as typing.
-                    const pad = el.value && !el.value.endsWith('\n') ? '\n' : '';
-                    insertAtCaret(el, `${pad}${md}\n`);
-                } else {
-                    set({ content: `${draft.content || ''}\n${md}\n` });
-                }
-            }
-            setUpload(null);
-        } catch (e: unknown) {
-            setUpload({ state: 'error', text: e instanceof Error ? e.message : 'Upload failed' });
-        }
-    }, [workerUrl, draft.content]);
+    // Commits the image to public/collections/ and returns the path to embed.
+    const uploadImage = useCallback(async (file: File): Promise<string> => {
+        const res = await fetch(`${workerUrl}/api/collections/images`, {
+            method: 'POST',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            credentials: 'include',
+            body: JSON.stringify({ filename: file.name, type: file.type, content: await readAsBase64(file) }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || `Upload failed (${res.status})`);
+        return json.path as string;
+    }, [workerUrl]);
 
     return (
         <form
@@ -269,86 +153,18 @@ function ItemForm({
                 {collection === 'projects' && (
                     <div className="space-y-2">
                         <Label htmlFor="date">Date</Label>
-                        <PasteInput
-                            id="date"
-                            type="month"
-                            value={(draft as ProjectItem).date?.slice(0, 7) || ''}
-                            onChange={(e) => set({ date: e.target.value ? `${e.target.value}-01` : '' })}
-                            // A month input only accepts YYYY-MM; keep that much of whatever was copied.
-                            transform={(t) => (t.match(/\d{4}-\d{2}/)?.[0] || '')}
-                            replace
-                        />
+                        <MonthPicker value={(draft as ProjectItem).date || ''} onChange={(date) => set({ date })} />
                     </div>
                 )}
                 <div className="space-y-2 sm:col-span-2">
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="content">Details page body (Markdown, optional)</Label>
-                        <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                        >
-                            <ImagePlus size={14} /> Add image
-                        </button>
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            className="hidden"
-                            onChange={(e) => {
-                                uploadImages(Array.from(e.target.files || []));
-                                e.target.value = '';
-                            }}
-                        />
-                    </div>
-                    <PasteTextarea
-                        ref={bodyRef}
-                        id="content"
-                        rows={10}
-                        className={cn('font-mono text-xs', dragging && 'ring-2 ring-primary/60')}
+                    <Label>Details page body (optional)</Label>
+                    <MarkdownEditor
                         value={draft.content || ''}
-                        onChange={(e) => set({ content: e.target.value })}
-                        placeholder="Write in Markdown. Drop or paste an image here to upload it."
-                        onDragOver={(e) => {
-                            if ([...e.dataTransfer.items].some((i) => i.kind === 'file')) {
-                                e.preventDefault();
-                                setDragging(true);
-                            }
-                        }}
-                        onDragLeave={() => setDragging(false)}
-                        onDrop={(e) => {
-                            setDragging(false);
-                            const files = Array.from(e.dataTransfer.files || []);
-                            if (files.some((f) => f.type.startsWith('image/'))) {
-                                e.preventDefault();
-                                uploadImages(files);
-                            }
-                        }}
-                        onPaste={(e) => {
-                            const files = Array.from(e.clipboardData.files || []).filter((f) => f.type.startsWith('image/'));
-                            if (files.length) {
-                                e.preventDefault();
-                                uploadImages(files);
-                            }
-                        }}
-                    >
-                        {upload && (
-                            <div
-                                className={cn(
-                                    'pointer-events-none absolute bottom-2 left-2 flex items-center gap-2 rounded-md border px-2 py-1 text-xs backdrop-blur',
-                                    upload.state === 'busy'
-                                        ? 'border-border bg-background/90 text-muted-foreground'
-                                        : 'border-red-500/30 bg-red-500/10 text-red-600'
-                                )}
-                            >
-                                {upload.state === 'busy' ? <Loader2 size={12} className="animate-spin" /> : <AlertTriangle size={12} />}
-                                {upload.text}
-                            </div>
-                        )}
-                    </PasteTextarea>
+                        onChange={(content) => set({ content })}
+                        onUpload={uploadImage}
+                    />
                     <p className="text-xs text-muted-foreground">
-                        Each image uploads as its own commit into the repo. Hover any field for a Paste button.
+                        Stored as Markdown. Each image uploads as its own commit. Hover any field for a Paste button.
                     </p>
                 </div>
                 <div className="flex items-center gap-3 sm:col-span-2">
