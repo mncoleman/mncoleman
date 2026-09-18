@@ -14,7 +14,7 @@
  *     scripts/generate-search-index.ts at site build time (Notion content).
  *   - https://artifacts.mncoleman.com/api/list — instant artifacts (the service
  *     filters `visibility: private` out of this endpoint itself).
- *   - https://artifacts.mncoleman.com/api/library/list — the "A"I library.
+ *   - https://artifacts.mncoleman.com/api/library/list — the AI library.
  *
  * Protocol: stateless-first per MCP 2026-07-28 (SEP-2575), with the legacy
  * `initialize` handshake still implemented so today's clients work. See
@@ -225,8 +225,8 @@ const TOOLS = [
     },
     {
         name: 'list_ai_library',
-        title: 'List the "A"I library',
-        description: 'List the public "A"I library: reusable AI prompts and Claude skills, each with its full text.',
+        title: 'List the AI library',
+        description: 'List the public AI library: reusable AI prompts and Claude skills, each with its full text.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -236,8 +236,8 @@ const TOOLS = [
     },
     {
         name: 'get_ai_library_item',
-        title: 'Get an "A"I library item',
-        description: 'Fetch one prompt or skill from the "A"I library in full, by slug.',
+        title: 'Get an AI library item',
+        description: 'Fetch one prompt or skill from the AI library in full, by slug.',
         inputSchema: {
             type: 'object',
             properties: { slug: { type: 'string', description: 'The item slug (see list_ai_library).' } },
@@ -397,7 +397,7 @@ async function callTool(name: string, args: Record<string, unknown>, env: Env): 
             if (!slug) throw new Error('slug is required');
             const items = await getLibrary(env);
             const item = items.find(i => i.slug === slug);
-            if (!item) throw new Error(`No "A"I library item with slug "${slug}". Use list_ai_library to see available slugs.`);
+            if (!item) throw new Error(`No AI library item with slug "${slug}". Use list_ai_library to see available slugs.`);
             return item;
         }
 

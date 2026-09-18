@@ -597,7 +597,7 @@ app.post('/unlock/:slug', async (c) => {
 });
 
 // ---------------------------------------------------------------------------
-// "A"I Library — prompts + skills. No private/password concept: every read
+// AI Library — prompts + skills. No private/password concept: every read
 // here is public. Only create/edit/delete require auth (via the Worker bridge).
 // ---------------------------------------------------------------------------
 

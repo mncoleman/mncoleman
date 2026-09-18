@@ -267,7 +267,7 @@ export function Search({ items }: SearchProps) {
                                     { label: 'Resources', path: '/resources', type: 'resource' },
                                     { label: 'Artifacts', path: '/artifacts', type: 'artifact' },
                                     { label: 'Resume', path: '/resume', type: 'resume' },
-                                    { label: '"A"I', path: '/ai', type: 'ai' },
+                                    { label: 'AI', path: '/ai', type: 'ai' },
                                 ] as const).map(({ label, path, type }) => (
                                     <QuickLinkButton
                                         key={label}

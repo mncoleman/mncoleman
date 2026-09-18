@@ -67,7 +67,7 @@ export function libraryDetailsPage(o: LibraryDetailsOptions): string {
             <button class="button secondary" type="button" data-copy="${escape(detailsUrl)}">Share page</button>
             ${downloadLinks}
         </div>
-        <a class="back" href="https://mncoleman.com/ai/">← All "A"I</a>
+        <a class="back" href="https://mncoleman.com/ai/">← All AI</a>
     </div>
     <textarea id="copy-source" hidden>${escape(o.content)}</textarea>
     <script>

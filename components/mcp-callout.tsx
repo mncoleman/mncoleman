@@ -38,7 +38,7 @@ const TABS = [
         label: 'Claude Code',
         steps: ['Run this in any terminal:'],
         code: `claude mcp add --transport http mncoleman ${MCP_URL}`,
-        after: 'Then ask Claude anything about the site — it can search posts, read the resume, and pull prompts from the "A"I library.',
+        after: 'Then ask Claude anything about the site — it can search posts, read the resume, and pull prompts from the AI library.',
     },
     {
         id: 'claude',

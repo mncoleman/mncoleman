@@ -14,7 +14,7 @@ Tiny Bun + Hono service that hosts uploaded HTML/PDF/image artifacts at
 | `GET`  | `/a/:slug`          | —      | Public view. HTML gets OG meta injected.     |
 | `GET`  | `/raw/:slug`        | —      | Force-download the underlying file.          |
 | `GET`  | `/og/:slug.png`     | —      | Cached OG image (1200x630, branded).         |
-| `GET`  | `/api/library/list` | —      | Public list of "A"I library items (prompts + skills), full content included. |
+| `GET`  | `/api/library/list` | —      | Public list of AI library items (prompts + skills), full content included. |
 | `POST` | `/api/library`      | Bearer | Create a prompt or skill. JSON body, `kind: 'prompt'\|'skill'`. |
 | `PATCH`| `/api/library/:slug`| Bearer | Partial update of a library item.            |
 | `DELETE`| `/api/library/:slug`| Bearer | Remove a library item.                      |
@@ -115,7 +115,7 @@ docker run -d \
 
 # /srv/library is a bind mount (not a named volume) so the host-side private MCP
 #   server can read prompt/skill files directly off the filesystem with no extra
-#   plumbing — see the "A"I library MCP addendum.
+#   plumbing — see the AI library MCP addendum.
 
 # MAX_UPLOAD_BYTES=104857600 (100 MB) raises the upload ceiling from the 25 MB
 #   default. Uploads transit the Cloudflare Worker, which caps request bodies at
@@ -167,7 +167,7 @@ Generate the shared secret with `openssl rand -hex 32`, then:
 Single Docker volume `artifacts_data`. Fully portable — `docker run` with the
 same volume on a fresh container preserves all state.
 
-### "A"I library layout
+### AI library layout
 
 ```
 /library/<slug>/

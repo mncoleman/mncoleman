@@ -160,7 +160,7 @@ export default async function RootLayout({
                         Artifacts <Kbd>T</Kbd>
                       </Link>
                       <Link href="/ai" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
-                        &quot;A&quot;I <Kbd>I</Kbd>
+                        AI <Kbd>I</Kbd>
                       </Link>
                       <Link href="/resume" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
                         Resume <Kbd>M</Kbd>

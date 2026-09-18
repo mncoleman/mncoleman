@@ -84,7 +84,7 @@ export default function AiPageClient() {
         <PageEntrance>
             <div className="container mx-auto px-4 py-16 max-w-5xl">
                 <div className="mb-10 text-center">
-                    <h1 className="text-4xl font-bold tracking-tight mb-3">&quot;A&quot;I</h1>
+                    <h1 className="text-4xl font-bold tracking-tight mb-3">AI</h1>
                     <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                         Prompts and Agent Skills.
                     </p>

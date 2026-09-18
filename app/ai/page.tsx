@@ -1,7 +1,7 @@
 import AiPageClient from './AiPageClient';
 
 export const metadata = {
-    title: '"A"I | Matthew Coleman',
+    title: 'AI | Matthew Coleman',
     description: 'Prompts and Agent Skills, made by a (mostly) human.',
 };
 
