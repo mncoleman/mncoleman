@@ -1,15 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { AlertTriangle, Check, ExternalLink, Loader2, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import {
+    AlertTriangle, Check, ExternalLink, ImagePlus, Loader2, Pencil, Plus, RefreshCw, Search, Trash2, X,
+} from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
 import { cn, slugify } from '@/lib/utils';
+import { PasteInput, PasteTextarea, insertAtCaret } from '@/components/admin/PasteField';
 
 /**
  * Editor for the two JSON-backed collections, `data/resources.json` and
@@ -20,6 +21,9 @@ import { cn, slugify } from '@/lib/utils';
  * The Worker returns the file's git sha with the items and requires it back on
  * save; a 409 means the file moved underneath us (another admin, or a build
  * committing to main) and the only safe move is to reload.
+ *
+ * Images dropped or pasted into the body are uploaded straight away (their own
+ * commit, into public/collections/) and inserted as markdown at the caret.
  */
 
 type CollectionName = 'resources' | 'projects';
@@ -46,10 +50,11 @@ interface ProjectItem {
 }
 
 type Item = ResourceItem | ProjectItem;
+type TagsField = 'categories' | 'tech';
 
-const COLLECTIONS: Record<CollectionName, { label: string; singular: string; tagsField: 'categories' | 'tech'; tagsLabel: string; path: string }> = {
-    resources: { label: 'Resources', singular: 'resource', tagsField: 'categories', tagsLabel: 'Categories', path: '/resources' },
-    projects: { label: 'Projects', singular: 'project', tagsField: 'tech', tagsLabel: 'Tech', path: '/projects' },
+const COLLECTIONS: Record<CollectionName, { label: string; singular: string; tagsField: TagsField; tagsLabel: string; tagSingular: string; path: string }> = {
+    resources: { label: 'Resources', singular: 'resource', tagsField: 'categories', tagsLabel: 'Categories', tagSingular: 'category', path: '/resources' },
+    projects: { label: 'Projects', singular: 'project', tagsField: 'tech', tagsLabel: 'Tech', tagSingular: 'tech tag', path: '/projects' },
 };
 
 function emptyItem(name: CollectionName): Item {
@@ -59,27 +64,139 @@ function emptyItem(name: CollectionName): Item {
     return { id: '', name: '', description: '', url: '', tech: [], date: '', published: false, content: '' };
 }
 
-function tagsOf(item: Item, field: 'categories' | 'tech'): string[] {
+function tagsOf(item: Item, field: TagsField): string[] {
     const v = (item as unknown as Record<string, unknown>)[field];
     return Array.isArray(v) ? (v as string[]) : [];
+}
+
+const ADD_NEW = '__add_new__';
+
+/**
+ * Multi-select built from the values already in use across the collection, with an
+ * "Add new…" choice that opens a text box. Chosen values sit above as removable chips.
+ */
+function TagPicker({
+    label,
+    singular,
+    value,
+    options,
+    onChange,
+}: {
+    label: string;
+    singular: string;
+    value: string[];
+    options: string[];
+    onChange: (next: string[]) => void;
+}) {
+    const [adding, setAdding] = useState(false);
+    const [draft, setDraft] = useState('');
+    const available = options.filter((o) => !value.includes(o));
+
+    const add = (tag: string) => {
+        const t = tag.trim();
+        if (!t || value.includes(t)) return;
+        onChange([...value, t]);
+    };
+
+    const commitDraft = () => {
+        add(draft);
+        setDraft('');
+        setAdding(false);
+    };
+
+    return (
+        <div className="space-y-2">
+            <Label>{label}</Label>
+            {value.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                    {value.map((t) => (
+                        <span key={t} className="inline-flex items-center gap-1 rounded-full border border-border bg-accent px-2 py-0.5 text-xs text-accent-foreground">
+                            {t}
+                            <button type="button" onClick={() => onChange(value.filter((v) => v !== t))} aria-label={`Remove ${t}`} className="text-muted-foreground hover:text-foreground">
+                                <X size={12} />
+                            </button>
+                        </span>
+                    ))}
+                </div>
+            )}
+            {adding ? (
+                <div className="flex gap-2">
+                    <PasteInput
+                        autoFocus
+                        value={draft}
+                        placeholder={`New ${singular}`}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                commitDraft();
+                            } else if (e.key === 'Escape') {
+                                setAdding(false);
+                                setDraft('');
+                            }
+                        }}
+                        wrapperClassName="flex-1"
+                    />
+                    <Button type="button" size="sm" onClick={commitDraft} disabled={!draft.trim()} className="gap-1">
+                        <Plus size={14} /> Add
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => { setAdding(false); setDraft(''); }}>
+                        Cancel
+                    </Button>
+                </div>
+            ) : (
+                <select
+                    value=""
+                    onChange={(e) => {
+                        if (e.target.value === ADD_NEW) setAdding(true);
+                        else if (e.target.value) add(e.target.value);
+                    }}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                    <option value="">{available.length ? `Add a ${singular}…` : `No more existing ${label.toLowerCase()}`}</option>
+                    {available.map((o) => (
+                        <option key={o} value={o}>{o}</option>
+                    ))}
+                    <option value={ADD_NEW}>+ Add new {singular}…</option>
+                </select>
+            )}
+        </div>
+    );
+}
+
+function readAsBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error);
+        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+        reader.readAsDataURL(file);
+    });
 }
 
 function ItemForm({
     collection,
     initial,
     existingIds,
+    tagOptions,
+    workerUrl,
     onSave,
     onCancel,
 }: {
     collection: CollectionName;
     initial: Item;
     existingIds: string[];
+    tagOptions: string[];
+    workerUrl: string;
     onSave: (item: Item) => void;
     onCancel: () => void;
 }) {
     const cfg = COLLECTIONS[collection];
     const [draft, setDraft] = useState<Item>(initial);
-    const [tagsText, setTagsText] = useState(tagsOf(initial, cfg.tagsField).join(', '));
+    const [tags, setTags] = useState<string[]>(tagsOf(initial, cfg.tagsField));
+    const [upload, setUpload] = useState<{ state: 'busy' | 'error'; text: string } | null>(null);
+    const [dragging, setDragging] = useState(false);
+    const bodyRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const set = (patch: Partial<ResourceItem & ProjectItem>) => setDraft((d) => ({ ...d, ...patch }) as Item);
 
@@ -87,7 +204,38 @@ function ItemForm({
     // builds its routes from slugify(name), so renaming a record moves its page.
     const slug = slugify(draft.name);
     const duplicate = existingIds.includes(slug);
-    const valid = draft.name.trim().length > 0 && !duplicate;
+    const valid = draft.name.trim().length > 0 && !duplicate && !upload;
+
+    const uploadImages = useCallback(async (files: File[]) => {
+        const images = files.filter((f) => f.type.startsWith('image/'));
+        if (images.length === 0) return;
+        setUpload({ state: 'busy', text: `Uploading ${images.length === 1 ? images[0].name : `${images.length} images`}…` });
+        try {
+            for (const file of images) {
+                const res = await fetch(`${workerUrl}/api/collections/images`, {
+                    method: 'POST',
+                    headers: authHeaders({ 'Content-Type': 'application/json' }),
+                    credentials: 'include',
+                    body: JSON.stringify({ filename: file.name, type: file.type, content: await readAsBase64(file) }),
+                });
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error || `Upload failed (${res.status})`);
+                const alt = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
+                const md = `![${alt}](${json.path})`;
+                const el = bodyRef.current;
+                if (el) {
+                    // Through the caret path so the controlled textarea sees it as typing.
+                    const pad = el.value && !el.value.endsWith('\n') ? '\n' : '';
+                    insertAtCaret(el, `${pad}${md}\n`);
+                } else {
+                    set({ content: `${draft.content || ''}\n${md}\n` });
+                }
+            }
+            setUpload(null);
+        } catch (e: unknown) {
+            setUpload({ state: 'error', text: e instanceof Error ? e.message : 'Upload failed' });
+        }
+    }, [workerUrl, draft.content]);
 
     return (
         <form
@@ -95,14 +243,13 @@ function ItemForm({
             onSubmit={(e) => {
                 e.preventDefault();
                 if (!valid) return;
-                const tags = tagsText.split(',').map((t) => t.trim()).filter(Boolean);
                 onSave({ ...draft, id: slug, [cfg.tagsField]: tags } as Item);
             }}
         >
             <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="name">Name</Label>
-                    <Input id="name" value={draft.name} onChange={(e) => set({ name: e.target.value })} required />
+                    <PasteInput id="name" value={draft.name} onChange={(e) => set({ name: e.target.value })} required />
                     <p className="text-xs text-muted-foreground">
                         URL: {cfg.path}/{slug || '…'}/
                         {duplicate && <span className="ml-2 text-red-600">— already used by another {cfg.singular}</span>}
@@ -110,36 +257,99 @@ function ItemForm({
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="url">Link</Label>
-                    <Input id="url" type="url" value={draft.url} onChange={(e) => set({ url: e.target.value })} placeholder="https://" />
+                    <PasteInput id="url" type="url" value={draft.url} onChange={(e) => set({ url: e.target.value })} placeholder="https://" transform={(t) => t.trim()} />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="description">Short description</Label>
-                    <Textarea id="description" rows={2} value={draft.description} onChange={(e) => set({ description: e.target.value })} />
+                    <PasteTextarea id="description" rows={2} value={draft.description} onChange={(e) => set({ description: e.target.value })} />
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="tags">{cfg.tagsLabel}</Label>
-                    <Input id="tags" value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder="Comma-separated" />
+                <div className={cn(collection === 'projects' ? '' : 'sm:col-span-2')}>
+                    <TagPicker label={cfg.tagsLabel} singular={cfg.tagSingular} value={tags} options={tagOptions} onChange={setTags} />
                 </div>
                 {collection === 'projects' && (
                     <div className="space-y-2">
                         <Label htmlFor="date">Date</Label>
-                        <Input
+                        <PasteInput
                             id="date"
                             type="month"
                             value={(draft as ProjectItem).date?.slice(0, 7) || ''}
                             onChange={(e) => set({ date: e.target.value ? `${e.target.value}-01` : '' })}
+                            // A month input only accepts YYYY-MM; keep that much of whatever was copied.
+                            transform={(t) => (t.match(/\d{4}-\d{2}/)?.[0] || '')}
+                            replace
                         />
                     </div>
                 )}
                 <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="content">Details page body (Markdown, optional)</Label>
-                    <Textarea
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="content">Details page body (Markdown, optional)</Label>
+                        <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                            <ImagePlus size={14} /> Add image
+                        </button>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => {
+                                uploadImages(Array.from(e.target.files || []));
+                                e.target.value = '';
+                            }}
+                        />
+                    </div>
+                    <PasteTextarea
+                        ref={bodyRef}
                         id="content"
                         rows={10}
-                        className="font-mono text-xs"
+                        className={cn('font-mono text-xs', dragging && 'ring-2 ring-primary/60')}
                         value={draft.content || ''}
                         onChange={(e) => set({ content: e.target.value })}
-                    />
+                        placeholder="Write in Markdown. Drop or paste an image here to upload it."
+                        onDragOver={(e) => {
+                            if ([...e.dataTransfer.items].some((i) => i.kind === 'file')) {
+                                e.preventDefault();
+                                setDragging(true);
+                            }
+                        }}
+                        onDragLeave={() => setDragging(false)}
+                        onDrop={(e) => {
+                            setDragging(false);
+                            const files = Array.from(e.dataTransfer.files || []);
+                            if (files.some((f) => f.type.startsWith('image/'))) {
+                                e.preventDefault();
+                                uploadImages(files);
+                            }
+                        }}
+                        onPaste={(e) => {
+                            const files = Array.from(e.clipboardData.files || []).filter((f) => f.type.startsWith('image/'));
+                            if (files.length) {
+                                e.preventDefault();
+                                uploadImages(files);
+                            }
+                        }}
+                    >
+                        {upload && (
+                            <div
+                                className={cn(
+                                    'pointer-events-none absolute bottom-2 left-2 flex items-center gap-2 rounded-md border px-2 py-1 text-xs backdrop-blur',
+                                    upload.state === 'busy'
+                                        ? 'border-border bg-background/90 text-muted-foreground'
+                                        : 'border-red-500/30 bg-red-500/10 text-red-600'
+                                )}
+                            >
+                                {upload.state === 'busy' ? <Loader2 size={12} className="animate-spin" /> : <AlertTriangle size={12} />}
+                                {upload.text}
+                            </div>
+                        )}
+                    </PasteTextarea>
+                    <p className="text-xs text-muted-foreground">
+                        Each image uploads as its own commit into the repo. Hover any field for a Paste button.
+                    </p>
                 </div>
                 <div className="flex items-center gap-3 sm:col-span-2">
                     <Switch id="published" checked={draft.published} onCheckedChange={(v) => set({ published: v })} />
@@ -168,6 +378,7 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
     const [editing, setEditing] = useState<number | 'new' | null>(null);
     const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
     const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+    const [query, setQuery] = useState('');
 
     const cfg = COLLECTIONS[collection];
 
@@ -220,6 +431,27 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
 
     const existingIds = useMemo(() => (items || []).map((i) => i.id), [items]);
 
+    // Every tag in use, for the picker. Alphabetical, so the dropdown is scannable.
+    const tagOptions = useMemo(() => {
+        const set = new Set<string>();
+        for (const i of items || []) for (const t of tagsOf(i, cfg.tagsField)) set.add(t);
+        return [...set].sort((a, b) => a.localeCompare(b));
+    }, [items, cfg.tagsField]);
+
+    // Search across everything a record says, keeping the original index so edit
+    // and delete still address the right entry in the full list.
+    const visible = useMemo(() => {
+        const all = (items || []).map((item, index) => ({ item, index }));
+        const q = query.trim().toLowerCase();
+        if (!q) return all;
+        return all.filter(({ item }) =>
+            [item.name, item.description, item.url, item.content || '', ...tagsOf(item, cfg.tagsField)]
+                .join('\n')
+                .toLowerCase()
+                .includes(q)
+        );
+    }, [items, query, cfg.tagsField]);
+
     const applyEdit = (index: number | 'new', item: Item) => {
         setItems((prev) => {
             const next = [...(prev || [])];
@@ -247,6 +479,7 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
                             type="button"
                             onClick={() => {
                                 if (dirty && !window.confirm('Discard unsaved changes?')) return;
+                                setQuery('');
                                 setCollection(name);
                             }}
                             className={cn(
@@ -270,6 +503,17 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
                         Save &amp; publish
                     </Button>
                 </div>
+            </div>
+
+            <div className="relative">
+                <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <PasteInput
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder={`Search ${collection} by name, description, ${cfg.tagsLabel.toLowerCase()} or body…`}
+                    className="pl-9"
+                    aria-label={`Search ${collection}`}
+                />
             </div>
 
             {message && (
@@ -301,6 +545,8 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
                             collection={collection}
                             initial={emptyItem(collection)}
                             existingIds={existingIds}
+                            tagOptions={tagOptions}
+                            workerUrl={workerUrl}
                             onSave={(item) => applyEdit('new', item)}
                             onCancel={() => setEditing(null)}
                         />
@@ -319,7 +565,10 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
                     {items.length === 0 && (
                         <p className="text-sm text-muted-foreground">No {collection} yet.</p>
                     )}
-                    {items.map((item, index) => (
+                    {items.length > 0 && visible.length === 0 && (
+                        <p className="text-sm text-muted-foreground">Nothing matches “{query}”.</p>
+                    )}
+                    {visible.map(({ item, index }) => (
                         <Card key={item.id || index} className={cn(!item.published && 'opacity-70')}>
                             {editing === index ? (
                                 <CardContent className="pt-6">
@@ -327,6 +576,8 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
                                         collection={collection}
                                         initial={item}
                                         existingIds={existingIds.filter((id) => id !== item.id)}
+                                        tagOptions={tagOptions}
+                                        workerUrl={workerUrl}
                                         onSave={(next) => applyEdit(index, next)}
                                         onCancel={() => setEditing(null)}
                                     />

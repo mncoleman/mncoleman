@@ -709,6 +709,60 @@ export default {
             // The whole file is read and written each time. The client sends back the
             // sha it read, so a stale write (another admin, or a build committing in
             // between) is refused by GitHub with a 409 rather than silently clobbered.
+            // Images for the collection write-ups. Each one is committed to
+            // public/collections/ under a unique name (so no read-before-write and no
+            // sha race), and the editor inserts the returned path as markdown. That
+            // commit builds the site on its own; the JSON save afterwards builds again.
+            if (url.pathname === '/api/collections/images' && request.method === 'POST') {
+                let body: { filename?: string; content?: string; type?: string };
+                try {
+                    body = await request.json();
+                } catch {
+                    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+                        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+                const type = (body.type || '').toLowerCase();
+                const ext = ({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg', 'image/avif': 'avif' } as Record<string, string>)[type];
+                if (!ext || typeof body.content !== 'string' || !body.content) {
+                    return new Response(JSON.stringify({ error: 'Send an image (png, jpg, gif, webp, svg, avif) as base64 `content` with its `type`' }), {
+                        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+                // 6MB of base64 ≈ 4.5MB of image. Larger than that belongs in the artifact service.
+                if (body.content.length > 6 * 1024 * 1024) {
+                    return new Response(JSON.stringify({ error: 'Image too large (limit ~4.5MB)' }), {
+                        status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+                const base = (body.filename || 'image')
+                    .replace(/\.[^.]+$/, '')
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '')
+                    .slice(0, 40) || 'image';
+                const name = `${base}-${Date.now().toString(36)}.${ext}`;
+                const fileUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/public/collections/${name}`;
+                const resp = await fetch(fileUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${env.GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'User-Agent': 'Cloudflare-Worker',
+                    },
+                    body: JSON.stringify({ message: `Add collection image ${name}`, content: body.content }),
+                });
+                if (!resp.ok) {
+                    const text = await resp.text();
+                    return new Response(JSON.stringify({ error: `GitHub write failed (${resp.status})`, detail: text.slice(0, 300) }), {
+                        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+                return new Response(JSON.stringify({ ok: true, path: `/collections/${name}` }), {
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+            }
+
             const collectionMatch = url.pathname.match(/^\/api\/collections\/(resources|projects)$/);
             if (collectionMatch) {
                 const name = collectionMatch[1];
