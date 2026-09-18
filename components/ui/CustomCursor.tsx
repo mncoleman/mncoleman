@@ -8,6 +8,11 @@ const CustomCursor = () => {
     const cursorDotRef = useRef<HTMLDivElement>(null);
     const cursorRingRef = useRef<HTMLDivElement>(null);
     const [isVisible, setIsVisible] = useState(false);
+    // Mirrors `isVisible` for the listeners below, so the effect does not have to
+    // depend on it. It used to: every mouse-leave/re-enter re-ran the effect, which
+    // reset the ring to (0,0) — it visibly swept in from the top-left corner — and
+    // leaked a fresh set of pointer listeners each time.
+    const visibleRef = useRef(false);
     // Only mount on hover-capable pointers AND when motion is allowed. Under
     // prefers-reduced-motion we render nothing and let the native cursor show
     // (the `cursor: none` override in globals.css is gated on no-preference).
@@ -39,7 +44,8 @@ const CustomCursor = () => {
 
         if (!dot || !ring) return;
 
-        let requestRef: number;
+        let requestRef = 0;
+        let running = false;
         let mouseX = 0;
         let mouseY = 0;
         let ringX = 0;
@@ -48,13 +54,25 @@ const CustomCursor = () => {
         // Initial position off-screen until first move
         // We'll trust the isVisible state to handle initial show
 
+        // The ring's catch-up loop only runs while it has somewhere to go. It used
+        // to run every frame for the life of the page.
+        const kick = () => {
+            if (running) return;
+            running = true;
+            requestRef = requestAnimationFrame(animate);
+        };
+
         const onMouseMove = (e: MouseEvent) => {
-            if (!isVisible) setIsVisible(true);
+            if (!visibleRef.current) {
+                visibleRef.current = true;
+                setIsVisible(true);
+            }
             mouseX = e.clientX;
             mouseY = e.clientY;
 
             // Dot follows immediately
             dot.style.transform = `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`;
+            kick();
         };
 
         const onMouseDown = () => {
@@ -66,10 +84,12 @@ const CustomCursor = () => {
         };
 
         const onMouseEnter = () => {
+            visibleRef.current = true;
             setIsVisible(true);
         };
 
         const onMouseLeave = () => {
+            visibleRef.current = false;
             setIsVisible(false);
         };
 
@@ -80,7 +100,11 @@ const CustomCursor = () => {
 
             ring.style.transform = `translate(${ringX}px, ${ringY}px) translate(-50%, -50%)`;
 
-            requestRef = requestAnimationFrame(animate);
+            if (Math.abs(mouseX - ringX) > 0.1 || Math.abs(mouseY - ringY) > 0.1) {
+                requestRef = requestAnimationFrame(animate);
+            } else {
+                running = false;
+            }
         };
 
         // Pointer events as well as mouse: a component that calls preventDefault()
@@ -107,17 +131,19 @@ const CustomCursor = () => {
         document.addEventListener("mouseenter", onMouseEnter);
         document.addEventListener("mouseleave", onMouseLeave);
 
-        requestRef = requestAnimationFrame(animate);
-
         return () => {
             window.removeEventListener("mousemove", onMouseMove);
             window.removeEventListener("mousedown", onMouseDown);
             window.removeEventListener("mouseup", onMouseUp);
+            // These three were never removed before.
+            window.removeEventListener("pointermove", onPointerMove);
+            window.removeEventListener("pointerdown", onPointerDown);
+            window.removeEventListener("pointerup", onPointerUp);
             document.removeEventListener("mouseenter", onMouseEnter);
             document.removeEventListener("mouseleave", onMouseLeave);
             cancelAnimationFrame(requestRef);
         };
-    }, [isVisible, enabled]);
+    }, [enabled]);
 
     if (!enabled) return null;
 

@@ -85,13 +85,16 @@ const ProfileCardComponent = ({
         const INITIAL_TAU = 0.6;
         let initialUntil = 0;
 
-        const setVarsFromXY = (x: number, y: number) => {
-            const shell = shellRef.current;
-            const wrap = wrapRef.current;
-            if (!shell || !wrap) return;
+        // The shell's size is cached here (fed by a ResizeObserver in the effect
+        // below) rather than read off `clientWidth` every frame. Reading it after
+        // the previous frame wrote nine custom properties forced a full style
+        // recalc per frame — it was the single hottest thing on /about.
+        let width = 1;
+        let height = 1;
 
-            const width = shell.clientWidth || 1;
-            const height = shell.clientHeight || 1;
+        const setVarsFromXY = (x: number, y: number) => {
+            const wrap = wrapRef.current;
+            if (!wrap) return;
 
             const percentX = clamp((100 / width) * x);
             const percentY = clamp((100 / height) * y);
@@ -130,7 +133,12 @@ const ProfileCardComponent = ({
 
             const stillFar = Math.abs(targetX - currentX) > 0.05 || Math.abs(targetY - currentY) > 0.05;
 
-            if (stillFar || document.hasFocus()) {
+            // Demand-driven: only while there is distance left to cover. This used
+            // to also continue while `document.hasFocus()`, which meant the loop
+            // never stopped for as long as the window was focused — and there are
+            // two of these mounted on /about (one per breakpoint), so the hidden one
+            // was burning frames too. Every input path calls `start()` again.
+            if (stillFar) {
                 rafId = requestAnimationFrame(step);
             } else {
                 running = false;
@@ -144,12 +152,18 @@ const ProfileCardComponent = ({
 
         const start = () => {
             if (running) return;
+            // `display: none` on the other breakpoint's copy — nothing to animate.
+            if (shellRef.current && shellRef.current.offsetParent === null) return;
             running = true;
             lastTs = 0;
             rafId = requestAnimationFrame(step);
         };
 
         return {
+            setSize(w: number, h: number) {
+                width = w || 1;
+                height = h || 1;
+            },
             setImmediate(x: number, y: number) {
                 currentX = x;
                 currentY = y;
@@ -161,9 +175,7 @@ const ProfileCardComponent = ({
                 start();
             },
             toCenter() {
-                const shell = shellRef.current;
-                if (!shell) return;
-                this.setTarget(shell.clientWidth / 2, shell.clientHeight / 2);
+                this.setTarget(width / 2, height / 2);
             },
             beginInitial(durationMs: number) {
                 initialUntil = performance.now() + durationMs;
@@ -242,13 +254,14 @@ const ProfileCardComponent = ({
             const { beta, gamma } = event;
             if (beta == null || gamma == null) return;
 
-            const centerX = shell.clientWidth / 2;
-            const centerY = shell.clientHeight / 2;
-            const x = clamp(centerX + gamma * mobileTiltSensitivity, 0, shell.clientWidth);
+            // Event-driven (not per frame), so a direct read here is fine.
+            const w = shell.clientWidth;
+            const h = shell.clientHeight;
+            const x = clamp(w / 2 + gamma * mobileTiltSensitivity, 0, w);
             const y = clamp(
-                centerY + (beta - ANIMATION_CONFIG.DEVICE_BETA_OFFSET) * mobileTiltSensitivity,
+                h / 2 + (beta - ANIMATION_CONFIG.DEVICE_BETA_OFFSET) * mobileTiltSensitivity,
                 0,
-                shell.clientHeight
+                h
             );
 
             tiltEngine.setTarget(x, y);
@@ -289,6 +302,14 @@ const ProfileCardComponent = ({
         };
         shell.addEventListener('click', handleClick);
 
+        // Keep the engine's cached size current without per-frame DOM reads.
+        tiltEngine.setSize(shell.clientWidth, shell.clientHeight);
+        const ro = new ResizeObserver((entries) => {
+            const box = entries[0]?.contentRect;
+            if (box) tiltEngine.setSize(box.width, box.height);
+        });
+        ro.observe(shell);
+
         const initialX = (shell.clientWidth || 0) - ANIMATION_CONFIG.INITIAL_X_OFFSET;
         const initialY = ANIMATION_CONFIG.INITIAL_Y_OFFSET;
         tiltEngine.setImmediate(initialX, initialY);
@@ -300,6 +321,7 @@ const ProfileCardComponent = ({
             shell.removeEventListener('pointermove', pointerMoveHandler as EventListener);
             shell.removeEventListener('pointerleave', pointerLeaveHandler as EventListener);
             shell.removeEventListener('click', handleClick);
+            ro.disconnect();
             window.removeEventListener('deviceorientation', deviceOrientationHandler as EventListener);
             if (enterTimerRef.current) window.clearTimeout(enterTimerRef.current);
             if (leaveRafRef.current) cancelAnimationFrame(leaveRafRef.current);

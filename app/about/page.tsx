@@ -19,7 +19,7 @@ export default function AboutPage() {
     <div className="container mx-auto px-4 py-16 max-w-6xl">
       <header className="mb-12 text-center text-balance">
         <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight leading-tight">
-          <FallInText text="About Me" duration={800} className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60" />
+          <FallInText text="About Me" className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60" />
         </h1>
         <div className="h-1 w-20 bg-primary/20 mx-auto rounded-full" />
       </header>
@@ -32,14 +32,11 @@ export default function AboutPage() {
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-6">
                 <h2 className="text-2xl font-bold tracking-tight">
-                  <TextType text="Introduction" speed={80} />
+                  <TextType text="Introduction" speed={35} />
                 </h2>
               </div>
               <p className="text-xl text-muted-foreground leading-relaxed max-w-2xl">
-                <BlurText
-                  text={aboutData.introduction}
-                  duration={1200}
-                />
+                <BlurText text={aboutData.introduction} />
               </p>
             </div>
             <div className="absolute bottom-0 left-0 right-0 h-1">
@@ -74,14 +71,11 @@ export default function AboutPage() {
                 <CpuIcon ref={cpuRef} size={24} />
               </div>
               <h2 className="text-2xl font-bold tracking-tight">
-                <TextType text="What I Do" speed={80} />
+                <TextType text="What I Do" speed={35} />
               </h2>
             </div>
             <div className="text-muted-foreground leading-relaxed">
-              <BlurText
-                text={aboutData.whatIDo}
-                duration={1200}
-              />
+              <BlurText text={aboutData.whatIDo} />
             </div>
             <div className="absolute bottom-0 left-0 right-0 h-1">
               <div className="h-full w-0 bg-primary group-hover:w-full transition-all duration-500 mx-auto" />
@@ -99,14 +93,11 @@ export default function AboutPage() {
                 <LayoutPanelTopIcon ref={layoutRef} size={24} />
               </div>
               <h2 className="text-2xl font-bold tracking-tight">
-                <TextType text="This Website" speed={80} />
+                <TextType text="This Website" speed={35} />
               </h2>
             </div>
             <div className="text-muted-foreground leading-relaxed">
-              <BlurText
-                text={aboutData.thisWebsite}
-                duration={1200}
-              />
+              <BlurText text={aboutData.thisWebsite} />
             </div>
             <div className="absolute bottom-0 left-0 right-0 h-1">
               <div className="h-full w-0 bg-primary group-hover:w-full transition-all duration-500 mx-auto" />

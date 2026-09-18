@@ -34,9 +34,14 @@ const roboto = localFont({
     { path: '../public/fonts/Roboto-Bold.woff2', weight: '700', style: 'normal' },
   ],
   display: 'swap',
-  // Don't High-priority-preload all 4 weights — they competed with FCP/LCP on
-  // slow connections. display:swap + next/font's size-adjusted fallback keep CLS ~0.
-  preload: false,
+  // Preloaded on purpose. With `preload: false` the fonts were only discovered
+  // once the stylesheet had been parsed, so the first paint was in the fallback
+  // face and every page then swapped to Roboto a beat later — the "flicker on
+  // load". Preloading puts the four ~17KB files in flight from the HTML, before
+  // the CSS. Checked on a Slow 4G + 4x CPU emulation of the built site: all four
+  // font requests start in the same millisecond as the stylesheet and finish
+  // before first paint, which is gated by the CSS, not the fonts.
+  preload: true,
   variable: '--font-roboto',
 });
 

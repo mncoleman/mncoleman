@@ -232,6 +232,7 @@ export function PullChainToggle() {
             const isPull = wasDrag && peak > 12;
             if (isClick || isPull) {
                 yank();
+                wake(); // the snap-back has to animate even if the rope was asleep
                 toggleRef.current();
             }
         };
@@ -242,8 +243,30 @@ export function PullChainToggle() {
         svg.addEventListener('pointercancel', onRelease);
         svg.addEventListener('lostpointercapture', onRelease);
 
+        // The simulation sleeps once the rope has come to rest. Without this it ran
+        // Engine.update plus eight attribute writes every frame, forever, on every
+        // page — the header is site-wide. It wakes on any pointer press, on the
+        // theme yank, and when the tab comes back (a paused tab's rAF never fires).
         let raf = 0;
+        let running = false;
         let last = performance.now();
+        let stillFrames = 0;
+        const REST_FRAMES = 30;
+        // "At rest" is judged by movement, not by body velocities: the constraint
+        // solver keeps a settled rope jittering by about a tenth of a pixel forever,
+        // so anything finer than this tolerance would never sleep.
+        const REST_MOVE = 0.25;
+        const lastPos = chain.map((b) => ({ x: b.position.x, y: b.position.y }));
+        const stepMovement = () => {
+            let max = 0;
+            chain.forEach((b, i) => {
+                max = Math.max(max, Math.abs(b.position.x - lastPos[i].x), Math.abs(b.position.y - lastPos[i].y));
+                lastPos[i].x = b.position.x;
+                lastPos[i].y = b.position.y;
+            });
+            return max;
+        };
+
         const frame = (now: number) => {
             const dt = Math.min(now - last, 33); // clamp big gaps (tab switch etc.)
             last = now;
@@ -264,12 +287,39 @@ export function PullChainToggle() {
             handleHitEl.setAttribute('cx', hx);
             handleHitEl.setAttribute('cy', hy);
 
+            // A drag holds the loop open; otherwise stop once it has been still
+            // for a beat, so a settling wobble is not cut off mid-swing.
+            stillFrames = !drag && stepMovement() < REST_MOVE ? stillFrames + 1 : 0;
+            if (stillFrames >= REST_FRAMES) {
+                running = false;
+                return;
+            }
             raf = requestAnimationFrame(frame);
         };
-        raf = requestAnimationFrame(frame);
+        const wake = () => {
+            if (running || document.hidden) return;
+            running = true;
+            stillFrames = 0;
+            last = performance.now();
+            raf = requestAnimationFrame(frame);
+        };
+        const onVisibility = () => {
+            if (document.hidden) {
+                cancelAnimationFrame(raf);
+                running = false;
+            } else {
+                wake();
+            }
+        };
+        svg.addEventListener('pointerdown', wake);
+        document.addEventListener('visibilitychange', onVisibility);
+        wake();
 
         return () => {
             cancelAnimationFrame(raf);
+            running = false;
+            svg.removeEventListener('pointerdown', wake);
+            document.removeEventListener('visibilitychange', onVisibility);
             svg.removeEventListener('pointerdown', onDown);
             svg.removeEventListener('pointermove', onMove);
             svg.removeEventListener('pointerup', onRelease);

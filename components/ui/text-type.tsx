@@ -10,7 +10,7 @@ interface TextTypeProps {
     speed?: number;
 }
 
-export function TextType({ text, className, delay = 0, speed = 50 }: TextTypeProps) {
+export function TextType({ text, className, delay = 0, speed = 35 }: TextTypeProps) {
     const [displayedText, setDisplayedText] = useState('');
     const [currentIndex, setCurrentIndex] = useState(0);
 

@@ -25,23 +25,33 @@ self.addEventListener('install', (event) => {
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    Promise.all([
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // Navigation preload: the browser fires the page request in parallel with
+      // starting this worker, instead of waiting for the worker to boot and then
+      // fetch. On a repeat visit that is the difference between the HTML being
+      // in flight immediately and it waiting on service-worker startup.
+      self.registration.navigationPreload
+        ? self.registration.navigationPreload.enable().catch(() => {})
+        : Promise.resolve(),
+    ])
   );
   self.clients.claim();
 });
 
 // Fetch event - split strategy:
 //   • Immutable assets (content-hashed /_next/static/ chunks, fonts, images) → cache-first.
-//     GitHub Pages can't set `Cache-Control: immutable`, so the SW is the only lever; a new
-//     deploy bumps CACHE_NAME (stamp-sw-version.ts) so the `activate` cleanup still busts these.
+//     `public/_headers` also marks these immutable on Pages; the SW makes repeat visits
+//     skip the network entirely. A new deploy bumps CACHE_NAME (stamp-sw-version.ts) so
+//     the `activate` cleanup still busts these.
 //   • Everything else (HTML / navigations) → network-first so content stays fresh.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
@@ -53,6 +63,13 @@ self.addEventListener('fetch', (event) => {
   // network-first branch below only risks respondWith() rejecting when the offline
   // fallback misses. Leave those requests to the browser.
   if (url.origin !== self.location.origin) return;
+
+  // App Router client navigations fetch `?_rsc=` payloads. Those were going
+  // through the network-first branch below and being cloned into the cache on
+  // every page switch, for an entry that is never useful while online (a failed
+  // RSC fetch makes Next hard-navigate, which the cached HTML then serves). Skip
+  // the clone and the cache write; the browser handles the request as normal.
+  if (url.searchParams.has('_rsc')) return;
 
   const immutable =
     url.pathname.startsWith('/_next/static/') ||
@@ -78,8 +95,14 @@ self.addEventListener('fetch', (event) => {
   // Network-first for HTML/navigations; fall back to cache when offline.
   // `caches.match` resolves to undefined on a miss, and respondWith(undefined)
   // rejects — so surface a real error response instead.
+  // For navigations, use the preloaded response if the browser already started
+  // one (see `activate`); otherwise fetch as before.
+  const network = () =>
+    event.request.mode === 'navigate' && event.preloadResponse
+      ? event.preloadResponse.then((preloaded) => preloaded || fetch(event.request))
+      : fetch(event.request);
   event.respondWith(
-    fetch(event.request)
+    network()
       .then(cachePut)
       .catch(() =>
         caches.match(event.request).then((cached) => cached || Response.error())

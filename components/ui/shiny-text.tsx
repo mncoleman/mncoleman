@@ -1,23 +1,36 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { motion, useMotionValue, useAnimationFrame, useTransform } from 'motion/react';
+import React, { useState, useCallback } from 'react';
 
 interface ShinyTextProps {
   text?: string;
   children?: React.ReactNode;
   disabled?: boolean;
+  /** Seconds for one sweep across the text. */
   speed?: number;
   className?: string;
   color?: string;
   shineColor?: string;
   spread?: number;
-  yoyo?: boolean;
   pauseOnHover?: boolean;
   direction?: 'left' | 'right';
+  /** Seconds to hold between sweeps. */
   delay?: number;
 }
 
+/**
+ * The shimmering wordmark.
+ *
+ * Driven by a CSS keyframe (`shiny-sweep` in globals.css), not JavaScript. The
+ * previous version ran a `useAnimationFrame` loop that wrote `background-position`
+ * through a motion value sixty times a second — on every page, forever, since it
+ * lives in the header. The browser's own animation does the same paint without
+ * any main-thread work, and pauses itself in a background tab.
+ *
+ * `delay` is a hold between sweeps. CSS `animation-delay` only applies once, so the
+ * hold is expressed inside the keyframe instead: the sweep occupies the first
+ * `--shine-sweep` fraction of the cycle and the rest holds still.
+ */
 const ShinyText: React.FC<ShinyTextProps> = ({
   text,
   children,
@@ -27,74 +40,14 @@ const ShinyText: React.FC<ShinyTextProps> = ({
   color = '#b5b5b5',
   shineColor = '#ffffff',
   spread = 120,
-  yoyo = false,
   pauseOnHover = false,
   direction = 'left',
   delay = 0
 }) => {
   const [isPaused, setIsPaused] = useState(false);
-  const progress = useMotionValue(0);
-  const elapsedRef = useRef(0);
-  const lastTimeRef = useRef<number | null>(null);
-  const directionRef = useRef(direction === 'left' ? 1 : -1);
 
-  const animationDuration = speed * 1000;
-  const delayDuration = delay * 1000;
-
-  useAnimationFrame(time => {
-    if (disabled || isPaused) {
-      lastTimeRef.current = null;
-      return;
-    }
-
-    if (lastTimeRef.current === null) {
-      lastTimeRef.current = time;
-      return;
-    }
-
-    const deltaTime = time - lastTimeRef.current;
-    lastTimeRef.current = time;
-
-    elapsedRef.current += deltaTime;
-
-    if (yoyo) {
-      const cycleDuration = animationDuration + delayDuration;
-      const fullCycle = cycleDuration * 2;
-      const cycleTime = elapsedRef.current % fullCycle;
-
-      if (cycleTime < animationDuration) {
-        const p = (cycleTime / animationDuration) * 100;
-        progress.set(directionRef.current === 1 ? p : 100 - p);
-      } else if (cycleTime < cycleDuration) {
-        progress.set(directionRef.current === 1 ? 100 : 0);
-      } else if (cycleTime < cycleDuration + animationDuration) {
-        const reverseTime = cycleTime - cycleDuration;
-        const p = 100 - (reverseTime / animationDuration) * 100;
-        progress.set(directionRef.current === 1 ? p : 100 - p);
-      } else {
-        progress.set(directionRef.current === 1 ? 0 : 100);
-      }
-    } else {
-      const cycleDuration = animationDuration + delayDuration;
-      const cycleTime = elapsedRef.current % cycleDuration;
-
-      if (cycleTime < animationDuration) {
-        const p = (cycleTime / animationDuration) * 100;
-        progress.set(directionRef.current === 1 ? p : 100 - p);
-      } else {
-        progress.set(directionRef.current === 1 ? 100 : 0);
-      }
-    }
-  });
-
-  useEffect(() => {
-    directionRef.current = direction === 'left' ? 1 : -1;
-    elapsedRef.current = 0;
-    progress.set(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [direction]);
-
-  const backgroundPosition = useTransform(progress, p => `${150 - p * 2}% center`);
+  const cycle = speed + delay;
+  const sweep = cycle > 0 ? speed / cycle : 1;
 
   const handleMouseEnter = useCallback(() => {
     if (pauseOnHover) setIsPaused(true);
@@ -104,23 +57,28 @@ const ShinyText: React.FC<ShinyTextProps> = ({
     if (pauseOnHover) setIsPaused(false);
   }, [pauseOnHover]);
 
-  const gradientStyle: React.CSSProperties = {
+  const style = {
     backgroundImage: `linear-gradient(${spread}deg, ${color} 0%, ${color} 35%, ${shineColor} 50%, ${color} 65%, ${color} 100%)`,
     backgroundSize: '200% auto',
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
-    WebkitTextFillColor: 'transparent'
-  };
+    WebkitTextFillColor: 'transparent',
+    // The keyframe reads this to know where the sweep ends and the hold begins.
+    '--shine-sweep': `${(sweep * 100).toFixed(2)}%`,
+    animation: disabled ? 'none' : `shiny-sweep ${cycle}s linear infinite`,
+    animationDirection: direction === 'left' ? 'normal' : 'reverse',
+    animationPlayState: isPaused ? 'paused' : 'running',
+  } as React.CSSProperties;
 
   return (
-    <motion.span
-      className={`inline-block ${className}`}
-      style={{ ...gradientStyle, backgroundPosition }}
+    <span
+      className={`inline-block shiny-text ${className}`}
+      style={style}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {children ?? text}
-    </motion.span>
+    </span>
   );
 };
 

@@ -8,7 +8,7 @@ interface FallInTextProps {
     className?: string;
 }
 
-export function FallInText({ text, duration = 800, className = '' }: FallInTextProps) {
+export function FallInText({ text, duration = 450, className = '' }: FallInTextProps) {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
@@ -23,7 +23,7 @@ export function FallInText({ text, duration = 800, className = '' }: FallInTextP
             style={{
                 display: 'inline-block',
                 opacity: isVisible ? 1 : 0,
-                transform: isVisible ? 'translateY(0)' : 'translateY(-50px)',
+                transform: isVisible ? 'translateY(0)' : 'translateY(-24px)',
                 transition: `opacity ${duration}ms cubic-bezier(0.34, 1.56, 0.64, 1), transform ${duration}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
             }}
         >
