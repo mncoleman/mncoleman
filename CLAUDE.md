@@ -95,7 +95,7 @@ Content comes from **two Notion data sources** (one database + one page) plus re
 
 - **Blog database** (`NOTION_DATABASE_ID`) — Title, Slug, Date, Tags, Published, Featured, Excerpt, Author. Featured posts sort first, then newest-first.
 - **Resources** (`data/resources.json`) — id (slug), name, url, categories, description, published, content (markdown body). Edited at `/admin/content`; each save is a Worker-made commit that Pages builds. Moved off Notion on 2026-09-18 because every build fetched every page body and sat in rate-limit backoff for minutes.
-- **Projects** (`data/projects.json`) — id (slug), name, description, url, tech, date, published, content. Same editor and flow as resources. Detail slugs derive from `slugify(name)` and the editor freezes `id` once saved so a rename keeps its URL.
+- **Projects** (`data/projects.json`) — id (slug), name, description, url, tech, date, published, content. Same editor and flow as resources. Detail slugs derive from `slugify(name)`; `id` mirrors it, and renaming a record moves its page.
 - **Resume page** (`NOTION_RESUME_PAGE_ID`) — single page, body rendered to markdown.
 - **Artifacts** — static ones in `data/artifacts.json`; dynamic ("instant") ones served live from the artifact service (`source: 'static' | 'dynamic'`).
 - **Search index** — `data/search-index.json`, regenerated at build time from all content.

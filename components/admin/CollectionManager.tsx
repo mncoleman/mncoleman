@@ -83,10 +83,10 @@ function ItemForm({
 
     const set = (patch: Partial<ResourceItem & ProjectItem>) => setDraft((d) => ({ ...d, ...patch }) as Item);
 
-    // The slug is the details-page URL, so it follows the name until the record
-    // has been saved once; after that renaming keeps the old URL working.
-    const slug = initial.id || slugify(draft.name);
-    const duplicate = !initial.id && existingIds.includes(slug);
+    // The slug is the details-page URL and always follows the name: the site
+    // builds its routes from slugify(name), so renaming a record moves its page.
+    const slug = slugify(draft.name);
+    const duplicate = existingIds.includes(slug);
     const valid = draft.name.trim().length > 0 && !duplicate;
 
     return (
