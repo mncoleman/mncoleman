@@ -2,14 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FileUp, Library, MapPin, BarChart3, Users } from 'lucide-react';
+import { LayoutDashboard, FileUp, Library, MapPin, BarChart3, Users, FolderKanban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const LINKS = [
     { href: '/admin', label: 'Overview', icon: LayoutDashboard },
     { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+    { href: '/admin/content', label: 'Content', icon: FolderKanban },
     { href: '/admin/artifacts', label: 'Artifacts', icon: FileUp },
-    { href: '/admin/library', label: '"A"I Library', icon: Library },
+    { href: '/admin/library', label: 'AI Library', icon: Library },
     { href: '/admin/visitors', label: 'Visitors', icon: MapPin },
     { href: '/admin/users', label: 'Users', icon: Users, superAdminOnly: true },
 ];

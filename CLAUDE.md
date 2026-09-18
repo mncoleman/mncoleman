@@ -16,7 +16,7 @@ Five independently-deployed pieces live in this repo. Pushing to `main` deploys 
 2. **`worker/`** — a Cloudflare Worker (`mncoleman-admin-auth`) that handles admin login (Telegram OIDC), mints session JWTs, stores admin users in KV, fires **Cloudflare Pages deploy-hook** rebuilds (on a `scheduled()` cron trigger and from the admin panel), and proxies artifact uploads to the artifact service. It still holds `GITHUB_TOKEN` — that is for committing `data/artifacts.json`, which is independent of where the site is hosted.
 3. **`worker-mcp/`** — a second Cloudflare Worker (`mncoleman-site-mcp`) serving the **public, unauthenticated MCP server** at `https://mncoleman.com/mcp`. It owns a route on the Cloudflare-proxied apex, so `/mcp*` is intercepted while every other path still falls through to Cloudflare Pages. Worker routes take precedence over a Pages custom domain on the same hostname — verified empirically on a throwaway subdomain before the cutover, not assumed from docs. Holds no secrets; reads `public/data/site-content.json` (built by `scripts/generate-search-index.ts`) plus the artifact service's public list endpoints. Stateless per MCP 2026-07-28 (SEP-2575) with the legacy `initialize` handshake still supported. Separate Worker on purpose — `worker/` gates every POST behind an Origin allowlist + CSRF header that MCP clients cannot send.
 4. **`worker-www-redirect/`** — a third Cloudflare Worker (`mncoleman-www-redirect`) doing nothing but a `www` -> apex 301. Holds no secrets and reads nothing. It exists because GitHub Pages used to issue that redirect for free and a Pages custom domain does not — see the Gotchas.
-5. **`server/`** — a Bun + Hono service on an Oracle ARM box (`artifacts.mncoleman.com`) that hosts uploaded artifacts (HTML/PDF/images) and the "A"I library (prompts + skills), each with auto-generated OG share images. Deployed as a Docker container. See `server/README.md`.
+5. **`server/`** — a Bun + Hono service on an Oracle ARM box (`artifacts.mncoleman.com`) that hosts uploaded artifacts (HTML/PDF/images) and the AI library (prompts + skills), each with auto-generated OG share images. Deployed as a Docker container. See `server/README.md`.
 
 The site uses a **two-layer adapter pattern** for Notion content: `lib/notion.ts` does the direct API integration; `lib/blog.ts`, `lib/resources.ts`, `lib/resume.ts`, `lib/projects.ts` are thin adapters per content type. Every fetcher validates credentials before calling Notion, falls back to sample data when they are absent, and throws when they are present but the fetch fails (see Patterns).
 
@@ -28,10 +28,11 @@ app/                    — Next.js App Router pages (see Pages below)
                           `layout.tsx` owns the session/login gate + tab nav for all
                           /admin/* subroutes; each subpage is a thin wrapper that pulls
                           `workerUrl`/`user` from `components/admin/admin-context.tsx`.
-  ai/                   — "A"I library (prompts + skills from the artifact service)
+  ai/                   — AI library (prompts + skills from the artifact service)
   artifacts/            — Hosted artifact gallery + detail pages
   blog/, projects/,
-  resources/            — Notion-backed content (list + [slug] detail + OG image)
+  resources/            — blog is Notion-backed; projects and resources read data/*.json
+                          (list + [slug] detail + OG image)
   brand-kit/            — Brand/design-system showcase page
   layout.tsx            — Root layout: header nav, footer, providers, GA, fonts
   sitemap.ts, robots.ts, manifest.ts, opengraph-image.tsx — SEO/PWA route handlers
@@ -48,7 +49,7 @@ scripts/                — Build-time scripts (search index, OG finalize, SW ve
 worker/                 — Cloudflare Worker (admin auth + rebuild cron) — separate deploy
 worker-mcp/             — Cloudflare Worker (public MCP server at /mcp) — separate deploy
 worker-www-redirect/    — Cloudflare Worker (www -> apex 301) — separate deploy
-server/                 — Bun/Hono artifact + "A"I library service — separate deploy
+server/                 — Bun/Hono artifact + AI library service — separate deploy
 public/                 — Static assets, icons, sw.js, fonts, sounds/, _headers (Pages cache rules)
 assets/                 — Build-time-only assets NOT served to visitors (og-veil.jpg)
 profile-summary-card-output/ — CI-generated GitHub stat SVGs (do not hand-edit)
@@ -82,7 +83,7 @@ profile-summary-card-output/ — CI-generated GitHub stat SVGs (do not hand-edit
 - `next.config.ts` — Static export config (no basePath — custom domain).
 - `worker-www-redirect/` — Tiny Worker issuing the `www` -> apex 301 that GitHub Pages used to give for free. A Pages custom domain *serves* content rather than redirecting, and a zone Redirect Rule needs a credential neither the DNS token nor the wrangler login carries.
 - `worker/index.ts` + `worker/wrangler.toml` — Admin auth Worker.
-- `server/src/index.ts` + `server/README.md` — Artifact/"A"I library service.
+- `server/src/index.ts` + `server/README.md` — Artifact/AI library service.
 
 ### Pages
 
@@ -90,11 +91,11 @@ profile-summary-card-output/ — CI-generated GitHub stat SVGs (do not hand-edit
 
 ## Data Model
 
-Content comes from **four separate Notion data sources** (three databases + one page) plus local/remote JSON:
+Content comes from **two Notion data sources** (one database + one page) plus repo JSON edited from the admin panel:
 
 - **Blog database** (`NOTION_DATABASE_ID`) — Title, Slug, Date, Tags, Published, Featured, Excerpt, Author. Featured posts sort first, then newest-first.
-- **Resources database** (`NOTION_RESOURCES_DATABASE_ID`) — Name, URL, Category, Description, Published.
-- **Projects database** (`NOTION_PROJECTS_DATABASE_ID`) — Name, Description, URL, Tech, Date, Published. Detail slugs derive from `slugify(name)`.
+- **Resources** (`data/resources.json`) — id (slug), name, url, categories, description, published, content (markdown body). Edited at `/admin/content`; each save is a Worker-made commit that Pages builds. Moved off Notion on 2026-09-18 because every build fetched every page body and sat in rate-limit backoff for minutes.
+- **Projects** (`data/projects.json`) — id (slug), name, description, url, tech, date, published, content. Same editor and flow as resources. Detail slugs derive from `slugify(name)` and the editor freezes `id` once saved so a rename keeps its URL.
 - **Resume page** (`NOTION_RESUME_PAGE_ID`) — single page, body rendered to markdown.
 - **Artifacts** — static ones in `data/artifacts.json`; dynamic ("instant") ones served live from the artifact service (`source: 'static' | 'dynamic'`).
 - **Search index** — `data/search-index.json`, regenerated at build time from all content.
@@ -130,7 +131,8 @@ Content comes from **four separate Notion data sources** (three databases + one 
 
 ## Common Tasks
 
-- **Add a blog post / resource / project**: add a row in the corresponding Notion database with `Published` checked, then rebuild (Notion is build-time only — content is not live).
+- **Add a blog post**: add a row in the blog Notion database with `Published` checked, then rebuild (Notion is build-time only — content is not live).
+- **Add a resource or project**: `/admin/content` → New → Save & publish. The save commits `data/<collection>.json` through the Worker (`/api/collections/:name`, GET returns items + git sha, PUT requires that sha back and answers 409 if the file moved) and the commit triggers the Pages build. Do not also fire the deploy hook. `scripts/migrate-notion-collections.ts` is the one-off that seeded the files from Notion.
 - **Add an artifact (static)**: add an entry to `data/artifacts.json`; place the file under `public/artifacts/`. Dynamic artifacts are uploaded through the admin panel → Worker → artifact service.
 - **Add a page**: create `app/<route>/page.tsx`; add the nav link in `app/layout.tsx` (and to `components/mobile-nav.tsx` if needed); add it to `app/sitemap.ts`.
 - **Add a shadcn/ui component**: `npx shadcn@latest add button` (shadcn) or `npx shadcn@latest add @react-bits/<name>` (ReactBits registry). Both registries are configured in `components.json`.
@@ -153,7 +155,7 @@ npm run lint       # ESLint
 npm run dev:artifacts  # run the artifact service locally (tsx)
 ```
 
-Required env (see `.env.example`): `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `NOTION_RESOURCES_DATABASE_ID`, `NOTION_RESUME_PAGE_ID`, `NOTION_PROJECTS_DATABASE_ID`. Optional: `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_WORKER_URL` (admin auth Worker — `app/admin/layout.tsx`, `app/artifacts/ArtifactsPageClient.tsx`; defaults to `http://localhost:8787`), `NEXT_PUBLIC_TELEGRAM_BOT_NAME` (admin login widget), `NEXT_PUBLIC_ARTIFACTS_API_URL` (artifact + "A"I library service — `components/admin/{ArtifactUploader,LibraryManager}.tsx`, `app/artifacts/ArtifactsPageClient.tsx`, `app/ai/AiPageClient.tsx`; defaults to `https://artifacts.mncoleman.com`), `NEXT_PUBLIC_VISITOR_API_URL` (visitor-globe guestbook — `components/visitor-globe/visitor-api.ts`; falls back to `NEXT_PUBLIC_ARTIFACTS_API_URL`), `NEXT_PUBLIC_DISABLE_DARKVEIL`. All build-time values must also be set as **GitHub Secrets** for production builds.
+Required env (see `.env.example`): `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `NOTION_RESUME_PAGE_ID` (`NOTION_RESOURCES_DATABASE_ID` and `NOTION_PROJECTS_DATABASE_ID` are no longer read; resources and projects come from `data/*.json`). Optional: `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_WORKER_URL` (admin auth Worker — `app/admin/layout.tsx`, `app/artifacts/ArtifactsPageClient.tsx`; defaults to `http://localhost:8787`), `NEXT_PUBLIC_TELEGRAM_BOT_NAME` (admin login widget), `NEXT_PUBLIC_ARTIFACTS_API_URL` (artifact + AI library service — `components/admin/{ArtifactUploader,LibraryManager}.tsx`, `app/artifacts/ArtifactsPageClient.tsx`, `app/ai/AiPageClient.tsx`; defaults to `https://artifacts.mncoleman.com`), `NEXT_PUBLIC_VISITOR_API_URL` (visitor-globe guestbook — `components/visitor-globe/visitor-api.ts`; falls back to `NEXT_PUBLIC_ARTIFACTS_API_URL`), `NEXT_PUBLIC_DISABLE_DARKVEIL`. All build-time values must also be set as **GitHub Secrets** for production builds.
 
 **Deploy**: pushing to `main` triggers a **Cloudflare Pages** build (Git integration, project `mncoleman`, build `npm run build`, output `out/`). There is no deploy workflow in `.github/` any more.
 

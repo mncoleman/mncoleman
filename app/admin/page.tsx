@@ -4,14 +4,15 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, RefreshCw, FileUp, Library, MapPin, BarChart3 } from 'lucide-react';
+import { Loader2, RefreshCw, FileUp, Library, MapPin, BarChart3, FolderKanban } from 'lucide-react';
 import { useAdmin } from '@/components/admin/admin-context';
 import { authHeaders } from '@/lib/admin-auth';
 
 const SHORTCUTS = [
     { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, description: 'Traffic, top pages and referrers from GA4.' },
+    { href: '/admin/content', label: 'Content', icon: FolderKanban, description: 'Edit resources and projects. Saves publish automatically.' },
     { href: '/admin/artifacts', label: 'Artifacts', icon: FileUp, description: 'Upload and manage hosted artifacts.' },
-    { href: '/admin/library', label: '"A"I Library', icon: Library, description: 'Publish prompts and skills.' },
+    { href: '/admin/library', label: 'AI Library', icon: Library, description: 'Publish prompts and skills.' },
     { href: '/admin/visitors', label: 'Visitors', icon: MapPin, description: 'Moderate the visitor globe guestbook.' },
 ];
 
@@ -49,7 +50,7 @@ export default function AdminOverviewPage() {
                 <CardHeader>
                     <CardTitle>Rebuild Site</CardTitle>
                     <CardDescription>
-                        Notion content is pulled at build time, so new posts, resources and projects
+                        Blog posts and the resume come from Notion at build time, so a new post
                         only appear after a rebuild.
                     </CardDescription>
                 </CardHeader>

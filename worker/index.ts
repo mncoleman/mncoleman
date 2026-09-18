@@ -543,7 +543,7 @@ export default {
                 });
             }
 
-            // "A"I library item create: JSON body forwarded directly — no multipart/duplex
+            // AI library item create: JSON body forwarded directly — no multipart/duplex
             // streaming needed here, these are small text payloads, not files.
             if (url.pathname === '/api/library' && request.method === 'POST') {
                 if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
@@ -569,7 +569,7 @@ export default {
                 });
             }
 
-            // "A"I library item edit: JSON body forwarded directly.
+            // AI library item edit: JSON body forwarded directly.
             if (url.pathname.startsWith('/api/library/') && request.method === 'PATCH') {
                 if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
                     return new Response(
@@ -598,7 +598,7 @@ export default {
                 });
             }
 
-            // "A"I library item delete.
+            // AI library item delete.
             if (url.pathname.startsWith('/api/library/') && request.method === 'DELETE') {
                 if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
                     return new Response(
@@ -699,6 +699,90 @@ export default {
                         message: e?.message || 'Unknown error talking to the GA4 Data API',
                     }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                 }
+            }
+
+            // Site collections (data/resources.json, data/projects.json). These replaced
+            // the Resources and Projects Notion databases: a save here is a commit to
+            // the repo, which the Pages Git integration builds like any other push —
+            // no deploy hook needed, and no Notion round trips at build time.
+            //
+            // The whole file is read and written each time. The client sends back the
+            // sha it read, so a stale write (another admin, or a build committing in
+            // between) is refused by GitHub with a 409 rather than silently clobbered.
+            const collectionMatch = url.pathname.match(/^\/api\/collections\/(resources|projects)$/);
+            if (collectionMatch) {
+                const name = collectionMatch[1];
+                const fileUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/data/${name}.json`;
+                const ghHeaders = {
+                    'Authorization': `token ${env.GITHUB_TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'Cloudflare-Worker',
+                };
+
+                if (request.method === 'GET') {
+                    const resp = await fetch(fileUrl, { headers: ghHeaders });
+                    if (!resp.ok) {
+                        return new Response(JSON.stringify({ error: `Could not read data/${name}.json (${resp.status})` }), {
+                            status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                        });
+                    }
+                    const data = await resp.json() as any;
+                    let items: unknown = [];
+                    try {
+                        items = JSON.parse(decodeBase64ToUtf8(data.content));
+                    } catch {
+                        return new Response(JSON.stringify({ error: `data/${name}.json is not valid JSON` }), {
+                            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                        });
+                    }
+                    return new Response(JSON.stringify({ items, sha: data.sha }), {
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+
+                if (request.method === 'PUT') {
+                    let body: { items?: unknown; sha?: string; message?: string };
+                    try {
+                        body = await request.json();
+                    } catch {
+                        return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+                            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                        });
+                    }
+                    if (!Array.isArray(body.items) || !body.sha) {
+                        return new Response(JSON.stringify({ error: '`items` (array) and `sha` are required' }), {
+                            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                        });
+                    }
+                    const resp = await fetch(fileUrl, {
+                        method: 'PUT',
+                        headers: ghHeaders,
+                        body: JSON.stringify({
+                            message: body.message || `Update ${name} via admin panel`,
+                            content: encodeUtf8ToBase64(JSON.stringify(body.items, null, 2) + '\n'),
+                            sha: body.sha,
+                        }),
+                    });
+                    if (resp.status === 409) {
+                        return new Response(JSON.stringify({
+                            error: 'stale',
+                            message: `data/${name}.json changed since you loaded it. Reload and apply your edit again.`,
+                        }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                    }
+                    if (!resp.ok) {
+                        const text = await resp.text();
+                        return new Response(JSON.stringify({ error: `GitHub write failed (${resp.status})`, detail: text.slice(0, 300) }), {
+                            status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                        });
+                    }
+                    const result = await resp.json() as any;
+                    // The commit itself triggers the Pages build; do not also fire the hook.
+                    return new Response(JSON.stringify({ ok: true, sha: result.content?.sha, commit: result.commit?.sha }), {
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+
+                return new Response('Method not allowed', { status: 405, headers: corsHeaders });
             }
 
             // Artifacts Management Endpoints
@@ -1573,14 +1657,22 @@ async function fetchGaSummary(env: Env, days: number) {
         ],
     };
 
-    const res = await fetch(
-        `https://analyticsdata.googleapis.com/v1beta/properties/${env.GA_PROPERTY_ID}:batchRunReports`,
-        {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        }
-    );
+    // batchRunReports takes at most five requests, and the five above fill it. The
+    // city breakdown goes in its own runReport, fired in parallel.
+    const citiesBody = {
+        dateRanges: window,
+        dimensions: [{ name: 'city' }, { name: 'region' }, { name: 'country' }],
+        metrics: [{ name: 'activeUsers' }, { name: 'sessions' }],
+        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
+        limit: 15,
+    };
+
+    const gaHeaders = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const base = `https://analyticsdata.googleapis.com/v1beta/properties/${env.GA_PROPERTY_ID}`;
+    const [res, citiesRes] = await Promise.all([
+        fetch(`${base}:batchRunReports`, { method: 'POST', headers: gaHeaders, body: JSON.stringify(body) }),
+        fetch(`${base}:runReport`, { method: 'POST', headers: gaHeaders, body: JSON.stringify(citiesBody) }),
+    ]);
 
     if (!res.ok) {
         const text = await res.text();
@@ -1589,6 +1681,8 @@ async function fetchGaSummary(env: Env, days: number) {
 
     const data = await res.json() as { reports?: { rows?: GaRow[] }[] };
     const reports = data.reports || [];
+    // Cities are a nice-to-have: if that one report fails, the rest still loads.
+    const cityRows: GaRow[] = citiesRes.ok ? ((await citiesRes.json() as { rows?: GaRow[] }).rows || []) : [];
 
     // Report 0 gains a synthetic `dateRange` dimension because we passed two named
     // ranges — match on the name rather than trusting row order. That dimension is
@@ -1627,6 +1721,13 @@ async function fetchGaSummary(env: Env, days: number) {
         countries: (reports[4]?.rows || []).map((r) => ({
             country: r.dimensionValues?.[0]?.value || '(not set)',
             users: num(r, 0),
+        })),
+        cities: cityRows.map((r) => ({
+            city: r.dimensionValues?.[0]?.value || '(not set)',
+            region: r.dimensionValues?.[1]?.value || '',
+            country: r.dimensionValues?.[2]?.value || '',
+            users: num(r, 0),
+            sessions: num(r, 1),
         })),
     };
 }

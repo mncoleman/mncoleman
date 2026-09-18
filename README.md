@@ -118,7 +118,7 @@
 | **Resources** | Curated link library grouped by multi-select categories |
 | **Resume** | Notion page parsed into a structured card layout (hero, experience, education) |
 | **Artifacts** | Two kinds: *static* files committed to `public/artifacts/`, and *instant* ones uploaded live to the artifact service |
-| **"A"I Library** | Public prompts + skills at `/ai`, served from the artifact service |
+| **AI Library** | Public prompts + skills at `/ai`, served from the artifact service |
 | **Visitor Globe** | Public "where are you from" guestbook with bot defence and moderation |
 | **Brand Kit** | Public brand assets and style reference page |
 | **Featured Posts** | Pin important content to the top of the blog |
@@ -133,7 +133,7 @@ The site features a secure, hidden admin dashboard for managing content and depl
 - **One-Click Rebuilds**: Trigger GitHub Actions deployments directly from the dashboard.
 - **Content Editing**: Edit the "About Me" section with a live preview editor.
 - **Artifact Uploads**: Upload files (HTML, PDF, images) either as *static* artifacts committed to the repo or *instant* ones published live to the artifact service.
-- **"A"I Library**: Author and publish prompts and skills.
+- **AI Library**: Author and publish prompts and skills.
 - **Analytics**: GA4 figures read through the Worker with a service account.
 - **Visitors**: Moderate the guestbook globe's pins.
 - **User Management**: Manage allow-listed Telegram users. Roles are `admin` and `super_admin`; only `super_admin` can manage users or reveal private-artifact passwords.
@@ -186,9 +186,7 @@ Copy `.env.example` to `.env.local` and fill in your values:
 # Notion Integration (required for content)
 NOTION_TOKEN=ntn_your_integration_token_here
 NOTION_DATABASE_ID=your_blog_database_id
-NOTION_RESOURCES_DATABASE_ID=your_resources_database_id
 NOTION_RESUME_PAGE_ID=your_resume_page_id
-NOTION_PROJECTS_DATABASE_ID=your_projects_database_id
 
 # Google Analytics (optional)
 NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
@@ -245,9 +243,8 @@ If you prefer to set up manually:
 
 2. **Set Up Databases / Pages**
    - **Blog database**: Title, Slug, Date, Tags, Published, Featured, Excerpt, Author
-   - **Resources database**: Name, URL, Category (multi-select), Description, Published
-   - **Projects database**: Name, Description, URL, Category, Published
    - **Resume page**: Single page with markdown content
+   - Resources and projects are not in Notion: they live in `data/resources.json` and `data/projects.json`, edited from `/admin/content` (each save commits and rebuilds the site)
 
 3. **Share Databases**
    - Share each database/page with your integration
@@ -316,7 +313,7 @@ piece owns a behaviour is usually the fastest way to debug it.
 | 1 | **Next.js site** (repo root) | GitHub Pages, behind `mncoleman.com` | Push to `main` / daily cron |
 | 2 | **`worker/`** — admin auth | Cloudflare Worker `mncoleman-admin-auth` | `cd worker && npx wrangler deploy` |
 | 3 | **`worker-mcp/`** — public MCP server | Cloudflare Worker on `mncoleman.com/mcp` | `cd worker-mcp && npx wrangler deploy` |
-| 4 | **`server/`** — artifacts + "A"I library | Bun + Hono container on an Oracle ARM box, `artifacts.mncoleman.com` | Docker image build + ship (see [`server/README.md`](./server/README.md)) |
+| 4 | **`server/`** — artifacts + AI library | Bun + Hono container on an Oracle ARM box, `artifacts.mncoleman.com` | Docker image build + ship (see [`server/README.md`](./server/README.md)) |
 
 A few consequences worth knowing up front:
 
@@ -329,7 +326,7 @@ A few consequences worth knowing up front:
   path falls through to GitHub Pages. It stays separate from `worker/` because that one gates
   every POST behind an Origin allowlist and a CSRF header that MCP clients cannot send.
 - **Only piece 4 has a database.** Everything else is stateless; the artifact service holds
-  uploaded files, the "A"I library, and the visitor guestbook's SQLite file.
+  uploaded files, the AI library, and the visitor guestbook's SQLite file.
 
 ### The Build-Time CMS Approach
 
@@ -477,7 +474,7 @@ mncoleman/
 │   │   ├── library/                #   workerUrl/user from admin-context.tsx
 │   │   ├── users/
 │   │   └── visitors/
-│   ├── ai/                         # "A"I library (prompts + skills)
+│   ├── ai/                         # AI library (prompts + skills)
 │   ├── artifacts/                  # Artifact gallery + [slug]/details + OG image
 │   ├── blog/                       # Blog listing + [slug] + OG image
 │   ├── brand-kit/                  # Brand assets / style reference
@@ -674,13 +671,11 @@ Go to Settings → Secrets and variables → Actions:
 |-------------|-------------|---------|
 | `NOTION_TOKEN` | Notion integration token | `ntn_abc123...` |
 | `NOTION_DATABASE_ID` | Blog database ID | `2b5c6cc793dc...` |
-| `NOTION_RESOURCES_DATABASE_ID` | Resources database ID | `2dac6cc793dc...` |
 | `NOTION_RESUME_PAGE_ID` | Resume page ID | `2dac6cc793dc...` |
-| `NOTION_PROJECTS_DATABASE_ID` | Projects database ID | `2dac6cc793dc...` |
 | `NEXT_PUBLIC_GA_ID` | Google Analytics ID (optional) | `G-XXXXXXXXXX` |
 | `NEXT_PUBLIC_WORKER_URL` | Cloudflare Worker URL (admin) | `https://...workers.dev` |
 | `NEXT_PUBLIC_TELEGRAM_BOT_NAME` | Telegram bot username (admin) | `mncoleman_admin_bot` |
-| `NEXT_PUBLIC_ARTIFACTS_API_URL` | Artifact + "A"I library service | `https://artifacts.mncoleman.com` |
+| `NEXT_PUBLIC_ARTIFACTS_API_URL` | Artifact + AI library service | `https://artifacts.mncoleman.com` |
 | `NEXT_PUBLIC_VISITOR_API_URL` | Visitor guestbook (falls back to artifacts URL) | `https://artifacts.mncoleman.com` |
 | `N8N_DEPLOY_WEBHOOK_URL` | Optional n8n notify webhook | `https://n8n.example.com/...` |
 
@@ -791,7 +786,7 @@ The site is hosted on a custom domain at <https://mncoleman.com>
 
 - **[CLAUDE.md](./CLAUDE.md)** - Project guide, architecture, patterns, and the gotcha list
 - **[ADMIN_SETUP.md](./ADMIN_SETUP.md)** - Admin dashboard & Telegram auth setup
-- **[server/README.md](./server/README.md)** - Artifact + "A"I library service: endpoints, deploy, storage layout
+- **[server/README.md](./server/README.md)** - Artifact + AI library service: endpoints, deploy, storage layout
 - **[CUSTOM_DOMAIN_SETUP.md](./CUSTOM_DOMAIN_SETUP.md)** - GitHub Pages custom domain configuration
 
 ---

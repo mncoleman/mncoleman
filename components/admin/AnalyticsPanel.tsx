@@ -35,6 +35,8 @@ interface Summary {
     topPages: { path: string; views: number }[];
     sources: { channel: string; source: string; sessions: number }[];
     countries: { country: string; users: number }[];
+    // Absent on a payload cached by an older Worker, hence optional.
+    cities?: { city: string; region: string; country: string; users: number; sessions: number }[];
 }
 
 const formatDuration = (seconds: number) => {
@@ -473,6 +475,15 @@ npx wrangler deploy`}
                             title="Countries"
                             description="Active users by country."
                             rows={data.countries.map((r) => ({ label: r.country, value: r.users }))}
+                        />
+                        <BarList
+                            title="Cities"
+                            description="Active users by city. GA4 reports a city only when it can resolve one, so small towns show as (not set)."
+                            rows={(data.cities || []).map((r) => ({
+                                label: r.city,
+                                sub: [r.region, r.country].filter(Boolean).join(', '),
+                                value: r.users,
+                            }))}
                         />
                         <Card>
                             <CardHeader>

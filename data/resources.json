@@ -1,0 +1,201 @@
+[
+  {
+    "id": "musical-toys",
+    "name": "Musical Toys",
+    "url": "https://musical.toys/",
+    "categories": [
+      "Random"
+    ],
+    "description": "Creative musical “e-fidgets”",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "truepeoplesearch",
+    "name": "TruePeopleSearch",
+    "url": "https://www.truepeoplesearch.com/",
+    "categories": [
+      "Tracking",
+      "Tools"
+    ],
+    "description": "Name, Phone Number, Email, & Address lookup",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "bouncing-dvd-logo",
+    "name": "Bouncing DVD Logo",
+    "url": "https://www.bouncingdvdlogo.com/",
+    "categories": [
+      "Random"
+    ],
+    "description": "childhood memories",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "optical-illusion-halucinations",
+    "name": "Optical Illusion - halucinations",
+    "url": "https://strobe.cool/",
+    "categories": [
+      "Random"
+    ],
+    "description": "sorry, not sorry",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "the-useless-web",
+    "name": "The Useless Web",
+    "url": "https://theuselessweb.com/",
+    "categories": [
+      "Random",
+      "Useless"
+    ],
+    "description": "Quite literally… a (mostly) useless website",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "true-size-of",
+    "name": "True size of… ",
+    "url": "https://thetruesize.com/#",
+    "categories": [
+      "Tools",
+      "Random",
+      "Scale"
+    ],
+    "description": "Country size comparison website",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "icon-map",
+    "name": "Icon Map",
+    "url": "https://iconmap.io/",
+    "categories": [
+      "Tools",
+      "Random"
+    ],
+    "description": "A favicon (website icon) map with over 400,000 icons",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "favicon-generator",
+    "name": "Favicon Generator",
+    "url": "https://realfavicongenerator.net/",
+    "categories": [
+      "Tools",
+      "Software",
+      "Coding"
+    ],
+    "description": "A favicon generator and preview tool",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "e6bx",
+    "name": "E6BX",
+    "url": "https://e6bx.com/",
+    "categories": [
+      "Calculator",
+      "Tools",
+      "Aviation"
+    ],
+    "description": "Extremely useful aviation calculator(s)",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "aviation-weather-center",
+    "name": "Aviation Weather Center",
+    "url": "https://aviationweather.gov/",
+    "categories": [
+      "Weather",
+      "Tools"
+    ],
+    "description": "Super helpful weather tool for pilots or any weather enthusiast",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "telehack",
+    "name": "Telehack",
+    "url": "https://telehack.com/",
+    "categories": [
+      "Random"
+    ],
+    "description": "Pretty much just a “techy” distraction, though it has some cool tools if you know where to look",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "full-page-calendar",
+    "name": "Full Page Calendar",
+    "url": "https://neatnik.net/calendar/",
+    "categories": [
+      "Tools",
+      "Random"
+    ],
+    "description": "Full page calendar that gives a nice visual of the year",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "excalidraw",
+    "name": "Excalidraw",
+    "url": "https://excalidraw.com/",
+    "categories": [
+      "Tools"
+    ],
+    "description": "Online whiteboard, no account needed",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "screen-backgrounds-white-screen",
+    "name": "Screen Backgrounds - White Screen",
+    "url": "https://www.whitescreen.online/",
+    "categories": [
+      "Random"
+    ],
+    "description": "Screen backgrounds",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "bible-plan-resources",
+    "name": "Bible Plan Resources",
+    "url": "https://matthewcoleman.notion.site/Bible-Plan-Resources-14bc6cc793dc80308f49f3981cc72862?pvs=74",
+    "categories": [
+      "Spiritual"
+    ],
+    "description": "A Notion site I put together for my Bible Reading group.",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "desmos-scientific-calculator",
+    "name": "Desmos Scientific Calculator",
+    "url": "https://www.desmos.com/scientific",
+    "categories": [
+      "Calculator"
+    ],
+    "description": "My favorite online calculator",
+    "published": true,
+    "content": ""
+  },
+  {
+    "id": "mybiblelog",
+    "name": "MyBibleLog",
+    "url": "https://www.mybiblelog.com/",
+    "categories": [
+      "Tracking",
+      "Spiritual"
+    ],
+    "description": "My favorite Bible reading tracker that I use ALL THE TIME, literally.",
+    "published": true,
+    "content": ""
+  }
+]
