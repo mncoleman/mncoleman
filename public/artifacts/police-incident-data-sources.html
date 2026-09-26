@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Police &amp; Incident Data Sources — Windsor CO / I-25</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root, [data-theme="light"]{
+  --bg:#f7f6f2; --surface:#faf9f7; --surface-2:#fcfcfb; --surface-off:#eeecea; --surface-dyn:#e5e2de;
+  --divider:#dcdad6; --border:#d4d2ce;
+  --text:#1a1915; --text-muted:#6b6966; --text-faint:#a8a7a4;
+  --primary:#016b72; --primary-hov:#0c5058; --primary-hl:#cddcda; --primary-dim:rgba(1,107,114,.08);
+  --green:#2f7d34; --orange:#b35d00; --red:#c0302a; --blue:#0a5fa0;
+  --green-bg:rgba(47,125,52,.09); --orange-bg:rgba(179,93,0,.09); --red-bg:rgba(192,48,42,.09); --blue-bg:rgba(10,95,160,.09);
+  --code-bg:#1a1915; --code-text:#d4d2ce;
+  --sh-sm:0 1px 2px rgba(26,25,21,.06); --sh-md:0 4px 12px rgba(26,25,21,.08);
+}
+[data-theme="dark"]{
+  --bg:#161512; --surface:#1c1a17; --surface-2:#201e1b; --surface-off:#252220; --surface-dyn:#2c2926;
+  --divider:#262421; --border:#363432;
+  --text:#cccac6; --text-muted:#7a7876; --text-faint:#5a5856;
+  --primary:#4a9da8; --primary-hov:#21808c; --primary-hl:#2f3a3b; --primary-dim:rgba(74,157,168,.12);
+  --green:#65af65; --orange:#e09840; --red:#d96b65; --blue:#5290c5;
+  --green-bg:rgba(101,175,101,.10); --orange-bg:rgba(224,152,64,.10); --red-bg:rgba(217,107,101,.10); --blue-bg:rgba(82,144,197,.10);
+  --code-bg:#0f0e0c; --code-text:#cccac6;
+  --sh-sm:0 1px 2px rgba(0,0,0,.25); --sh-md:0 4px 12px rgba(0,0,0,.35);
+}
+:root{
+  --code-c:#6b6966; --code-g:#6dbc6d; --code-o:#e8a24a; --code-p:#b48ef5;
+  --radius-sm:.375rem; --radius-md:.5rem; --radius-lg:.75rem; --radius-xl:1rem; --radius-full:9999px;
+  --text-xs:clamp(.75rem,.7rem + .25vw,.875rem); --text-sm:clamp(.875rem,.8rem + .35vw,1rem);
+  --text-base:clamp(1rem,.95rem + .25vw,1.125rem); --text-lg:clamp(1.125rem,1rem + .75vw,1.5rem);
+  --text-xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem); --text-2xl:clamp(2rem,1.2rem + 2.5vw,3.5rem);
+  --font-display:"Inter",-apple-system,sans-serif; --font-body:"Inter",-apple-system,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;
+  --t:180ms cubic-bezier(.16,1,.3,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:130px;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-body);font-size:var(--text-base);color:var(--text);background:var(--bg);line-height:1.6;min-height:100dvh}
+a{color:var(--primary);text-decoration:none;transition:color var(--t)}
+a:hover{color:var(--primary-hov);text-decoration:underline}
+h1,h2,h3{text-wrap:balance}p{text-wrap:pretty}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:9999px}
+
+.site-header{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;padding:0 clamp(1rem,4vw,3rem)}
+.header-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:60px;gap:1rem}
+.logo{display:flex;align-items:center;gap:.7rem;font-size:1.05rem;font-weight:600;color:var(--text);text-decoration:none;letter-spacing:-.01em}
+.logo:hover{text-decoration:none;color:var(--text)}
+.logo svg{color:var(--primary);flex-shrink:0}
+.header-actions{display:flex;align-items:center;gap:.75rem}
+.theme-btn{background:none;border:1px solid var(--border);border-radius:var(--radius-md);padding:.4rem .6rem;cursor:pointer;color:var(--text-muted);transition:all var(--t);line-height:1}
+.theme-btn:hover{color:var(--text);border-color:var(--text-muted)}
+.search-wrap{position:relative}
+.search-wrap>svg{position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none}
+#search{background:var(--surface-off);border:1px solid var(--border);border-radius:var(--radius-md);padding:.4rem .75rem .4rem 2.1rem;font-family:var(--font-body);font-size:var(--text-sm);color:var(--text);width:220px;transition:border-color var(--t),box-shadow var(--t),width var(--t)}
+#search::placeholder{color:var(--text-faint)}
+#search:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-dim);width:280px}
+
+.hero{background:linear-gradient(135deg,var(--surface) 0%,var(--surface-off) 100%);padding:clamp(2.5rem,7vw,5rem) clamp(1rem,4vw,3rem);text-align:center;border-bottom:1px solid var(--border)}
+.hero h1{font-size:var(--text-2xl);font-weight:700;line-height:1.08;margin-bottom:1rem;letter-spacing:-.03em}
+.hero h1 em{font-style:normal;color:var(--primary)}
+.hero p{color:var(--text-muted);max-width:64ch;margin:0 auto 2rem;font-size:var(--text-sm)}
+.stats{display:flex;justify-content:center;gap:2.5rem;flex-wrap:wrap}
+.stat{text-align:center}
+.stat-number{font-size:var(--text-xl);font-weight:700;color:var(--primary);display:block;letter-spacing:-.02em}
+.stat-label{font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+
+.legend{display:flex;gap:.5rem 1rem;flex-wrap:wrap;justify-content:center;padding:1rem clamp(1rem,4vw,3rem);background:var(--surface);border-bottom:1px solid var(--divider)}
+.legend-item{display:flex;align-items:center;gap:.4rem;font-size:var(--text-xs);color:var(--text-muted)}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+.filter-bar{position:sticky;top:60px;z-index:90;background:var(--surface-2);border-bottom:1px solid var(--border);padding:.6rem clamp(1rem,4vw,3rem);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.filter-inner{display:flex;gap:.4rem;max-width:1200px;margin:0 auto;align-items:center;min-width:max-content}
+.filter-label{font-size:var(--text-xs);color:var(--text-muted);margin-right:.4rem;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.filter-btn{padding:.3rem .8rem;border-radius:var(--radius-full);border:1px solid var(--border);background:none;color:var(--text-muted);font-family:var(--font-body);font-size:var(--text-xs);cursor:pointer;transition:all var(--t);white-space:nowrap;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.filter-btn:hover{border-color:var(--primary);color:var(--primary)}
+.filter-btn.active{background:var(--primary);border-color:var(--primary);color:#fff}
+
+.main-layout{max-width:1200px;margin:0 auto;padding:2rem clamp(1rem,4vw,3rem);display:grid;grid-template-columns:220px 1fr;gap:2rem;align-items:start}
+.sidebar{position:sticky;top:130px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:1rem}
+.back-home{display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;margin-bottom:1rem;border:1px solid rgba(128,128,128,.32);border-radius:.5rem;background:rgba(128,128,128,.08);color:inherit;font-size:.78rem;font-weight:600;letter-spacing:.01em;text-decoration:none;opacity:.82;transition:opacity .15s ease,background .15s ease}
+.back-home:hover{opacity:1;background:rgba(128,128,128,.16);text-decoration:none;color:inherit}
+.back-home svg{width:14px;height:14px;flex-shrink:0}
+.sidebar-title{font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);margin-bottom:.75rem;padding:0 .25rem}
+.sidebar-nav{list-style:none}
+.sidebar-nav a{display:flex;align-items:center;gap:.5rem;padding:.45rem .5rem;border-radius:var(--radius-md);font-size:var(--text-sm);color:var(--text-muted);text-decoration:none;transition:all var(--t)}
+.sidebar-nav a:hover{background:var(--surface-off);color:var(--text);text-decoration:none}
+.sidebar-nav a.active-nav{background:var(--primary-dim);color:var(--primary)}
+.sidebar-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+.content{min-width:0}
+.section-block{margin-bottom:3rem;scroll-margin-top:130px}
+.section-block.section-hidden{display:none}
+.section-header{display:flex;align-items:center;gap:.75rem;padding-bottom:.75rem;margin-bottom:1.25rem;border-bottom:2px solid var(--border)}
+.section-icon{width:36px;height:36px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.section-header h2{font-size:var(--text-lg);font-weight:650;letter-spacing:-.02em}
+.section-header small{font-size:var(--text-xs);color:var(--text-muted);margin-left:auto;white-space:nowrap}
+.section-intro{color:var(--text-muted);font-size:var(--text-sm);margin-bottom:1.25rem;max-width:72ch}
+.sub-title{font-size:var(--text-sm);font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin:1.5rem 0 .75rem}
+
+.resource-grid{display:grid;gap:.75rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.1rem;transition:box-shadow var(--t),border-color var(--t)}
+.card:hover{box-shadow:var(--sh-md);border-color:var(--primary)}
+.card.hidden{display:none!important}
+.card-top{display:flex;align-items:flex-start;gap:.5rem;margin-bottom:.4rem;flex-wrap:wrap}
+.card-badge{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:.15rem .45rem;border-radius:var(--radius-full);flex-shrink:0;margin-top:2px}
+.card-title{font-weight:650;font-size:var(--text-sm);color:var(--text);line-height:1.3;letter-spacing:-.01em}
+.card-desc{font-size:var(--text-xs);color:var(--text-muted);max-width:72ch}
+.card-desc+.card-desc{margin-top:.5rem}
+.card-tags{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.6rem}
+.tag{font-size:.63rem;padding:.12rem .45rem;border-radius:var(--radius-full);border:1px solid var(--border);color:var(--text-faint);white-space:nowrap;font-family:var(--font-mono)}
+.card-links{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.7rem}
+.card-link{display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem;border-radius:var(--radius-md);border:1px solid var(--border);font-size:var(--text-xs);color:var(--text-muted);text-decoration:none;white-space:nowrap;transition:all var(--t)}
+.card-link:hover{border-color:var(--primary);color:var(--primary);text-decoration:none}
+.freshness{display:inline-flex;align-items:center;gap:.35rem;font-family:var(--font-mono);font-size:.68rem;font-weight:600;padding:.2rem .5rem;border-radius:var(--radius-sm);margin-top:.6rem}
+.fresh-live{background:var(--green-bg);color:var(--green)}
+.fresh-day{background:var(--orange-bg);color:var(--orange)}
+.fresh-old{background:var(--red-bg);color:var(--red)}
+
+.badge-live{background:var(--green-bg);color:var(--green)}
+.badge-t1{background:var(--orange-bg);color:var(--orange)}
+.badge-base{background:var(--red-bg);color:var(--red)}
+.badge-windsor{background:var(--primary-dim);color:var(--primary)}
+.badge-decoy{background:var(--red-bg);color:var(--red)}
+
+.callout{padding:.9rem 1.1rem;border-radius:var(--radius-lg);border-left:3px solid;margin:1rem 0;font-size:var(--text-xs);display:flex;gap:.7rem;align-items:flex-start}
+.callout svg{flex-shrink:0;margin-top:2px}
+.callout strong{display:block;margin-bottom:.25rem;font-size:var(--text-sm)}
+.callout.warn{background:var(--red-bg);border-color:var(--red);color:var(--text)}
+.callout.warn svg,.callout.warn strong{color:var(--red)}
+.callout.tip{background:var(--blue-bg);border-color:var(--blue);color:var(--text)}
+.callout.tip svg,.callout.tip strong{color:var(--blue)}
+.callout.note{background:var(--orange-bg);border-color:var(--orange);color:var(--text)}
+.callout.note svg,.callout.note strong{color:var(--orange)}
+.callout.fc{background:var(--green-bg);border-color:var(--green);color:var(--text)}
+.callout.fc svg,.callout.fc strong{color:var(--green)}
+
+code.inline{background:var(--surface-off);color:var(--primary);padding:.1rem .35rem;border-radius:var(--radius-sm);border:1px solid var(--border);font-family:var(--font-mono);font-size:.85em;word-break:break-word}
+.cbwrap{position:relative;margin:.85rem 0}
+pre.cb{background:var(--code-bg);color:var(--code-text);padding:1rem 1.1rem;padding-right:5.5rem;border-radius:var(--radius-lg);overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.8;white-space:pre-wrap;word-break:break-word;tab-size:2;border:1px solid var(--border)}
+pre.cb .c{color:var(--code-c)}pre.cb .g{color:var(--code-g)}pre.cb .o{color:var(--code-o)}pre.cb .p{color:var(--code-p)}
+.copy-btn{position:absolute;top:.55rem;right:.55rem;display:inline-flex;align-items:center;gap:.3rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);color:#a8a7a4;border-radius:var(--radius-sm);padding:.25rem .5rem;font-family:var(--font-body);font-size:.68rem;font-weight:600;cursor:pointer;transition:all var(--t);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.copy-btn:hover{background:rgba(255,255,255,.14);color:#e8e6e2}
+.copy-btn.copied{border-color:var(--code-g);color:var(--code-g)}
+.copy-btn svg{width:12px;height:12px}
+
+table.dt{width:100%;border-collapse:collapse;font-size:var(--text-xs);margin:.85rem 0}
+table.dt th{text-align:left;padding:.5rem .7rem;background:var(--surface-off);color:var(--text-muted);font-weight:650;text-transform:uppercase;letter-spacing:.05em;font-size:.68rem;border-bottom:1px solid var(--border)}
+table.dt td{padding:.55rem .7rem;border-bottom:1px solid var(--divider);vertical-align:top}
+table.dt tr:last-child td{border-bottom:none}
+table.dt code{font-family:var(--font-mono);color:var(--primary);font-size:.9em}
+.tscroll{overflow-x:auto}
+
+ol.steps{list-style:none;counter-reset:s;margin:.5rem 0}
+ol.steps li{counter-increment:s;position:relative;padding-left:2.2rem;margin-bottom:.8rem;font-size:var(--text-xs);color:var(--text-muted)}
+ol.steps li::before{content:counter(s);position:absolute;left:0;top:-1px;width:1.5rem;height:1.5rem;border-radius:var(--radius-full);background:var(--primary-dim);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;font-family:var(--font-mono)}
+ol.steps li strong{color:var(--text)}
+
+#results-count{font-size:var(--text-xs);color:var(--text-faint);padding:.5rem 0 1.25rem;font-family:var(--font-mono)}
+.no-results{text-align:center;padding:3rem;color:var(--text-muted);display:none}
+footer{text-align:center;padding:2rem 1rem;border-top:1px solid var(--border);color:var(--text-faint);font-size:var(--text-xs);margin-top:2rem;line-height:1.8}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+@media(max-width:980px){
+  .main-layout{grid-template-columns:1fr;padding:1.25rem .75rem}
+  .sidebar{display:none}
+  .site-header{padding:0 .75rem}
+  .header-inner{height:auto;flex-wrap:wrap;padding:.5rem 0;gap:.5rem}
+  .logo{font-size:.9rem;gap:.5rem}
+  .logo svg{width:20px;height:20px}
+  .header-actions{width:100%;gap:.5rem}
+  #search{width:100%;flex:1}#search:focus{width:100%}
+  .hero{padding:2rem .75rem}
+  .hero p{font-size:var(--text-xs);margin-bottom:1.25rem}
+  .stats{gap:1.5rem}
+  .legend{padding:.75rem;gap:.4rem .75rem}
+  .filter-bar{position:relative;top:auto;padding:.5rem .75rem}
+  .filter-btn{padding:.35rem .6rem;font-size:.7rem}
+  .section-header{flex-wrap:wrap;gap:.5rem}
+  .section-header small{margin-left:0;width:100%}
+  .section-icon{width:28px;height:28px}
+  pre.cb{font-size:.7rem;padding-right:1.1rem;padding-top:2.6rem}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+<div class="header-inner">
+  <a href="#top" class="logo">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+    Police &amp; Incident Data Sources
+  </a>
+  <div class="header-actions">
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="search" id="search" placeholder="Search sources&hellip;" aria-label="Search sources">
+    </div>
+    <button class="theme-btn" data-theme-toggle aria-label="Toggle light or dark theme"></button>
+  </div>
+</div>
+</header>
+
+<section class="hero" id="top">
+  <h1>Real-Time <em>Police &amp; Incident</em> Data Sources</h1>
+  <p>Every source below was actually hit, not just linked. Timestamps are from real responses on 2026-08-10 &mdash; not claimed refresh rates. Scoped to Windsor, Colorado (Weld + Larimer) and the I-25 corridor. Where something <em>doesn't</em> work, that is stated too.</p>
+  <div class="stats">
+    <div class="stat"><span class="stat-number">8&nbsp;min</span><span class="stat-label">Freshest verified</span></div>
+    <div class="stat"><span class="stat-number">14</span><span class="stat-label">Sources tested</span></div>
+    <div class="stat"><span class="stat-number">3</span><span class="stat-label">Latency tiers</span></div>
+    <div class="stat"><span class="stat-number">1</span><span class="stat-label">Decoy caught</span></div>
+  </div>
+</section>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot" style="background:var(--green)"></span>Live (minutes)</div>
+  <div class="legend-item"><span class="legend-dot" style="background:var(--orange)"></span>Next-day (T+1)</div>
+  <div class="legend-item"><span class="legend-dot" style="background:var(--red)"></span>Annual baseline</div>
+  <div class="legend-item"><span class="legend-dot" style="background:var(--primary)"></span>Windsor-specific</div>
+</div>
+
+<div class="filter-bar">
+  <div class="filter-inner">
+    <span class="filter-label">Filter:</span>
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="live">Live</button>
+    <button class="filter-btn" data-filter="t1">Next-day</button>
+    <button class="filter-btn" data-filter="baseline">Baseline</button>
+    <button class="filter-btn" data-filter="windsor">Windsor</button>
+    <button class="filter-btn" data-filter="i25">I-25</button>
+    <button class="filter-btn" data-filter="keyless">Keyless</button>
+    <button class="filter-btn" data-filter="police">Police</button>
+    <button class="filter-btn" data-filter="fire">Fire / EMS</button>
+    <button class="filter-btn" data-filter="decoy">Decoys</button>
+  </div>
+</div>
+
+<div class="main-layout">
+
+<aside class="sidebar">
+  <a class="back-home" href="https://mncoleman.com/artifacts/">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+    Back to Artifacts
+  </a>
+  <div class="sidebar-title">Contents</div>
+  <ul class="sidebar-nav">
+    <li><a href="#findings"><span class="sidebar-dot" style="background:var(--red)"></span>Two Key Findings</a></li>
+    <li><a href="#tier1"><span class="sidebar-dot" style="background:var(--green)"></span>Tier 1 &mdash; Live</a></li>
+    <li><a href="#tier2"><span class="sidebar-dot" style="background:var(--orange)"></span>Tier 2 &mdash; Next-day</a></li>
+    <li><a href="#tier3"><span class="sidebar-dot" style="background:var(--red)"></span>Tier 3 &mdash; Baselines</a></li>
+    <li><a href="#architecture"><span class="sidebar-dot" style="background:var(--primary)"></span>Architecture</a></li>
+    <li><a href="#legal"><span class="sidebar-dot" style="background:var(--blue)"></span>Legal &amp; ToS</a></li>
+  </ul>
+</aside>
+
+<main class="content">
+<div id="results-count"></div>
+
+<!-- ============ FINDINGS ============ -->
+<section class="section-block" id="findings">
+  <div class="section-header">
+    <div class="section-icon" style="background:var(--red-bg);color:var(--red)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+    </div>
+    <h2>Two Findings That Shape Everything</h2>
+    <small>Read before building</small>
+  </div>
+  <p class="section-intro">These two facts invalidate the obvious approach. Both were verified directly against live responses, and both cut against what a surface-level search returns.</p>
+
+  <div class="resource-grid">
+
+    <article class="card" data-cat="windsor police live" data-tier="live">
+      <div class="card-top">
+        <span class="card-badge badge-windsor">Finding 01</span>
+        <span class="card-title">Windsor PD runs its own dispatch &mdash; so it is invisible to every county feed</span>
+      </div>
+      <p class="card-desc">Windsor is a home-rule town with its own police department <strong>and its own dispatch center</strong> (970-674-6400 opt 1). It is not dispatched by Weld County and not by Larimer County. Consequence: <strong>there is no structured, machine-readable feed of Windsor police calls.</strong> Records come out only through JustFOIA / CORA. Your live Windsor-police option is scanner audio on FRCC talkgroup <code class="inline">1938</code> ("Local Law North") or nothing.</p>
+      <p class="card-desc">Verified four independent ways:</p>
+      <div class="cbwrap">
+<pre class="cb"><span class="c"># 1. Weld Sheriff Daily Call Report — tallied every jurisdiction in a full day (08/09/26)</span>
+   91  Weld          13  Greeley       5  Hill N Park
+    2  Frederick      1  Mead          1  Keenesburg   ...
+<span class="o">    0  Windsor</span>   <span class="c">&lt;- "Windsor" appears ONLY in the filter dropdown</span>
+
+<span class="c"># 2. Larimer County Sheriff dispatches: unincorporated Larimer, Wellington,</span>
+<span class="c">#    Berthoud, Timnath PD. Windsor is NOT among them.</span>
+
+<span class="c"># 3. Windsor PD is not a PulsePoint agency (all 15 CO agencies enumerated).</span>
+
+<span class="c"># 4. On the radio: FRCC talkgroup 1938 "Local Law North".</span></pre>
+        <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</button>
+      </div>
+      <div class="card-tags"><span class="tag">windsor-pd</span><span class="tag">frcc-tg-1938</span><span class="tag">cora-only</span></div>
+    </article>
+
+    <article class="card" data-cat="decoy windsor" data-tier="live">
+      <div class="card-top">
+        <span class="card-badge badge-decoy">Decoy</span>
+        <span class="card-title">The "Windsor Police Incident Dashboard" is Windsor, <em>Ontario</em></span>
+      </div>
+      <p class="card-desc">Searching for a Windsor police dashboard surfaces a polished ArcGIS app backed by a live, keyless FeatureServer with <strong>38,761 records updated to today at 20:24&nbsp;UTC</strong>. It looks perfect. It is Canada. Three independent giveaways:</p>
+      <div class="cbwrap">
+<pre class="cb"><span class="c"># The tell-tale record sample:</span>
+2026-08-10 20:24 | Controlled Drug  | MCDOUGALL ST AT WYANDOTTE ST E
+2026-08-10 19:34 | Assault          | 1600 BLOCK <span class="o">OUELLETTE AV</span>
+2026-08-10 19:07 | Mischief         | 700 BLOCK <span class="o">DOUGALL AV</span>
+
+<span class="c"># 1. Ouellette / Wyandotte / Dougall = Windsor, Ontario streets</span>
+<span class="c"># 2. spatialReference WKID 26917 = NAD83 UTM zone 17N</span>
+<span class="c">#    (Colorado is zone 13N — this is southern Ontario)</span>
+<span class="c"># 3. The owner's own snippet says "Windsor Police SERVICE" (Canadian usage)</span></pre>
+        <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</button>
+      </div>
+      <p class="card-desc">I searched the full ArcGIS catalog and confirmed <strong>no Colorado equivalent exists.</strong> If another research pass hands you this dashboard, it is wrong.</p>
+      <div class="card-tags"><span class="tag">false-positive</span><span class="tag">wkid-26917</span></div>
+    </article>
+
+    <article class="card" data-cat="baseline decoy" data-tier="baseline">
+      <div class="card-top">
+        <span class="card-badge badge-base">Finding 02</span>
+        <span class="card-title">State open-data portals lie about their freshness</span>
+      </div>
+      <p class="card-desc"><code class="inline">data.colorado.gov</code> reports <strong>"Crimes in Colorado" as updated 2026-08-10 (today)</strong> &mdash; but the newest actual record is <strong>2024-12-31</strong>. The portal's <code class="inline">updatedAt</code> field tracks metadata touches, not data. This is precisely the stale-data trap that makes these datasets look usable when they aren't.</p>
+      <div class="cbwrap">
+<pre class="cb"><span class="c"># ALWAYS run this before trusting any Socrata dataset:</span>
+curl <span class="g">"https://data.colorado.gov/resource/j6g4-gayk.json?\$select=max(incident_date)"</span>
+
+<span class="c"># Actual response:</span>
+<span class="c">#   [{"max_incident_date":"2024-12-31T00:00:00.000"}]</span>
+<span class="c"># Portal claimed: updated 2026-08-10. Reality: 19 months stale.</span></pre>
+        <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</button>
+      </div>
+      <span class="freshness fresh-old">● metadata says today · data ends 2024-12-31</span>
+      <div class="card-tags"><span class="tag">socrata</span><span class="tag">recency-check</span></div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============ TIER 1 ============ -->
+<section class="section-block" id="tier1">
+  <div class="section-header">
+    <div class="section-icon" style="background:var(--green-bg);color:var(--green)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    </div>
+    <h2>Tier 1 &mdash; Genuinely Live</h2>
+    <small>Minutes old, verified</small>
+  </div>
+  <p class="section-intro">Sources that returned data measured in minutes when tested. This is where the dashboard's live map comes from.</p>
+
+  <div class="resource-grid">
+
+    <article class="card" data-cat="live keyless fire windsor" data-tier="live">
+      <div class="card-top">
+        <span class="card-badge badge-live">Best source</span>
+        <span class="card-title">PulsePoint CAD feed &mdash; keyless, structured, 911-integrated</span>
+      </div>
+      <p class="card-desc">The strongest find. PulsePoint is wired directly into dispatch CAD systems. The public web app fetches JSON that is AES-encrypted client-side, but the passphrase is assembled in the open inside their JS bundle &mdash; so the feed is readable with <strong>no key, no account, and no rate limit encountered.</strong></p>
+      <div class="cbwrap">
+<pre class="cb"><span class="c"># Endpoint — returns {ct, iv, s}</span>
+<span class="c"># CryptoJS AES-CBC, OpenSSL EVP_BytesToKey (MD5) KDF</span>
+https://api.pulsepoint.org/v1/webapp?resource=incidents&amp;agencyid=&lt;ID&gt;
+
+<span class="c"># Passphrase (built at runtime from the string "CommonIncidents"):</span>
+<span class="g">tombrady5rings</span></pre>
+        <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</button>
+      </div>
+
+      <div class="sub-title">Agency IDs that matter to Windsor</div>
+      <div class="tscroll"><table class="dt">
+        <tr><th>ID</th><th>Agency</th><th>Relevance</th></tr>
+        <tr><td><code>PID185</code></td><td><strong>Weld County Public Safety Communications</strong> (Greeley PSAP)</td><td>Dispatches <strong>43 law, fire and EMS agencies</strong>; its boundary polygon spans all of Weld and <strong>does contain Windsor</strong>. Covers fire/EMS in Windsor's Weld half &mdash; not Windsor PD.</td></tr>
+        <tr><td><code>06945</code></td><td>Loveland Fire Rescue Authority</td><td>Loveland + south Larimer, I-25 corridor</td></tr>
+        <tr><td><code>06960</code></td><td>Poudre Fire Authority</td><td>Fort Collins, west Larimer</td></tr>
+      </table></div>
+
+      <div class="sub-title">Live proof &mdash; pulled 2026-08-10 23:05 UTC</div>
+      <div class="cbwrap">
+<pre class="cb">[Loveland 06945] 2026-08-10T22:57:12Z | ME  | N BOISE AVE, LOVELAND, CO       | units=1  <span class="o">&lt;- 8 MIN OLD</span>
+[Loveland 06945] 2026-08-10T22:43:45Z | IFT | W 6TH ST, LOVELAND, CO          | units=1
+[Weld PID185]    2026-08-10T22:01:50Z | ME  | NANCY AVE, ARISTOCRAT RANCH, CO | units=3
+[Poudre 06960]   2026-08-10T20:58:57Z | TC  | S GREENFIELDS &amp; E MULBERRY ST   | units=5</pre>
+        <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</button>
+      </div>
+      <p class="card-desc">Per incident you get <code class="inline">CallReceivedDateTime</code>, a type code (ME=medical, TC=traffic collision, PS=public service, ST=structure, HC=hazmat, IFT=interfacility transfer), <code class="inline">FullDisplayAddress</code>, lat/lon, and the responding unit roster. Buckets are <code class="inline">active</code>, <code class="inline">recent</code> (~24h), and <code class="inline">alerts</code>.</p>
+      <div class="callout note">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <div><strong>Two caveats</strong>It is fire/EMS dispatch &mdash; a crash, medical, or fire appears; a traffic stop or burglary does not. And <code class="inline">PID185</code> was returning only <code class="inline">active</code> (1 call) with an empty <code class="inline">recent</code> bucket when tested, so poll it and build your own history rather than expecting backfill.</div>
+      </div>
+      <span class="freshness fresh-live">● verified 8 minutes old</span>
+      <div class="card-tags"><span class="tag">no-api-key</span><span class="tag">aes-cbc</span><span class="tag">cad-integrated</span><span class="tag">fire-ems-only</span></div>
+      <div class="card-links"><a class="card-link" href="https://web.pulsepoint.org/" target="_blank" rel="noopener">PulsePoint Web &rarr;</a></div>
+    </article>
+
+    <article class="card" data-cat="live police windsor i25" data-tier="live">
+      <div class="card-top">
+        <span class="card-badge badge-live">Live</span>
+        <span class="card-title">Broadcastify scanner audio &mdash; the only true real-time <em>police</em> tier</span>
+      </div>
+      <p class="card-desc">Weld County agencies run on the FRCC P25 Phase II trunked system (migrated off DTRS in 2014). The Weld County Sheriff feed was <strong>Online with 3d14h uptime and 18 listeners</strong> when checked, so the FRCC talkgroups carried on that feed are in the clear.</p>
+      <div class="tscroll"><table class="dt">
+        <tr><th>Feed</th><th>Content</th></tr>
+        <tr><td><code>feed/61</code></td><td><strong>Weld County Sheriff</strong> &mdash; FRCC law talkgroups. Verified Online.</td></tr>
+        <tr><td><code>feed/28371</code></td><td>Weld County Fire and EMS &mdash; FRCC</td></tr>
+        <tr><td><code>feed/45527</code></td><td><strong>Front Range highways incl. I-25 and I-70</strong> (CSP) &mdash; directly relevant</td></tr>
+        <tr><td><code>feed/22222</code>, <code>feed/32602</code></td><td>Additional Weld feeds</td></tr>
+      </table></div>
+      <div class="callout warn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+        <div><strong>Unverified &mdash; check this before you build</strong>I confirmed feed 61 is online and named for Weld Sheriff FRCC talkgroups. I did <strong>not</strong> verify per-talkgroup encryption flags, and specifically did not confirm that Windsor PD's <strong>TG 1938 is carried on it or unencrypted</strong>. That is the single talkgroup you care most about &mdash; check RadioReference first. Platform audio also lags ~30-60s.</div>
+      </div>
+      <p class="card-desc">To get this onto a dashboard you would transcribe the stream (Whisper) and extract addresses via NER.</p>
+      <span class="freshness fresh-live">● seconds (minus ~30-60s platform lag)</span>
+      <div class="card-tags"><span class="tag">p25-phase-ii</span><span class="tag">frcc</span><span class="tag">audio-only</span><span class="tag">tos-friction</span></div>
+      <div class="card-links"><a class="card-link" href="https://www.broadcastify.com/listen/ctid/302" target="_blank" rel="noopener">Weld County feeds &rarr;</a><a class="card-link" href="https://wiki.radioreference.com/index.php/Weld_County_(CO)" target="_blank" rel="noopener">RadioReference wiki &rarr;</a></div>
+    </article>
+
+    <article class="card" data-cat="live i25" data-tier="live">
+      <div class="card-top">
+        <span class="card-badge badge-live">Official</span>
+        <span class="card-title">CDOT COtrip &mdash; authoritative and live for I-25. Free API key.</span>
+      </div>
+      <p class="card-desc">The best I-25 source: official CDOT Intelligent Transportation Systems data covering crashes, closures, and construction. Verified live &mdash; the endpoint returns <code class="inline">403 Not Authorized</code> without a key, confirming the route is real and gated rather than dead.</p>
+      <div class="cbwrap">
+<pre class="cb"><span class="c"># Register for a free key at https://manage-api.cotrip.org/  (returns 200)</span>
+curl <span class="g">"https://data.cotrip.org/api/v1/incidents?apiKey=$COTRIP_TOKEN"</span>
+
+<span class="c"># Paginate with &amp;offset=&lt;nextOffset&gt;</span>
+<span class="c"># Reference implementation (Colorado's own emergency mgmt org):</span>
+<span class="c">#   github.com/dfpc-coe/etl-cotrip-incidents  -> task.ts</span></pre>
+        <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</button>
+      </div>
+      <div class="callout tip">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <div><strong>Don't bother with the GraphQL route</strong><code class="inline">maps.cotrip.org/api/graphql</code> responds but has introspection disabled and rejects guessed query names. The keyed REST API is the supported path &mdash; use it rather than reverse-engineering the map.</div>
+      </div>
+      <span class="freshness fresh-live">● minutes (official ITS feed)</span>
+      <div class="card-tags"><span class="tag">free-api-key</span><span class="tag">i-25</span><span class="tag">official-cdot</span></div>
+      <div class="card-links"><a class="card-link" href="https://maps.cotrip.org/help/117/Traveler-Information-Data-Feed-Access" target="_blank" rel="noopener">Developer docs &rarr;</a><a class="card-link" href="https://github.com/dfpc-coe/etl-cotrip-incidents" target="_blank" rel="noopener">Reference ETL &rarr;</a></div>
+    </article>
+
+    <article class="card" data-cat="live keyless i25" data-tier="live">
+      <div class="card-top">
+        <span class="card-badge badge-live">Keyless</span>
+        <span class="card-title">NWS alerts &mdash; instant, free, useful context layer</span>
+      </div>
+      <p class="card-desc">Verified 200 with valid GeoJSON. No key, no account. Good for correlating weather against I-25 incident spikes &mdash; a cheap layer that makes the dashboard meaningfully smarter.</p>
+      <div class="cbwrap">
+<pre class="cb"><span class="c"># COZ038 = Larimer County below 6000 ft</span>
+curl <span class="g">"https://api.weather.gov/alerts/active?zone=COZ038"</span></pre>
+        <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</button>
+      </div>
+      <span class="freshness fresh-live">● instant</span>
+      <div class="card-tags"><span class="tag">no-api-key</span><span class="tag">geojson</span></div>
+    </article>
+
+    <article class="card" data-cat="live windsor police" data-tier="live">
+      <div class="card-top">
+        <span class="card-badge badge-windsor">Windsor</span>
+        <span class="card-title">Windsor-specific alerting &mdash; low volume, but it is actually Windsor</span>
+      </div>
+      <p class="card-desc"><strong>NoCo Alerts via LETA</strong> (Larimer Emergency Telephone Authority). Windsor participates by intergovernmental agreement. <code class="inline">leta911.org</code> verified 200; <code class="inline">nocoalerts.org</code> redirects (302). This is the official emergency-notification channel for Windsor.</p>
+      <p class="card-desc"><strong>windsorpd.com CivicAlerts</strong> &mdash; press releases for significant incidents (recent items included an arrest for possession of explosives). Hours-to-days lag, but it is genuinely first-party Windsor PD and trivially scrapeable at <code class="inline">windsorpd.com/CivicAlerts.aspx?CID=1</code>.</p>
+      <span class="freshness fresh-day">● hours to days</span>
+      <div class="card-tags"><span class="tag">first-party</span><span class="tag">low-volume</span><span class="tag">scrapeable</span></div>
+      <div class="card-links"><a class="card-link" href="https://www.windsorpd.com/CivicAlerts.aspx?CID=1" target="_blank" rel="noopener">Windsor PD alerts &rarr;</a><a class="card-link" href="https://www.leta911.org/" target="_blank" rel="noopener">LETA 911 &rarr;</a></div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============ TIER 2 ============ -->
+<section class="section-block" id="tier2">
+  <div class="section-header">
+    <div class="section-icon" style="background:var(--orange-bg);color:var(--orange)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    </div>
+    <h2>Tier 2 &mdash; Next-Day, Structured</h2>
+    <small>T+1, verified</small>
+  </div>
+  <p class="section-intro">Rich, structured police call data &mdash; but posted the following day. Good for the history layer, wrong for the live map.</p>
+
+  <div class="resource-grid">
+    <article class="card" data-cat="t1 police" data-tier="t1">
+      <div class="card-top">
+        <span class="card-badge badge-t1">T+1</span>
+        <span class="card-title">Weld County Sheriff Daily Call Report</span>
+      </div>
+      <p class="card-desc"><strong>Verified T+1:</strong> <code class="inline">08/09/26</code> returned a full 131KB report; <code class="inline">08/10/26</code> (today) returned 21KB with <strong>zero call records</strong>. Calls post the following day. Plain HTML, no JS rendering needed.</p>
+      <div class="cbwrap">
+<pre class="cb"><span class="c"># URL pattern</span>
+https://apps.weld.gov/sheriff/DailyCalls/index.cfm?single=yes&amp;call_date=MM/DD/YY
+
+<span class="c"># Real record from 08/09/26:</span>
+Call Time:    12:13 AM 08/09/26
+Call Type:    Traffic Stop
+Jurisdiction: Frederick
+WCSO Report:  26W004953
+Neighborhood: near HIGHWAY 85 SB / HIGHWAY 34 BYP WB
+Call ID:      20260809-00011      Priority: 9</pre>
+        <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</button>
+      </div>
+      <div class="callout note">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <div><strong>Scope reminder</strong>WCSO and contract towns only &mdash; <strong>no Windsor</strong>. Still the best structured police call data in the county, and it covers rural Weld plus the HWY 34 / HWY 85 corridors near Windsor. The jurisdiction filter is POST-driven (the GET <code class="inline">jurisdiction=</code> param returns the unfiltered page), so scrape the day and filter client-side.</div>
+      </div>
+      <span class="freshness fresh-day">● next day (today's returns zero records)</span>
+      <div class="card-tags"><span class="tag">plain-html</span><span class="tag">no-js-needed</span><span class="tag">coldfusion</span><span class="tag">no-windsor</span></div>
+      <div class="card-links"><a class="card-link" href="https://apps.weld.gov/sheriff/DailyCalls/" target="_blank" rel="noopener">Daily Call Report &rarr;</a></div>
+    </article>
+  </div>
+</section>
+
+<!-- ============ TIER 3 ============ -->
+<section class="section-block" id="tier3">
+  <div class="section-header">
+    <div class="section-icon" style="background:var(--red-bg);color:var(--red)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+    </div>
+    <h2>Tier 3 &mdash; Official Baselines</h2>
+    <small>Annual, not live</small>
+  </div>
+  <p class="section-intro">Use these for "is this week unusual," never for "what just happened." Recency column is the <em>real</em> max date I queried, not the portal's claim.</p>
+
+  <div class="resource-grid">
+    <article class="card" data-cat="baseline" data-tier="baseline">
+      <div class="card-top">
+        <span class="card-badge badge-base">Baseline</span>
+        <span class="card-title">Colorado open data &mdash; verified recency</span>
+      </div>
+      <div class="tscroll"><table class="dt">
+        <tr><th>Dataset</th><th>ID</th><th>Real recency (verified)</th></tr>
+        <tr><td>Crimes in Colorado (CBI NIBRS)</td><td><code>j6g4-gayk</code></td><td><strong>max <code>incident_date</code> = 2024-12-31</strong> despite "updated today"</td></tr>
+        <tr><td>Annual Arrests by Offense (current)</td><td><code>24px-ypnu</code></td><td>starts 2008, annual cadence</td></tr>
+        <tr><td>City of Denver Traffic Accidents</td><td><code>cpwf-cznk</code></td><td>genuinely fresh &mdash; but Denver only</td></tr>
+        <tr><td>CDOT Real Time Data Feed</td><td><code>j3ch-zsvz</code></td><td>catalog pointer to COtrip &mdash; use the live source instead</td></tr>
+      </table></div>
+      <span class="freshness fresh-old">● annual — baselines only</span>
+      <div class="card-tags"><span class="tag">socrata</span><span class="tag">nibrs</span><span class="tag">cbi</span></div>
+      <div class="card-links"><a class="card-link" href="https://data.colorado.gov/" target="_blank" rel="noopener">Colorado Information Marketplace &rarr;</a></div>
+    </article>
+  </div>
+</section>
+
+<!-- ============ ARCHITECTURE ============ -->
+<section class="section-block" id="architecture">
+  <div class="section-header">
+    <div class="section-icon" style="background:var(--primary-dim);color:var(--primary)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+    </div>
+    <h2>Recommended Architecture</h2>
+    <small>Build order</small>
+  </div>
+
+  <div class="resource-grid">
+    <article class="card" data-cat="live t1 baseline windsor i25" data-tier="live">
+      <div class="card-top">
+        <span class="card-badge badge-windsor">Plan</span>
+        <span class="card-title">Six layers, in build order</span>
+      </div>
+      <ol class="steps">
+        <li><strong>Poll PulsePoint</strong> (<code class="inline">PID185</code>, <code class="inline">06945</code>, <code class="inline">06960</code>) every 60s. Dedupe on incident ID and persist &mdash; this is your live map <em>and</em> it builds the history the API won't backfill.</li>
+        <li><strong>Poll COtrip incidents</strong> every 2-5 min, filtered to an I-25 bounding box. Keep it a separate layer.</li>
+        <li><strong>Nightly scrape</strong> the Weld Daily Call Report for yesterday &mdash; the real police layer, and it lets you retroactively label Tier 1 incidents.</li>
+        <li><strong>Scrape windsorpd.com CivicAlerts</strong> daily &mdash; the only first-party Windsor PD channel that exists.</li>
+        <li><strong>If you want live Windsor police:</strong> verify TG 1938's encryption status, then run an RTL-SDR with trunk-recorder on FRCC and transcribe locally. This is the only path &mdash; and it also sidesteps the ToS issue below.</li>
+        <li><strong>Baselines from Tier 3</strong>, refreshed quarterly.</li>
+      </ol>
+      <div class="callout fc">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+        <div><strong>Steps 1-4 and 6 are all first-party or officially sanctioned.</strong>Step 5 is the only one with friction, and running your own receiver removes even that.</div>
+      </div>
+      <div class="card-tags"><span class="tag">poll-60s</span><span class="tag">rtl-sdr</span><span class="tag">trunk-recorder</span></div>
+    </article>
+  </div>
+</section>
+
+<!-- ============ LEGAL ============ -->
+<section class="section-block" id="legal">
+  <div class="section-header">
+    <div class="section-icon" style="background:var(--blue-bg);color:var(--blue)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7h14"/><path d="m5 7-3 6h6zM19 7l-3 6h6z"/></svg>
+    </div>
+    <h2>Legal &amp; Terms of Service</h2>
+    <small>Flagged, not cleared</small>
+  </div>
+
+  <div class="resource-grid">
+    <article class="card" data-cat="live police" data-tier="live">
+      <div class="card-top">
+        <span class="card-badge badge-t1">Read first</span>
+        <span class="card-title">Where the friction actually is</span>
+      </div>
+      <p class="card-desc">Receiving unencrypted public safety radio is legal in Colorado. The friction is <strong>contractual, not statutory.</strong></p>
+      <div class="callout warn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+        <div><strong>Broadcastify</strong>Their ToS restricts re-transmission and automated scraping, and archives/Calls are paid tiers. Running your own SDR receiver avoids this entirely &mdash; that is your own lawful reception, not their stream.</div>
+      </div>
+      <div class="callout note">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <div><strong>PulsePoint &mdash; ToS not reviewed</strong>Flagging rather than clearing this one. The data is published for public consumption, but the payload is deliberately obfuscated, and extracting the passphrase to read it is a fact worth weighing before anything public-facing. Fine for personal use; read their terms before shipping it to others.</div>
+      </div>
+      <p class="card-desc"><code class="inline">weld.gov</code>, <code class="inline">data.colorado.gov</code>, <code class="inline">api.weather.gov</code>, and COtrip (with a registered key) are all intended for public/programmatic access. Be polite with poll rates.</p>
+      <div class="card-tags"><span class="tag">tos</span><span class="tag">colorado</span></div>
+    </article>
+  </div>
+</section>
+
+<div class="no-results" id="no-results">No sources match that search or filter.</div>
+
+<footer>
+  Research conducted 2026-08-10. Every endpoint was hit directly; timestamps are from real responses.<br>
+  Verify TG 1938 encryption status and PulsePoint ToS before building anything public-facing.
+</footer>
+
+</main>
+</div>
+
+<script>
+(function(){
+  var html=document.documentElement;
+  var btn=document.querySelector('[data-theme-toggle]');
+  var d=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+  html.setAttribute('data-theme',d);
+  var SUN='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
+  var MOON='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  function upd(){document.querySelectorAll('[data-theme-toggle]').forEach(function(b){b.innerHTML=d==='dark'?SUN:MOON;});}
+  upd();
+  if(btn)btn.addEventListener('click',function(){d=d==='dark'?'light':'dark';html.setAttribute('data-theme',d);upd();});
+
+  var cards=document.querySelectorAll('.card');
+  var fbtns=document.querySelectorAll('.filter-btn');
+  var sections=document.querySelectorAll('.section-block');
+  var si=document.getElementById('search');
+  var noRes=document.getElementById('no-results');
+  var countEl=document.getElementById('results-count');
+  var cf='all';
+
+  function apply(){
+    var q=si.value.toLowerCase().trim(), vis=0;
+    cards.forEach(function(c){
+      var cat=(c.dataset.cat||'').toLowerCase();
+      var txt=(c.innerText||'').toLowerCase();
+      var pf=(cf==='all')||cat.indexOf(cf)>-1;
+      var ps=!q||txt.indexOf(q)>-1;
+      c.classList.toggle('hidden',!(pf&&ps));
+      if(pf&&ps)vis++;
+    });
+    sections.forEach(function(s){
+      var n=s.querySelectorAll('.card:not(.hidden)').length;
+      s.classList.toggle('section-hidden',n===0);
+    });
+    countEl.textContent=(q||cf!=='all')?('Showing '+vis+' of '+cards.length+' sources'):'';
+    noRes.style.display=vis===0?'block':'none';
+  }
+
+  function setFilter(b){
+    fbtns.forEach(function(x){x.classList.remove('active')});
+    b.classList.add('active'); cf=b.dataset.filter; apply();
+  }
+  fbtns.forEach(function(b){
+    b.addEventListener('click',function(){setFilter(b)});
+    // mobile Safari swallows clicks inside horizontal scroll containers
+    var sx=0,sy=0,moved=false;
+    b.addEventListener('touchstart',function(e){var t=e.changedTouches[0];sx=t.clientX;sy=t.clientY;moved=false;},{passive:true});
+    b.addEventListener('touchmove',function(e){var t=e.changedTouches[0];if(Math.abs(t.clientX-sx)>8||Math.abs(t.clientY-sy)>8)moved=true;},{passive:true});
+    b.addEventListener('touchend',function(e){if(!moved){e.preventDefault();setFilter(b);}},{passive:false});
+  });
+  si.addEventListener('input',apply);
+
+  // scroll-spy
+  var navLinks=document.querySelectorAll('.sidebar-nav a');
+  var obs=new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){
+        navLinks.forEach(function(a){
+          a.classList.toggle('active-nav',a.getAttribute('href')==='#'+en.target.id);
+        });
+      }
+    });
+  },{rootMargin:'-20% 0px -70% 0px'});
+  sections.forEach(function(s){if(s.id)obs.observe(s)});
+})();
+
+function flash(btn){
+  var orig=btn.innerHTML;
+  btn.classList.add('copied');
+  btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Copied!';
+  setTimeout(function(){btn.classList.remove('copied');btn.innerHTML=orig;},2000);
+}
+function copyCode(btn){
+  var pre=btn.parentElement.querySelector('pre');
+  var txt=pre.innerText.split('\n')
+    .filter(function(l){return l.trim().indexOf('#')!==0})
+    .map(function(l){return l.replace(/^\s*\$\s/,'')})
+    .join('\n').trim();
+  navigator.clipboard.writeText(txt).then(function(){flash(btn)});
+}
+function copyRaw(btn,id){
+  navigator.clipboard.writeText(document.getElementById(id).innerText).then(function(){flash(btn)});
+}
+</script>
+</body>
+</html>

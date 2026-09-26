@@ -8,17 +8,18 @@ Next.js 16 (App Router, `output: 'export'` static site) · React 19 · TypeScrip
 
 ## Architecture
 
-Five independently-deployed pieces live in this repo. Pushing to `main` deploys only the first; the others each have their own deploy step, and a change spanning them must ship in dependency order (the Worker mints the JWT the artifact service authorises against, so the Worker goes first):
+Six independently-deployed pieces live in this repo. Pushing to `main` deploys only the first; the others each have their own deploy step, and a change spanning them must ship in dependency order (the Worker mints the JWT the artifact service authorises against, so the Worker goes first):
 
 1. **Next.js static site** (repo root) — statically exported at build time, hosted on **Cloudflare Pages** behind the custom domain. Cloudflare builds it directly from this GitHub repo (Pages Git integration); there is no GitHub Actions deploy workflow. All content is fetched from Notion **at build time**; there is no runtime server for the site itself.
 
    Migrated off GitHub Pages on 2026-08-15 after its origin certificate expired and could not renew: the ACME challenge runs through the Cloudflare-proxied apex, and Full (strict) refused the very certificate the renewal existed to replace. Cloudflare Pages has no origin certificate, so that whole failure mode is gone rather than managed.
-2. **`worker/`** — a Cloudflare Worker (`mncoleman-admin-auth`) that handles admin login (Telegram OIDC), mints session JWTs, stores admin users in KV, fires **Cloudflare Pages deploy-hook** rebuilds (on a `scheduled()` cron trigger and from the admin panel), and proxies artifact uploads to the artifact service. It still holds `GITHUB_TOKEN` — that is for committing `data/artifacts.json`, which is independent of where the site is hosted.
+2. **`worker/`** — a Cloudflare Worker (`mncoleman-admin-auth`) that handles admin login (Telegram OIDC), mints session JWTs, stores admin users in KV, fires **Cloudflare Pages deploy-hook** rebuilds (on a `scheduled()` cron trigger and from the admin panel), and proxies artifact uploads to the artifact service. It holds `GITHUB_TOKEN` for committing `data/artifacts.json` and the `data/*.json` collections; those commits are what trigger Pages builds.
 3. **`worker-mcp/`** — a second Cloudflare Worker (`mncoleman-site-mcp`) serving the **public, unauthenticated MCP server** at `https://mncoleman.com/mcp`. It owns a route on the Cloudflare-proxied apex, so `/mcp*` is intercepted while every other path still falls through to Cloudflare Pages. Worker routes take precedence over a Pages custom domain on the same hostname — verified empirically on a throwaway subdomain before the cutover, not assumed from docs. Holds no secrets; reads `public/data/site-content.json` (built by `scripts/generate-search-index.ts`) plus the artifact service's public list endpoints. Stateless per MCP 2026-07-28 (SEP-2575) with the legacy `initialize` handshake still supported. Separate Worker on purpose — `worker/` gates every POST behind an Origin allowlist + CSRF header that MCP clients cannot send.
 4. **`worker-www-redirect/`** — a third Cloudflare Worker (`mncoleman-www-redirect`) doing nothing but a `www` -> apex 301. Holds no secrets and reads nothing. It exists because GitHub Pages used to issue that redirect for free and a Pages custom domain does not — see the Gotchas.
 5. **`server/`** — a Bun + Hono service on an Oracle ARM box (`artifacts.mncoleman.com`) that hosts uploaded artifacts (HTML/PDF/images) and the AI library (prompts + skills), each with auto-generated OG share images. Deployed as a Docker container. See `server/README.md`.
+6. **`worker-tokens/`** — a fourth Cloudflare Worker (`mncoleman-token-count`) owning the route `mncoleman.com/api/count-tokens`. It holds `ANTHROPIC_API_KEY` and exposes only `POST /v1/messages/count_tokens` (model allowlist, per-IP rate limit, `MAX_CHARS` cap) so the static Skill Lens artifact can show real token counts without the key reaching a browser. Separate from `worker/` for the same Origin/CSRF reason as `worker-mcp/`.
 
-The site uses a **two-layer adapter pattern** for Notion content: `lib/notion.ts` does the direct API integration; `lib/blog.ts`, `lib/resources.ts`, `lib/resume.ts`, `lib/projects.ts` are thin adapters per content type. Every fetcher validates credentials before calling Notion, falls back to sample data when they are absent, and throws when they are present but the fetch fails (see Patterns).
+The site uses a **two-layer adapter pattern** for Notion content: `lib/notion.ts` does the direct API integration; `lib/blog.ts` and `lib/resume.ts` are thin adapters per content type; `lib/resources.ts` and `lib/projects.ts` read `data/*.json` instead. Every Notion fetcher validates credentials before calling Notion, falls back to sample data when they are absent, and throws when they are present but the fetch fails (see Patterns).
 
 ## Directory Map
 
@@ -43,12 +44,13 @@ components/
   brand-kit/            — Brand kit showcase components
   visitor-globe/        — cobe WebGL globe + "where are you from" guestbook
   *.tsx                 — Nav, search, theme, page transitions, PWA install, etc.
-data/                   — about.json, artifacts.json (static manifest), search-index.json (generated)
+data/                   — about.json, artifacts.json (static manifest), resources.json, projects.json, search-index.json + build-info.json (generated)
 hooks/                  — use-toast
 scripts/                — Build-time scripts (search index, OG finalize, SW version stamp)
 worker/                 — Cloudflare Worker (admin auth + rebuild cron) — separate deploy
 worker-mcp/             — Cloudflare Worker (public MCP server at /mcp) — separate deploy
 worker-www-redirect/    — Cloudflare Worker (www -> apex 301) — separate deploy
+worker-tokens/          — Cloudflare Worker (token-count proxy at /api/count-tokens) — separate deploy
 server/                 — Bun/Hono artifact + AI library service — separate deploy
 public/                 — Static assets, icons, sw.js, fonts, sounds/, _headers (Pages cache rules)
 assets/                 — Build-time-only assets NOT served to visitors (og-veil.jpg)
@@ -72,7 +74,7 @@ profile-summary-card-output/ — CI-generated GitHub stat SVGs (do not hand-edit
 - `components/backdrop-fade.tsx` — Fades a backdrop in once its canvas has actually drawn. Must never set transform/filter/will-change — each would make it a containing block for Dark Veil's `position: fixed` canvas.
 - `components/ui/glass-cube.tsx` — The bento card. Glass + 3D extrusion + tilt in dark; a plain solid card with a lift-and-shadow hover in light, because translucent white over white is a grey box. Colours come from `dark:` variants, not JS state, so hydration can't paint the wrong palette.
 - `lib/notion.ts` — Direct Notion API integration for blog posts; `NotionPost` type, credential validation, sample-data fallback, reading-time calc.
-- `lib/blog.ts` / `lib/resources.ts` / `lib/resume.ts` / `lib/projects.ts` — Per-content-type adapters over Notion.
+- `lib/blog.ts` / `lib/resume.ts` — Per-content-type adapters over Notion. `lib/resources.ts` / `lib/projects.ts` — read `data/resources.json` / `data/projects.json`.
 - `lib/artifacts.ts` — Reads `data/artifacts.json` static manifest; file-type/label/size helpers.
 - `lib/admin-auth.ts` — Client-side session token helpers (sessionStorage) + `authHeaders()` for Worker calls.
 - `lib/og-card.tsx` — Shared OG image renderer used by the per-route `opengraph-image.tsx` files. **Must stay visually identical to `server/src/og.tsx`** — static artifacts unfurl from here, instant ones from there, and a viewer seeing both should not be able to tell which pipeline produced which. They cannot share code (separate deploys; the Docker image only copies `server/`), so a change to one is a manual change to the other.
@@ -87,7 +89,7 @@ profile-summary-card-output/ — CI-generated GitHub stat SVGs (do not hand-edit
 
 ### Pages
 
-`/` · `/about` · `/blog` + `/blog/[slug]` · `/projects` + `/projects/[slug]` · `/resources` + `/resources/[slug]` · `/resume` · `/artifacts` · `/ai` · `/brand-kit` · `/privacy` · `/terms` · `/admin` + `/admin/{analytics,artifacts,library,visitors,users}`. List pages that need client interactivity split into a server `page.tsx` (metadata + data fetch) plus a `*PageClient.tsx` (`'use client'`).
+`/` · `/about` · `/blog` + `/blog/[slug]` · `/projects` + `/projects/[slug]` · `/resources` + `/resources/[slug]` · `/resume` · `/artifacts` · `/ai` · `/brand-kit` · `/privacy` · `/terms` · `/admin` + `/admin/{analytics,artifacts,content,library,visitors,users}`. List pages that need client interactivity split into a server `page.tsx` (metadata + data fetch) plus a `*PageClient.tsx` (`'use client'`).
 
 ## Data Model
 
@@ -143,6 +145,7 @@ Content comes from **two Notion data sources** (one database + one page) plus re
 - **Deploy the www redirect Worker**: `cd worker-www-redirect && npx wrangler deploy`.
 - **Force a site rebuild** without a push: POST the Pages deploy hook (stored as the Worker secret `PAGES_DEPLOY_HOOK`), or use the admin panel's rebuild button, which does the same thing.
 - **Deploy the MCP Worker**: `cd worker-mcp && npx wrangler deploy`.
+- **Deploy the token-count Worker**: `cd worker-tokens && npx wrangler deploy` (`ANTHROPIC_API_KEY` via `wrangler secret put`).
 - **Deploy the artifact service**: see the Docker build/ship steps in `server/README.md`. Do NOT recreate the container from that `docker run` block by hand — carry the live container's env forward with `docker inspect artifacts --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -v '^PATH='` instead, so a documentation drift can't silently drop a secret.
 
 ## Environment
@@ -150,18 +153,18 @@ Content comes from **two Notion data sources** (one database + one page) plus re
 ```bash
 npm run dev        # dev server (port 3000; raised Node heap)
 npm run dev:lite   # dev server with Dark Veil disabled + smaller heap
-npm run build      # generate-search-index → next build → finalize-og-images → stamp-sw-version → out/
+npm run build      # build-info → generate-search-index → generate-factbook → next build → finalize-og-images → stamp-sw-version → out/
 npm run lint       # ESLint
 npm run dev:artifacts  # run the artifact service locally (tsx)
 ```
 
-Required env (see `.env.example`): `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `NOTION_RESUME_PAGE_ID` (`NOTION_RESOURCES_DATABASE_ID` and `NOTION_PROJECTS_DATABASE_ID` are no longer read; resources and projects come from `data/*.json`). Optional: `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_WORKER_URL` (admin auth Worker — `app/admin/layout.tsx`, `app/artifacts/ArtifactsPageClient.tsx`; defaults to `http://localhost:8787`), `NEXT_PUBLIC_TELEGRAM_BOT_NAME` (admin login widget), `NEXT_PUBLIC_ARTIFACTS_API_URL` (artifact + AI library service — `components/admin/{ArtifactUploader,LibraryManager}.tsx`, `app/artifacts/ArtifactsPageClient.tsx`, `app/ai/AiPageClient.tsx`; defaults to `https://artifacts.mncoleman.com`), `NEXT_PUBLIC_VISITOR_API_URL` (visitor-globe guestbook — `components/visitor-globe/visitor-api.ts`; falls back to `NEXT_PUBLIC_ARTIFACTS_API_URL`), `NEXT_PUBLIC_DISABLE_DARKVEIL`. All build-time values must also be set as **GitHub Secrets** for production builds.
+Required env (see `.env.example`): `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `NOTION_RESUME_PAGE_ID` (`NOTION_RESOURCES_DATABASE_ID` and `NOTION_PROJECTS_DATABASE_ID` are no longer read; resources and projects come from `data/*.json`). Optional: `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_WORKER_URL` (admin auth Worker — `app/admin/layout.tsx`, `app/artifacts/ArtifactsPageClient.tsx`; defaults to `http://localhost:8787`), `NEXT_PUBLIC_ARTIFACTS_API_URL` (artifact + AI library service — `components/admin/{ArtifactUploader,LibraryManager}.tsx`, `app/artifacts/ArtifactsPageClient.tsx`, `app/ai/AiPageClient.tsx`; defaults to `https://artifacts.mncoleman.com`), `NEXT_PUBLIC_VISITOR_API_URL` (visitor-globe guestbook — `components/visitor-globe/visitor-api.ts`; falls back to `NEXT_PUBLIC_ARTIFACTS_API_URL`), `NEXT_PUBLIC_DISABLE_DARKVEIL`. Production values are set on the Cloudflare Pages project (see Deploy below).
 
-**Deploy**: pushing to `main` triggers a **Cloudflare Pages** build (Git integration, project `mncoleman`, build `npm run build`, output `out/`). There is no deploy workflow in `.github/` any more.
+**Deploy**: pushing to `main` triggers a **Cloudflare Pages** build (Git integration, project `mncoleman`, build `npm run build`, output `out/`). Nothing in `.github/workflows/` deploys the site.
 
 - **Build env vars live on the Pages project**, not in GitHub Secrets. Set them in the Cloudflare dashboard (Settings → Variables) or via the Pages API. `NODE_VERSION` is pinned to 20 there; build caching is on; preview deployments are off.
-- **Daily content rebuild**: the admin Worker's `scheduled()` handler fires the Pages deploy hook at 06:00 UTC (`[triggers] crons` in `worker/wrangler.toml`). That replaced `deploy.yml`'s `schedule:`.
-- **Admin-panel rebuilds** POST the same deploy hook (`PAGES_DEPLOY_HOOK` secret on the Worker) instead of a GitHub `repository_dispatch`.
+- **Daily content rebuild**: the admin Worker's `scheduled()` handler fires the Pages deploy hook at 06:00 UTC (`[triggers] crons` in `worker/wrangler.toml`).
+- **Admin-panel rebuilds** POST the same deploy hook (`PAGES_DEPLOY_HOOK` secret on the Worker).
 - **Artifact manifest commits** made by the Worker push to the repo, and the Git integration builds them like any other push — do *not* also fire the deploy hook for those, or one upload builds twice.
 - `profile-cards.yml` still runs on Actions (5 AM UTC) because it commits repo content rather than deploying. `profile-summary-card-output/*` is in the Pages **build watch path excludes**, so that commit no longer triggers a full Notion rebuild an hour before the cron does one anyway.
 
@@ -171,7 +174,7 @@ Required env (see `.env.example`): `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `NOTION
 
 1. **No basePath**: the site runs on the custom domain `mncoleman.com`, so `next.config.ts` has **no** `basePath`. (It previously used `/mncoleman`/`/matthew-coleman` for the GitHub Pages subpath — don't reintroduce that. `public/CNAME` is also gone; it only meant anything to GitHub Pages.)
 2. **Notion token format**: tokens start with `ntn_`, **not** `secret_`. Validation checks for the placeholder `ntn_your_integration_token_here`.
-3. **Separate Notion databases**: Blog, Resources, and Projects are distinct databases with distinct IDs (plus the Resume page). "Databases with multiple data sources are not supported" means you pointed at a database with synced/linked blocks — use the plain database ID.
+3. **Notion sources**: the Blog database and the Resume page are the only Notion sources (resources and projects live in `data/*.json`). "Databases with multiple data sources are not supported" means you pointed at a database with synced/linked blocks — use the plain database ID.
 4. **Notion is build-time only**: content changes require a rebuild to appear; they are not real-time. Use the admin rebuild trigger or wait for the daily cron.
 5. **Images unoptimized**: static export disables Next image optimization; use `<img>` or `unoptimized` `<Image>`.
 6. **Dark Veil canvas coverage**: use `position: fixed` with explicit `100vw/100vh`; use `window.innerWidth/innerHeight` (not parent dims) for resize; don't wrap the canvas in positioned containers; `overflow-x: hidden` on html/body; `resolutionScale` affects render resolution only, not visual size. WebGL/GSAP components need `'use client'`.
@@ -188,7 +191,7 @@ Required env (see `.env.example`): `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `NOTION
 18. **Two wrangler credential files exist.** `~/.wrangler/config/default.toml` is the live one; `~/Library/Preferences/.wrangler/config/default.toml` can hold a stale token that fails with a misleading "Authentication error". Read the OAuth token from the former. It is short-lived (~1h) — run any `wrangler` command to refresh it before a long API session.
 19. **Neither stored Cloudflare credential can edit Rulesets.** The 1Password DNS token does DNS + zone settings (it *can* flip the SSL mode); the wrangler OAuth login does Workers/Pages/DNS-adjacent work but only `zone:read`. Transform Rules, Redirect Rules and Page Rules therefore need Matthew in the dashboard. Don't conclude a token is broken — check this list first.
 
-20. **Pages build watch paths: an empty `path_includes` matches NOTHING.** Setting `path_excludes` via the API without also setting `path_includes: ["*"]` silently filters out every push — deployments are created and then sit in `queued`/`idle` forever rather than failing. Cost ~10 minutes of "why is this deploy stuck" on 2026-08-15. The pair is currently `path_includes: ["*"]` + `path_excludes: ["profile-summary-card-output/*"]`, so the daily profile-card commit no longer triggers a full Notion rebuild an hour before the cron does one. If a deploy ever hangs in `queued`, check these two fields first.
+20. **Pages build watch paths: an empty `path_includes` matches NOTHING.** Setting `path_excludes` via the API without also setting `path_includes: ["*"]` silently filters out every push — deployments are created and then sit in `queued`/`idle` forever rather than failing. The pair is currently `path_includes: ["*"]` + `path_excludes: ["profile-summary-card-output/*"]`, so the daily profile-card commit no longer triggers a full Notion rebuild an hour before the cron does one. If a deploy ever hangs in `queued`, check these two fields first.
 
 21. **The resume prints out of a stylesheet, not out of the DOM you see.** Nearly every element on `/resume` is invisible until JavaScript animates it in — motion's `initial={{opacity:0}}`, the contact chips' inline `animation: fadeSlideIn`, the experience cards' collapsed `grid-template-rows: 0fr`. A printer runs none of it, so the `@media print` block in `globals.css` is `!important` throughout (it is overriding inline styles) and scoped to `.resume-print`. It also has to **hide `[aria-hidden]` and un-hide `.sr-only`**, because the typewriter headings render half-typed decorative copy plus the real string. Verify it by injecting the rules as a plain stylesheet and screenshotting — **never by calling `window.print()`**, which opens a modal that freezes browser automation for the rest of the session.
 
