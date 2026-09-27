@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: 'The terms and conditions that govern your use of this website.',
 };
 
-const LAST_UPDATED = 'June 16, 2026';
+const LAST_UPDATED = 'September 27, 2026';
 
 export default function TermsOfServicePage() {
   return (
@@ -73,6 +73,88 @@ export default function TermsOfServicePage() {
             indirect, incidental, special, consequential, or punitive damages, or any loss of data,
             profits, or goodwill, arising out of or related to your use of (or inability to use) the
             Site.
+          </p>
+
+          <h2 id="library">Library (library.mncoleman.com)</h2>
+          <p>
+            Library is a book-cataloging and lending app operated by Matthew Coleman at
+            library.mncoleman.com (the &ldquo;Service&rdquo;). This section applies to the Service in
+            addition to the rest of these Terms; where they conflict, this section controls for the
+            Service. The Service is offered for personal and small-organization use and, unlike the
+            rest of the Site, may be used for non-personal purposes such as running a church, school,
+            or community lending library.
+          </p>
+          <h3>Accounts</h3>
+          <p>
+            You must provide a valid email address and keep your sign-in credentials secure. You are
+            responsible for activity under your account and in libraries you own, including the people
+            you invite. You must be at least 13 years old to create an account. We may suspend or close
+            accounts that violate these Terms.
+          </p>
+          <h3>Your content</h3>
+          <p>
+            You keep ownership of what you add to the Service &mdash; catalog entries, notes, tags,
+            cover photos, and borrower details. You grant us a limited license to store, process, and
+            display that content only as needed to operate the Service for you (for example, showing a
+            library&rsquo;s catalog to its members, or on its public page if you turn one on). Only add
+            borrower contact details you have permission to store. Book metadata and cover images
+            retrieved from third-party sources (such as Open Library and Google Books) remain subject to
+            those sources&rsquo; terms. You can export your catalog at any time and delete a library or
+            your account from Settings.
+          </p>
+          <h3>Plans, billing, and renewal</h3>
+          <p>
+            Each library is on a plan: Personal (free, with limits on books and members), Family, or
+            Full. Paid plans are subscriptions billed monthly or yearly in advance through our payment
+            processor, Stripe, and <strong>renew automatically</strong> at the then-current price until
+            you cancel. Family plans include a set number of members; adding members beyond that adds a
+            per-member charge, which you confirm before it is added and which is prorated on your next
+            bill. Prices are shown before you pay and may change with at least 30 days&rsquo; notice for
+            existing subscriptions. Prices do not include taxes unless stated; if taxes apply they will be
+            shown at checkout.
+          </p>
+          <h3>Cancellation and refunds</h3>
+          <p>
+            You can cancel anytime from Settings &rarr; Plan &amp; billing. Cancellation stops future
+            renewals; you keep your paid plan until the end of the period you already paid for, after
+            which the library moves to the free Personal plan. <strong>Payments are non-refundable</strong>,
+            including for partial periods, except where required by law. If a library is over a plan&rsquo;s
+            limits after a downgrade, nothing is deleted, but adding books, members, or loans is paused
+            until it is back within the limits or upgraded. Complimentary plans granted by us may be
+            changed or ended with reasonable notice.
+          </p>
+          <h3>Referral program (account credit)</h3>
+          <p>
+            You can share a referral link. People who create an account with your link receive 10% off
+            their Service purchases while they remain subscribed. You earn <strong>account credit</strong>{' '}
+            equal to 10% of the amount they actually pay (after discounts, excluding taxes).
+            <strong> Referral credit is not cash, has no cash value, cannot be withdrawn, transferred, or
+            exchanged, and can only be applied toward your own future Service charges.</strong> Credit is
+            reversed if the underlying payment is refunded or charged back. Self-referrals, duplicate or
+            fake accounts, and spam are not allowed; we may withhold or remove credit earned in violation
+            of these Terms, and we may change or end the program at any time. Credit remaining when your
+            account is closed is forfeited.
+          </p>
+          <h3>Coupons</h3>
+          <p>
+            Promotional codes are valid only as described when issued, may be limited in number of uses
+            or by expiration date, cannot be combined with other discounts in a single checkout (the
+            larger discount applies), and have no cash value.
+          </p>
+          <h3>Acceptable use</h3>
+          <p>
+            Don&rsquo;t use the Service to store unlawful content, infringe others&rsquo; rights, harass
+            anyone, attempt to access libraries or data you haven&rsquo;t been given access to, overload
+            or probe the Service, or resell it. Public library pages must not contain content you
+            wouldn&rsquo;t want anyone on the internet to see.
+          </p>
+          <h3>Availability</h3>
+          <p>
+            We work to keep the Service available and your data backed up, but the Service is provided
+            &ldquo;as is&rdquo; without guarantees of uninterrupted availability. The Disclaimer and
+            Limitation of Liability sections above apply to the Service; to the extent permitted by law,
+            our total liability for the Service is limited to the amount you paid us for it in the 12
+            months before the claim.
           </p>
 
           <h2>Changes to These Terms</h2>
