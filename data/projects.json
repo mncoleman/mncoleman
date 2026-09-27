@@ -1,5 +1,17 @@
 [
   {
+    "id": "library",
+    "name": "Library",
+    "description": "Scan an ISBN with your phone and the title, author, and cover fill in on their own. Share the catalog with your household, lend to friends, and always know where a book went. It installs like a native app on iPhone and works on any computer.",
+    "url": "https://library.mncoleman.com/",
+    "tech": [
+      "Web App"
+    ],
+    "date": "2026-09-01",
+    "published": true,
+    "content": ""
+  },
+  {
     "id": "chords",
     "name": "Chords",
     "description": "Music Chord Lookup",
