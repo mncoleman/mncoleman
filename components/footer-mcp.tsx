@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Check, Plug } from 'lucide-react';
-import { MCP_URL } from './mcp-callout';
+
+/** The public MCP endpoint. Lives here, not in mcp-callout, so the footer stays light. */
+export const MCP_URL = 'https://mncoleman.com/mcp';
 
 /**
  * Footer entry for the public MCP server. A copy button rather than a link to

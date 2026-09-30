@@ -1,11 +1,9 @@
 'use client';
 
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, createContext, useContext, useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { ChevronDown, Globe, Linkedin, Mail, MapPin, Phone } from 'lucide-react';
 import { BlurText } from '@/components/ui/blur-text';
 import { FallInText } from '@/components/ui/fall-in-text';
@@ -85,29 +83,25 @@ function SectionHeading({ text, delay = 0 }: { text: string; delay?: number }) {
     );
 }
 
+/**
+ * Markdown pre-rendered on the server by `page.tsx`. Rendering it here meant
+ * shipping react-markdown + remark-gfm (~150KB) to the browser for a page whose
+ * markdown is fixed at build time; the server renders the identical elements and
+ * this route's JS no longer carries the parser.
+ */
+export interface ResumeMarkdown {
+    /** Inline fragment (bold lead-ins, links, no `<p>` wrapper) keyed by its source. */
+    inline: Record<string, ReactNode>;
+    /** One rendered body per `resume.extra` section, in the same order. */
+    extra: ReactNode[];
+}
+
+const MarkdownContext = createContext<ResumeMarkdown>({ inline: {}, extra: [] });
+
 /** Inline markdown (bold lead-ins, links) without the block-level `<p>` wrapper. */
 function Inline({ children }: { children: string }) {
-    return (
-        <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-                p: ({ children: content }) => <>{content}</>,
-                a: ({ href, children: content, ...props }) => (
-                    <a
-                        href={href}
-                        target={href?.startsWith('http') ? '_blank' : undefined}
-                        rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
-                        className="underline underline-offset-4 hover:text-foreground transition-colors"
-                        {...props}
-                    >
-                        {content}
-                    </a>
-                ),
-            }}
-        >
-            {children}
-        </ReactMarkdown>
-    );
+    const { inline } = useContext(MarkdownContext);
+    return <>{Object.prototype.hasOwnProperty.call(inline, children) ? inline[children] : children}</>;
 }
 
 function ExperienceCard({ entry, delay }: { entry: ResumeExperience; delay: number }) {
@@ -410,10 +404,17 @@ function ResumeHero({ resume }: { resume: ParsedResume }) {
     return <TiltFrame backdrop={backdrop}>{content}</TiltFrame>;
 }
 
-export function ResumePageClient({ resume }: { resume: ParsedResume }) {
+export function ResumePageClient({
+    resume,
+    markdown,
+}: {
+    resume: ParsedResume;
+    markdown: ResumeMarkdown;
+}) {
     return (
         // `resume-print` scopes the @media print block in globals.css — see the
         // comment there for why those rules have to be as broad as they are.
+        <MarkdownContext.Provider value={markdown}>
         <div className="resume-print container mx-auto px-4 py-12 max-w-5xl">
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* ---- Hero ---------------------------------------------------- */}
@@ -531,15 +532,13 @@ export function ResumePageClient({ resume }: { resume: ParsedResume }) {
                 )}
 
                 {/* ---- Anything the parser didn't recognise -------------------- */}
-                {resume.extra.map((section) => (
+                {resume.extra.map((section, sectionIndex) => (
                     <section key={section.heading}>
                         <SectionHeading text={section.heading} delay={0.1} />
                         <Reveal delay={0.15}>
                             <div className={CARD}>
                                 <article className="prose prose-neutral dark:prose-invert max-w-none prose-headings:tracking-tight">
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                        {section.markdown}
-                                    </ReactMarkdown>
+                                    {markdown.extra[sectionIndex]}
                                 </article>
                             </div>
                         </Reveal>
@@ -547,5 +546,6 @@ export function ResumePageClient({ resume }: { resume: ParsedResume }) {
                 ))}
             </div>
         </div>
+        </MarkdownContext.Provider>
     );
 }

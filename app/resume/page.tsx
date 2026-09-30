@@ -4,7 +4,55 @@ import { hasStructure, parseResume } from '@/lib/resume-parse';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { PageEntrance } from '@/components/page-entrance';
-import { ResumePageClient } from './ResumePageClient';
+import { ResumePageClient, type ResumeMarkdown } from './ResumePageClient';
+import type { ParsedResume } from '@/lib/resume-parse';
+
+/**
+ * Inline markdown (bold lead-ins, links) without the block-level `<p>` wrapper.
+ * Rendered here, on the server, so react-markdown never reaches the browser —
+ * `ResumePageClient` looks each fragment up by its source string.
+ */
+function Inline({ children }: { children: string }) {
+    return (
+        <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+                p: ({ children: content }) => <>{content}</>,
+                a: ({ href, children: content, ...props }) => (
+                    <a
+                        href={href}
+                        target={href?.startsWith('http') ? '_blank' : undefined}
+                        rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+                        className="underline underline-offset-4 hover:text-foreground transition-colors"
+                        {...props}
+                    >
+                        {content}
+                    </a>
+                ),
+            }}
+        >
+            {children}
+        </ReactMarkdown>
+    );
+}
+
+function renderResumeMarkdown(resume: ParsedResume): ResumeMarkdown {
+    const inline: Record<string, React.ReactNode> = {};
+    const sources = [
+        ...resume.skills,
+        ...resume.certifications,
+        ...resume.experience.flatMap((entry) => [...entry.summary, ...entry.bullets]),
+    ];
+    for (const source of sources) {
+        if (!Object.prototype.hasOwnProperty.call(inline, source)) {
+            inline[source] = <Inline>{source}</Inline>;
+        }
+    }
+    const extra = resume.extra.map((section) => (
+        <ReactMarkdown key={section.heading} remarkPlugins={[remarkGfm]}>{section.markdown}</ReactMarkdown>
+    ));
+    return { inline, extra };
+}
 
 // Explicit, because the Share button exists to get this link pasted somewhere —
 // `opengraph-image.tsx` supplies the picture, this supplies the words beside it.
@@ -64,7 +112,7 @@ export default async function ResumePage() {
 
     return (
         <PageEntrance>
-            <ResumePageClient resume={parsed} />
+            <ResumePageClient resume={parsed} markdown={renderResumeMarkdown(parsed)} />
         </PageEntrance>
     );
 }

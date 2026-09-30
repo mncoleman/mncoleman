@@ -3,8 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, ChevronDown, Copy, Plug } from 'lucide-react';
+import { MCP_URL } from './footer-mcp';
 
-export const MCP_URL = 'https://mncoleman.com/mcp';
+// Defined in footer-mcp (which ships on every route) and re-exported here: when the
+// constant lived in this file, the footer's import dragged this whole callout —
+// motion, tabs, copy UI — into the site-wide bundle for one string.
+export { MCP_URL };
 
 const CHARS = MCP_URL.split('');
 
