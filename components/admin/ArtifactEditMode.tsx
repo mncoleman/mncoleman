@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
     ArrowLeft, Bot, Check, Copy, ExternalLink, Link2, Link2Off, Loader2, MessageSquare,
-    MousePointerClick, Pencil, RotateCcw, Send, Trash2, X,
+    Maximize2, Minimize2, MousePointerClick, PanelRightClose, PanelRightOpen, Pencil, RotateCcw, Send, Trash2, X,
 } from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
 
@@ -57,6 +57,9 @@ function ago(ms: number | null): string {
  */
 export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug: string }) {
     const frameRef = useRef<HTMLIFrameElement>(null);
+    const stageRef = useRef<HTMLDivElement>(null);
+    const [fullscreen, setFullscreen] = useState(false);
+    const [panelOpen, setPanelOpen] = useState(true);
     const shaRef = useRef<string | null>(null);
     const [frameKey, setFrameKey] = useState(0);
     const [sha, setSha] = useState<string | null>(null);
@@ -158,6 +161,7 @@ export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug:
                     }));
                     setPicks(items);
                     setEditing(false);
+                    if (items.length) setPanelOpen(true);
                     if (m.startEdit && items.length === 1 && items[0].editable) {
                         post({ type: 'edit:start', cssPath: items[0].cssPath, tag: items[0].tag, quote: items[0].quote, caret: m.caret });
                     }
@@ -263,6 +267,35 @@ export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug:
         setTimeout(() => setCopied(false), 1500);
     };
 
+    // Full screen re-styles the SAME stage element rather than mounting a new
+    // frame, so the page, select mode, picks and an in-progress text edit all
+    // survive the switch. The browser's own full screen hides its chrome when
+    // allowed; when it is refused (or in Safari's iframe-less fallback) the
+    // fixed overlay alone still covers the window.
+    const enterFullscreen = () => {
+        setFullscreen(true);
+        stageRef.current?.requestFullscreen?.().catch(() => { /* overlay only */ });
+    };
+    const exitFullscreen = () => {
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        setFullscreen(false);
+    };
+
+    useEffect(() => {
+        const onChange = () => { if (!document.fullscreenElement) setFullscreen(false); };
+        document.addEventListener('fullscreenchange', onChange);
+        return () => document.removeEventListener('fullscreenchange', onChange);
+    }, []);
+
+    // Overlay-only mode has no browser Esc; give it one. (Esc inside the frame
+    // belongs to the helper — it clears the pick — and never reaches here.)
+    useEffect(() => {
+        if (!fullscreen) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.fullscreenElement) setFullscreen(false); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [fullscreen]);
+
     const visibleNotes = notes.filter((n) => showResolved || n.status === 'open');
     const single = picks.length === 1 ? picks[0] : null;
 
@@ -277,6 +310,9 @@ export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug:
                         <MousePointerClick className="h-3.5 w-3.5" />
                         {selectOn ? 'Selecting' : 'Select'}
                     </Button>
+                    <Button size="sm" variant="outline" onClick={enterFullscreen} className="gap-1.5">
+                        <Maximize2 className="h-3.5 w-3.5" /> Full screen
+                    </Button>
                     <Button asChild size="sm" variant="outline" className="gap-1.5">
                         <a href={`${ARTIFACTS_API}/a/${encodeURIComponent(slug)}`} target="_blank" rel="noreferrer">
                             <ExternalLink className="h-3.5 w-3.5" /> Open
@@ -289,18 +325,50 @@ export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug:
                 <div className="p-3 rounded text-sm bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">{loadError}</div>
             )}
 
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-                <div className="rounded-lg border border-border/60 overflow-hidden bg-white">
+            <div
+                ref={stageRef}
+                className={fullscreen
+                    ? `fixed inset-0 z-[100] bg-background p-3 grid gap-3 ${panelOpen ? 'grid-cols-[minmax(0,1fr)_22rem]' : 'grid-cols-1'}`
+                    : 'grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]'}
+            >
+                <div className={`relative rounded-lg border border-border/60 overflow-hidden bg-white ${fullscreen ? 'h-full min-h-0' : ''}`}>
                     <iframe
                         key={frameKey}
                         ref={frameRef}
                         src={frameSrc}
                         title={`Artifact ${slug}`}
-                        className="w-full h-[75vh] block"
+                        className={`w-full block ${fullscreen ? 'h-full' : 'h-[75vh]'}`}
                     />
+                    {fullscreen && !panelOpen && (
+                        <div className="absolute top-2 right-2 flex gap-1.5 rounded-lg bg-background/90 backdrop-blur border border-border/60 p-1 shadow-lg">
+                            <Button size="sm" variant={selectOn ? 'default' : 'ghost'} onClick={toggleSelect} className="h-7 gap-1" title="Toggle select mode">
+                                <MousePointerClick className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setPanelOpen(true)} className="h-7 gap-1" title="Show panel">
+                                <PanelRightOpen className="h-3.5 w-3.5" />
+                                {picks.length > 0 && <span className="text-xs">{picks.length}</span>}
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={exitFullscreen} className="h-7" title="Exit full screen">
+                                <Minimize2 className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
-                <div className="space-y-4 min-w-0">
+                <div className={`space-y-4 min-w-0 ${fullscreen ? (panelOpen ? 'overflow-y-auto min-h-0' : 'hidden') : ''}`} data-lenis-prevent>
+                    {fullscreen && (
+                        <div className="flex items-center gap-1.5">
+                            <Button size="sm" variant={selectOn ? 'default' : 'outline'} onClick={toggleSelect} className="h-7 gap-1">
+                                <MousePointerClick className="h-3.5 w-3.5" /> {selectOn ? 'Selecting' : 'Select'}
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setPanelOpen(false)} className="h-7 gap-1" title="Hide panel">
+                                <PanelRightClose className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={exitFullscreen} className="h-7 gap-1 ml-auto">
+                                <Minimize2 className="h-3.5 w-3.5" /> Exit
+                            </Button>
+                        </div>
+                    )}
                     {message && (
                         <div className={`p-3 rounded text-sm ${message.type === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
                             {message.text}
