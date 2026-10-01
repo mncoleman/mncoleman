@@ -5,19 +5,19 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, RefreshCw, FileUp, Library, MapPin, BarChart3, FolderKanban } from 'lucide-react';
-import { useAdmin } from '@/components/admin/admin-context';
+import { useAdmin, canUse, canSeeArtifacts, type AdminUser } from '@/components/admin/admin-context';
 import { authHeaders } from '@/lib/admin-auth';
 
-const SHORTCUTS = [
-    { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, description: 'Traffic, top pages and referrers from GA4.' },
-    { href: '/admin/content', label: 'Content', icon: FolderKanban, description: 'Edit resources and projects. Saves publish automatically.' },
-    { href: '/admin/artifacts', label: 'Artifacts', icon: FileUp, description: 'Upload and manage hosted artifacts.' },
-    { href: '/admin/library', label: 'AI Library', icon: Library, description: 'Publish prompts and skills.' },
-    { href: '/admin/visitors', label: 'Visitors', icon: MapPin, description: 'Moderate the visitor globe guestbook.' },
+const SHORTCUTS: { href: string; label: string; icon: typeof FileUp; description: string; allowed: (u: AdminUser) => boolean }[] = [
+    { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, description: 'Traffic, top pages and referrers from GA4.', allowed: (u) => canUse(u, 'analytics') },
+    { href: '/admin/content', label: 'Content', icon: FolderKanban, description: 'Edit resources and projects. Saves publish automatically.', allowed: (u) => canUse(u, 'content') },
+    { href: '/admin/artifacts', label: 'Artifacts', icon: FileUp, description: 'Upload, manage and edit hosted artifacts.', allowed: canSeeArtifacts },
+    { href: '/admin/library', label: 'AI Library', icon: Library, description: 'Publish prompts and skills.', allowed: (u) => canUse(u, 'library') },
+    { href: '/admin/visitors', label: 'Visitors', icon: MapPin, description: 'Moderate the visitor globe guestbook.', allowed: (u) => canUse(u, 'visitors') },
 ];
 
 export default function AdminOverviewPage() {
-    const { workerUrl } = useAdmin();
+    const { workerUrl, user } = useAdmin();
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -46,7 +46,7 @@ export default function AdminOverviewPage() {
 
     return (
         <div className="space-y-6">
-            <Card>
+            {canUse(user, 'rebuild') && <Card>
                 <CardHeader>
                     <CardTitle>Rebuild Site</CardTitle>
                     <CardDescription>
@@ -72,10 +72,10 @@ export default function AdminOverviewPage() {
                         </div>
                     )}
                 </CardContent>
-            </Card>
+            </Card>}
 
             <div className="grid gap-4 sm:grid-cols-2">
-                {SHORTCUTS.map(({ href, label, icon: Icon, description }) => (
+                {SHORTCUTS.filter((s) => s.allowed(user)).map(({ href, label, icon: Icon, description }) => (
                     <Link key={href} href={href}>
                         <Card className="h-full transition-colors hover:border-foreground/30">
                             <CardHeader>

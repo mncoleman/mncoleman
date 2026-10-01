@@ -28,6 +28,8 @@ export interface ArtifactMeta {
      * redesign reaches already-published artifacts without a manual re-save.
      */
     ogVersion?: number;
+    /** Last in-place edit (edit mode or a linked Claude session). `uploadedAt` stays the upload time. */
+    updatedAt?: string;
 }
 
 export class SlugTakenError extends Error {

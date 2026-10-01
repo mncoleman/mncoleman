@@ -189,9 +189,11 @@ export interface PasswordPromptOptions {
     description?: string;
     publicBase: string;
     error?: string;
+    /** Carry `?select=1` through the unlock so the admin edit-mode frame lands back in select mode. */
+    select?: boolean;
 }
 
-export function passwordPromptPage({ slug, name, description, publicBase, error }: PasswordPromptOptions): string {
+export function passwordPromptPage({ slug, name, description, publicBase, error, select }: PasswordPromptOptions): string {
     const og = {
         title: name,
         description: description || `mncoleman Artifact: ${name}`,
@@ -204,7 +206,7 @@ export function passwordPromptPage({ slug, name, description, publicBase, error 
         <h1>${escape(name)}</h1>
         <p>This artifact is password-protected. Enter the password to continue.</p>
         ${error ? `<div class="error">${escape(error)}</div>` : ''}
-        <form method="post" action="/unlock/${encodeURIComponent(slug)}" autocomplete="off">
+        <form method="post" action="/unlock/${encodeURIComponent(slug)}${select ? '?select=1' : ''}" autocomplete="off">
             <input type="password" name="password" placeholder="Password" required autofocus>
             <button class="button" type="submit">Unlock</button>
         </form>

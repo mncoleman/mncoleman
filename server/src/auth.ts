@@ -23,6 +23,11 @@ export const requireAuth: MiddlewareHandler = async (c, next) => {
             algorithms: ['HS256'],
             audience: 'artifacts-service',
         });
+        // A Claude link token is scoped to one artifact's /api/link routes and
+        // must never pass as an admin-panel token anywhere else.
+        if (payload.purpose === 'artifact-link') {
+            return c.json({ error: 'invalid token' }, 401);
+        }
         c.set('user', payload);
         await next();
     } catch {

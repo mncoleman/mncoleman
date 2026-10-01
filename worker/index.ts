@@ -32,16 +32,57 @@ export interface Env {
     BUILD_TOKEN: string;            // Shared secret the Pages build sends to claim a deployment number
     GA_SA_CLIENT_EMAIL: string;     // Google service-account email, granted Viewer on the property
     GA_SA_PRIVATE_KEY: string;      // Service-account PKCS#8 private key (PEM)
+    GOOGLE_CLIENT_ID: string;       // Same OAuth client app.mncoleman.com uses
+    GOOGLE_CLIENT_SECRET: string;
+    OWNER_EMAIL?: string;           // Owner's Google address — super_admin via Google sign-in
 }
 
+/**
+ * What a person can do in the admin panel.
+ *
+ *   super_admin  the owner (OWNER_SUB / OWNER_EMAIL), never stored in KV.
+ *   site_admin   every feature, every artifact, and may set artifact
+ *                visibility and passwords. Records written before roles
+ *                existed say 'admin' and mean this.
+ *   editor       only the `features` ticked for them, plus edit mode and
+ *                Claude linking on the instant artifacts in `artifactGrants`.
+ *                Never changes an artifact's visibility or password.
+ */
+type StoredRole = 'admin' | 'site_admin' | 'editor';
+type SessionRole = 'super_admin' | 'site_admin' | 'editor';
+
+const FEATURES = ['artifacts', 'content', 'library', 'visitors', 'analytics', 'rebuild'] as const;
+type Feature = typeof FEATURES[number];
+
 interface AdminUser {
+    /**
+     * The KV key (`user:<id>`). A Telegram username for Telegram invites —
+     * which is also what every record written before email invites used, so
+     * those have no `id` field and `username` stands in — or the lowercased
+     * email address for people added by email.
+     */
+    id?: string;
     username: string;
-    sub: string | null;
+    method?: 'telegram' | 'email';
+    /** Lets this person sign in with Google. Required for email invites, optional for Telegram ones. */
+    email?: string | null;
+    sub: string | null;             // Telegram OIDC sub, once claimed
+    googleSub?: string | null;      // Google OIDC sub, once claimed
     firstName: string | null;
     status: 'invited' | 'active';
-    role: 'admin';
+    role: StoredRole;
+    features?: Feature[];
+    artifactGrants?: string[];
     invitedAt: string;
     claimedAt: string | null;
+}
+
+interface Session {
+    valid: boolean;
+    role: SessionRole;
+    userId: string;                 // KV record id, or 'owner'
+    features: Feature[];
+    artifactGrants: string[];
 }
 
 export default {
@@ -231,6 +272,99 @@ export default {
                 return new Response(null, { status: 302, headers });
             }
 
+            // Google sign-in: the same OAuth client app.mncoleman.com uses. Invite-only:
+            // the verified email must already be on a user record (or be OWNER_EMAIL).
+            if (url.pathname === '/auth/google/login' && request.method === 'GET') {
+                const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+                if (!checkRateLimit(`login:${ip}`, 10, 60_000)) {
+                    return new Response('Too Many Requests', { status: 429, headers: { 'Retry-After': '60' } });
+                }
+                if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+                    return Response.redirect(`${env.FRONTEND_URL || 'https://mncoleman.com'}/admin?auth_error=google_not_configured`, 302);
+                }
+                const codeVerifier = generateCodeVerifier();
+                const codeChallenge = await generateCodeChallenge(codeVerifier);
+                const state = crypto.randomUUID();
+                const nonce = crypto.randomUUID();
+                const signedCookie = await signOauthData(JSON.stringify({ codeVerifier, state, nonce }), env.JWT_SECRET);
+                const params = new URLSearchParams({
+                    client_id: env.GOOGLE_CLIENT_ID,
+                    redirect_uri: `${url.origin}/auth/google/callback`,
+                    response_type: 'code',
+                    scope: 'openid email profile',
+                    state,
+                    nonce,
+                    code_challenge: codeChallenge,
+                    code_challenge_method: 'S256',
+                    prompt: 'select_account',
+                });
+                return new Response(null, {
+                    status: 302,
+                    headers: {
+                        'Location': `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
+                        'Set-Cookie': `google_oauth_state=${signedCookie}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=300`,
+                    },
+                });
+            }
+
+            if (url.pathname === '/auth/google/callback' && request.method === 'GET') {
+                const frontendAdmin = `${env.FRONTEND_URL || 'https://mncoleman.com'}/admin`;
+                const code = url.searchParams.get('code');
+                const state = url.searchParams.get('state');
+                if (!code || !state) return Response.redirect(`${frontendAdmin}?auth_error=missing_params`, 302);
+
+                const cookie = getCookieValue(request, 'google_oauth_state');
+                if (!cookie) return Response.redirect(`${frontendAdmin}?auth_error=expired_session`, 302);
+                const oauthData = await verifyOauthData(cookie, env.JWT_SECRET);
+                if (!oauthData || oauthData.state !== state) {
+                    return Response.redirect(`${frontendAdmin}?auth_error=invalid_state`, 302);
+                }
+
+                const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        grant_type: 'authorization_code',
+                        code,
+                        redirect_uri: `${url.origin}/auth/google/callback`,
+                        client_id: env.GOOGLE_CLIENT_ID,
+                        client_secret: env.GOOGLE_CLIENT_SECRET,
+                        code_verifier: oauthData.codeVerifier,
+                    }),
+                });
+                if (!tokenResponse.ok) {
+                    console.error('[google callback] token exchange failed:', await tokenResponse.text());
+                    return Response.redirect(`${frontendAdmin}?auth_error=token_exchange_failed`, 302);
+                }
+                const tokens = await tokenResponse.json() as { id_token?: string };
+                const idPayload = tokens.id_token
+                    ? await verifyGoogleIdToken(tokens.id_token, env.GOOGLE_CLIENT_ID)
+                    : null;
+                // email_verified gates everything: an unverified address proves nothing
+                // about who is signing in, and the email is the invite.
+                if (!idPayload || idPayload.nonce !== oauthData.nonce || idPayload.email_verified !== true || !idPayload.email) {
+                    return Response.redirect(`${frontendAdmin}?auth_error=invalid_token`, 302);
+                }
+
+                const email = String(idPayload.email).toLowerCase();
+                const googleSub = String(idPayload.sub);
+                const authResult = await checkGoogleAuthorization(env, googleSub, email, idPayload.given_name || null);
+                if (!authResult.authorized) {
+                    return Response.redirect(`${frontendAdmin}?auth_error=unauthorized`, 302);
+                }
+
+                const name = idPayload.given_name || idPayload.name || email;
+                const sessionToken = await signJwt({
+                    id: `g:${googleSub}`, name, role: authResult.role, username: authResult.userId, email, provider: 'google',
+                }, env.JWT_SECRET);
+
+                const headers = new Headers();
+                headers.append('Location', `${frontendAdmin}#session_token=${sessionToken}`);
+                headers.append('Set-Cookie', 'google_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+                headers.append('Set-Cookie', `admin_token=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`);
+                return new Response(null, { status: 302, headers });
+            }
+
             // Session check endpoint
             if (url.pathname === '/auth/me' && request.method === 'GET') {
                 const token = getAuthToken(request);
@@ -245,7 +379,9 @@ export default {
                 if (!session.valid) return new Response('Invalid session', { status: 401, headers: corsHeaders });
 
                 return new Response(JSON.stringify({ user: {
-                    name: payload.name, id: payload.id, role: session.role, username: payload.username
+                    name: payload.name, id: payload.id, role: session.role, username: payload.username,
+                    email: payload.email || null, provider: payload.provider || 'telegram',
+                    features: session.features, artifactGrants: session.artifactGrants,
                 } }), {
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
                 });
@@ -425,6 +561,63 @@ export default {
             }
             authPayload.role = session.role;
 
+            const forbidden = () => new Response(JSON.stringify({ error: 'You do not have access to this part of the admin panel.' }), {
+                status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+            const can = (feature: Feature) => hasFeature(session, feature);
+
+            // Every token to the artifact service carries what this person may touch.
+            // The service enforces it (and fails closed when it is absent), so the
+            // Worker does not have to parse the multipart bodies it streams through.
+            const serviceJwt = (purpose: string) => signArtifactsJwt({
+                sub: session.userId,
+                name: authPayload.name || authPayload.username || 'Admin',
+                role: session.role,
+                purpose,
+                artifacts: can('artifacts') ? '*' : session.artifactGrants,
+                manageSecrets: session.role === 'super_admin' || session.role === 'site_admin',
+            }, env.ARTIFACTS_JWT_SECRET);
+
+            // Feature gates, by path. Users, avatars and the instant-artifact routes
+            // are handled where they are defined.
+            const p = url.pathname;
+            if (p === '/api/trigger' && !can('rebuild')) return forbidden();
+            if (p.startsWith('/api/library') && !can('library')) return forbidden();
+            if (p.startsWith('/api/admin/visitors') && !can('visitors')) return forbidden();
+            if (p.startsWith('/api/analytics') && !can('analytics')) return forbidden();
+            if (p.startsWith('/api/collections') && !can('content')) return forbidden();
+            if (p === '/api/artifacts' && !can('artifacts')) return forbidden();
+
+            // Edit mode and Claude linking for one instant artifact. Proxied as-is:
+            // the service checks the slug against the token's `artifacts` claim.
+            const collabMatch = p.match(/^\/api\/artifacts\/instant\/([a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?)\/(state|notes|notes\/[a-f0-9-]{36}(?:\/(?:resolve|reopen|redeliver))?|edit-text|link)$/);
+            if (collabMatch) {
+                if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
+                    return new Response(JSON.stringify({ error: 'Instant artifacts not configured' }), {
+                        status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+                const [, slug, rest] = collabMatch;
+                // Never `artifact-link`: that purpose is reserved for Claude link tokens and requireAuth refuses it.
+                const jwt = await serviceJwt(`admin-${rest.split('/')[0]}`);
+                const hasBody = request.method === 'POST' || request.method === 'PUT';
+                const upstream = await fetch(
+                    `${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/admin/artifacts/${slug}/${rest}${url.search}`,
+                    {
+                        method: request.method,
+                        headers: {
+                            'Authorization': `Bearer ${jwt}`,
+                            ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+                        },
+                        body: hasBody ? await request.text() : undefined,
+                    },
+                );
+                return new Response(await upstream.text(), {
+                    status: upstream.status,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                });
+            }
+
             // Trigger Action endpoint
             if (url.pathname === '/api/trigger' && request.method === 'POST') {
                 const body = await request.json() as { action: string, data?: any };
@@ -465,10 +658,7 @@ export default {
                         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                     });
                 }
-                const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'artifact-list' },
-                    env.ARTIFACTS_JWT_SECRET
-                );
+                const jwt = await serviceJwt('artifact-list');
                 const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/admin/list`, {
                     headers: { 'Authorization': `Bearer ${jwt}` },
                 });
@@ -491,10 +681,7 @@ export default {
                 if (!/^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?$/.test(slug)) {
                     return new Response(JSON.stringify({ error: 'invalid slug' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                 }
-                const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'artifact-edit' },
-                    env.ARTIFACTS_JWT_SECRET
-                );
+                const jwt = await serviceJwt('artifact-edit');
                 const upstreamHeaders: Record<string, string> = {
                     'Authorization': `Bearer ${jwt}`,
                 };
@@ -528,14 +715,13 @@ export default {
                 if (!/^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?$/.test(slug)) {
                     return new Response(JSON.stringify({ error: 'invalid slug' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                 }
-                const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'artifact-delete' },
-                    env.ARTIFACTS_JWT_SECRET
-                );
+                const jwt = await serviceJwt('artifact-delete');
                 const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/${encodeURIComponent(slug)}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${jwt}` },
                 });
+                // A later artifact reusing this slug must not inherit the old grants.
+                if (upstream.ok) await dropGrant(env.ADMIN_USERS, slug);
                 const text = await upstream.text();
                 return new Response(text, {
                     status: upstream.status,
@@ -552,10 +738,7 @@ export default {
                         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
                     );
                 }
-                const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'library-create' },
-                    env.ARTIFACTS_JWT_SECRET
-                );
+                const jwt = await serviceJwt('library-create');
                 const bodyText = await request.text();
                 const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/library`, {
                     method: 'POST',
@@ -581,10 +764,7 @@ export default {
                 if (!/^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?$/.test(slug)) {
                     return new Response(JSON.stringify({ error: 'invalid slug' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                 }
-                const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'library-edit' },
-                    env.ARTIFACTS_JWT_SECRET
-                );
+                const jwt = await serviceJwt('library-edit');
                 const bodyText = await request.text();
                 const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/library/${encodeURIComponent(slug)}`, {
                     method: 'PATCH',
@@ -610,10 +790,7 @@ export default {
                 if (!/^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?$/.test(slug)) {
                     return new Response(JSON.stringify({ error: 'invalid slug' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                 }
-                const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'library-delete' },
-                    env.ARTIFACTS_JWT_SECRET
-                );
+                const jwt = await serviceJwt('library-delete');
                 const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/library/${encodeURIComponent(slug)}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${jwt}` },
@@ -630,10 +807,7 @@ export default {
                 if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
                     return new Response(JSON.stringify({ error: 'Visitor service not configured' }), { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                 }
-                const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'visitors-list' },
-                    env.ARTIFACTS_JWT_SECRET
-                );
+                const jwt = await serviceJwt('visitors-list');
                 const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/admin/visitors`, {
                     headers: { 'Authorization': `Bearer ${jwt}` },
                 });
@@ -650,10 +824,7 @@ export default {
                 if (!/^[a-f0-9-]{8,64}$/i.test(id)) {
                     return new Response(JSON.stringify({ error: 'invalid id' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
                 }
-                const jwt = await signArtifactsJwt(
-                    { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'visitors-delete' },
-                    env.ARTIFACTS_JWT_SECRET
-                );
+                const jwt = await serviceJwt('visitors-delete');
                 const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/admin/visitors/${encodeURIComponent(id)}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${jwt}` },
@@ -874,10 +1045,7 @@ export default {
                                 { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
                             );
                         }
-                        const jwt = await signArtifactsJwt(
-                            { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'artifact-upload' },
-                            env.ARTIFACTS_JWT_SECRET
-                        );
+                        const jwt = await serviceJwt('artifact-upload');
                         const upstreamHeaders: Record<string, string> = {
                             'Authorization': `Bearer ${jwt}`,
                             'Content-Type': ctype,
@@ -932,10 +1100,7 @@ export default {
                             );
                         }
 
-                        const jwt = await signArtifactsJwt(
-                            { sub: authPayload.id || authPayload.username || 'admin', role: authPayload.role, purpose: 'artifact-upload' },
-                            env.ARTIFACTS_JWT_SECRET
-                        );
+                        const jwt = await serviceJwt('artifact-upload');
 
                         const bytes = decodeBase64ToBytes(body.content);
                         const blob = new Blob([bytes], { type: body.type || 'application/octet-stream' });
@@ -1303,60 +1468,117 @@ export default {
                     const userList = await getUserList(env.ADMIN_USERS);
                     const users: any[] = [];
 
-                    // Owner — enrich with cached profile
-                    const ownerUsername = authPayload.username || '';
+                    // Owner — enrich with cached profile (Telegram sessions only;
+                    // a Google session's `username` is not a Telegram handle).
+                    const ownerUsername = authPayload.provider === 'google' ? '' : (authPayload.username || '');
                     const ownerProfile = ownerUsername
                         ? await getCachedProfile(env, ownerUsername, url.origin)
                         : null;
                     users.push({
+                        id: 'owner',
                         username: ownerUsername,
+                        method: 'telegram',
+                        email: env.OWNER_EMAIL || null,
                         sub: authPayload.id,
                         firstName: ownerProfile?.firstName || authPayload.name,
                         status: 'active',
                         role: 'super_admin',
+                        features: [...FEATURES],
+                        artifactGrants: [],
                         invitedAt: '',
                         claimedAt: '',
                         photoUrl: ownerProfile?.photoUrl || null,
                     });
 
-                    for (const uname of userList) {
-                        const user = await getUser(env.ADMIN_USERS, uname);
+                    for (const id of userList) {
+                        const user = await getUser(env.ADMIN_USERS, id);
                         if (user) {
-                            const profile = await getCachedProfile(env, uname, url.origin);
-                            users.push({ ...user, photoUrl: profile?.photoUrl || null });
+                            const view = userView(user);
+                            const profile = view.method === 'telegram' ? await getCachedProfile(env, view.username, url.origin) : null;
+                            users.push({ ...view, photoUrl: profile?.photoUrl || null });
                         }
                     }
 
-                    return new Response(JSON.stringify({ users }), {
+                    return new Response(JSON.stringify({ users, features: FEATURES }), {
                         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                     });
                 }
 
+                // Add someone: by Telegram username, or by email (Google sign-in).
                 if (request.method === 'POST') {
-                    const body = await request.json() as { username: string };
-                    let username = (body.username || '').toLowerCase().replace(/^@/, '');
-                    if (!/^[a-z0-9_]{1,32}$/.test(username)) {
-                        return new Response('Invalid username', { status: 400, headers: corsHeaders });
+                    const body = await request.json() as Partial<UserInput> & { username?: string; email?: string; method?: string };
+                    const access = parseAccess(body);
+                    if (typeof access === 'string') return jsonError(access, 400, corsHeaders);
+
+                    const email = normalizeEmail(body.email);
+                    if (body.email && !email) return jsonError('That is not a valid email address.', 400, corsHeaders);
+
+                    let id: string;
+                    let method: 'telegram' | 'email';
+                    if (body.method === 'email') {
+                        if (!email) return jsonError('An email address is required.', 400, corsHeaders);
+                        id = email;
+                        method = 'email';
+                    } else {
+                        id = (body.username || '').toLowerCase().replace(/^@/, '');
+                        if (!/^[a-z0-9_]{1,32}$/.test(id)) return jsonError('Invalid username', 400, corsHeaders);
+                        method = 'telegram';
                     }
 
-                    const existing = await getUser(env.ADMIN_USERS, username);
-                    if (existing) {
-                        return new Response('User already exists', { status: 409, headers: corsHeaders });
+                    if (await getUser(env.ADMIN_USERS, id)) return jsonError('User already exists', 409, corsHeaders);
+                    if (email && await env.ADMIN_USERS.get(`email:${email}`)) {
+                        return jsonError('Someone already has that email.', 409, corsHeaders);
                     }
 
-                    const user = await inviteUser(env.ADMIN_USERS, username);
-                    return new Response(JSON.stringify({ user }), {
+                    const user = await inviteUser(env.ADMIN_USERS, { id, method, email, ...access });
+                    return new Response(JSON.stringify({ user: userView(user) }), {
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+
+                // Change someone's role, features, artifact grants or Google email.
+                if (request.method === 'PATCH') {
+                    const body = await request.json() as Partial<UserInput> & { id?: string; email?: string | null };
+                    const id = String(body.id || '').toLowerCase();
+                    const user = id ? await getUser(env.ADMIN_USERS, id) : null;
+                    if (!user) return jsonError('User not found', 404, corsHeaders);
+                    const access = parseAccess({ ...accessOf(user), ...body });
+                    if (typeof access === 'string') return jsonError(access, 400, corsHeaders);
+
+                    if (body.email !== undefined) {
+                        const email = body.email ? normalizeEmail(body.email) : null;
+                        if (body.email && !email) return jsonError('That is not a valid email address.', 400, corsHeaders);
+                        if (userId(user) === user.email && email !== user.email) {
+                            return jsonError('This person was added by email; remove them and add the new address instead.', 400, corsHeaders);
+                        }
+                        if (email && email !== user.email) {
+                            const holder = await env.ADMIN_USERS.get(`email:${email}`);
+                            if (holder && holder !== userId(user)) return jsonError('Someone already has that email.', 409, corsHeaders);
+                        }
+                        await setUserEmail(env.ADMIN_USERS, user, email);
+                    }
+
+                    user.role = access.role;
+                    user.features = access.features;
+                    user.artifactGrants = access.artifactGrants;
+                    await env.ADMIN_USERS.put(`user:${userId(user)}`, JSON.stringify(user));
+                    // A live Claude link outlives the KV change otherwise: the service
+                    // cannot see KV, and the link token is good for two hours.
+                    await revokeLinks(env, userId(user),
+                        access.role === 'site_admin' || access.features.includes('artifacts') ? '*' : access.artifactGrants);
+                    return new Response(JSON.stringify({ user: userView(user) }), {
                         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                     });
                 }
 
                 if (request.method === 'DELETE') {
-                    const username = url.searchParams.get('username')?.toLowerCase().replace(/^@/, '');
-                    if (!username) {
-                        return new Response('Missing username', { status: 400, headers: corsHeaders });
+                    const id = (url.searchParams.get('id') || url.searchParams.get('username') || '').toLowerCase().replace(/^@/, '');
+                    if (!id) {
+                        return new Response('Missing id', { status: 400, headers: corsHeaders });
                     }
 
-                    await removeUser(env.ADMIN_USERS, username);
+                    await removeUser(env.ADMIN_USERS, id);
+                    await revokeLinks(env, id, []);
                     return new Response(JSON.stringify({ success: true }), {
                         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                     });
@@ -1558,6 +1780,42 @@ async function verifyTelegramIdToken(idToken: string, botId: string): Promise<an
 
     const valid = await crypto.subtle.verify(verifyParams, cryptoKey, sigBytes, data);
     return valid ? payload : null;
+}
+
+// Google's signing keys, cached per isolate like Telegram's.
+let cachedGoogleJwks: any = null;
+let googleJwksCachedAt = 0;
+
+async function verifyGoogleIdToken(idToken: string, clientId: string): Promise<any | null> {
+    const parts = idToken.split('.');
+    if (parts.length !== 3) return null;
+    const [headerB64, payloadB64, signatureB64] = parts;
+    let header: any, payload: any;
+    try {
+        header = JSON.parse(atobUrl(headerB64));
+        payload = JSON.parse(atobUrl(payloadB64));
+    } catch {
+        return null;
+    }
+    if (header.alg !== 'RS256') return null;
+    if (payload.iss !== 'https://accounts.google.com' && payload.iss !== 'accounts.google.com') return null;
+    if (payload.aud !== clientId) return null;
+    if (typeof payload.exp !== 'number' || payload.exp < Math.floor(Date.now() / 1000)) return null;
+
+    if (!cachedGoogleJwks || Date.now() - googleJwksCachedAt > 3600_000) {
+        const resp = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+        if (!resp.ok) return null;
+        cachedGoogleJwks = await resp.json();
+        googleJwksCachedAt = Date.now();
+    }
+    const jwk = cachedGoogleJwks.keys?.find((k: any) => k.kid === header.kid);
+    if (!jwk) return null;
+    const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+    const sigStr = atobUrl(signatureB64);
+    const sig = new Uint8Array(sigStr.length);
+    for (let i = 0; i < sigStr.length; i++) sig[i] = sigStr.charCodeAt(i);
+    const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, sig, new TextEncoder().encode(`${headerB64}.${payloadB64}`));
+    return ok ? payload : null;
 }
 
 // Simple JWT implementation using HmacSHA256
@@ -1873,6 +2131,84 @@ async function triggerRebuild(env: Env, reason: string) {
 }
 
 // --- Multi-User KV Helpers ---
+//
+// KV layout:
+//   user:<id>        the AdminUser record (id = Telegram username, or email)
+//   user_list        JSON array of ids
+//   sub:<tgSub>      -> id, written when a Telegram invite is claimed
+//   gsub:<googleSub> -> id, written on first Google sign-in
+//   email:<address>  -> id, for every record that has an email
+
+function userId(user: AdminUser): string {
+    return user.id || user.username;
+}
+
+function effectiveRole(stored: StoredRole | undefined): 'site_admin' | 'editor' {
+    return stored === 'editor' ? 'editor' : 'site_admin';
+}
+
+function hasFeature(session: Pick<Session, 'role' | 'features'>, feature: Feature): boolean {
+    return session.role === 'super_admin' || session.role === 'site_admin' || session.features.includes(feature);
+}
+
+interface UserInput {
+    role: 'site_admin' | 'editor';
+    features: Feature[];
+    artifactGrants: string[];
+}
+
+function accessOf(user: AdminUser): UserInput {
+    return {
+        role: effectiveRole(user.role),
+        features: user.features || [],
+        artifactGrants: user.artifactGrants || [],
+    };
+}
+
+/** Validates role/features/grants from a request body. A string is the error. */
+function parseAccess(body: Partial<UserInput>): UserInput | string {
+    // Omitted means the least access, never a full admin.
+    const role = body.role === 'site_admin' ? 'site_admin' : body.role === 'editor' || body.role === undefined ? 'editor' : null;
+    if (!role) return 'role must be site_admin or editor';
+    const features = Array.isArray(body.features) ? body.features : [];
+    if (features.some((f) => !(FEATURES as readonly string[]).includes(f))) return 'Unknown feature';
+    const grants = Array.isArray(body.artifactGrants) ? body.artifactGrants : [];
+    if (grants.length > 500 || grants.some((g) => typeof g !== 'string' || !/^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?$/.test(g))) {
+        return 'Invalid artifact grant';
+    }
+    // A site admin has everything; storing features for one would only mislead.
+    return role === 'site_admin'
+        ? { role, features: [], artifactGrants: [] }
+        : { role, features: [...new Set(features)] as Feature[], artifactGrants: [...new Set(grants)] };
+}
+
+function normalizeEmail(raw: unknown): string | null {
+    const e = String(raw || '').trim().toLowerCase();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.length <= 254 ? e : null;
+}
+
+function userView(user: AdminUser) {
+    const id = userId(user);
+    return {
+        id,
+        username: user.method === 'email' ? '' : user.username,
+        method: user.method || 'telegram',
+        email: user.email || null,
+        sub: user.sub,
+        firstName: user.firstName,
+        status: user.status,
+        role: effectiveRole(user.role),
+        features: user.features || [],
+        artifactGrants: user.artifactGrants || [],
+        invitedAt: user.invitedAt,
+        claimedAt: user.claimedAt,
+        googleLinked: !!user.googleSub,
+    };
+}
+
+function jsonError(message: string, status: number, headers: Record<string, string>): Response {
+    return new Response(JSON.stringify({ error: message }), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
+}
 
 async function checkUserAuthorization(
     env: Env, sub: string, username?: string, firstName?: string
@@ -1883,21 +2219,22 @@ async function checkUserAuthorization(
     }
 
     // Check by sub (fast path for active users)
-    const usernameFromSub = await env.ADMIN_USERS.get(`sub:${sub}`);
-    if (usernameFromSub) {
-        const user = await getUser(env.ADMIN_USERS, usernameFromSub);
+    const idFromSub = await env.ADMIN_USERS.get(`sub:${sub}`);
+    if (idFromSub) {
+        const user = await getUser(env.ADMIN_USERS, idFromSub);
         if (user && user.status === 'active') {
-            return { authorized: true, role: user.role };
+            return { authorized: true, role: effectiveRole(user.role) };
         }
     }
 
-    // Check by username for unclaimed invitations
+    // Check by username for unclaimed Telegram invitations. An email invite
+    // that has not been claimed yet is not claimable from Telegram.
     if (username) {
         const normalizedUsername = username.toLowerCase();
         const user = await getUser(env.ADMIN_USERS, normalizedUsername);
-        if (user && user.status === 'invited') {
+        if (user && user.method !== 'email' && !user.sub && user.status === 'invited') {
             await claimInvitation(env.ADMIN_USERS, normalizedUsername, sub, firstName || null);
-            return { authorized: true, role: user.role };
+            return { authorized: true, role: effectiveRole(user.role) };
         }
     }
 
@@ -1905,21 +2242,68 @@ async function checkUserAuthorization(
 }
 
 /**
- * Re-check an already-verified session JWT against KV, in one read.
- *
- * Keyed on `sub:` rather than `user:<username>` deliberately: `sub:` is written by
- * claimInvitation and deleted by removeUser, so its presence means "still an active
- * admin", and an admin who changed their Telegram username after claiming the invite
- * is not locked out. Only the owner is ever super_admin, and that comes from
- * OWNER_SUB, never KV — so the owner short-circuits with zero reads.
+ * Google sign-in is invite-only, by verified email. The first sign-in links the
+ * Google account (gsub:) so a later change of address on the Google side does
+ * not lock the person out; after that the email index is only a fallback.
  */
-async function revalidateSession(env: Env, payload: any): Promise<{ valid: boolean; role: string }> {
-    if (String(payload.id) === env.OWNER_SUB) {
-        return { valid: true, role: 'super_admin' };
+async function checkGoogleAuthorization(
+    env: Env, googleSub: string, email: string, firstName: string | null,
+): Promise<{ authorized: boolean; role: string; userId: string }> {
+    if (env.OWNER_EMAIL && email === env.OWNER_EMAIL.toLowerCase()) {
+        return { authorized: true, role: 'super_admin', userId: 'owner' };
     }
-    const username = await env.ADMIN_USERS.get(`sub:${payload.id}`);
-    if (!username) return { valid: false, role: '' };
-    return { valid: true, role: 'admin' };
+    const kv = env.ADMIN_USERS;
+    let id = await kv.get(`gsub:${googleSub}`);
+    let user = id ? await getUser(kv, id) : null;
+    if (!user) {
+        id = await kv.get(`email:${email}`);
+        user = id ? await getUser(kv, id) : null;
+        // Already linked to a different Google account: that address alone is not enough.
+        if (user && user.googleSub && user.googleSub !== googleSub) user = null;
+    }
+    if (!user || !id) return { authorized: false, role: '', userId: '' };
+
+    if (user.googleSub !== googleSub || user.status !== 'active') {
+        user.googleSub = googleSub;
+        if (user.status !== 'active') {
+            user.status = 'active';
+            user.claimedAt = new Date().toISOString();
+        }
+        if (!user.firstName) user.firstName = firstName;
+        await kv.put(`user:${id}`, JSON.stringify(user));
+        await kv.put(`gsub:${googleSub}`, id);
+    }
+    return { authorized: true, role: effectiveRole(user.role), userId: id };
+}
+
+/**
+ * Re-check an already-verified session JWT against KV on every request, and
+ * re-derive role, features and grants from the record, so nothing below
+ * trusts a week-old claim and a removed or demoted person loses access at
+ * once. Telegram sessions resolve through `sub:`, Google ones (id `g:<sub>`)
+ * through `gsub:`; both indexes are deleted by removeUser. The owner never
+ * touches KV.
+ */
+async function revalidateSession(env: Env, payload: any): Promise<Session> {
+    const none: Session = { valid: false, role: 'editor', userId: '', features: [], artifactGrants: [] };
+    const owner: Session = { valid: true, role: 'super_admin', userId: 'owner', features: [...FEATURES], artifactGrants: [] };
+    const sessionId = String(payload.id || '');
+    if (sessionId === env.OWNER_SUB) return owner;
+    if (payload.provider === 'google' && env.OWNER_EMAIL && payload.email === env.OWNER_EMAIL.toLowerCase()) return owner;
+
+    const id = sessionId.startsWith('g:')
+        ? await env.ADMIN_USERS.get(`gsub:${sessionId.slice(2)}`)
+        : await env.ADMIN_USERS.get(`sub:${sessionId}`);
+    if (!id) return none;
+    const user = await getUser(env.ADMIN_USERS, id);
+    if (!user || user.status !== 'active') return none;
+    return {
+        valid: true,
+        role: effectiveRole(user.role),
+        userId: id,
+        features: user.features || [],
+        artifactGrants: user.artifactGrants || [],
+    };
 }
 
 async function getUserList(kv: KVNamespace): Promise<string[]> {
@@ -1927,28 +2311,45 @@ async function getUserList(kv: KVNamespace): Promise<string[]> {
     return raw ? JSON.parse(raw) : [];
 }
 
-async function getUser(kv: KVNamespace, username: string): Promise<AdminUser | null> {
-    const raw = await kv.get(`user:${username}`);
+async function getUser(kv: KVNamespace, id: string): Promise<AdminUser | null> {
+    const raw = await kv.get(`user:${id}`);
     return raw ? JSON.parse(raw) : null;
 }
 
-async function inviteUser(kv: KVNamespace, username: string): Promise<AdminUser> {
+async function inviteUser(
+    kv: KVNamespace,
+    input: { id: string; method: 'telegram' | 'email'; email: string | null } & UserInput,
+): Promise<AdminUser> {
     const user: AdminUser = {
-        username,
+        id: input.id,
+        username: input.method === 'telegram' ? input.id : '',
+        method: input.method,
+        email: input.email,
         sub: null,
+        googleSub: null,
         firstName: null,
         status: 'invited',
-        role: 'admin',
+        role: input.role,
+        features: input.features,
+        artifactGrants: input.artifactGrants,
         invitedAt: new Date().toISOString(),
         claimedAt: null,
     };
-    await kv.put(`user:${username}`, JSON.stringify(user));
+    await kv.put(`user:${input.id}`, JSON.stringify(user));
+    if (input.email) await kv.put(`email:${input.email}`, input.id);
     const list = await getUserList(kv);
-    if (!list.includes(username)) {
-        list.push(username);
+    if (!list.includes(input.id)) {
+        list.push(input.id);
         await kv.put('user_list', JSON.stringify(list));
     }
     return user;
+}
+
+/** Moves the email index with the record. The caller writes the record itself. */
+async function setUserEmail(kv: KVNamespace, user: AdminUser, email: string | null): Promise<void> {
+    if (user.email && user.email !== email) await kv.delete(`email:${user.email}`);
+    if (email) await kv.put(`email:${email}`, userId(user));
+    user.email = email;
 }
 
 async function claimInvitation(kv: KVNamespace, username: string, sub: string, firstName: string | null): Promise<void> {
@@ -1962,16 +2363,44 @@ async function claimInvitation(kv: KVNamespace, username: string, sub: string, f
     await kv.put(`sub:${sub}`, username);
 }
 
-async function removeUser(kv: KVNamespace, username: string): Promise<void> {
-    const user = await getUser(kv, username);
-    if (user?.sub) {
-        await kv.delete(`sub:${user.sub}`);
+/** Ends any Claude link `userId` holds on an artifact outside `keep`. Best effort. */
+async function revokeLinks(env: Env, userId: string, keep: '*' | string[]): Promise<void> {
+    if (keep === '*' || !env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) return;
+    try {
+        const jwt = await signArtifactsJwt(
+            { sub: 'owner', role: 'super_admin', purpose: 'revoke-links', artifacts: '*', manageSecrets: true },
+            env.ARTIFACTS_JWT_SECRET,
+        );
+        await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/admin/links/revoke`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, keep }),
+        });
+    } catch (e) {
+        console.error('revokeLinks failed:', e);
     }
-    await kv.delete(`user:${username}`);
-    await kv.delete(`profile:${username}`);
-    await kv.delete(`avatar:${username}`);
+}
+
+async function dropGrant(kv: KVNamespace, slug: string): Promise<void> {
+    for (const id of await getUserList(kv)) {
+        const user = await getUser(kv, id);
+        if (user?.artifactGrants?.includes(slug)) {
+            user.artifactGrants = user.artifactGrants.filter((s) => s !== slug);
+            await kv.put(`user:${id}`, JSON.stringify(user));
+        }
+    }
+}
+
+async function removeUser(kv: KVNamespace, id: string): Promise<void> {
+    const user = await getUser(kv, id);
+    if (user?.sub) await kv.delete(`sub:${user.sub}`);
+    if (user?.googleSub) await kv.delete(`gsub:${user.googleSub}`);
+    if (user?.email) await kv.delete(`email:${user.email}`);
+    await kv.delete(`user:${id}`);
+    await kv.delete(`profile:${id}`);
+    await kv.delete(`avatar:${id}`);
     const list = await getUserList(kv);
-    const filtered = list.filter(u => u !== username);
+    const filtered = list.filter(u => u !== id);
     await kv.put('user_list', JSON.stringify(filtered));
 }
 

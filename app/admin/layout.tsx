@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, LogOut } from 'lucide-react';
 import { TelegramLoginButton } from '@/components/admin/TelegramLoginButton';
-import { AdminNav } from '@/components/admin/AdminNav';
+import { AdminNav, ADMIN_ROUTES } from '@/components/admin/AdminNav';
+import { usePathname } from 'next/navigation';
 import { AdminProvider, type AdminUser } from '@/components/admin/admin-context';
 import { setSessionToken, clearSessionToken, authHeaders } from '@/lib/admin-auth';
 
@@ -16,10 +17,21 @@ const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:8787'
  * per hard load — switching tabs re-renders only the page, with no refetch and no
  * flash of the login gate.
  */
+// A UX guard for direct URLs; the Worker refuses the API calls regardless.
+// Sub-routes (e.g. /admin/artifacts/edit) inherit their parent tab's rule.
+function routeAllowed(pathname: string, user: AdminUser): boolean {
+    const current = pathname.replace(/\/$/, '') || '/admin';
+    const match = ADMIN_ROUTES
+        .filter((r) => current === r.href || (r.href !== '/admin' && current.startsWith(`${r.href}/`)))
+        .sort((a, b) => b.href.length - a.href.length)[0];
+    return match ? match.allowed(user) : true;
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const [session, setSession] = useState<{ user: AdminUser } | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const pathname = usePathname();
 
     useEffect(() => {
         // Check for session token from OIDC callback (URL fragment for mobile compatibility).
@@ -45,6 +57,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 token_exchange_failed: 'Authentication failed. Please try again.',
                 invalid_token: 'Invalid authentication response.',
                 unauthorized: 'You are not authorized to access this area.',
+                google_not_configured: 'Google sign-in is not set up yet.',
             };
             setError(messages[authError] || 'Authentication failed.');
             window.history.replaceState({}, '', window.location.pathname);
@@ -132,9 +145,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </Button>
                     </div>
 
-                    <AdminNav role={session.user?.role} />
+                    <AdminNav user={session.user} />
 
-                    {children}
+                    {routeAllowed(pathname, session.user) ? children : (
+                        <p className="text-muted-foreground">You do not have access to this part of the admin panel.</p>
+                    )}
                 </div>
             </div>
         </AdminProvider>
