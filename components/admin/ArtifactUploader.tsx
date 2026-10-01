@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw, Zap, Globe, Copy, ExternalLink, Lock, Eye, EyeOff, AlertTriangle, Search, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, Upload, Trash2, FileText, File, Image, Code, FileType, UploadCloud, Pencil, X, Check, RefreshCw, Zap, Globe, Copy, ExternalLink, Lock, Eye, EyeOff, AlertTriangle, Search, ChevronDown, ChevronRight, MousePointerClick } from 'lucide-react';
+import Link from 'next/link';
+import { canUse, canManageSecrets, type AdminUser } from '@/components/admin/admin-context';
 import { authHeaders } from '@/lib/admin-auth';
 
 type SourceFilter = 'all' | 'dynamic' | 'static';
@@ -13,6 +15,7 @@ type VisibilityFilter = 'all' | 'public' | 'private';
 
 interface ArtifactUploaderProps {
     workerUrl: string;
+    user: AdminUser;
 }
 
 type Destination = 'instant' | 'github';
@@ -97,7 +100,12 @@ function FilterPill({ active, label, count, onClick }: { active: boolean; label:
     );
 }
 
-export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
+export function ArtifactUploader({ workerUrl, user }: ArtifactUploaderProps) {
+    // Editors without the Artifacts feature see only their granted instant
+    // artifacts: no upload, no delete, no static manifest. Only site admins
+    // change visibility or passwords. The service enforces both regardless.
+    const fullAccess = canUse(user, 'artifacts');
+    const secrets = canManageSecrets(user);
     const [file, setFile] = useState<globalThis.File | null>(null);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -183,10 +191,12 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         setLoadingList(true);
         try {
             const [staticRes, dynamicRes] = await Promise.all([
-                fetch(getApiUrl(workerUrl, ''), {
-                    headers: authHeaders(),
-                    credentials: 'include',
-                }).then(r => (r.ok ? r.json() : { artifacts: [] })).catch(() => ({ artifacts: [] })),
+                fullAccess
+                    ? fetch(getApiUrl(workerUrl, ''), {
+                        headers: authHeaders(),
+                        credentials: 'include',
+                    }).then(r => (r.ok ? r.json() : { artifacts: [] })).catch(() => ({ artifacts: [] }))
+                    : Promise.resolve({ artifacts: [] }),
                 // Admin list — includes private artifacts (proxied through the Worker for auth).
                 fetch(`${workerUrl.replace(/\/$/, '')}/api/artifacts/instant/list`, {
                     headers: authHeaders(),
@@ -510,7 +520,11 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
         <Card>
             <CardHeader>
                 <CardTitle>Artifacts</CardTitle>
-                <CardDescription>Upload files to the artifacts page. Files are committed to the repo and served statically.</CardDescription>
+                <CardDescription>
+                    {fullAccess
+                        ? 'Upload files to the artifacts page. Files are committed to the repo and served statically.'
+                        : 'The artifacts you can edit. Use edit mode to change text or send notes to Claude.'}
+                </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 {message && (
@@ -520,9 +534,9 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                 )}
 
                 {/* Desktop: upload form (left) and artifacts list (right) side by side. */}
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+                <div className={`grid grid-cols-1 gap-6 lg:items-start ${fullAccess ? 'lg:grid-cols-2' : ''}`}>
                 {/* Left column — upload */}
-                <div className="space-y-6 min-w-0">
+                {fullAccess && <div className="space-y-6 min-w-0">
                 {/* Upload Form */}
                 <form onSubmit={handleUpload} className="space-y-4">
                     {/* Drop Zone */}
@@ -760,9 +774,9 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                     </div>
                 )}
 
-                </div>
+                </div>}
                 {/* Right column — uploaded artifacts (with a divider on desktop) */}
-                <div className="space-y-3 min-w-0 lg:border-l lg:border-border/50 lg:pl-6">
+                <div className={`space-y-3 min-w-0 ${fullAccess ? 'lg:border-l lg:border-border/50 lg:pl-6' : ''}`}>
                     <div className="flex items-center justify-between gap-3">
                         <button
                             type="button"
@@ -917,7 +931,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                                 </div>
                                             </div>
 
-                                            {artifact.source === 'dynamic' && (
+                                            {artifact.source === 'dynamic' && secrets && (
                                                 <>
                                                     <div className="space-y-2">
                                                         <Label className="text-xs">Visibility</Label>
@@ -1086,6 +1100,13 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1 shrink-0">
+                                                {artifact.source === 'dynamic' && artifact.slug && artifact.type.split(';')[0].trim() === 'text/html' && (
+                                                    <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" title="Edit mode: select, edit text, send notes to Claude">
+                                                        <Link href={`/admin/artifacts/edit?slug=${encodeURIComponent(artifact.slug)}`}>
+                                                            <MousePointerClick className="h-3.5 w-3.5" />
+                                                        </Link>
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -1094,7 +1115,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                                 >
                                                     <Pencil className="h-3.5 w-3.5" />
                                                 </Button>
-                                                <Button
+                                                {fullAccess && <Button
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => setPendingDelete(artifact)}
@@ -1106,7 +1127,7 @@ export function ArtifactUploader({ workerUrl }: ArtifactUploaderProps) {
                                                     ) : (
                                                         <Trash2 className="h-3.5 w-3.5" />
                                                     )}
-                                                </Button>
+                                                </Button>}
                                             </div>
                                         </div>
                                     </div>

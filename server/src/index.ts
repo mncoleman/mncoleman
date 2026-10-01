@@ -73,6 +73,9 @@ import {
 } from './bot-defense';
 import { moderateFields } from './moderation';
 import { geocodeAutocomplete } from './geocode';
+import { registerCollabRoutes, canAccessArtifact, hasAllArtifacts, canManageSecrets } from './artifact-collab';
+import { deleteNotesForSlug } from './artifact-notes-db';
+import { injectSelectHelper, SELECT_MODE_PARAM } from './select-helper';
 
 const STORAGE_ROOT = resolve(process.env.STORAGE_ROOT || '/srv/artifacts');
 const RESERVED_FILENAMES = new Set(['..', '.', 'meta.json', 'og.png', '']);
@@ -170,13 +173,19 @@ app.get('/api/list', async (c) => {
 
 // Admin-only listing — includes private artifacts (with hasPassword flag, never the hash).
 app.get('/api/admin/list', requireAuth, async (c) => {
-    const metas = await listAll();
+    // Editors see only the artifacts they were granted; the claim is the gate.
+    const metas = (await listAll()).filter((m) => canAccessArtifact(c, m.slug));
     // Bound to a local so `.map` can't pass the array index in as `withPassword`.
     const withPassword = canSeePasswords(c);
-    return c.json({ artifacts: metas.map((m) => adminArtifactView(m, withPassword)) });
+    return c.json({
+        artifacts: metas.map((m) => ({ ...adminArtifactView(m, withPassword), editable: normalizeMimeType(m.type) === 'text/html', updatedAt: m.updatedAt ?? null })),
+        canUpload: hasAllArtifacts(c),
+        canManageSecrets: canManageSecrets(c),
+    });
 });
 
 app.post('/api/upload', requireAuth, async (c) => {
+    if (!hasAllArtifacts(c)) return c.json({ error: 'You can edit the artifacts you were given, but not upload new ones.' }, 403);
     let form: FormData;
     try {
         form = await c.req.formData();
@@ -274,8 +283,10 @@ app.post('/api/upload', requireAuth, async (c) => {
 app.delete('/api/:slug', requireAuth, async (c) => {
     const slug = c.req.param('slug');
     if (!isValidSlug(slug)) return c.json({ error: 'invalid slug' }, 400);
+    if (!hasAllArtifacts(c)) return c.json({ error: 'You cannot delete artifacts.' }, 403);
     if (!(await slugExists(slug))) return c.json({ error: 'not found' }, 404);
     await remove(slug);
+    deleteNotesForSlug(slug);
     return c.json({ ok: true });
 });
 
@@ -289,6 +300,7 @@ app.delete('/api/:slug', requireAuth, async (c) => {
 app.patch('/api/:slug', requireAuth, async (c) => {
     const slug = c.req.param('slug');
     if (!isValidSlug(slug)) return c.json({ error: 'invalid slug' }, 400);
+    if (!canAccessArtifact(c, slug)) return c.json({ error: 'You do not have access to this artifact.' }, 403);
     const existing = await getMeta(slug);
     if (!existing) return c.json({ error: 'not found' }, 404);
 
@@ -297,6 +309,12 @@ app.patch('/api/:slug', requireAuth, async (c) => {
         form = await c.req.formData();
     } catch {
         return c.json({ error: 'invalid multipart body' }, 400);
+    }
+
+    // Editors may change an artifact's content and wording, never who can see
+    // it: visibility and the password are site-admin only.
+    if (!canManageSecrets(c) && (form.has('visibility') || form.has('password') || form.has('clearPassword'))) {
+        return c.json({ error: 'Only a site admin can change an artifact\'s visibility or password.' }, 403);
     }
 
     const next: ArtifactMeta = { ...existing, visibility: existing.visibility ?? 'public' };
@@ -494,7 +512,7 @@ app.get('/a/:slug', async (c) => {
         // honor the og:image meta. Content is still gated — the artifact bytes
         // are not in the response body.
         return new Response(
-            passwordPromptPage({ slug, name: meta.name, description: meta.description, publicBase: PUBLIC_BASE }),
+            passwordPromptPage({ slug, name: meta.name, description: meta.description, publicBase: PUBLIC_BASE, select: c.req.query(SELECT_MODE_PARAM) === '1' }),
             {
                 status: 200,
                 headers: {
@@ -511,12 +529,18 @@ app.get('/a/:slug', async (c) => {
     const normType = normalizeMimeType(meta.type);
 
     if (normType === 'text/html') {
-        const injected = injectOgMeta(file.toString('utf-8'), meta);
+        let injected = injectOgMeta(file.toString('utf-8'), meta);
+        // The admin edit-mode frame asks for the select helper. Never cached:
+        // the plain URL and the select URL must not share a cache entry.
+        const select = c.req.query(SELECT_MODE_PARAM) === '1';
+        if (select) injected = injectSelectHelper(injected);
         return new Response(injected, {
             headers: {
                 'Content-Type': 'text/html; charset=utf-8',
-                'Cache-Control': cacheControl,
+                'Cache-Control': select ? 'no-store' : cacheControl,
                 'X-Artifact-Slug': slug,
+                // Only the admin panel may frame the select-mode page.
+                ...(select ? { 'Content-Security-Policy': `frame-ancestors ${CORS_ORIGINS.join(' ')}` } : {}),
             },
         });
     }
@@ -578,7 +602,7 @@ app.post('/unlock/:slug', async (c) => {
     const ok = password.length > 0 && (await Bun.password.verify(password, meta.passwordHash));
     if (!ok) {
         return new Response(
-            passwordPromptPage({ slug, name: meta.name, description: meta.description, publicBase: PUBLIC_BASE, error: 'Incorrect password.' }),
+            passwordPromptPage({ slug, name: meta.name, description: meta.description, publicBase: PUBLIC_BASE, error: 'Incorrect password.', select: c.req.query(SELECT_MODE_PARAM) === '1' }),
             {
                 status: 401,
                 headers: { 'Content-Type': 'text/html; charset=utf-8' },
@@ -587,10 +611,11 @@ app.post('/unlock/:slug', async (c) => {
     }
 
     const cookieValue = signSlugCookie(slug, 60 * 60 * 24); // 24h
+    const select = c.req.query(SELECT_MODE_PARAM) === '1' ? `?${SELECT_MODE_PARAM}=1` : '';
     return new Response(null, {
         status: 303,
         headers: {
-            'Location': `/a/${encodeURIComponent(slug)}`,
+            'Location': `/a/${encodeURIComponent(slug)}${select}`,
             'Set-Cookie': `${cookieName(slug)}=${cookieValue}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`,
         },
     });
@@ -1110,6 +1135,8 @@ app.patch('/api/admin/visitors/:id', requireAuth, async (c) => {
 });
 
 app.delete('/api/admin/visitors/:id', requireAuth, (c) => c.json({ ok: deleteVisitor(c.req.param('id')) }));
+
+registerCollabRoutes(app);
 
 // Favicon: redirect to mncoleman.com's so artifact pages and direct visits look on-brand.
 app.get('/favicon.ico', (c) => c.redirect(SITE_FAVICON_ICO, 302));

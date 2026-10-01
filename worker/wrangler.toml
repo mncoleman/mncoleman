@@ -15,6 +15,10 @@ compatibility_date = "2024-04-01"
 #   BUILD_TOKEN             — Shared secret the Cloudflare Pages build sends to claim
 #                             a CalVer deployment number (same value as the Pages
 #                             project's BUILD_TOKEN build variable)
+#   GOOGLE_CLIENT_ID        — Google sign-in: the SAME OAuth client app.mncoleman.com uses.
+#   GOOGLE_CLIENT_SECRET      Its redirect URIs must include
+#                             https://mncoleman-admin-auth.mncoleman.workers.dev/auth/google/callback
+#   OWNER_EMAIL             — (optional) owner's Google address; super_admin via Google
 [vars]
 TELEGRAM_BOT_ID = "8681257901"  # mncolemandotcombot — OIDC client_id
 FRONTEND_URL = "https://mncoleman.com"
