@@ -57,7 +57,6 @@ function ago(ms: number | null): string {
  */
 export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug: string }) {
     const frameRef = useRef<HTMLIFrameElement>(null);
-    const stageRef = useRef<HTMLDivElement>(null);
     const [fullscreen, setFullscreen] = useState(false);
     const [panelOpen, setPanelOpen] = useState(true);
     const shaRef = useRef<string | null>(null);
@@ -267,33 +266,26 @@ export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug:
         setTimeout(() => setCopied(false), 1500);
     };
 
-    // Full screen re-styles the SAME stage element rather than mounting a new
-    // frame, so the page, select mode, picks and an in-progress text edit all
-    // survive the switch. The browser's own full screen hides its chrome when
-    // allowed; when it is refused (or in Safari's iframe-less fallback) the
-    // fixed overlay alone still covers the window.
-    const enterFullscreen = () => {
-        setFullscreen(true);
-        stageRef.current?.requestFullscreen?.().catch(() => { /* overlay only */ });
-    };
-    const exitFullscreen = () => {
-        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-        setFullscreen(false);
-    };
+    // Expand fills the browser window (not the OS full screen, like the hub's
+    // expanded artifact view) by re-styling the SAME stage element rather than
+    // mounting a new frame, so the page, select mode, picks and an in-progress
+    // text edit all survive the switch.
+    const enterFullscreen = () => setFullscreen(true);
+    const exitFullscreen = () => setFullscreen(false);
 
-    useEffect(() => {
-        const onChange = () => { if (!document.fullscreenElement) setFullscreen(false); };
-        document.addEventListener('fullscreenchange', onChange);
-        return () => document.removeEventListener('fullscreenchange', onChange);
-    }, []);
-
-    // Overlay-only mode has no browser Esc; give it one. (Esc inside the frame
-    // belongs to the helper — it clears the pick — and never reaches here.)
+    // Esc collapses it. (Esc inside the frame belongs to the helper — it clears
+    // the pick — and never reaches here.)
     useEffect(() => {
         if (!fullscreen) return;
-        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.fullscreenElement) setFullscreen(false); };
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreen(false); };
         window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
+        // The page behind must not scroll under the overlay.
+        const prev = document.documentElement.style.overflow;
+        document.documentElement.style.overflow = 'hidden';
+        return () => {
+            window.removeEventListener('keydown', onKey);
+            document.documentElement.style.overflow = prev;
+        };
     }, [fullscreen]);
 
     const visibleNotes = notes.filter((n) => showResolved || n.status === 'open');
@@ -311,7 +303,7 @@ export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug:
                         {selectOn ? 'Selecting' : 'Select'}
                     </Button>
                     <Button size="sm" variant="outline" onClick={enterFullscreen} className="gap-1.5">
-                        <Maximize2 className="h-3.5 w-3.5" /> Full screen
+                        <Maximize2 className="h-3.5 w-3.5" /> Expand
                     </Button>
                     <Button asChild size="sm" variant="outline" className="gap-1.5">
                         <a href={`${ARTIFACTS_API}/a/${encodeURIComponent(slug)}`} target="_blank" rel="noreferrer">
@@ -326,7 +318,6 @@ export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug:
             )}
 
             <div
-                ref={stageRef}
                 className={fullscreen
                     ? `fixed inset-0 z-[100] bg-background p-3 grid gap-3 ${panelOpen ? 'grid-cols-[minmax(0,1fr)_22rem]' : 'grid-cols-1'}`
                     : 'grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]'}
@@ -348,7 +339,7 @@ export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug:
                                 <PanelRightOpen className="h-3.5 w-3.5" />
                                 {picks.length > 0 && <span className="text-xs">{picks.length}</span>}
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={exitFullscreen} className="h-7" title="Exit full screen">
+                            <Button size="sm" variant="ghost" onClick={exitFullscreen} className="h-7" title="Collapse">
                                 <Minimize2 className="h-3.5 w-3.5" />
                             </Button>
                         </div>
@@ -365,7 +356,7 @@ export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug:
                                 <PanelRightClose className="h-3.5 w-3.5" />
                             </Button>
                             <Button size="sm" variant="outline" onClick={exitFullscreen} className="h-7 gap-1 ml-auto">
-                                <Minimize2 className="h-3.5 w-3.5" /> Exit
+                                <Minimize2 className="h-3.5 w-3.5" /> Collapse
                             </Button>
                         </div>
                     )}
