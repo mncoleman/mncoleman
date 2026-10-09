@@ -2,13 +2,12 @@
 
 import { createContext, useContext } from 'react';
 
-export type AdminFeature = 'artifacts' | 'content' | 'library' | 'visitors' | 'analytics' | 'rebuild';
+export type AdminFeature = 'artifacts' | 'content' | 'library' | 'analytics' | 'rebuild';
 
 export const FEATURE_LABELS: Record<AdminFeature, string> = {
     artifacts: 'Artifacts (all, incl. upload/delete)',
     content: 'Content (resources + projects)',
     library: 'AI Library',
-    visitors: 'Visitors',
     analytics: 'Analytics',
     rebuild: 'Rebuild site',
 };

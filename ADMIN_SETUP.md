@@ -111,7 +111,7 @@ Remember that this only ships the **site**. The Worker is deployed separately wi
 
 1. Visit `https://mncoleman.com/admin`.
 2. Log in with Telegram and approve the request in the app.
-3. The dashboard tabs are Artifacts, Library, Analytics, Visitors, and Users.
+3. The dashboard tabs are Artifacts, Library, Analytics, and Users.
 4. "Trigger Rebuild" fires a `repository_dispatch` at GitHub Actions — a good first test
    that the Worker's `GITHUB_TOKEN` is wired up correctly.
 

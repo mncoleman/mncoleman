@@ -4,7 +4,7 @@
  * GA4 Enhanced Measurement only sees real `<a href>` anchors — it cannot observe a
  * `<button>` that calls `window.open()`, `navigator.share()`, or `clipboard.writeText()`,
  * which is how every interactive control on this site works. So the interactions worth
- * knowing about (open / copy / share on cards, prompt + skill copies, guestbook signups)
+ * knowing about (open / copy / share on cards, prompt + skill copies)
  * only exist in GA if we send them ourselves.
  *
  * No-ops when GA is not configured (local dev, or a build without NEXT_PUBLIC_GA_ID), so

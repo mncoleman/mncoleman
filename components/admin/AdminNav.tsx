@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FileUp, Library, MapPin, BarChart3, Users, FolderKanban } from 'lucide-react';
+import { LayoutDashboard, FileUp, Library, BarChart3, Users, FolderKanban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { canUse, canSeeArtifacts, type AdminUser } from '@/components/admin/admin-context';
 
@@ -12,7 +12,6 @@ const LINKS: { href: string; label: string; icon: typeof Users; allowed: (u: Adm
     { href: '/admin/content', label: 'Content', icon: FolderKanban, allowed: (u) => canUse(u, 'content') },
     { href: '/admin/artifacts', label: 'Artifacts', icon: FileUp, allowed: canSeeArtifacts },
     { href: '/admin/library', label: 'AI Library', icon: Library, allowed: (u) => canUse(u, 'library') },
-    { href: '/admin/visitors', label: 'Visitors', icon: MapPin, allowed: (u) => canUse(u, 'visitors') },
     { href: '/admin/users', label: 'Users', icon: Users, allowed: (u) => u.role === 'super_admin' },
 ];
 

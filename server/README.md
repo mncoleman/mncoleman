@@ -74,7 +74,7 @@ mkdir -p /srv/library
 # On the ARM box — retire the running container first, the name is already taken.
 #   Keep the old one around under a new name until the replacement is verified,
 #   then `docker rm artifacts-old`. NEVER `docker rm -v` — the -v would delete the
-#   artifacts_data volume and every hosted artifact plus visitors.db with it.
+#   artifacts_data volume and every hosted artifact plus the notes database with it.
 docker stop artifacts                    # skip both on a first-ever run —
 docker rename artifacts artifacts-old    #   there is no container yet
 
@@ -90,18 +90,12 @@ docker run -d \
     -e CORS_ORIGINS=https://mncoleman.com,https://mncoleman.github.io,http://localhost:3000 \
     -e MAX_UPLOAD_BYTES=104857600 \
     -e LIBRARY_ROOT=/library \
-    -e VISITOR_IP_SALT="$(cat /home/ubuntu/.visitor-ip-salt)" \
-    -e VISITOR_TOKEN_SECRET="$(cat /home/ubuntu/.visitor-token-secret)" \
-    -e GEOAPIFY_KEY="$(cat /home/ubuntu/.geoapify.key)" \
     -v artifacts_data:/data \
     -v /srv/library:/library \
     artifacts:latest
 
-# The last three are secrets read from chmod-600 files on the box — the
-#   `$(cat ...)` must run on the ARM box, never as a literal pasted from here.
-#   Omitting them does NOT fail the build: the visitor-globe guestbook silently
-#   falls back to JWT_SECRET-derived salts (invalidating every issued submission
-#   token) and geocoding returns no results. Both have bitten a real deploy.
+# JWT_SECRET is read from a chmod-600 file on the box — the `$(cat ...)` must
+#   run on the ARM box, never as a literal pasted from here.
 #
 # SAFER THAN RETYPING THE FLAGS: carry the running container's env forward, so a
 #   drift in this file can never silently drop a variable again.
