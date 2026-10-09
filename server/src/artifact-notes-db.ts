@@ -5,7 +5,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 /**
  * Notes and Claude links for instant artifacts, in bun:sqlite.
  *
- * Same volume and lazy-open rule as visitors-db.ts: nothing touches the file
+ * Lives on the artifacts_data volume and opens lazily: nothing touches the file
  * at import, and only this one Bun process ever writes it.
  *
  * A NOTE is left in edit mode on one or more elements of an artifact.

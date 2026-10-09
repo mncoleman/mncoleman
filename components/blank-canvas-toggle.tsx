@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Clears the homepage down to its backdrop — cards, globe and scroll cue gone, nav
+ * Clears the homepage down to its backdrop — cards gone, nav
  * and the corner controls kept — so the paper (or the veil) is the whole screen.
  *
  * The hiding is a single class on `<html>` plus two rules in `globals.css`, not

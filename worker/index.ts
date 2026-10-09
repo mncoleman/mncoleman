@@ -51,8 +51,13 @@ export interface Env {
 type StoredRole = 'admin' | 'site_admin' | 'editor';
 type SessionRole = 'super_admin' | 'site_admin' | 'editor';
 
-const FEATURES = ['artifacts', 'content', 'library', 'visitors', 'analytics', 'rebuild'] as const;
+const FEATURES = ['artifacts', 'content', 'library', 'analytics', 'rebuild'] as const;
 type Feature = typeof FEATURES[number];
+
+/** Stored features minus any since retired (e.g. 'visitors'), so an old KV record still validates on save. */
+function knownFeatures(features: string[] | undefined): Feature[] {
+    return (features || []).filter((f): f is Feature => (FEATURES as readonly string[]).includes(f));
+}
 
 interface AdminUser {
     /**
@@ -583,7 +588,6 @@ export default {
             const p = url.pathname;
             if (p === '/api/trigger' && !can('rebuild')) return forbidden();
             if (p.startsWith('/api/library') && !can('library')) return forbidden();
-            if (p.startsWith('/api/admin/visitors') && !can('visitors')) return forbidden();
             if (p.startsWith('/api/analytics') && !can('analytics')) return forbidden();
             if (p.startsWith('/api/collections') && !can('content')) return forbidden();
             if (p === '/api/artifacts' && !can('artifacts')) return forbidden();
@@ -800,37 +804,6 @@ export default {
                     status: upstream.status,
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 });
-            }
-
-            // Visitor globe: list all pins (incl. hidden) for the admin panel.
-            if (url.pathname === '/api/admin/visitors' && request.method === 'GET') {
-                if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
-                    return new Response(JSON.stringify({ error: 'Visitor service not configured' }), { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-                }
-                const jwt = await serviceJwt('visitors-list');
-                const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/admin/visitors`, {
-                    headers: { 'Authorization': `Bearer ${jwt}` },
-                });
-                const text = await upstream.text();
-                return new Response(text, { status: upstream.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-            }
-
-            // Visitor globe: delete a pin.
-            if (url.pathname.startsWith('/api/admin/visitors/') && request.method === 'DELETE') {
-                if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
-                    return new Response(JSON.stringify({ error: 'Visitor service not configured' }), { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-                }
-                const id = decodeURIComponent(url.pathname.split('/').pop() || '');
-                if (!/^[a-f0-9-]{8,64}$/i.test(id)) {
-                    return new Response(JSON.stringify({ error: 'invalid id' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-                }
-                const jwt = await serviceJwt('visitors-delete');
-                const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/api/admin/visitors/${encodeURIComponent(id)}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${jwt}` },
-                });
-                const text = await upstream.text();
-                return new Response(text, { status: upstream.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
             }
 
             // GA4 traffic summary for the admin analytics page.
@@ -2160,7 +2133,7 @@ interface UserInput {
 function accessOf(user: AdminUser): UserInput {
     return {
         role: effectiveRole(user.role),
-        features: user.features || [],
+        features: knownFeatures(user.features),
         artifactGrants: user.artifactGrants || [],
     };
 }
@@ -2198,7 +2171,7 @@ function userView(user: AdminUser) {
         firstName: user.firstName,
         status: user.status,
         role: effectiveRole(user.role),
-        features: user.features || [],
+        features: knownFeatures(user.features),
         artifactGrants: user.artifactGrants || [],
         invitedAt: user.invitedAt,
         claimedAt: user.claimedAt,
@@ -2301,7 +2274,7 @@ async function revalidateSession(env: Env, payload: any): Promise<Session> {
         valid: true,
         role: effectiveRole(user.role),
         userId: id,
-        features: user.features || [],
+        features: knownFeatures(user.features),
         artifactGrants: user.artifactGrants || [],
     };
 }

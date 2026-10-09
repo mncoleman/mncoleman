@@ -84,10 +84,10 @@ function readStored(): ScrollPrefs {
  * Site-wide smooth scrolling.
  *
  * Lenis 1.x scrolls the *real* document (no transform wrapper), so `position:
- * sticky` (the header), `position: fixed` (Dark Veil, the scroll cue) and every
+ * sticky` (the header), `position: fixed` (Dark Veil) and every
  * `window.scrollY` reader keep working untouched.
  *
- * Nested scrollers (modals, code blocks, the visitor wheel, ScrollStack) must
+ * Nested scrollers (modals, code blocks, ScrollStack) must
  * carry `data-lenis-prevent` or Lenis eats their wheel events and scrolls the
  * page instead.
  */
@@ -95,7 +95,7 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
   // Both resolved during the first client render, not in an effect: flipping the
   // branch below afterwards would swap the element type wrapping `children` and
   // remount the whole app — tearing down and re-initialising Dark Veil's WebGL
-  // context and the globe one frame after first paint. Neither reads any DOM, so
+  // context one frame after first paint. Neither reads any DOM, so
   // hydration is unaffected (<ReactLenis root> renders a context provider and no
   // markup, so the tree is identical either way).
   const [reduced, setReduced] = useState(
@@ -162,8 +162,7 @@ function LenisRoot({ prefs, children }: { prefs: ScrollPrefs; children: ReactNod
         lerp: lerpFor(initial.smoothness),
         wheelMultiplier: initial.strength,
         smoothWheel: initial.smoothWheel,
-        // Native touch scrolling on mobile: syncing it costs more than it buys
-        // and fights the visitor wheel's own gesture handling.
+        // Native touch scrolling on mobile: syncing it costs more than it buys.
         syncTouch: false,
       }}
     >

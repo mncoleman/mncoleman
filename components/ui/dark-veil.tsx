@@ -96,7 +96,7 @@ type Props = {
 };
 
 // Dev escape hatch: `npm run dev:lite` sets NEXT_PUBLIC_DISABLE_DARKVEIL=1 so
-// only the globe's single WebGL context runs — keeps the dev server light on
+// no WebGL context runs on the homepage — keeps the dev server light on
 // RAM. Read at module scope: it is inlined at build time, and hoisting it keeps
 // the component's hooks unconditional.
 const DISABLED = process.env.NEXT_PUBLIC_DISABLE_DARKVEIL === '1';

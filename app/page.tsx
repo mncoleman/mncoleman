@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowRight, ChevronDown } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { UserIcon } from '@/components/ui/user';
 import { FolderCodeIcon } from '@/components/ui/folder-code';
 import { SquarePenIcon } from '@/components/ui/square-pen';
@@ -14,24 +14,16 @@ interface AnimatedIconHandle {
 }
 
 import { motion } from 'motion/react';
-import dynamic from 'next/dynamic';
 import GlassCube from '@/components/ui/glass-cube';
 import { HomeBackdrop } from '@/components/home-backdrop';
 import { BlankCanvasToggle } from '@/components/blank-canvas-toggle';
 import { McpCallout } from '@/components/mcp-callout';
-import { DeferUntilVisible } from '@/components/defer';
 import { TransitionLink } from '@/components/transition-link';
 import { usePageTransition } from '@/components/transition-provider';
-import { useSmoothScrollTo } from '@/components/smooth-scroll';
 
 // Heavy, purely-decorative libraries (OGL for Dark Veil) load after first paint
 // and stay off the homepage's initial JS chunk. The content cards remain
 // server-rendered (see Home), so LCP is unaffected.
-// The visitor globe holds its own WebGL context (cobe) + fetches live pins, so it
-// is client-only and lazy — it never touches the homepage's initial JS or LCP.
-const VisitorSection = dynamic(() => import('@/components/visitor-globe/VisitorSection'), {
-  ssr: false,
-});
 
 const bentoCards = [
   {
@@ -140,9 +132,6 @@ function CardContent({ card }: { card: (typeof bentoCards)[number] }) {
 
 // ── Desktop: 3D glass cubes in bento grid with idle pulse ──
 function DesktopGrid() {
-  // Native smooth scroll fights Lenis, so the cue routes through it instead
-  // (falls back to scrollIntoView when Lenis is off — reduced motion).
-  const smoothScrollTo = useSmoothScrollTo();
   // Pulse sweeps left-to-right by column (0, 1, 2)
   const [pulseCol, setPulseCol] = useState(-1);
   const lastInteraction = useRef(Date.now());
@@ -192,8 +181,7 @@ function DesktopGrid() {
           no measurement, and it degrades to "stacked, nothing overlapping" when the
           viewport is too short to have spare room to distribute. */}
       {/* `min-h-20` floors this band. It is `flex-1`, so on a short viewport it was
-          collapsing until the callout sat almost against the header — and moving the
-          scroll cue into flow (below) took another 56px out of the same pool. The floor
+          collapsing until the callout sat almost against the header. The floor
           keeps air around the callout and lets the container exceed its min-height
           instead, which costs a few pixels of scroll rather than the layout. */}
       <div className="w-full max-w-5xl min-h-20 flex-1 flex items-center justify-center relative z-20">
@@ -214,24 +202,6 @@ function DesktopGrid() {
         </div>
       </div>
       <div className="flex-1" aria-hidden />
-
-      {/* Gentle scroll cue hinting at the visitor globe below the cards.
-
-          In flow, not `absolute bottom-8`: the balancing band above is `flex-1`,
-          so on a tall viewport the cue still sits at the bottom, but on a short
-          one the band collapses to nothing and an absolutely-positioned cue was
-          landing on top of the bottom row of cards. Being in flow is what makes
-          the "degrades to stacked, nothing overlapping" note above actually true.
-          Horizontal centring comes from the parent's `items-center`, which is why
-          `.vg-scroll-cue` no longer carries a -50% translate. */}
-      <button
-        type="button"
-        onClick={() => smoothScrollTo('#visitor-globe')}
-        aria-label="Scroll down to the visitor globe"
-        className="vg-scroll-cue mb-6 z-10 text-muted-foreground/50 hover:text-foreground transition-colors"
-      >
-        <ChevronDown className="h-8 w-8" strokeWidth={1.5} />
-      </button>
     </div>
   );
 }
@@ -324,17 +294,6 @@ export default function Home() {
       <BlankCanvasToggle />
       <DesktopGrid />
       <MobileStack />
-      {/* The globe is well below the fold, but `dynamic(ssr:false)` still downloaded cobe,
-          booted a WebGL canvas and hit the visitors API during hydration — inside the LCP
-          window, for a section many visitors never scroll to. Gate it on the viewport.
-          minHeight reserves the space so revealing it can't shift layout.
-          `data-blank-hide` is on the wrapper, not inside it, so blank-canvas mode also
-          collapses that 600px reservation instead of leaving dead space behind. */}
-      <div data-blank-hide>
-        <DeferUntilVisible rootMargin="300px" minHeight={600}>
-          <VisitorSection />
-        </DeferUntilVisible>
-      </div>
     </>
   );
 }

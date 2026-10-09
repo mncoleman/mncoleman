@@ -82,7 +82,6 @@
 - **WebGL Backgrounds** - Dark Veil shader (OGL) in dark mode, a canvas wave field in light
 - **3D Glass Cubes** - Interactive bento grid on desktop (pure CSS 3D transforms, no 3D library)
 - **Sticky Card Stack** - Scroll-driven mobile home page
-- **Visitor Globe** - Interactive guestbook globe (cobe) on the home page
 - **Frosted Glass UI** - Modern glassmorphism design
 - **Page Transitions** - Smooth Motion-powered route transitions
 - **Dark Mode** - System-aware theme switching
@@ -119,7 +118,6 @@
 | **Resume** | Notion page parsed into a structured card layout (hero, experience, education) |
 | **Artifacts** | Two kinds: *static* files committed to `public/artifacts/`, and *instant* ones uploaded live to the artifact service |
 | **AI Library** | Public prompts + skills at `/ai`, served from the artifact service |
-| **Visitor Globe** | Public "where are you from" guestbook with bot defence and moderation |
 | **Brand Kit** | Public brand assets and style reference page |
 | **Featured Posts** | Pin important content to the top of the blog |
 | **Secure Admin** | Telegram-authenticated dashboard backed by a Cloudflare Worker |
@@ -135,7 +133,6 @@ The site features a secure, hidden admin dashboard for managing content and depl
 - **Artifact Uploads**: Upload files (HTML, PDF, images) either as *static* artifacts committed to the repo or *instant* ones published live to the artifact service.
 - **AI Library**: Author and publish prompts and skills.
 - **Analytics**: GA4 figures read through the Worker with a service account.
-- **Visitors**: Moderate the guestbook globe's pins.
 - **User Management**: Manage allow-listed Telegram users. Roles are `admin` and `super_admin`; only `super_admin` can manage users or reveal private-artifact passwords.
 
 The admin auth flow is handled by a Cloudflare Worker (`worker/index.ts`), which mints a
@@ -197,7 +194,6 @@ NEXT_PUBLIC_TELEGRAM_BOT_NAME=your_bot_username
 
 # Hosted services (optional — default to production)
 NEXT_PUBLIC_ARTIFACTS_API_URL=https://artifacts.mncoleman.com
-NEXT_PUBLIC_VISITOR_API_URL=            # falls back to ARTIFACTS_API_URL
 
 # Local dev convenience (optional)
 NEXT_PUBLIC_DISABLE_DARKVEIL=1          # what `npm run dev:lite` sets
@@ -290,7 +286,7 @@ If you prefer to set up manually:
 - **CMS**: Notion API (`@notionhq/client`, `notion-to-md`)
 - **Markdown**: `react-markdown` + `remark-gfm`, `@next/mdx`
 - **Backend**: Cloudflare Workers (admin auth + a separate public MCP server) and a Bun + Hono artifact service
-- **Graphics**: `ogl` for the Dark Veil shader, a hand-rolled canvas wave field for light mode, `cobe` for the visitor globe. The 3D glass-cube bento is pure CSS 3D transforms — there is no `three`/R3F dependency
+- **Graphics**: `ogl` for the Dark Veil shader, a hand-rolled canvas wave field for light mode. The 3D glass-cube bento is pure CSS 3D transforms — there is no `three`/R3F dependency
 - **Animation**: `motion` (Framer Motion successor), `gsap`, `lenis` for smooth scroll
 - **Hosting**: GitHub Pages on a custom domain (`mncoleman.com`)
 - **CI/CD**: GitHub Actions (push, daily cron, repository dispatch, manual)
@@ -326,7 +322,7 @@ A few consequences worth knowing up front:
   path falls through to GitHub Pages. It stays separate from `worker/` because that one gates
   every POST behind an Origin allowlist and a CSRF header that MCP clients cannot send.
 - **Only piece 4 has a database.** Everything else is stateless; the artifact service holds
-  uploaded files, the AI library, and the visitor guestbook's SQLite file.
+  uploaded files, the AI library, and the artifact notes SQLite file.
 
 ### The Build-Time CMS Approach
 
@@ -497,7 +493,6 @@ mncoleman/
 │   │   ├── ContentEditor.tsx, UserManagement.tsx, VisitorManager.tsx
 │   │   └── TelegramLoginButton.tsx
 │   ├── brand-kit/BrandKitClient.tsx
-│   ├── visitor-globe/              # cobe globe + guestbook dialog + captchas
 │   ├── ui/                         # Reusable UI primitives
 │   │   ├── CustomCursor.tsx        #   pointer-aware accent cursor
 │   │   ├── dark-veil.tsx           #   OGL shader; `contained` fills a parent
@@ -506,7 +501,7 @@ mncoleman/
 │   │   └── ...                     #   button, card, badge, input, tabs, …
 │   ├── Waves.tsx                   # Canvas wave field (light-mode backdrop)
 │   ├── home-backdrop.tsx           # Picks Dark Veil vs Waves by theme
-│   ├── defer.tsx                   # DeferUntilIdle / DeferUntilVisible
+│   ├── defer.tsx                   # DeferUntilIdle
 │   ├── smooth-scroll.tsx           # Site-wide Lenis instance
 │   ├── MagicBento.tsx, ScrollFloat.tsx, ScrollStack.tsx
 │   ├── search.tsx                  # Cmd/Ctrl+K global search
@@ -676,7 +671,6 @@ Go to Settings → Secrets and variables → Actions:
 | `NEXT_PUBLIC_WORKER_URL` | Cloudflare Worker URL (admin) | `https://...workers.dev` |
 | `NEXT_PUBLIC_TELEGRAM_BOT_NAME` | Telegram bot username (admin) | `mncoleman_admin_bot` |
 | `NEXT_PUBLIC_ARTIFACTS_API_URL` | Artifact + AI library service | `https://artifacts.mncoleman.com` |
-| `NEXT_PUBLIC_VISITOR_API_URL` | Visitor guestbook (falls back to artifacts URL) | `https://artifacts.mncoleman.com` |
 | `N8N_DEPLOY_WEBHOOK_URL` | Optional n8n notify webhook | `https://n8n.example.com/...` |
 
 **2. Enable GitHub Pages**

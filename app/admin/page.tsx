@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, RefreshCw, FileUp, Library, MapPin, BarChart3, FolderKanban } from 'lucide-react';
+import { Loader2, RefreshCw, FileUp, Library, BarChart3, FolderKanban } from 'lucide-react';
 import { useAdmin, canUse, canSeeArtifacts, type AdminUser } from '@/components/admin/admin-context';
 import { authHeaders } from '@/lib/admin-auth';
 
@@ -13,7 +13,6 @@ const SHORTCUTS: { href: string; label: string; icon: typeof FileUp; description
     { href: '/admin/content', label: 'Content', icon: FolderKanban, description: 'Edit resources and projects. Saves publish automatically.', allowed: (u) => canUse(u, 'content') },
     { href: '/admin/artifacts', label: 'Artifacts', icon: FileUp, description: 'Upload, manage and edit hosted artifacts.', allowed: canSeeArtifacts },
     { href: '/admin/library', label: 'AI Library', icon: Library, description: 'Publish prompts and skills.', allowed: (u) => canUse(u, 'library') },
-    { href: '/admin/visitors', label: 'Visitors', icon: MapPin, description: 'Moderate the visitor globe guestbook.', allowed: (u) => canUse(u, 'visitors') },
 ];
 
 export default function AdminOverviewPage() {
