@@ -1,21 +1,23 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import Link from 'next/link';
-import { Calendar, Filter, X } from 'lucide-react';
+import { Calendar, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { CardActions } from '@/components/ui/card-actions';
 import { useToast } from '@/hooks/use-toast';
 import { PageEntrance } from '@/components/page-entrance';
 import { FolderCodeIcon, type FolderCodeIconHandle } from '@/components/ui/folder-code';
 import { slugify } from '@/lib/utils';
+import { flattenTags, type Tags } from '@/lib/tags';
+import { TagFilterBar, useTagFilter } from '@/components/tag-filter';
 
 interface Project {
     id: string;
     name: string;
     description: string;
     url: string;
-    tech: string[];
+    tags: Tags;
     date: string;
     published: boolean;
 }
@@ -26,11 +28,11 @@ interface ProjectsPageClientProps {
 
 function ProjectCard({
     project,
-    selectedTech,
+    selectedValues,
     showToast,
 }: {
     project: Project;
-    selectedTech: string | null;
+    selectedValues: Set<string>;
     showToast: (msg: string) => void;
 }) {
     const iconRef = useRef<FolderCodeIconHandle>(null);
@@ -62,12 +64,12 @@ function ProjectCard({
             </div>
 
             <div className="space-y-4">
-                {project.tech.length > 0 && (
+                {flattenTags(project.tags).length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                        {project.tech.map((tag) => (
+                        {flattenTags(project.tags).map((tag) => (
                             <span
                                 key={tag}
-                                className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-all ${selectedTech === tag
+                                className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-all ${selectedValues.has(tag)
                                     ? 'bg-primary/10 border-primary/20 text-primary'
                                     : 'bg-accent text-accent-foreground border-border'
                                     }`}
@@ -102,19 +104,9 @@ function ProjectCard({
 }
 
 export default function ProjectsPageClient({ projects }: ProjectsPageClientProps) {
-    const [selectedTech, setSelectedTech] = useState<string | null>(null);
+    const filter = useTagFilter(projects);
+    const filteredProjects = filter.filtered;
     const { showToast, ToastComponent } = useToast();
-
-    const allTech = useMemo(() => {
-        const techSet = new Set<string>();
-        projects.forEach(p => p.tech.forEach(t => techSet.add(t)));
-        return Array.from(techSet).sort();
-    }, [projects]);
-
-    const filteredProjects = useMemo(() => {
-        if (!selectedTech) return projects;
-        return projects.filter(p => p.tech.includes(selectedTech));
-    }, [projects, selectedTech]);
 
     return (
         <PageEntrance>
@@ -131,50 +123,14 @@ export default function ProjectsPageClient({ projects }: ProjectsPageClientProps
                 </p>
             </header>
 
-            {/* Filter Bar */}
-            <div className="mb-12 flex flex-wrap items-center justify-center gap-2">
-                <div className="flex items-center gap-2 mr-2 text-muted-foreground text-sm font-medium">
-                    <Filter className="h-4 w-4" />
-                    <span>Filter:</span>
-                </div>
-                <button
-                    onClick={() => setSelectedTech(null)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedTech === null
-                        ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
-                        : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
-                        }`}
-                >
-                    All
-                </button>
-                {allTech.map(tech => (
-                    <button
-                        key={tech}
-                        onClick={() => setSelectedTech(tech)}
-                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedTech === tech
-                            ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
-                            : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
-                            }`}
-                    >
-                        {tech}
-                    </button>
-                ))}
-                {selectedTech && (
-                    <button
-                        onClick={() => setSelectedTech(null)}
-                        className="p-1.5 rounded-full bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all ml-2"
-                        title="Clear filter"
-                    >
-                        <X className="h-4 w-4" />
-                    </button>
-                )}
-            </div>
+            <TagFilterBar filter={filter} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {filteredProjects.map((project) => (
                     <ProjectCard
                         key={project.id}
                         project={project}
-                        selectedTech={selectedTech}
+                        selectedValues={filter.selectedValues}
                         showToast={showToast}
                     />
                 ))}
@@ -192,7 +148,7 @@ export default function ProjectsPageClient({ projects }: ProjectsPageClientProps
                         We couldn't find any projects matching your current filter. Try selecting a different technology or clearing filters.
                     </p>
                     <button
-                        onClick={() => setSelectedTech(null)}
+                        onClick={filter.clear}
                         className="mt-8 px-6 py-2 bg-primary text-primary-foreground rounded-full font-medium hover:opacity-90 transition-opacity"
                     >
                         Clear All Filters

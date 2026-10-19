@@ -1,4 +1,5 @@
 import { slugify } from './utils';
+import { DEFAULT_TAG_KEY, flattenTags, normalizeTags, type Tags } from './tags';
 import resourcesData from '@/data/resources.json';
 
 /**
@@ -13,6 +14,9 @@ export interface Resource {
     id: string;
     name: string;
     url: string;
+    /** Keyed tags, e.g. `{ Category: [...] }`. */
+    tags: Tags;
+    /** Every tag value across all keys, flat — what search and the MCP feed index. */
     categories: string[];
     description: string;
     published: boolean;
@@ -27,7 +31,11 @@ interface StoredResource extends Resource {
     content?: string;
 }
 
-const ALL = resourcesData as StoredResource[];
+// Records may still carry the pre-keys flat `categories` array; fold it into the default key.
+const ALL: StoredResource[] = (resourcesData as unknown as Array<Record<string, unknown>>).map((raw) => {
+    const tags = normalizeTags(raw.tags, raw.categories, DEFAULT_TAG_KEY.resources);
+    return { ...raw, tags, categories: flattenTags(tags) } as unknown as StoredResource;
+});
 
 /** Unique details-page slugs for every published resource. */
 export async function getResourceSlugs(): Promise<string[]> {

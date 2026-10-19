@@ -10,6 +10,8 @@ import { authHeaders } from '@/lib/admin-auth';
 import { cn, slugify } from '@/lib/utils';
 import { PasteInput, PasteTextarea } from '@/components/admin/PasteField';
 import { TagPicker } from '@/components/admin/TagPicker';
+import { TagManager } from '@/components/admin/TagManager';
+import { DEFAULT_TAG_KEY, flattenTags, normalizeTags, tagKeys, tagValues, type Tags } from '@/lib/tags';
 import { MonthPicker } from '@/components/admin/MonthPicker';
 import { MarkdownEditor } from '@/components/admin/MarkdownEditor';
 
@@ -33,7 +35,7 @@ interface ResourceItem {
     id: string;
     name: string;
     url: string;
-    categories: string[];
+    tags: Tags;
     description: string;
     published: boolean;
     content?: string;
@@ -44,30 +46,30 @@ interface ProjectItem {
     name: string;
     description: string;
     url: string;
-    tech: string[];
+    tags: Tags;
     date: string;
     published: boolean;
     content?: string;
 }
 
 type Item = ResourceItem | ProjectItem;
-type TagsField = 'categories' | 'tech';
-
-const COLLECTIONS: Record<CollectionName, { label: string; singular: string; tagsField: TagsField; tagsLabel: string; tagSingular: string; path: string }> = {
-    resources: { label: 'Resources', singular: 'resource', tagsField: 'categories', tagsLabel: 'Categories', tagSingular: 'category', path: '/resources' },
-    projects: { label: 'Projects', singular: 'project', tagsField: 'tech', tagsLabel: 'Tech', tagSingular: 'tech tag', path: '/projects' },
+const COLLECTIONS: Record<CollectionName, { label: string; singular: string; path: string }> = {
+    resources: { label: 'Resources', singular: 'resource', path: '/resources' },
+    projects: { label: 'Projects', singular: 'project', path: '/projects' },
 };
 
 function emptyItem(name: CollectionName): Item {
     if (name === 'resources') {
-        return { id: '', name: '', url: '', categories: [], description: '', published: false, content: '' };
+        return { id: '', name: '', url: '', tags: {}, description: '', published: false, content: '' };
     }
-    return { id: '', name: '', description: '', url: '', tech: [], date: '', published: false, content: '' };
+    return { id: '', name: '', description: '', url: '', tags: {}, date: '', published: false, content: '' };
 }
 
-function tagsOf(item: Item, field: TagsField): string[] {
-    const v = (item as unknown as Record<string, unknown>)[field];
-    return Array.isArray(v) ? (v as string[]) : [];
+/** Folds a pre-keys flat `tech` / `categories` array into `tags`, and drops it. */
+function normalizeItem(name: CollectionName, raw: Record<string, unknown>): Item {
+    const legacyField = name === 'projects' ? 'tech' : 'categories';
+    const { [legacyField]: legacy, ...rest } = raw;
+    return { ...rest, tags: normalizeTags(raw.tags, legacy, DEFAULT_TAG_KEY[name]) } as unknown as Item;
 }
 
 function readAsBase64(file: File): Promise<string> {
@@ -83,7 +85,7 @@ function ItemForm({
     collection,
     initial,
     existingIds,
-    tagOptions,
+    items,
     workerUrl,
     onSave,
     onCancel,
@@ -91,14 +93,36 @@ function ItemForm({
     collection: CollectionName;
     initial: Item;
     existingIds: string[];
-    tagOptions: string[];
+    items: Item[];
     workerUrl: string;
     onSave: (item: Item) => void;
     onCancel: () => void;
 }) {
     const cfg = COLLECTIONS[collection];
     const [draft, setDraft] = useState<Item>(initial);
-    const [tags, setTags] = useState<string[]>(tagsOf(initial, cfg.tagsField));
+    const [tags, setTags] = useState<Tags>(initial.tags);
+    const [newKey, setNewKey] = useState('');
+    // Keys the record shows a picker for: every key in use anywhere, plus any just typed.
+    const [extraKeys, setExtraKeys] = useState<string[]>([]);
+    const pickerKeys = useMemo(() => {
+        const all = [...tagKeys(items), ...Object.keys(tags), ...extraKeys];
+        if (all.length === 0) all.push(DEFAULT_TAG_KEY[collection]);
+        return [...new Set(all)];
+    }, [items, tags, extraKeys, collection]);
+
+    const setKeyValues = (key: string, values: string[]) =>
+        setTags((t) => {
+            const { [key]: _old, ...rest } = t;
+            return values.length ? { ...rest, [key]: values } : rest;
+        });
+
+    const addKey = () => {
+        const k = newKey.trim();
+        if (!k) return;
+        const existing = pickerKeys.find((x) => x.toLowerCase() === k.toLowerCase());
+        if (!existing) setExtraKeys((x) => [...x, k]);
+        setNewKey('');
+    };
 
     const set = (patch: Partial<ResourceItem & ProjectItem>) => setDraft((d) => ({ ...d, ...patch }) as Item);
 
@@ -127,7 +151,7 @@ function ItemForm({
             onSubmit={(e) => {
                 e.preventDefault();
                 if (!valid) return;
-                onSave({ ...draft, id: slug, [cfg.tagsField]: tags } as Item);
+                onSave({ ...draft, id: slug, tags } as Item);
             }}
         >
             <div className="grid gap-4 sm:grid-cols-2">
@@ -147,11 +171,33 @@ function ItemForm({
                     <Label htmlFor="description">Short description</Label>
                     <PasteTextarea id="description" rows={2} value={draft.description} onChange={(e) => set({ description: e.target.value })} />
                 </div>
-                <div className={cn(collection === 'projects' ? '' : 'sm:col-span-2')}>
-                    <TagPicker label={cfg.tagsLabel} singular={cfg.tagSingular} value={tags} options={tagOptions} onChange={setTags} />
+                <div className="space-y-4 sm:col-span-2">
+                    {pickerKeys.map((key) => (
+                        <TagPicker
+                            key={key}
+                            label={key}
+                            singular={key.toLowerCase()}
+                            value={tags[key] || []}
+                            options={tagValues(items, key)}
+                            onChange={(v) => setKeyValues(key, v)}
+                        />
+                    ))}
+                    <div className="flex items-center gap-2">
+                        <PasteInput
+                            value={newKey}
+                            onChange={(e) => setNewKey(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addKey(); } }}
+                            placeholder="New kind of tag (e.g. Type, Status)"
+                            className="h-8 max-w-xs text-sm"
+                            aria-label="New tag kind"
+                        />
+                        <Button type="button" size="sm" variant="outline" onClick={addKey} disabled={!newKey.trim()} className="gap-1">
+                            <Plus size={14} /> Add kind
+                        </Button>
+                    </div>
                 </div>
                 {collection === 'projects' && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 sm:col-span-2">
                         <Label htmlFor="date">Date</Label>
                         <MonthPicker value={(draft as ProjectItem).date || ''} onChange={(date) => set({ date })} />
                     </div>
@@ -207,7 +253,7 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
             const res = await fetch(`${workerUrl}/api/collections/${name}`, { headers: authHeaders(), credentials: 'include' });
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
-            setItems(json.items);
+            setItems((json.items as Record<string, unknown>[]).map((r) => normalizeItem(name, r)));
             setSha(json.sha);
             setDirty(false);
         } catch (e: unknown) {
@@ -247,12 +293,13 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
 
     const existingIds = useMemo(() => (items || []).map((i) => i.id), [items]);
 
-    // Every tag in use, for the picker. Alphabetical, so the dropdown is scannable.
-    const tagOptions = useMemo(() => {
-        const set = new Set<string>();
-        for (const i of items || []) for (const t of tagsOf(i, cfg.tagsField)) set.add(t);
-        return [...set].sort((a, b) => a.localeCompare(b));
-    }, [items, cfg.tagsField]);
+    const [showTags, setShowTags] = useState(false);
+
+    // Rewrites every record's tags (rename / delete from the manager).
+    const rewriteTags = (rewrite: (tags: Tags) => Tags) => {
+        setItems((prev) => (prev || []).map((i) => ({ ...i, tags: rewrite(i.tags) }) as Item));
+        setDirty(true);
+    };
 
     // Search across everything a record says, keeping the original index so edit
     // and delete still address the right entry in the full list.
@@ -261,12 +308,12 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
         const q = query.trim().toLowerCase();
         if (!q) return all;
         return all.filter(({ item }) =>
-            [item.name, item.description, item.url, item.content || '', ...tagsOf(item, cfg.tagsField)]
+            [item.name, item.description, item.url, item.content || '', ...flattenTags(item.tags)]
                 .join('\n')
                 .toLowerCase()
                 .includes(q)
         );
-    }, [items, query, cfg.tagsField]);
+    }, [items, query]);
 
     const applyEdit = (index: number | 'new', item: Item) => {
         setItems((prev) => {
@@ -311,6 +358,9 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
                     <Button variant="outline" size="sm" onClick={() => load(collection)} disabled={loading || saving} className="gap-2">
                         <RefreshCw size={14} /> Reload
                     </Button>
+                    <Button variant="outline" size="sm" onClick={() => setShowTags((v) => !v)} disabled={!items || editing !== null} className="gap-2">
+                        Tags
+                    </Button>
                     <Button size="sm" onClick={() => setEditing('new')} disabled={loading || editing !== null} className="gap-2">
                         <Plus size={14} /> New {cfg.singular}
                     </Button>
@@ -326,7 +376,7 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
                 <PasteInput
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder={`Search ${collection} by name, description, ${cfg.tagsLabel.toLowerCase()} or body…`}
+                    placeholder={`Search ${collection} by name, description, tags or body…`}
                     className="pl-9"
                     aria-label={`Search ${collection}`}
                 />
@@ -351,6 +401,18 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
                 </div>
             )}
 
+            {showTags && items && editing === null && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-lg">Tags</CardTitle>
+                        <CardDescription>Rename or delete a kind or a value across every {cfg.singular}. Add new ones from a record&apos;s form.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <TagManager items={items} onChange={rewriteTags} />
+                    </CardContent>
+                </Card>
+            )}
+
             {editing === 'new' && (
                 <Card>
                     <CardHeader>
@@ -361,7 +423,7 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
                             collection={collection}
                             initial={emptyItem(collection)}
                             existingIds={existingIds}
-                            tagOptions={tagOptions}
+                            items={items || []}
                             workerUrl={workerUrl}
                             onSave={(item) => applyEdit('new', item)}
                             onCancel={() => setEditing(null)}
@@ -392,7 +454,7 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
                                         collection={collection}
                                         initial={item}
                                         existingIds={existingIds.filter((id) => id !== item.id)}
-                                        tagOptions={tagOptions}
+                                        items={items || []}
                                         workerUrl={workerUrl}
                                         onSave={(next) => applyEdit(index, next)}
                                         onCancel={() => setEditing(null)}
@@ -415,9 +477,9 @@ export function CollectionManager({ workerUrl }: { workerUrl: string }) {
                                             )}
                                         </CardTitle>
                                         <CardDescription className="mt-1 line-clamp-2">{item.description}</CardDescription>
-                                        {tagsOf(item, cfg.tagsField).length > 0 && (
+                                        {flattenTags(item.tags).length > 0 && (
                                             <div className="mt-2 flex flex-wrap gap-1">
-                                                {tagsOf(item, cfg.tagsField).map((t) => (
+                                                {flattenTags(item.tags).map((t) => (
                                                     <span key={t} className="rounded-full border border-border bg-accent px-2 py-0.5 text-[10px] text-accent-foreground">
                                                         {t}
                                                     </span>
