@@ -1,9 +1,9 @@
-FROM oven/bun:1.1.40-debian AS deps
+FROM oven/bun:1.4.3-debian AS deps
 WORKDIR /app
 COPY package.json ./
 RUN bun install --production
 
-FROM oven/bun:1.1.40-debian
+FROM oven/bun:1.4.3-debian
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
