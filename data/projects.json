@@ -8,6 +8,9 @@
     "tags": {
       "Tech": [
         "Web App"
+      ],
+      "Access": [
+        "Paid Service"
       ]
     },
     "published": true,
@@ -22,6 +25,9 @@
     "tags": {
       "Tech": [
         "Web App"
+      ],
+      "Access": [
+        "Invite Only"
       ]
     },
     "published": true,
@@ -92,6 +98,9 @@
     "tags": {
       "Tech": [
         "Web App"
+      ],
+      "Access": [
+        "Invite Only"
       ]
     },
     "published": true,
@@ -130,10 +139,13 @@
     "name": "Telegram Bot Debugger",
     "description": "A tool for watching Telegram messenger bot API requests.",
     "url": "https://mncoleman.github.io/telegram-bot-debugger/",
-    "date": "",
+    "date": "2026-01-01",
     "tags": {
       "Tech": [
         "Web App"
+      ],
+      "Access": [
+        "Free"
       ]
     },
     "published": true,
@@ -148,6 +160,9 @@
     "tags": {
       "Tech": [
         "Web App"
+      ],
+      "Access": [
+        "Free"
       ]
     },
     "published": true,
