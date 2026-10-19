@@ -1,19 +1,21 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import Link from 'next/link';
-import { Filter, X } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { CardActions } from '@/components/ui/card-actions';
 import { useToast } from '@/hooks/use-toast';
 import { PageEntrance } from '@/components/page-entrance';
 import { BookmarkIcon, type BookmarkIconHandle } from '@/components/ui/bookmark';
 import { slugify } from '@/lib/utils';
+import { flattenTags, type Tags } from '@/lib/tags';
+import { TagFilterBar, useTagFilter } from '@/components/tag-filter';
 
 interface Resource {
     id: string;
     name: string;
     url: string;
-    categories: string[];
+    tags: Tags;
     description: string;
     published: boolean;
 }
@@ -24,11 +26,11 @@ interface ResourcesPageClientProps {
 
 function ResourceCard({
     resource,
-    selectedCategory,
+    selectedValues,
     showToast,
 }: {
     resource: Resource;
-    selectedCategory: string | null;
+    selectedValues: Set<string>;
     showToast: (msg: string) => void;
 }) {
     const iconRef = useRef<BookmarkIconHandle>(null);
@@ -60,10 +62,10 @@ function ResourceCard({
             </div>
 
             <div className="flex flex-wrap gap-1.5 mt-2 mb-4">
-                {resource.categories.map(cat => (
+                {flattenTags(resource.tags).map(cat => (
                     <span
                         key={cat}
-                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${selectedCategory === cat
+                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${selectedValues.has(cat)
                             ? 'bg-primary/10 border-primary/20 text-primary'
                             : 'bg-muted/50 border-border text-muted-foreground'
                             }`}
@@ -89,19 +91,9 @@ function ResourceCard({
 }
 
 export default function ResourcesPageClient({ initialResources }: ResourcesPageClientProps) {
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const filter = useTagFilter(initialResources);
+    const filteredResources = filter.filtered;
     const { showToast, ToastComponent } = useToast();
-
-    const allCategories = useMemo(() => {
-        const cats = new Set<string>();
-        initialResources.forEach(r => r.categories.forEach(c => cats.add(c)));
-        return Array.from(cats).sort();
-    }, [initialResources]);
-
-    const filteredResources = useMemo(() => {
-        if (!selectedCategory) return initialResources;
-        return initialResources.filter(r => r.categories.includes(selectedCategory));
-    }, [initialResources, selectedCategory]);
 
     return (
         <PageEntrance>
@@ -118,50 +110,14 @@ export default function ResourcesPageClient({ initialResources }: ResourcesPageC
                 </p>
             </header>
 
-            {/* Filter Bar */}
-            <div className="mb-12 flex flex-wrap items-center justify-center gap-2">
-                <div className="flex items-center gap-2 mr-2 text-muted-foreground text-sm font-medium">
-                    <Filter className="h-4 w-4" />
-                    <span>Filter:</span>
-                </div>
-                <button
-                    onClick={() => setSelectedCategory(null)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedCategory === null
-                        ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
-                        : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
-                        }`}
-                >
-                    All
-                </button>
-                {allCategories.map(category => (
-                    <button
-                        key={category}
-                        onClick={() => setSelectedCategory(category)}
-                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedCategory === category
-                            ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
-                            : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
-                            }`}
-                    >
-                        {category}
-                    </button>
-                ))}
-                {selectedCategory && (
-                    <button
-                        onClick={() => setSelectedCategory(null)}
-                        className="p-1.5 rounded-full bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all ml-2"
-                        title="Clear filter"
-                    >
-                        <X className="h-4 w-4" />
-                    </button>
-                )}
-            </div>
+            <TagFilterBar filter={filter} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredResources.map((resource) => (
                     <ResourceCard
                         key={resource.id}
                         resource={resource}
-                        selectedCategory={selectedCategory}
+                        selectedValues={filter.selectedValues}
                         showToast={showToast}
                     />
                 ))}
@@ -179,7 +135,7 @@ export default function ResourcesPageClient({ initialResources }: ResourcesPageC
                         We couldn't find any resources matching your current criteria. Try clearing your filters.
                     </p>
                     <button
-                        onClick={() => setSelectedCategory(null)}
+                        onClick={filter.clear}
                         className="mt-8 px-6 py-2 bg-primary text-primary-foreground rounded-full font-medium hover:opacity-90 transition-opacity"
                     >
                         Clear All Filters

@@ -1,4 +1,5 @@
 import { slugify } from './utils';
+import { DEFAULT_TAG_KEY, flattenTags, normalizeTags, type Tags } from './tags';
 import projectsData from '@/data/projects.json';
 
 /**
@@ -13,6 +14,9 @@ export interface Project {
     name: string;
     description: string;
     url: string;
+    /** Keyed tags, e.g. `{ Tech: [...] }`. */
+    tags: Tags;
+    /** Every tag value across all keys, flat — what search and the MCP feed index. */
     tech: string[];
     date: string;
     published: boolean;
@@ -27,7 +31,11 @@ interface StoredProject extends Project {
     content?: string;
 }
 
-const ALL = projectsData as StoredProject[];
+// Records may still carry the pre-keys flat `tech` array; fold it into the default key.
+const ALL: StoredProject[] = (projectsData as unknown as Array<Record<string, unknown>>).map((raw) => {
+    const tags = normalizeTags(raw.tags, raw.tech, DEFAULT_TAG_KEY.projects);
+    return { ...raw, tags, tech: flattenTags(tags) } as unknown as StoredProject;
+});
 
 /** Unique details-page slugs for every published project. */
 export async function getProjectSlugs(): Promise<string[]> {

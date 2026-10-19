@@ -4,10 +4,12 @@
     "name": "Library",
     "description": "Scan an ISBN with your phone and the title, author, and cover fill in on their own. Share the catalog with your household, lend to friends, and always know where a book went. It installs like a native app on iPhone and works on any computer.",
     "url": "https://library.mncoleman.com/",
-    "tech": [
-      "Web App"
-    ],
     "date": "2026-09-01",
+    "tags": {
+      "Tech": [
+        "Web App"
+      ]
+    },
     "published": true,
     "content": ""
   },
@@ -16,10 +18,12 @@
     "name": "Chords",
     "description": "Music Chord Lookup",
     "url": "https://github.com/mncoleman/chords",
-    "tech": [
-      "Web App"
-    ],
     "date": "",
+    "tags": {
+      "Tech": [
+        "Web App"
+      ]
+    },
     "published": true,
     "content": ""
   },
@@ -28,10 +32,12 @@
     "name": "Globe",
     "description": "Fun tool that surfaces a bunch of data that a browser can pull.",
     "url": "https://globe.mncoleman.com",
-    "tech": [
-      "Website"
-    ],
     "date": "",
+    "tags": {
+      "Tech": [
+        "Website"
+      ]
+    },
     "published": true,
     "content": "![0992C797-AFD1-4022-9566-D6364A9F6578.jpeg](/collections/globe-1.jpeg)"
   },
@@ -40,10 +46,12 @@
     "name": "Tag",
     "description": "A game of tag",
     "url": "https://tag.mncoleman.com",
-    "tech": [
-      "Web App"
-    ],
     "date": "",
+    "tags": {
+      "Tech": [
+        "Web App"
+      ]
+    },
     "published": true,
     "content": "![Screenshot_2026-06-10_at_12.59.01_PM.png](/collections/tag-1.png)"
   },
@@ -52,10 +60,12 @@
     "name": "HTML Editor",
     "description": "Interactive HTML renderer and editor",
     "url": "https://html.mncoleman.com/",
-    "tech": [
-      "Website"
-    ],
     "date": "",
+    "tags": {
+      "Tech": [
+        "Website"
+      ]
+    },
     "published": true,
     "content": ""
   },
@@ -64,10 +74,12 @@
     "name": "Interactive ToDo List (and Flappy Bird)",
     "description": "Motion controlled todo list and flappy bird (device camera required)",
     "url": "https://mncoleman.github.io/interactive-todo-list/",
-    "tech": [
-      "Website"
-    ],
     "date": "",
+    "tags": {
+      "Tech": [
+        "Website"
+      ]
+    },
     "published": true,
     "content": ""
   },
@@ -76,10 +88,12 @@
     "name": "Bible Tracker",
     "description": "Bible reading tracker derived from MyBibleLog",
     "url": "https://github.com/mncoleman/bible-database",
-    "tech": [
-      "Web App"
-    ],
     "date": "",
+    "tags": {
+      "Tech": [
+        "Web App"
+      ]
+    },
     "published": true,
     "content": ""
   },
@@ -88,10 +102,12 @@
     "name": "Collaby",
     "description": "Search music artist collaborations.",
     "url": "https://collaby.mncoleman.com/",
-    "tech": [
-      "Website"
-    ],
     "date": "",
+    "tags": {
+      "Tech": [
+        "Website"
+      ]
+    },
     "published": true,
     "content": ""
   },
@@ -100,10 +116,12 @@
     "name": "LevoAir",
     "description": "A website for my drone service company.",
     "url": "https://levoair.com/",
-    "tech": [
-      "Website"
-    ],
     "date": "",
+    "tags": {
+      "Tech": [
+        "Website"
+      ]
+    },
     "published": true,
     "content": ""
   },
@@ -112,10 +130,12 @@
     "name": "Telegram Bot Debugger",
     "description": "A tool for watching Telegram messenger bot API requests.",
     "url": "https://mncoleman.github.io/telegram-bot-debugger/",
-    "tech": [
-      "Web App"
-    ],
     "date": "",
+    "tags": {
+      "Tech": [
+        "Web App"
+      ]
+    },
     "published": true,
     "content": ""
   },
@@ -124,10 +144,12 @@
     "name": "Moments",
     "description": "A Polaroid style image capture.",
     "url": "https://mncoleman.github.io/moments/",
-    "tech": [
-      "Web App"
-    ],
     "date": "",
+    "tags": {
+      "Tech": [
+        "Web App"
+      ]
+    },
     "published": true,
     "content": ""
   }
