@@ -57,19 +57,22 @@ export function NavUnderline({ children, className }: { children: React.ReactNod
             if (!box) return;
             window.clearTimeout(hideTimer);
             stop();
-            top.set(box.y);
+            top.jump(box.y);
             if (reduced) {
-                left.set(box.l);
-                right.set(box.r);
+                left.jump(box.l);
+                right.jump(box.r);
                 opacity.set(1);
                 visible = true;
                 return;
             }
             if (!visible) {
-                // Grow out of a dot at the word's centre.
+                // Grow out of a dot at the word's centre: the exact reverse of the exit.
+                // jump(), not set(): set() records the leap from wherever the bar last was
+                // as velocity, and the springs below inherit it, so the bar shot in from one
+                // side instead of opening out of the dot.
                 const c = (box.l + box.r) / 2;
-                left.set(c - BAR / 2);
-                right.set(c + BAR / 2);
+                left.jump(c - BAR / 2);
+                right.jump(c + BAR / 2);
                 running.push(animate(opacity, 1, { duration: 0.15 }));
                 running.push(animate(left, box.l, SQUISH), animate(right, box.r, SQUISH));
             } else {
