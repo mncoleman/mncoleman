@@ -7,6 +7,9 @@ import { MessageSquareText, PackageOpen, Copy, Check, Share2 } from 'lucide-reac
 import { PageEntrance } from '@/components/page-entrance';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { trackContentAction } from '@/lib/analytics';
+import DepthText from '@/components/ui/depth-text';
+
+const BRAND_BLUE = '#3b82f6';
 
 type LibraryKind = 'prompt' | 'skill';
 type FilterValue = 'prompt' | 'all' | 'skill';
@@ -84,7 +87,10 @@ export default function AiPageClient() {
         <PageEntrance>
             <div className="container mx-auto px-4 py-16 max-w-5xl">
                 <div className="mb-10 text-center">
-                    <h1 className="text-4xl font-bold tracking-tight mb-3">AI</h1>
+                    {/* Stacked extrusion that tilts toward the pointer; the face layer carries the text for the h1. */}
+                    <h1 className="mb-3 tracking-tight">
+                        <DepthText text="AI" depthColor={BRAND_BLUE} />
+                    </h1>
                     <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                         Prompts and Agent Skills.
                     </p>

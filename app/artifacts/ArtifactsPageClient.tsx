@@ -9,6 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { authHeaders } from '@/lib/admin-auth';
 import { artifactSlug } from '@/lib/utils';
 import { trackContentAction } from '@/lib/analytics';
+import FoldText from '@/components/ui/fold-text';
 
 interface Artifact {
     id: string;
@@ -177,12 +178,11 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
         <PageEntrance>
             <div className="container mx-auto px-4 py-16 max-w-5xl">
                 <header className="mb-12 text-center text-balance">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60 leading-tight">
-                        Artifacts
-                        <span className="block text-xl md:text-2xl font-medium text-muted-foreground mt-2">
-                            Files, Documents & Uploads
-                        </span>
+                    {/* Same FoldText as About: letters unfold off a crease and refold under the cursor. */}
+                    <h1 className="text-4xl md:text-5xl font-bold mb-2 tracking-tight leading-tight">
+                        <FoldText text="Artifacts" fontSize="inherit" fontWeight={700} hoverRefold />
                     </h1>
+                    <p className="mb-6 text-xl font-medium text-muted-foreground md:text-2xl">Files, Documents &amp; Uploads</p>
                     <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
                         A collection of uploaded files and documents available for viewing and download.
                     </p>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { FallInText } from '@/components/ui/fall-in-text';
+import FoldText from '@/components/ui/fold-text';
 import { TextType } from '@/components/ui/text-type';
 import { BlurText } from '@/components/ui/blur-text';
 import { ProfileCard } from '@/components/ui/profile-card';
@@ -19,7 +19,8 @@ export default function AboutPage() {
     <div className="container mx-auto px-4 py-16 max-w-6xl">
       <header className="mb-12 text-center text-balance">
         <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight leading-tight">
-          <FallInText text="About Me" className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60" />
+          {/* Letters unfold off a paper crease; FoldText keeps an sr-only copy for the h1. */}
+          <FoldText text="About Me" fontSize="inherit" fontWeight={700} hoverRefold />
         </h1>
         <div className="h-1 w-20 bg-primary/20 mx-auto rounded-full" />
       </header>
