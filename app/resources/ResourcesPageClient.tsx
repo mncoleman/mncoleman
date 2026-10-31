@@ -10,6 +10,7 @@ import { BookmarkIcon, type BookmarkIconHandle } from '@/components/ui/bookmark'
 import { slugify } from '@/lib/utils';
 import { flattenTags, type Tags } from '@/lib/tags';
 import { TagFilterBar, useTagFilter } from '@/components/tag-filter';
+import ParticleText from '@/components/ui/particle-text';
 
 interface Resource {
     id: string;
@@ -99,12 +100,23 @@ export default function ResourcesPageClient({ initialResources }: ResourcesPageC
         <PageEntrance>
         <div className="container mx-auto px-4 py-16 max-w-5xl">
             <header className="mb-12 text-center text-balance">
-                <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60 leading-tight">
-                    Resources
-                    <span className="block text-xl md:text-2xl font-medium text-muted-foreground mt-2">
-                        Tools, Websites & Inspiration
-                    </span>
-                </h1>
+                <h1 className="sr-only">Resources: Tools, Websites &amp; Inspiration</h1>
+                {/* Particles gather into the word; pointer pushes them, click bursts. ParticleText keeps its own sr-only copy, so hide it here. */}
+                {/* ParticleText draws its word in the lower part of its box (the rest is room for
+                    the gather/burst), so the box is pulled up to put the letters where the other
+                    pages' headings start. */}
+                <div aria-hidden="true" className="mx-auto flow-root h-[116px] max-w-3xl text-foreground">
+                    <ParticleText
+                        text="Resources"
+                        fontSize="clamp(3.5rem, 11vw, 7.5rem)"
+                        fontWeight={700}
+                        highlightColor="#3b82f6"
+                        intro="rain"
+                        className="min-h-0"
+                        style={{ height: 180, marginTop: -64 }}
+                    />
+                </div>
+                <p aria-hidden="true" className="mb-6 text-xl font-medium text-muted-foreground md:text-2xl">Tools, Websites &amp; Inspiration</p>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                     A curated collection of useful websites, tools, and resources I use frequently or find useful.
                 </p>

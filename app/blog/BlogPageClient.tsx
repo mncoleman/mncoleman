@@ -8,6 +8,10 @@ import { format } from 'date-fns';
 import { PageEntrance } from '@/components/page-entrance';
 import { SquarePenIcon, type SquarePenIconHandle } from '@/components/ui/square-pen';
 import { getSessionToken } from '@/lib/admin-auth';
+import MaskedHeading from '@/components/ui/masked-heading';
+// A captured frame of the home page's Dark Veil at its own hueShift (see CLAUDE.md,
+// "Recapture assets/og-veil.jpg"). Imported, so the build fingerprints and serves it.
+import veilFrame from '@/assets/og-veil.jpg';
 
 interface BlogPageClientProps {
     initialPosts: Post[];
@@ -107,12 +111,11 @@ export default function BlogPageClient({ initialPosts, allTags, databaseId }: Bl
         <PageEntrance>
         <div className="container mx-auto px-4 py-16 max-w-5xl">
             <header className="mb-12 text-center text-balance">
-                <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60 leading-tight">
-                    Blog
-                    <span className="block text-xl md:text-2xl font-medium text-muted-foreground mt-2">
-                        Thoughts on technology, life, and sometimes just random things.
-                    </span>
-                </h1>
+                {/* The home page's Dark Veil drifting through the letters. */}
+                <MaskedHeading tag="h1" text="Blog" src={veilFrame.src} textScale={0.15} brightness={2.2} saturation={1.3} className="mx-auto max-w-2xl" />
+                <p className="mt-3 mb-6 text-xl font-medium text-muted-foreground md:text-2xl">
+                    Thoughts on technology, life, and sometimes just random things.
+                </p>
                 {isAdmin && notionDatabaseUrl && (
                     <div className="mt-6 flex justify-center">
                         <a
