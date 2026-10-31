@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { Calendar, Filter, X, ArrowRight, Plus } from 'lucide-react';
 import { Post } from '@/lib/blog';
@@ -12,12 +12,23 @@ import MaskedHeading from '@/components/ui/masked-heading';
 // A captured frame of the home page's Dark Veil at its own hueShift (see CLAUDE.md,
 // "Recapture assets/og-veil.jpg"). Imported, so the build fingerprints and serves it.
 import veilFrame from '@/assets/og-veil.jpg';
+import { CollapsibleRow } from '@/components/collapsible-row';
 
 interface BlogPageClientProps {
     initialPosts: Post[];
     allTags: string[];
     databaseId: string;
 }
+
+// MaskedHeading sizes its letters as a fraction of its own width, so on a phone the
+// same 0.15 gives ~51px against ~60px for every other page's heading. A larger
+// fraction below md evens that out; md and up keep 0.15 (desktop is unchanged).
+const NARROW_QUERY = '(max-width: 767px)';
+const subscribeNarrow = (cb: () => void) => {
+    const mq = window.matchMedia(NARROW_QUERY);
+    mq.addEventListener('change', cb);
+    return () => mq.removeEventListener('change', cb);
+};
 
 function PostCard({
     post,
@@ -91,6 +102,7 @@ function PostCard({
 }
 
 export default function BlogPageClient({ initialPosts, allTags, databaseId }: BlogPageClientProps) {
+    const narrow = useSyncExternalStore(subscribeNarrow, () => window.matchMedia(NARROW_QUERY).matches, () => false);
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
 
@@ -112,7 +124,10 @@ export default function BlogPageClient({ initialPosts, allTags, databaseId }: Bl
         <div className="container mx-auto px-4 py-16 max-w-5xl">
             <header className="mb-12 text-center text-balance">
                 {/* The home page's Dark Veil drifting through the letters. */}
-                <MaskedHeading tag="h1" text="Blog" src={veilFrame.src} textScale={0.15} brightness={2.2} saturation={1.3} className="mx-auto max-w-2xl" />
+                {/* overflow-x-clip: the veil image is drawn 1.25x the heading's width, and on a
+                    phone that overhang pushed the page 37px wider than the viewport. It only
+                    shows through the letters, so clipping it hides nothing. */}
+                <MaskedHeading tag="h1" text="Blog" src={veilFrame.src} textScale={narrow ? 0.175 : 0.15} brightness={2.2} saturation={1.3} className="mx-auto max-w-2xl overflow-x-clip" />
                 <p className="mt-3 mb-6 text-xl font-medium text-muted-foreground md:text-2xl">
                     Thoughts on technology, life, and sometimes just random things.
                 </p>
@@ -133,14 +148,19 @@ export default function BlogPageClient({ initialPosts, allTags, databaseId }: Bl
 
             {/* Tag Filter */}
             {allTags.length > 0 && (
-                <div className="mb-12 flex flex-wrap items-center justify-center gap-2">
-                    <div className="flex items-center gap-2 mr-2 text-muted-foreground text-sm font-medium">
-                        <Filter className="h-4 w-4" />
-                        <span>Filter:</span>
-                    </div>
+                // Same one-line, fade-and-chevron row as the Projects/Resources filters.
+                <div className="mb-12 flex justify-center">
+                <CollapsibleRow
+                    label={
+                        <>
+                            <Filter className="h-4 w-4" />
+                            <span>Filter:</span>
+                        </>
+                    }
+                >
                     <button
                         onClick={() => setSelectedTag(null)}
-                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedTag === null
+                        className={`shrink-0 whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedTag === null
                             ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
                             : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
                             }`}
@@ -151,7 +171,7 @@ export default function BlogPageClient({ initialPosts, allTags, databaseId }: Bl
                         <button
                             key={tag}
                             onClick={() => setSelectedTag(tag)}
-                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedTag === tag
+                            className={`shrink-0 whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedTag === tag
                                 ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
                                 : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
                                 }`}
@@ -162,12 +182,13 @@ export default function BlogPageClient({ initialPosts, allTags, databaseId }: Bl
                     {selectedTag && (
                         <button
                             onClick={() => setSelectedTag(null)}
-                            className="p-1.5 rounded-full bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all ml-2"
+                            className="shrink-0 p-1.5 rounded-full bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all ml-2"
                             title="Clear filter"
                         >
                             <X className="h-4 w-4" />
                         </button>
                     )}
+                </CollapsibleRow>
                 </div>
             )}
 

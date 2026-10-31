@@ -178,11 +178,11 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
         <PageEntrance>
             <div className="container mx-auto px-4 py-16 max-w-5xl">
                 <header className="mb-12 text-center text-balance">
-                    {/* Same FoldText as About: letters unfold off a crease and refold under the cursor. */}
-                    <h1 className="text-4xl md:text-5xl font-bold mb-2 tracking-tight leading-tight">
+                    {/* Same FoldText as About: letters unfold off a crease and refold under the cursor.
+                        6.75rem on desktop puts the cap height level with the Projects and Blog headings. */}
+                    <h1 className="text-6xl md:text-7xl lg:text-[6.75rem] font-bold mb-4 tracking-tight leading-tight">
                         <FoldText text="Artifacts" fontSize="inherit" fontWeight={700} hoverRefold />
                     </h1>
-                    <p className="mb-6 text-xl font-medium text-muted-foreground md:text-2xl">Files, Documents &amp; Uploads</p>
                     <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
                         A collection of uploaded files and documents available for viewing and download.
                     </p>

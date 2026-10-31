@@ -2,12 +2,13 @@
 
 import { useSyncExternalStore } from 'react';
 import { isMuted, setMuted, subscribeMuted } from '@/lib/click-sound';
+import { cn } from '@/lib/utils';
 
 function SpeakerIcon({ muted }: { muted: boolean }) {
     return (
         <svg
-            width="16"
-            height="16"
+            width="18"
+            height="18"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -33,12 +34,13 @@ function SpeakerIcon({ muted }: { muted: boolean }) {
 }
 
 /**
- * Turns the click sound off.
+ * Turns the click sound off. A square at the right end of the floating corner cluster,
+ * matching the cursor toggle beside it.
  *
- * It lives in the footer rather than in the floating corner cluster because that
- * cluster is `hidden md:` throughout — the custom cursor, the scroll controls and
- * the eraser all control things that only exist on a desktop pointer. The sound
- * plays on a phone too, so the switch has to be reachable on one.
+ * Unlike the rest of that cluster it is NOT `hidden md:`: the cursor, scroll and eraser
+ * controls only mean anything with a desktop pointer, but the sound plays on a phone
+ * too, so this one stays reachable at every size. It takes the right-most slot for the
+ * same reason, so on a phone it sits alone in the corner rather than in a gap.
  *
  * `useSyncExternalStore` reads the module-level flag that every click already
  * consults, so there is one source of truth and no state to keep in step. The
@@ -46,7 +48,7 @@ function SpeakerIcon({ muted }: { muted: boolean }) {
  * only visitors who see a flicker are the ones who have turned it off, and for
  * them a wrong first paint would be the sound icon rather than a wrong sound.
  */
-export function SoundToggle({ className }: { className?: string }) {
+export function SoundToggle() {
     const muted = useSyncExternalStore(subscribeMuted, isMuted, () => false);
     const label = muted ? 'Turn click sounds on' : 'Turn click sounds off';
 
@@ -54,13 +56,21 @@ export function SoundToggle({ className }: { className?: string }) {
         <button
             type="button"
             onClick={() => setMuted(!muted)}
-            aria-pressed={!muted}
+            aria-pressed={muted}
+            aria-label={label}
             title={label}
-            className={className}
             data-print-hide
+            className={cn(
+                'fixed bottom-5 right-5 z-40 inline-flex h-10 w-10 items-center justify-center',
+                'rounded-lg border backdrop-blur-xl transition-colors pwa-safe-bottom',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                muted
+                    ? // Off is the deliberate state, shown pressed like the cursor toggle.
+                      'border-foreground/30 bg-foreground/10 text-foreground'
+                    : 'border-border/40 bg-background/40 text-muted-foreground hover:border-border hover:text-foreground'
+            )}
         >
             <SpeakerIcon muted={muted} />
-            {muted ? 'Sound off' : 'Sound on'}
         </button>
     );
 }

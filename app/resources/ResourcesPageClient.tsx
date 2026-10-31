@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { Filter } from 'lucide-react';
 import { CardActions } from '@/components/ui/card-actions';
@@ -24,6 +24,17 @@ interface Resource {
 interface ResourcesPageClientProps {
     initialResources: Resource[];
 }
+
+// Below md the word is ~56px tall, and the default 2px particles on a 4px grid smear
+// into a blur at that size. ParticleText re-samples when density changes, so the
+// values are picked from a media query rather than CSS. 1.2px on a 3px grid read
+// crispest at dpr 3; a 2px grid turned to noise.
+const NARROW_QUERY = '(max-width: 767px)';
+const subscribeNarrow = (cb: () => void) => {
+    const mq = window.matchMedia(NARROW_QUERY);
+    mq.addEventListener('change', cb);
+    return () => mq.removeEventListener('change', cb);
+};
 
 function ResourceCard({
     resource,
@@ -92,6 +103,7 @@ function ResourceCard({
 }
 
 export default function ResourcesPageClient({ initialResources }: ResourcesPageClientProps) {
+    const narrow = useSyncExternalStore(subscribeNarrow, () => window.matchMedia(NARROW_QUERY).matches, () => false);
     const filter = useTagFilter(initialResources);
     const filteredResources = filter.filtered;
     const { showToast, ToastComponent } = useToast();
@@ -100,24 +112,25 @@ export default function ResourcesPageClient({ initialResources }: ResourcesPageC
         <PageEntrance>
         <div className="container mx-auto px-4 py-16 max-w-5xl">
             <header className="mb-12 text-center text-balance">
-                <h1 className="sr-only">Resources: Tools, Websites &amp; Inspiration</h1>
+                <h1 className="sr-only">Resources</h1>
                 {/* Particles gather into the word; pointer pushes them, click bursts. ParticleText keeps its own sr-only copy, so hide it here. */}
                 {/* ParticleText draws its word in the lower part of its box (the rest is room for
                     the gather/burst), so the box is pulled up to put the letters where the other
                     pages' headings start. */}
-                <div aria-hidden="true" className="mx-auto flow-root h-[116px] max-w-3xl text-foreground">
+                <div aria-hidden="true" className="mx-auto flow-root h-[92px] max-w-3xl text-foreground md:h-[116px]">
                     <ParticleText
                         text="Resources"
                         fontSize="clamp(3.5rem, 11vw, 7.5rem)"
                         fontWeight={700}
+                        particleSize={narrow ? 1.2 : 2}
+                        density={narrow ? 3 : 4}
                         highlightColor="#3b82f6"
                         intro="rain"
                         className="min-h-0"
                         style={{ height: 180, marginTop: -64 }}
                     />
                 </div>
-                <p aria-hidden="true" className="mb-6 text-xl font-medium text-muted-foreground md:text-2xl">Tools, Websites &amp; Inspiration</p>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
                     A curated collection of useful websites, tools, and resources I use frequently or find useful.
                 </p>
             </header>

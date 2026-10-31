@@ -65,7 +65,7 @@ export function FancyCursorToggle() {
             className={cn(
                 // Floats bottom-right, above the page but below the custom cursor itself
                 // (which sits at z-[9999]) so the cursor still draws over the button.
-                'fixed bottom-5 right-5 z-40 hidden md:inline-flex h-10 w-10 items-center justify-center',
+                'fixed bottom-5 right-[4.5rem] z-40 hidden md:inline-flex h-10 w-10 items-center justify-center',
                 'rounded-lg border backdrop-blur-xl transition-colors pwa-safe-bottom',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 fancy

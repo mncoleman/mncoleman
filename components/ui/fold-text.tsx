@@ -2,9 +2,12 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-gsap.registerPlugin(ScrollTrigger);
+// ScrollTrigger is loaded only when a FoldText actually uses trigger="scroll" (see the
+// effect below). Registering it at module scope started its endless rAF loop
+// (ScrollTrigger.enable's Safari workaround re-requests a frame forever) on every page
+// that evaluated this module, 60 wake-ups a second with nothing moving, and no FoldText
+// on the site uses the scroll trigger.
 
 type SplitBy = 'char' | 'word' | 'line';
 type Hinge = 'top' | 'bottom' | 'left' | 'right';
@@ -281,7 +284,8 @@ const FoldText = ({
     };
 
     let timeline: gsap.core.Timeline | null = null;
-    let scrollTrigger: ScrollTrigger | null = null;
+    let scrollTrigger: { kill: () => void } | null = null;
+    let disposed = false;
 
     const play = (loop: boolean) => {
       timeline?.kill();
@@ -304,11 +308,15 @@ const FoldText = ({
       root.addEventListener('mouseenter', handleEnter);
     } else if (trigger === 'scroll') {
       render();
-      scrollTrigger = ScrollTrigger.create({
-        trigger: root,
-        start: 'top 82%',
-        once: true,
-        onEnter: handleEnter
+      void import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => {
+        if (disposed) return;
+        gsap.registerPlugin(ScrollTrigger);
+        scrollTrigger = ScrollTrigger.create({
+          trigger: root,
+          start: 'top 82%',
+          once: true,
+          onEnter: handleEnter
+        });
       });
     } else {
       play(trigger === 'loop');
@@ -395,6 +403,7 @@ const FoldText = ({
     }
 
     return () => {
+      disposed = true;
       root.removeEventListener('mouseenter', handleEnter);
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('scroll', handleScroll, { capture: true });

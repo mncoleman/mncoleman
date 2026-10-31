@@ -55,11 +55,11 @@ export function BlankCanvasToggle() {
             aria-label={label}
             title={label}
             className={cn(
-                // Third slot in the corner cluster: cursor toggle at right-5, scroll
-                // settings at right-[4.5rem], and the eraser (light mode only) at
-                // right-[11.5rem]. This one sits between them so the cluster stays
+                // Fourth slot in the corner cluster: sound at right-5, cursor toggle at
+                // right-[4.5rem], scroll settings at right-[8rem], and the eraser (light
+                // mode only) at right-[15rem]. This one sits between them so the cluster stays
                 // contiguous in dark mode, where there is no eraser.
-                'fixed bottom-5 right-[8rem] z-40 hidden md:inline-flex h-10 w-10',
+                'fixed bottom-5 right-[11.5rem] z-40 hidden md:inline-flex h-10 w-10',
                 'items-center justify-center rounded-lg border backdrop-blur-xl',
                 'transition-colors duration-300 pwa-safe-bottom',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',

@@ -164,12 +164,58 @@ function LenisRoot({ prefs, children }: { prefs: ScrollPrefs; children: ReactNod
         smoothWheel: initial.smoothWheel,
         // Native touch scrolling on mobile: syncing it costs more than it buys.
         syncTouch: false,
+        // Driven on demand by <LenisDriver /> instead of Lenis' own loop, which
+        // requested a frame 60 times a second forever, on every page, even with
+        // nothing scrolling.
+        autoRaf: false,
       }}
     >
+      <LenisDriver />
       <ScrollReset />
       {children}
     </ReactLenis>
   );
+}
+
+/**
+ * Runs Lenis' frame loop only while a smooth scroll is in flight. Every smooth
+ * scroll starts in `scrollTo` (the wheel handler calls it too), so wrapping it is
+ * the one wake-up point; the loop stops once Lenis reports it is no longer
+ * smooth-scrolling, which is exactly when its own `raf` would have had nothing to
+ * advance. Native scrolling (keyboard, scrollbar, touch) never needed the loop.
+ */
+function LenisDriver() {
+  const lenis = useLenis();
+
+  useEffect(() => {
+    if (!lenis) return;
+    let frame = 0;
+    const tick = (time: number) => {
+      lenis.raf(time);
+      frame = lenis.isScrolling === 'smooth' ? requestAnimationFrame(tick) : 0;
+    };
+    const wake = () => {
+      if (frame) return;
+      frame = requestAnimationFrame((time) => {
+        // Lenis steps by the time since its last frame. After a sleep that gap is
+        // seconds long and would land the whole scroll in one jump, so start from
+        // one ordinary frame's worth instead.
+        lenis.time = time - 1000 / 60;
+        tick(time);
+      });
+    };
+    const scrollTo = lenis.scrollTo;
+    lenis.scrollTo = (...args: Parameters<typeof scrollTo>) => {
+      scrollTo.apply(lenis, args);
+      wake();
+    };
+    return () => {
+      cancelAnimationFrame(frame);
+      lenis.scrollTo = scrollTo;
+    };
+  }, [lenis]);
+
+  return null;
 }
 
 /**

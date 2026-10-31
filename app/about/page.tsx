@@ -18,7 +18,7 @@ export default function AboutPage() {
     <PageEntrance>
     <div className="container mx-auto px-4 py-16 max-w-6xl">
       <header className="mb-12 text-center text-balance">
-        <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight leading-tight">
+        <h1 className="text-6xl md:text-7xl lg:text-[6.75rem] font-bold mb-6 tracking-tight leading-tight">
           {/* Letters unfold off a paper crease; FoldText keeps an sr-only copy for the h1. */}
           <FoldText text="About Me" fontSize="inherit" fontWeight={700} hoverRefold />
         </h1>
