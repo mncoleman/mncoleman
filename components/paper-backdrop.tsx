@@ -256,9 +256,9 @@ export function PaperBackdrop() {
                 aria-label="Erase pencil marks"
                 title="Erase pencil marks"
                 className={cn(
-                    // Fourth slot in the corner cluster: cursor toggle at right-5,
-                    // scroll settings at right-[4.5rem], blank canvas at right-[8rem].
-                    'fixed bottom-5 right-[11.5rem] z-40 hidden md:inline-flex h-10 w-10',
+                    // Fifth slot in the corner cluster: sound at right-5, cursor toggle at
+                    // right-[4.5rem], scroll settings at right-[8rem], blank canvas at right-[11.5rem].
+                    'fixed bottom-5 right-[15rem] z-40 hidden md:inline-flex h-10 w-10',
                     'items-center justify-center rounded-lg border backdrop-blur-xl',
                     'border-border/40 bg-background/40 text-muted-foreground',
                     'transition-colors duration-300 pwa-safe-bottom',

@@ -113,13 +113,12 @@ export default function ProjectsPageClient({ projects }: ProjectsPageClientProps
         <PageEntrance>
         <div className="container mx-auto px-4 py-16 max-w-5xl">
             <header className="mb-12 text-center text-balance">
-                <h1 className="sr-only">Things I&apos;ve Made (Probably with AI)</h1>
+                <h1 className="sr-only">Things I&apos;ve Made</h1>
                 {/* Canvas wordmark: letters turn to dashed vector paths under the cursor. Decorative; the h1 above carries the text. */}
                 <div aria-hidden="true" className="mx-auto h-[96px] max-w-3xl text-foreground sm:h-[130px] md:h-[150px]">
                     <TechText text="Things I've Made" fontWeight={700} />
                 </div>
-                <p aria-hidden="true" className="mb-6 text-xl font-medium text-muted-foreground md:text-2xl">(Probably with AI)</p>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                <p className="-mt-2 text-lg text-muted-foreground max-w-2xl mx-auto">
                     A collection of projects, experiments, and various things I've built along my journey. Most of these involve AI in some capacity.
                 </p>
             </header>

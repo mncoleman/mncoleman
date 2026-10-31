@@ -89,7 +89,9 @@ export default function AiPageClient() {
                 <div className="mb-10 text-center">
                     {/* Stacked extrusion that tilts toward the pointer; the face layer carries the text for the h1. */}
                     <h1 className="mb-3 tracking-tight">
-                        <DepthText text="AI" depthColor={BRAND_BLUE} />
+                        {/* 16vw floor lifts it to ~60px on a phone, level with the other headings; at lg+
+                            both this and the old 12vw hit the 7rem cap, so desktop is unchanged. */}
+                        <DepthText text="AI" depthColor={BRAND_BLUE} fontSize="clamp(3.75rem, 16vw, 7rem)" />
                     </h1>
                     <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                         Prompts and Agent Skills.

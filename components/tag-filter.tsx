@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Filter, X } from 'lucide-react';
 import { tagKeys, tagValues, type Tags } from '@/lib/tags';
+import { CollapsibleRow } from '@/components/collapsible-row';
 
 /**
  * Filter state + bar shared by /projects and /resources. One row of pills per tag
@@ -36,7 +37,7 @@ export function useTagFilter<T extends { tags: Tags }>(items: T[]) {
 }
 
 const pill = (on: boolean) =>
-    `px-4 py-1.5 rounded-full text-sm font-medium transition-all ${on
+    `shrink-0 whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-all ${on
         ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
         : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'}`;
 
@@ -47,11 +48,15 @@ export function TagFilterBar({ filter }: { filter: ReturnType<typeof useTagFilte
     return (
         <div className="mb-12 flex flex-col items-center gap-3">
             {keys.map((key, i) => (
-                <div key={key} className="flex flex-wrap items-center justify-center gap-2">
-                    <div className="flex items-center gap-2 mr-2 text-muted-foreground text-sm font-medium">
-                        {i === 0 && <Filter className="h-4 w-4" />}
-                        <span>{labelled ? `${key}:` : 'Filter:'}</span>
-                    </div>
+                <CollapsibleRow
+                    key={key}
+                    label={
+                        <>
+                            {i === 0 && <Filter className="h-4 w-4" />}
+                            <span>{labelled ? `${key}:` : 'Filter:'}</span>
+                        </>
+                    }
+                >
                     <button onClick={() => pick(key, null)} className={pill(!selected[key])}>
                         All
                     </button>
@@ -63,13 +68,13 @@ export function TagFilterBar({ filter }: { filter: ReturnType<typeof useTagFilte
                     {i === 0 && active && (
                         <button
                             onClick={clear}
-                            className="p-1.5 rounded-full bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all ml-2"
+                            className="shrink-0 p-1.5 rounded-full bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all ml-2"
                             title="Clear filter"
                         >
                             <X className="h-4 w-4" />
                         </button>
                     )}
-                </div>
+                </CollapsibleRow>
             ))}
         </div>
     );

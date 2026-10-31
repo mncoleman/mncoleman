@@ -17,13 +17,14 @@ import { NavLogo } from '@/components/nav-logo';
 import { TransitionProvider } from '@/components/transition-provider';
 import { SmoothScroll } from '@/components/smooth-scroll';
 import { ScrollSettings } from '@/components/scroll-settings';
-import { FooterButtons } from '@/components/footer-buttons';
-import { FooterMcp } from '@/components/footer-mcp';
+import { FooterFolder } from '@/components/footer-folder';
+import { SoundToggle } from '@/components/sound-toggle';
 import { Analytics } from '@/components/analytics';
 import { FancyCursorToggle } from '@/components/fancy-cursor-toggle';
 import { SelectionInk } from '@/components/selection-ink';
 import { ClickSound } from '@/components/click-sound';
-import { SiteVersion } from '@/components/site-version';
+import { FooterLinks } from '@/components/footer-links';
+import { buildInfo } from '@/lib/build-info';
 import { PullChainToggle } from '@/components/pull-chain-toggle';
 import { CursorPreferenceProvider, cursorPreferenceScript } from '@/components/cursor-preference';
 import searchIndex from '@/data/search-index.json';
@@ -196,24 +197,30 @@ export default async function RootLayout({
                   through the text. */}
               <footer className="border-t relative z-10 pwa-safe-bottom bg-background/70 backdrop-blur-xl">
 
-                <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground max-w-4xl space-y-3">
-                  <div>
-                    © 2003-{new Date().getFullYear()} Matthew Coleman. All rights reserved.
+                {/* pb-20 below lg keeps the bottom line clear of the corner sound button, which
+                    (unlike the rest of the corner cluster) also shows on phones and tablets. */}
+                {/* max-w-7xl px-4 is the header's own container, so on desktop the links' left edge
+                    lines up with the logo's; below lg the container is narrower than either cap. */}
+                <div className="container mx-auto flex max-w-7xl flex-col items-center gap-6 px-4 pt-8 pb-20 text-center text-muted-foreground lg:pb-5">
+                  {/* Left: the small links as a LineSidebar. Centre: the "Other" folder. The
+                      right column is an empty mirror so the folder stays centred. */}
+                  <div className="grid w-full grid-cols-1 items-center gap-6 md:grid-cols-[1fr_auto_1fr]">
+                    <div className="order-2 justify-self-center md:order-1 md:justify-self-start">
+                      <FooterLinks />
+                    </div>
+                    <div className="order-1 md:order-2">
+                      <FooterFolder />
+                    </div>
+                    <div className="hidden md:block md:order-3" aria-hidden="true" />
                   </div>
-                  <FooterButtons />
-                  <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/70">
-                    <Link href="/privacy" className="hover:text-foreground underline-offset-4 hover:underline transition-colors">
-                      Privacy Policy
-                    </Link>
-                    <span aria-hidden="true">·</span>
-                    <Link href="/terms" className="hover:text-foreground underline-offset-4 hover:underline transition-colors">
-                      Terms of Service
-                    </Link>
-                    <span aria-hidden="true">·</span>
-                    <FooterMcp />
+                  {/* Copyright and the deployed version, quiet, at the very bottom. */}
+                  <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground/70">
+                    <span>© 2003-{new Date().getFullYear()} Matthew Coleman. All rights reserved.</span>
+                    {/* The dot only reads as a separator on one line; on a phone the version wraps
+                        below and a dot left dangling at the end of the copyright looks like a typo. */}
+                    <span aria-hidden="true" className="hidden sm:inline">·</span>
+                    <span className="font-mono" title={`Built ${new Date(buildInfo.builtAt).toISOString()}`}>v{buildInfo.version}</span>
                   </div>
-                  {/* Deployed version, commit and start date — quiet on purpose. */}
-                  <SiteVersion />
                 </div>
               </footer>
             </div>
@@ -228,6 +235,8 @@ export default async function RootLayout({
                 and under the z-40 corner controls; autoHide fades it out as the page reaches
                 its end so the footer reads clean. */}
             <GradualBlur target="page" position="bottom" height="6rem" strength={2} layers={8} curve="bezier" autoHide zIndex={30} className="print:hidden" />
+            {/* Right-most slot of the corner cluster, and the only one also shown on phones. */}
+            <SoundToggle />
             <FancyCursorToggle />
             {/* Lenis controls, parked immediately left of the cursor toggle. */}
             <ScrollSettings />
