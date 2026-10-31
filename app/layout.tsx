@@ -9,6 +9,7 @@ import { MobileNav } from '@/components/mobile-nav';
 import { HamburgerButton } from '@/components/hamburger-button';
 import CustomCursor from '@/components/ui/CustomCursor';
 import GradualBlur from '@/components/ui/gradual-blur';
+import { NavUnderline } from '@/components/nav-underline';
 import { ThemeWrapper } from '@/components/theme-wrapper';
 import { KeyBindings } from '@/components/key-bindings';
 import { Search, SearchItem } from '@/components/search';
@@ -147,29 +148,30 @@ export default async function RootLayout({
 
                   {/* Desktop Navigation - Hidden on mobile */}
                   <div className="flex items-center gap-2">
-                    <nav className="hidden md:flex gap-6 items-center">
+                    {/* One shared underline glides between the words; see components/nav-underline.tsx. */}
+                    <NavUnderline className="hidden md:flex gap-6 items-center">
                       <Link href="/blog" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
-                        Blog <Kbd>B</Kbd>
+                        <span data-nav-word>Blog</span> <Kbd>B</Kbd>
                       </Link>
                       <Link href="/projects" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
-                        Projects <Kbd>P</Kbd>
+                        <span data-nav-word>Projects</span> <Kbd>P</Kbd>
                       </Link>
                       <Link href="/resources" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
-                        Resources <Kbd>R</Kbd>
+                        <span data-nav-word>Resources</span> <Kbd>R</Kbd>
                       </Link>
                       <Link href="/artifacts" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
-                        Artifacts <Kbd>T</Kbd>
+                        <span data-nav-word>Artifacts</span> <Kbd>T</Kbd>
                       </Link>
                       <Link href="/ai" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
-                        AI <Kbd>I</Kbd>
+                        <span data-nav-word>AI</span> <Kbd>I</Kbd>
                       </Link>
                       <Link href="/resume" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
-                        Resume <Kbd>M</Kbd>
+                        <span data-nav-word>Resume</span> <Kbd>M</Kbd>
                       </Link>
                       <Link href="/about" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
-                        About <Kbd>A</Kbd>
+                        <span data-nav-word>About</span> <Kbd>A</Kbd>
                       </Link>
-                    </nav>
+                    </NavUnderline>
                   </div>
 
                   {/* Controls, mirroring the logo column so the nav stays centred */}
