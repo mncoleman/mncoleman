@@ -32,7 +32,7 @@ const SIDEBAR_KEY = 'admin-sidebar-collapsed';
 
 /** Sections whose page owns the whole content area (list + editor) instead of a scrolling column. */
 function isFullBleed(pathname: string) {
-    return /^\/admin\/(projects|resources)\/?$/.test(pathname);
+    return /^\/admin\/(projects|resources|artifacts)\/?$/.test(pathname);
 }
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -307,7 +307,7 @@ export function DeployPill() {
                 {inFlight && p ? (
                     <>
                         <div className="flex items-baseline justify-between">
-                            <span className="font-medium">{run.kind === 'rebuild' ? 'Rebuilding from Notion' : 'Publishing your changes'}</span>
+                            <span className="font-medium">{run.kind === 'rebuild' ? 'Rebuilding from Notion' : run.kind === 'static' ? 'Publishing a static artifact' : 'Publishing your changes'}</span>
                             <span className="text-xs tabular-nums text-muted-foreground">{run.state === 'slow' ? clock(Math.round(p.elapsed)) : `~${clock(p.left)} left`}</span>
                         </div>
                         <ol className="mt-3 space-y-2.5">
