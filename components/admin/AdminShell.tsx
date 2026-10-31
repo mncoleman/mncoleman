@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-    AlertTriangle, BookMarked, Check, ChevronDown, ChevronsLeft, ChevronsRight, Circle, ExternalLink, FolderKanban,
+    AlertTriangle, ArrowLeft, BookMarked, Check, ChevronDown, ChevronsLeft, ChevronsRight, Circle, ExternalLink, FolderKanban,
     Loader2, LogOut, Menu, Plus, RefreshCw, Rocket, Search, Undo2, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -77,12 +77,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     }, [editsContent, publish]);
 
     return (
-        <div className="fixed inset-0 z-[45] flex bg-background text-foreground">
+        // The site header that normally pads for the notch is hidden in the admin, so the
+        // shell pads itself: without this the menu button sat under an iPhone's status bar.
+        <div className="fixed inset-0 z-[45] flex bg-background pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)] text-foreground">
             <div className="hidden md:flex">
                 <Sidebar user={user} collapsed={collapsed} onToggle={toggleCollapsed} />
             </div>
             {drawer && (
-                <div className="fixed inset-0 z-[46] flex md:hidden">
+                <div className="fixed inset-0 z-[46] flex pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] md:hidden">
                     <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setDrawer(false)} />
                     <div className="relative flex shadow-2xl">
                         <Sidebar user={user} collapsed={false} onToggle={() => setDrawer(false)} closeIcon />
@@ -200,6 +202,20 @@ function Sidebar({ user, collapsed, onToggle, closeIcon }: { user: AdminUser; co
                     );
                 })}
             </nav>
+            {/* The admin hides the site's own header, so this is the way back out. */}
+            <div className="border-t border-border/60 p-2">
+                <Link
+                    href="/"
+                    title={collapsed ? 'Back to site' : undefined}
+                    className={cn(
+                        'flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+                        collapsed && 'justify-center'
+                    )}
+                >
+                    <ArrowLeft size={16} />
+                    {!collapsed && <span>Back to site</span>}
+                </Link>
+            </div>
             <div className={cn('flex items-center gap-2 border-t border-border/60 p-3', collapsed && 'justify-center')}>
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium" title={collapsed ? user.name : undefined}>{initials}</span>
                 {!collapsed && (
