@@ -13,6 +13,10 @@ import { canUse, canManageSecrets, type AdminUser } from '@/components/admin/adm
 import { useDeploy } from '@/components/admin/deploy-status';
 import { authHeaders } from '@/lib/admin-auth';
 import { artifactSlug, cn } from '@/lib/utils';
+import { deleteDraft, getDraft, saveDraft } from '@/lib/artifact-drafts';
+
+// Public repo the Worker commits static artifacts to; read for previews before a build lands.
+const GITHUB_REPO = 'mncoleman/mncoleman';
 
 /**
  * Artifacts in the admin's list + side-pane pattern (see CollectionManager).
@@ -516,7 +520,7 @@ function FileFrame({ src, type, title, sameOrigin }: { src: string; type: string
     );
 }
 
-function BrowserBar({ url, badge }: { url: string; badge?: string }) {
+function BrowserBar({ url, badge, href }: { url: string; badge?: string; href?: string }) {
     return (
         <div className="flex h-9 shrink-0 items-center gap-3 border-b border-border/60 bg-background px-3 text-xs">
             <span className="hidden gap-1.5 sm:flex" aria-hidden="true">
@@ -526,9 +530,55 @@ function BrowserBar({ url, badge }: { url: string; badge?: string }) {
             </span>
             <span className="min-w-0 flex-1 truncate rounded bg-muted/60 px-2 py-0.5 text-muted-foreground">{url.replace(/^https?:\/\//, '')}</span>
             {badge && <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-700 dark:text-amber-300">{badge}</span>}
-            <a href={url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-muted-foreground hover:text-foreground" title="Open in a new tab" aria-label="Open in a new tab"><ExternalLink size={12} /></a>
+            {/* href differs from the shown url for local copies: the shown text is the file
+                name or live address, but only the blob URL actually opens before the upload or build. */}
+            <a href={href ?? url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-muted-foreground hover:text-foreground" title="Open in a new tab" aria-label="Open in a new tab"><ExternalLink size={12} /></a>
         </div>
     );
+}
+
+/**
+ * A static artifact is a commit, so until the next Pages build lands its address 404s
+ * (new) or still serves the old file (replaced). This finds something to preview in the
+ * meantime: the copy this browser just uploaded (lib/artifact-drafts.ts), as long as it
+ * is newer than the live build; otherwise, when the live address 404s, the committed file
+ * straight from GitHub, which has it the moment the commit lands.
+ */
+function useNotYetLive(a: ArtifactEntry, enabled: boolean, refresh: number) {
+    const [local, setLocal] = useState<{ url: string; from: 'this browser' | 'GitHub' } | null>(null);
+    useEffect(() => {
+        if (!enabled) return;
+        let cancelled = false;
+        let made: string | null = null;
+        const use = (blob: Blob, from: 'this browser' | 'GitHub') => {
+            if (cancelled) return;
+            made = URL.createObjectURL(blob);
+            setLocal({ url: made, from });
+        };
+        (async () => {
+            const draft = await getDraft(a.filename);
+            if (draft) {
+                const built = await fetch('/data/site-content.json', { cache: 'no-store' })
+                    .then((r) => (r.ok ? r.json() : null))
+                    .then((j) => (j ? Date.parse(j.generatedAt) || 0 : 0))
+                    .catch(() => 0);
+                if (draft.savedAt > built) return use(draft.blob, 'this browser');
+                void deleteDraft(a.filename); // the build has it now
+            }
+            const live = await fetch(viewUrl(a), { method: 'HEAD', cache: 'no-store' }).catch(() => null);
+            if (!live || live.ok) return;
+            const raw = await fetch(`https://raw.githubusercontent.com/${GITHUB_REPO}/main/public/artifacts/${encodeURIComponent(a.filename)}`, { cache: 'no-store' }).catch(() => null);
+            if (!raw?.ok) return;
+            // raw.githubusercontent serves text/plain; re-type it so HTML renders.
+            use(new Blob([await raw.arrayBuffer()], { type: a.type || 'application/octet-stream' }), 'GitHub');
+        })();
+        return () => {
+            cancelled = true;
+            if (made) URL.revokeObjectURL(made);
+            setLocal(null);
+        };
+    }, [a, enabled, refresh]);
+    return local;
 }
 
 /* ------------------------------- upload --------------------------------- */
@@ -593,6 +643,7 @@ function UploadPane({ api, taken, onClose, onUploaded }: { api: string; taken: s
             }
             if (!res.ok) throw new Error(await errorText(res, 'Upload failed'));
             const data = await res.json();
+            if (destination !== 'instant') void saveDraft(data.artifact?.filename || file.name, file);
             onUploaded({ ...data.artifact, source: destination === 'instant' ? 'dynamic' : 'static' });
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : 'Upload failed');
@@ -636,7 +687,7 @@ function UploadPane({ api, taken, onClose, onUploaded }: { api: string; taken: s
                     </div>
                     {file && localUrl && (
                         <div className="mx-5 mb-8 flex h-[60vh] min-h-[320px] flex-col overflow-hidden rounded-lg border border-border/60 md:mx-8">
-                            <BrowserBar url={file.name} badge="Not uploaded yet" />
+                            <BrowserBar url={file.name} href={localUrl} badge="Not uploaded yet" />
                             <div className="min-h-0 flex-1">
                                 {/* A blob: URL inherits this origin, so it gets the same opaque sandbox as static HTML. */}
                                 <FileFrame src={localUrl} type={file.type} title="Upload preview" sameOrigin />
@@ -709,6 +760,7 @@ function ArtifactEditor({
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [frameKey, setFrameKey] = useState(0);
     const { copied, copy } = useCopy();
+    const pending = useNotYetLive(a, !dynamic, frameKey);
 
     const dirty = name !== a.name || description !== (a.description || '') || !!file || vis !== (a.visibility || 'public') || !!password;
     const goingPrivate = dynamic && vis === 'private' && a.visibility !== 'private';
@@ -752,6 +804,7 @@ function ArtifactEditor({
                 });
             }
             if (!res.ok) throw new Error(await errorText(res, 'Save failed'));
+            if (!dynamic && file) void saveDraft(a.filename, file);
             const data = await res.json().catch(() => ({}));
             const returned = data && typeof data === 'object' ? (data.artifact ?? data) : {};
             const next: ArtifactEntry = {
@@ -855,9 +908,13 @@ function ArtifactEditor({
                     )}
                     {view === 'preview' && (
                         <div className="flex min-h-0 flex-1 flex-col bg-muted/30">
-                            <BrowserBar url={url} badge={a.visibility === 'private' ? 'Private · password-gated' : undefined} />
+                            <BrowserBar
+                                url={url}
+                                href={pending?.url}
+                                badge={pending ? `Not built yet · copy from ${pending.from}` : a.visibility === 'private' ? 'Private · password-gated' : undefined}
+                            />
                             <div className="min-h-0 flex-1">
-                                <FileFrame key={frameKey} src={fresh(url)} type={a.type} title={a.name} sameOrigin={!dynamic} />
+                                <FileFrame key={`${frameKey}-${pending?.url ?? 'live'}`} src={pending?.url ?? fresh(url)} type={a.type} title={a.name} sameOrigin={!dynamic} />
                             </div>
                         </div>
                     )}
