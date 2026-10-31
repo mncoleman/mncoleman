@@ -29,7 +29,13 @@ const SLOW_AFTER_S = 240;
 const GIVE_UP_AFTER_S = 600;
 const LANDED_NOTICE_MS = 15000;
 
-export type DeployKind = 'publish' | 'rebuild';
+/**
+ * `publish` — a collections commit, confirmed by its sha in sw.js.
+ * `rebuild` — the deploy hook (same commit), confirmed by a newer build time.
+ * `static` — a static-artifact commit made by the Worker, which returns no sha;
+ *            confirmed like a rebuild.
+ */
+export type DeployKind = 'publish' | 'rebuild' | 'static';
 
 export interface DeployRun {
     kind: DeployKind;
