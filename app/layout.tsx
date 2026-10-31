@@ -8,6 +8,7 @@ import Script from 'next/script';
 import { MobileNav } from '@/components/mobile-nav';
 import { HamburgerButton } from '@/components/hamburger-button';
 import CustomCursor from '@/components/ui/CustomCursor';
+import GradualBlur from '@/components/ui/gradual-blur';
 import { ThemeWrapper } from '@/components/theme-wrapper';
 import { KeyBindings } from '@/components/key-bindings';
 import { Search, SearchItem } from '@/components/search';
@@ -221,6 +222,10 @@ export default async function RootLayout({
             <SelectionInk />
             {/* Also renders nothing; one delegated listener that sounds every click. */}
             <ClickSound />
+            {/* Progressive blur along the bottom of the viewport. Fixed, pointer-events-none,
+                and under the z-40 corner controls; autoHide fades it out as the page reaches
+                its end so the footer reads clean. */}
+            <GradualBlur target="page" position="bottom" height="6rem" strength={2} layers={8} curve="bezier" autoHide zIndex={30} className="print:hidden" />
             <FancyCursorToggle />
             {/* Lenis controls, parked immediately left of the cursor toggle. */}
             <ScrollSettings />
