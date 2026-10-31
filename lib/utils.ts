@@ -27,3 +27,12 @@ export function artifactSlug(a: { filename?: string; name?: string }): string {
   const stem = (a.filename || '').replace(/\.[^.]+$/, '');
   return slugify(stem || a.name || 'artifact');
 }
+
+/**
+ * True while the admin's full-window shell is mounted. The site's global shortcuts
+ * (⌘K / `/` search, single-letter page jumps) stand down then, or ⌘K would open two
+ * palettes and the admin's J/K list navigation would jump to /brand-kit.
+ */
+export function inAdminShell(): boolean {
+  return typeof document !== 'undefined' && document.documentElement.classList.contains('admin-shell');
+}

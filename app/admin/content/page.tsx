@@ -1,9 +1,11 @@
 'use client';
 
-import { CollectionManager } from '@/components/admin/CollectionManager';
-import { useAdmin } from '@/components/admin/admin-context';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
+/** Projects and resources were one "Content" tab; they are separate sections now. */
 export default function AdminContentPage() {
-    const { workerUrl } = useAdmin();
-    return <CollectionManager workerUrl={workerUrl} />;
+    const router = useRouter();
+    useEffect(() => router.replace('/admin/projects'), [router]);
+    return null;
 }

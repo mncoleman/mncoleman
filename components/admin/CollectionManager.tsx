@@ -1,76 +1,31 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Check, ChevronDown, Circle, ExternalLink, Link2, Loader2, Plus, RefreshCw, Search, Settings2, Tags as TagsIcon, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { AlertTriangle, Check, ExternalLink, Loader2, Pencil, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { authHeaders } from '@/lib/admin-auth';
 import { cn, slugify } from '@/lib/utils';
-import { PasteInput, PasteTextarea } from '@/components/admin/PasteField';
+import { DEFAULT_TAG_KEY, flattenTags, tagKeys, tagValues } from '@/lib/tags';
+import { PasteInput } from '@/components/admin/PasteField';
 import { TagPicker } from '@/components/admin/TagPicker';
 import { TagManager } from '@/components/admin/TagManager';
-import { DEFAULT_TAG_KEY, flattenTags, normalizeTags, tagKeys, tagValues, type Tags } from '@/lib/tags';
 import { MonthPicker } from '@/components/admin/MonthPicker';
 import { MarkdownEditor } from '@/components/admin/MarkdownEditor';
+import { CollectionDetail } from '@/components/collection-detail';
+import { COLLECTIONS, useContent, type Change, type CollectionName, type Item } from '@/components/admin/content-store';
+import { useDeploy, useNow, deployProgress, clock } from '@/components/admin/deploy-status';
 
 /**
- * Editor for the two JSON-backed collections, `data/resources.json` and
- * `data/projects.json`. Each save writes the whole file back through the Worker
- * as one commit, which the Pages Git integration then builds — so an edit is
- * live a few minutes later, and there is no Notion in the loop.
- *
- * The Worker returns the file's git sha with the items and requires it back on
- * save; a 409 means the file moved underneath us (another admin, or a build
- * committing to main) and the only safe move is to reload.
+ * One JSON-backed collection: a table on the left and the selected record's
+ * editor beside it, so the list never locks while you edit. Edits stage as you
+ * type (see content-store.tsx); Publish in the top bar ships them.
  *
  * Images dropped or pasted into the body are uploaded straight away (their own
  * commit, into public/collections/) and inserted as markdown at the caret.
  */
-
-type CollectionName = 'resources' | 'projects';
-
-interface ResourceItem {
-    id: string;
-    name: string;
-    url: string;
-    tags: Tags;
-    description: string;
-    published: boolean;
-    content?: string;
-}
-
-interface ProjectItem {
-    id: string;
-    name: string;
-    description: string;
-    url: string;
-    tags: Tags;
-    date: string;
-    published: boolean;
-    content?: string;
-}
-
-type Item = ResourceItem | ProjectItem;
-const COLLECTIONS: Record<CollectionName, { label: string; singular: string; path: string }> = {
-    resources: { label: 'Resources', singular: 'resource', path: '/resources' },
-    projects: { label: 'Projects', singular: 'project', path: '/projects' },
-};
-
-function emptyItem(name: CollectionName): Item {
-    if (name === 'resources') {
-        return { id: '', name: '', url: '', tags: {}, description: '', published: false, content: '' };
-    }
-    return { id: '', name: '', description: '', url: '', tags: {}, date: '', published: false, content: '' };
-}
-
-/** Folds a pre-keys flat `tech` / `categories` array into `tags`, and drops it. */
-function normalizeItem(name: CollectionName, raw: Record<string, unknown>): Item {
-    const legacyField = name === 'projects' ? 'tech' : 'categories';
-    const { [legacyField]: legacy, ...rest } = raw;
-    return { ...rest, tags: normalizeTags(raw.tags, legacy, DEFAULT_TAG_KEY[name]) } as unknown as Item;
-}
 
 function readAsBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -81,58 +36,64 @@ function readAsBase64(file: File): Promise<string> {
     });
 }
 
-function ItemForm({
-    collection,
-    initial,
-    existingIds,
-    items,
-    workerUrl,
-    onSave,
-    onCancel,
-}: {
-    collection: CollectionName;
-    initial: Item;
-    existingIds: string[];
-    items: Item[];
-    workerUrl: string;
-    onSave: (item: Item) => void;
-    onCancel: () => void;
-}) {
-    const cfg = COLLECTIONS[collection];
-    const [draft, setDraft] = useState<Item>(initial);
-    const [tags, setTags] = useState<Tags>(initial.tags);
-    const [newKey, setNewKey] = useState('');
-    // Keys the record shows a picker for: every key in use anywhere, plus any just typed.
-    const [extraKeys, setExtraKeys] = useState<string[]>([]);
-    const pickerKeys = useMemo(() => {
-        const all = [...tagKeys(items), ...Object.keys(tags), ...extraKeys];
-        if (all.length === 0) all.push(DEFAULT_TAG_KEY[collection]);
-        return [...new Set(all)];
-    }, [items, tags, extraKeys, collection]);
+export function CollectionManager({ name, workerUrl }: { name: CollectionName; workerUrl: string }) {
+    const cfg = COLLECTIONS[name];
+    const content = useContent();
+    const { status, items, error } = content.state[name];
+    const changes = content.changes[name];
+    const selectedKey = content.selected[name];
+    const selected = items.find((i) => i._k === selectedKey) || null;
+    const [query, setQuery] = useState('');
+    const [filter, setFilter] = useState<'all' | 'live' | 'draft'>('all');
+    const [tagFilter, setTagFilter] = useState<string | null>(null);
+    const [showTags, setShowTags] = useState(false);
+    const searchRef = useRef<HTMLInputElement>(null);
+    const changed = useMemo(() => new Map(changes.map((c) => [c.item._k, c.kind])), [changes]);
+    const allTags = useMemo(() => [...new Set(items.flatMap((i) => flattenTags(i.tags)))].sort(), [items]);
 
-    const setKeyValues = (key: string, values: string[]) =>
-        setTags((t) => {
-            const { [key]: _old, ...rest } = t;
-            return values.length ? { ...rest, [key]: values } : rest;
+    const { ensureLoaded } = content;
+    useEffect(() => { ensureLoaded(name); }, [name, ensureLoaded]);
+
+    const visible = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        return items.filter((i) => {
+            if (filter === 'live' && !i.published) return false;
+            if (filter === 'draft' && i.published) return false;
+            if (tagFilter && !flattenTags(i.tags).includes(tagFilter)) return false;
+            if (!q) return true;
+            return [i.name, i.description, i.url, i.content || '', ...flattenTags(i.tags)].join('\n').toLowerCase().includes(q);
         });
+    }, [items, query, filter, tagFilter]);
 
-    const addKey = () => {
-        const k = newKey.trim();
-        if (!k) return;
-        const existing = pickerKeys.find((x) => x.toLowerCase() === k.toLowerCase());
-        if (!existing) setExtraKeys((x) => [...x, k]);
-        setNewKey('');
-    };
+    const select = useCallback((k: string | null) => content.select(name, k), [content, name]);
 
-    const set = (patch: Partial<ResourceItem & ProjectItem>) => setDraft((d) => ({ ...d, ...patch }) as Item);
+    // Keyboard: / search, N new, ↑/↓ or J/K through the visible list, Esc closes the editor.
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+            if (document.querySelector('[role="dialog"]')) return;
+            const t = e.target as HTMLElement | null;
+            const typing = !!t && typeof t.closest === 'function' && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName));
+            if (e.key === 'Escape') {
+                if (typing) t?.blur();
+                else if (selectedKey) select(null);
+                return;
+            }
+            if (typing) return;
+            if (e.key === '/') { e.preventDefault(); searchRef.current?.focus(); }
+            else if (e.key.toLowerCase() === 'n') { e.preventDefault(); content.create(name); }
+            else if (['ArrowDown', 'ArrowUp', 'j', 'k'].includes(e.key) && visible.length) {
+                e.preventDefault();
+                const idx = visible.findIndex((i) => i._k === selectedKey);
+                const step = e.key === 'ArrowDown' || e.key === 'j' ? 1 : -1;
+                const next = visible[idx === -1 ? 0 : Math.max(0, Math.min(visible.length - 1, idx + step))];
+                select(next._k);
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [visible, selectedKey, select, content, name]);
 
-    // The slug is the details-page URL and always follows the name: the site
-    // builds its routes from slugify(name), so renaming a record moves its page.
-    const slug = slugify(draft.name);
-    const duplicate = existingIds.includes(slug);
-    const valid = draft.name.trim().length > 0 && !duplicate;
-
-    // Commits the image to public/collections/ and returns the path to embed.
     const uploadImage = useCallback(async (file: File): Promise<string> => {
         const res = await fetch(`${workerUrl}/api/collections/images`, {
             method: 'POST',
@@ -145,375 +106,438 @@ function ItemForm({
         return json.path as string;
     }, [workerUrl]);
 
-    return (
-        <form
-            className="space-y-4"
-            onSubmit={(e) => {
-                e.preventDefault();
-                if (!valid) return;
-                onSave({ ...draft, id: slug, tags } as Item);
-            }}
-        >
-            <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="name">Name</Label>
-                    <PasteInput id="name" value={draft.name} onChange={(e) => set({ name: e.target.value })} required />
-                    <p className="text-xs text-muted-foreground">
-                        URL: {cfg.path}/{slug || '…'}/
-                        {duplicate && <span className="ml-2 text-red-600">— already used by another {cfg.singular}</span>}
-                    </p>
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="url">Link</Label>
-                    <PasteInput id="url" type="url" value={draft.url} onChange={(e) => set({ url: e.target.value })} placeholder="https://" transform={(t) => t.trim()} />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="description">Short description</Label>
-                    <PasteTextarea id="description" rows={2} value={draft.description} onChange={(e) => set({ description: e.target.value })} />
-                </div>
-                <div className="space-y-4 sm:col-span-2">
-                    {pickerKeys.map((key) => (
-                        <TagPicker
-                            key={key}
-                            label={key}
-                            singular={key.toLowerCase()}
-                            value={tags[key] || []}
-                            options={tagValues(items, key)}
-                            onChange={(v) => setKeyValues(key, v)}
-                        />
-                    ))}
-                    <div className="flex items-center gap-2">
-                        <PasteInput
-                            value={newKey}
-                            onChange={(e) => setNewKey(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addKey(); } }}
-                            placeholder="New kind of tag (e.g. Type, Status)"
-                            className="h-8 max-w-xs text-sm"
-                            aria-label="New tag kind"
-                        />
-                        <Button type="button" size="sm" variant="outline" onClick={addKey} disabled={!newKey.trim()} className="gap-1">
-                            <Plus size={14} /> Add kind
-                        </Button>
-                    </div>
-                </div>
-                {collection === 'projects' && (
-                    <div className="space-y-2 sm:col-span-2">
-                        <Label htmlFor="date">Date</Label>
-                        <MonthPicker value={(draft as ProjectItem).date || ''} onChange={(date) => set({ date })} />
-                    </div>
+    if (status !== 'ready' && items.length === 0) {
+        return (
+            <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-sm text-muted-foreground">
+                {status === 'error' ? (
+                    <>
+                        <p className="text-red-600">{error}</p>
+                        <Button size="sm" variant="outline" onClick={() => content.reload(name)} className="gap-1.5"><RefreshCw size={13} /> Try again</Button>
+                    </>
+                ) : (
+                    <Loader2 className="h-6 w-6 animate-spin" />
                 )}
-                <div className="space-y-2 sm:col-span-2">
-                    <Label>Details page body (optional)</Label>
-                    <MarkdownEditor
-                        value={draft.content || ''}
-                        onChange={(content) => set({ content })}
+            </div>
+        );
+    }
+
+    const narrow = !!selected;
+
+    return (
+        <div className="flex h-full">
+            {/* List. Beside an open record it narrows to name + status; on a phone it gives way to the editor. */}
+            <div className={cn('flex h-full min-w-0 flex-col border-r border-border/60 transition-[width] duration-200', narrow ? 'hidden w-[360px] shrink-0 md:flex xl:w-[400px]' : 'w-full')}>
+                <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3 md:px-6">
+                    {!narrow && <h1 className="mr-2 hidden text-lg font-semibold tracking-tight sm:block">{cfg.label}</h1>}
+                    <div className="relative min-w-0 flex-1">
+                        <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                            ref={searchRef}
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder={`Search ${cfg.label.toLowerCase()}…`}
+                            aria-label={`Search ${cfg.label.toLowerCase()}`}
+                            className="h-8 w-full rounded-md border border-border/60 bg-transparent pl-8 pr-8 text-sm outline-none placeholder:text-muted-foreground focus:border-foreground/40"
+                        />
+                        <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-border/60 px-1 font-mono text-[10px] text-muted-foreground sm:block">/</kbd>
+                    </div>
+                    <Segmented value={filter} onChange={setFilter} options={[['all', 'All'], ['live', 'Live'], ['draft', 'Drafts']]} />
+                    {!narrow && (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button type="button" className={cn('hidden h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-xs md:flex', tagFilter ? 'border-foreground/40 text-foreground' : 'border-border/60 text-muted-foreground hover:text-foreground')}>
+                                    {tagFilter || 'Tag'}
+                                    {tagFilter
+                                        ? <X size={12} onClick={(e) => { e.stopPropagation(); setTagFilter(null); }} />
+                                        : <ChevronDown size={12} />}
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent align="start" className="w-56 p-1">
+                                <div className="max-h-72 overflow-y-auto" data-lenis-prevent>
+                                    {allTags.map((t) => (
+                                        <button key={t} type="button" onClick={() => setTagFilter(t)} className="flex w-full items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-muted">
+                                            {t} {tagFilter === t && <Check size={13} />}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="mt-1 border-t border-border/60 pt-1">
+                                    <button type="button" onClick={() => setShowTags(true)} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">
+                                        <TagsIcon size={13} /> Manage tags…
+                                    </button>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    )}
+                    {/* Icon-only beside the editor, so the toolbar never wraps when the pane opens. */}
+                    <Button
+                        size="sm"
+                        onClick={() => content.create(name)}
+                        className={cn('h-8 shrink-0 gap-1.5', narrow && 'w-8 px-0')}
+                        title={`New ${cfg.singular} (N)`}
+                        aria-label={`New ${cfg.singular}`}
+                    >
+                        <Plus size={14} /> {!narrow && <span className="hidden sm:inline">New {cfg.singular}</span>}
+                    </Button>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-y-auto" data-lenis-prevent>
+                    {visible.length === 0 ? (
+                        <div className="flex h-40 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                            {items.length === 0 ? `No ${cfg.label.toLowerCase()} yet.` : 'Nothing matches.'}
+                            {items.length > 0 && (
+                                <button type="button" className="text-foreground underline underline-offset-4" onClick={() => { setQuery(''); setFilter('all'); setTagFilter(null); }}>Clear filters</button>
+                            )}
+                        </div>
+                    ) : (
+                        <RecordTable name={name} items={visible} selectedKey={selectedKey} changed={changed} onSelect={select} narrow={narrow} />
+                    )}
+                </div>
+                <div className="hidden border-t border-border/60 px-4 py-1.5 text-[11px] text-muted-foreground md:block md:px-6">
+                    {visible.length} of {items.length} · <kbd className="font-mono">↑↓</kbd> move · <kbd className="font-mono">N</kbd> new · <kbd className="font-mono">Esc</kbd> close · <kbd className="font-mono">⌘S</kbd> publish
+                </div>
+            </div>
+
+            {selected && (
+                <div className="h-full min-w-0 flex-1">
+                    <RecordEditor
+                        key={selected._k}
+                        name={name}
+                        item={selected}
+                        items={items}
+                        change={changed.get(selected._k)}
+                        onChange={(p) => content.update(name, selected._k, p)}
+                        onClose={() => select(null)}
+                        onRemove={() => content.remove(name, selected._k)}
                         onUpload={uploadImage}
                     />
-                    <p className="text-xs text-muted-foreground">
-                        Stored as Markdown. Each image uploads as its own commit. Hover any field for a Paste button.
-                    </p>
                 </div>
-                <div className="flex items-center gap-3 sm:col-span-2">
-                    <Switch id="published" checked={draft.published} onCheckedChange={(v) => set({ published: v })} />
-                    <Label htmlFor="published">Published</Label>
-                </div>
-            </div>
-            <div className="flex gap-2">
-                <Button type="submit" disabled={!valid} className="gap-2">
-                    <Check size={14} /> Done
-                </Button>
-                <Button type="button" variant="outline" onClick={onCancel} className="gap-2">
-                    <X size={14} /> Cancel
-                </Button>
-            </div>
-        </form>
+            )}
+
+            <Dialog open={showTags} onOpenChange={setShowTags}>
+                <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle>Tags</DialogTitle>
+                        <DialogDescription>Rename or delete a kind or a value across every {cfg.singular}. Add new ones from a record&apos;s details panel. Changes stage like any edit.</DialogDescription>
+                    </DialogHeader>
+                    <div className="max-h-[60vh] overflow-y-auto" data-lenis-prevent>
+                        <TagManager items={items} onChange={(rewrite) => content.rewriteTags(name, rewrite)} />
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </div>
     );
 }
 
-export function CollectionManager({ workerUrl }: { workerUrl: string }) {
-    const [collection, setCollection] = useState<CollectionName>('resources');
-    const [items, setItems] = useState<Item[] | null>(null);
-    const [sha, setSha] = useState<string>('');
-    const [dirty, setDirty] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [editing, setEditing] = useState<number | 'new' | null>(null);
-    const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
-    const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
-    const [query, setQuery] = useState('');
+/* -------------------------------- list ---------------------------------- */
 
-    const cfg = COLLECTIONS[collection];
+function Segmented<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: [T, string][] }) {
+    return (
+        <div className="flex h-8 shrink-0 items-center rounded-md border border-border/60 p-0.5">
+            {options.map(([v, label]) => (
+                <button
+                    key={v}
+                    type="button"
+                    onClick={() => onChange(v)}
+                    aria-pressed={value === v}
+                    className={cn('h-full rounded px-2 text-xs transition-colors', value === v ? 'bg-foreground/[0.08] font-medium text-foreground' : 'text-muted-foreground hover:text-foreground')}
+                >
+                    {label}
+                </button>
+            ))}
+        </div>
+    );
+}
 
-    const load = useCallback(async (name: CollectionName) => {
-        setLoading(true);
-        setMessage(null);
-        setEditing(null);
-        setConfirmDelete(null);
-        try {
-            const res = await fetch(`${workerUrl}/api/collections/${name}`, { headers: authHeaders(), credentials: 'include' });
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
-            setItems((json.items as Record<string, unknown>[]).map((r) => normalizeItem(name, r)));
-            setSha(json.sha);
-            setDirty(false);
-        } catch (e: unknown) {
-            setItems(null);
-            setMessage({ kind: 'error', text: e instanceof Error ? e.message : 'Could not load' });
-        } finally {
-            setLoading(false);
-        }
-    }, [workerUrl]);
+function ChangeMark({ kind }: { kind?: Change['kind'] }) {
+    if (!kind) return null;
+    return <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', kind === 'added' ? 'bg-emerald-500' : 'bg-amber-500')} title={kind === 'added' ? 'New, unpublished' : 'Edited, unpublished'} />;
+}
 
-    useEffect(() => {
-        load(collection);
-    }, [collection, load]);
+function StatusDot({ published }: { published: boolean }) {
+    return (
+        <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap text-xs', published ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground')}>
+            <Circle size={7} className={published ? 'fill-current' : ''} />
+            {published ? 'Live' : 'Draft'}
+        </span>
+    );
+}
 
-    const save = async () => {
-        if (!items) return;
-        setSaving(true);
-        setMessage(null);
-        try {
-            const res = await fetch(`${workerUrl}/api/collections/${collection}`, {
-                method: 'PUT',
-                headers: authHeaders({ 'Content-Type': 'application/json' }),
-                credentials: 'include',
-                body: JSON.stringify({ items, sha, message: `Update ${collection} via admin panel` }),
-            });
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.message || json.error || `Save failed (${res.status})`);
-            setSha(json.sha);
-            setDirty(false);
-            setMessage({ kind: 'ok', text: 'Saved. The site rebuilds from this commit and updates in a few minutes.' });
-        } catch (e: unknown) {
-            setMessage({ kind: 'error', text: e instanceof Error ? e.message : 'Save failed' });
-        } finally {
-            setSaving(false);
-        }
+function RecordTable({
+    name, items, selectedKey, changed, onSelect, narrow,
+}: {
+    name: CollectionName;
+    items: Item[];
+    selectedKey: string | null;
+    changed: Map<string, Change['kind']>;
+    onSelect: (k: string) => void;
+    narrow: boolean;
+}) {
+    return (
+        <table className="w-full table-fixed text-sm">
+            {!narrow && (
+                <thead className="sticky top-0 z-10 bg-background text-left text-xs text-muted-foreground">
+                    <tr className="border-b border-border/60">
+                        <th className="px-4 py-2 font-medium md:px-6">Name</th>
+                        <th className="hidden w-[22%] px-3 py-2 font-medium lg:table-cell">Tags</th>
+                        {name === 'projects' && <th className="hidden w-24 px-3 py-2 font-medium xl:table-cell">Date</th>}
+                        <th className="hidden w-[20%] px-3 py-2 font-medium md:table-cell">Link</th>
+                        <th className="w-24 px-4 py-2 text-right font-medium md:px-6">Status</th>
+                    </tr>
+                </thead>
+            )}
+            <tbody>
+                {items.map((i) => {
+                    const active = i._k === selectedKey;
+                    return (
+                        <tr
+                            key={i._k}
+                            onClick={() => onSelect(i._k)}
+                            className={cn('cursor-pointer border-b border-border/40 transition-colors', active ? 'bg-foreground/[0.06]' : 'hover:bg-muted/40')}
+                        >
+                            <td className="px-4 py-2.5 md:px-6">
+                                <div className="flex items-center gap-2">
+                                    <ChangeMark kind={changed.get(i._k)} />
+                                    <span className={cn('truncate', active && 'font-medium')}>{i.name || <span className="text-muted-foreground">Untitled</span>}</span>
+                                </div>
+                                {i.description && <div className="mt-0.5 truncate text-xs text-muted-foreground">{i.description}</div>}
+                            </td>
+                            {!narrow && (
+                                <td className="hidden px-3 py-2.5 lg:table-cell">
+                                    <div className="flex flex-wrap gap-1">
+                                        {flattenTags(i.tags).slice(0, 3).map((t) => (
+                                            <span key={t} className="whitespace-nowrap rounded border border-border/60 px-1.5 py-0.5 text-[11px] text-muted-foreground">{t}</span>
+                                        ))}
+                                    </div>
+                                </td>
+                            )}
+                            {!narrow && name === 'projects' && <td className="hidden px-3 py-2.5 text-xs tabular-nums text-muted-foreground xl:table-cell">{i.date ? i.date.slice(0, 7) : '—'}</td>}
+                            {!narrow && (
+                                <td className="hidden truncate px-3 py-2.5 text-xs text-muted-foreground md:table-cell">
+                                    {i.url ? i.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : '—'}
+                                </td>
+                            )}
+                            <td className="w-24 px-4 py-2.5 text-right md:px-6"><StatusDot published={i.published} /></td>
+                        </tr>
+                    );
+                })}
+            </tbody>
+        </table>
+    );
+}
+
+/* ------------------------------- editor --------------------------------- */
+
+function RecordEditor({
+    name, item, items, change, onChange, onClose, onRemove, onUpload,
+}: {
+    name: CollectionName;
+    item: Item;
+    items: Item[];
+    change?: Change['kind'];
+    onChange: (p: Partial<Item>) => void;
+    onClose: () => void;
+    onRemove: () => void;
+    onUpload: (file: File) => Promise<string>;
+}) {
+    const cfg = COLLECTIONS[name];
+    const { run } = useDeploy();
+    const riding = !!run && run.keys.includes(item._k);
+    const now = useNow(riding && run?.state !== 'landed');
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [railOpen, setRailOpen] = useState(true);
+    const [view, setView] = useState<'write' | 'preview'>('write');
+    const [newKey, setNewKey] = useState('');
+    const [extraKeys, setExtraKeys] = useState<string[]>([]);
+    const slug = slugify(item.name);
+    const duplicate = !!slug && items.some((i) => i._k !== item._k && i.id === slug);
+    const keys = useMemo(() => {
+        const all = [...tagKeys(items), ...Object.keys(item.tags), ...extraKeys];
+        if (all.length === 0) all.push(DEFAULT_TAG_KEY[name]);
+        return [...new Set(all)];
+    }, [items, item.tags, extraKeys, name]);
+
+    const setKey = (key: string, values: string[]) => {
+        const { [key]: _old, ...rest } = item.tags; // eslint-disable-line @typescript-eslint/no-unused-vars
+        onChange({ tags: values.length ? { ...rest, [key]: values } : rest });
     };
 
-    const existingIds = useMemo(() => (items || []).map((i) => i.id), [items]);
-
-    const [showTags, setShowTags] = useState(false);
-
-    // Rewrites every record's tags (rename / delete from the manager).
-    const rewriteTags = (rewrite: (tags: Tags) => Tags) => {
-        setItems((prev) => (prev || []).map((i) => ({ ...i, tags: rewrite(i.tags) }) as Item));
-        setDirty(true);
+    const addKey = () => {
+        const k = newKey.trim();
+        if (!k) return;
+        if (!keys.some((x) => x.toLowerCase() === k.toLowerCase())) setExtraKeys((x) => [...x, k]);
+        setNewKey('');
     };
 
-    // Search across everything a record says, keeping the original index so edit
-    // and delete still address the right entry in the full list.
-    const visible = useMemo(() => {
-        const all = (items || []).map((item, index) => ({ item, index }));
-        const q = query.trim().toLowerCase();
-        if (!q) return all;
-        return all.filter(({ item }) =>
-            [item.name, item.description, item.url, item.content || '', ...flattenTags(item.tags)]
-                .join('\n')
-                .toLowerCase()
-                .includes(q)
-        );
-    }, [items, query]);
+    let status: React.ReactNode;
+    if (change) {
+        status = <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400"><ChangeMark kind={change} /> {change === 'added' ? 'New · not published yet' : 'Edited · not published yet'}</span>;
+    } else if (riding && (run.state === 'running' || run.state === 'slow')) {
+        status = <span className="flex items-center gap-1.5 text-sky-600 dark:text-sky-400"><Loader2 size={12} className="animate-spin" /> Publishing{run.state === 'running' ? ` · live in ~${clock(deployProgress(run, now).left)}` : '…'}</span>;
+    } else if (riding && run.state === 'landed') {
+        status = <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400"><Check size={12} /> Now live</span>;
+    } else {
+        status = <span className="flex items-center gap-1.5"><Check size={12} /> Matches the live site</span>;
+    }
 
-    const applyEdit = (index: number | 'new', item: Item) => {
-        setItems((prev) => {
-            const next = [...(prev || [])];
-            if (index === 'new') next.unshift(item);
-            else next[index] = item;
-            return next;
-        });
-        setDirty(true);
-        setEditing(null);
-    };
-
-    const remove = (index: number) => {
-        setItems((prev) => (prev || []).filter((_, i) => i !== index));
-        setDirty(true);
-        setConfirmDelete(null);
-    };
+    const rail = (
+        <div className="space-y-6 p-4">
+            <Field label="Status">
+                <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                    <div>
+                        <div className="text-sm">{item.published ? 'Published' : 'Draft'}</div>
+                        <div className="text-[11px] text-muted-foreground">{item.published ? 'Shown on the site' : 'Hidden from the site'}</div>
+                    </div>
+                    <Switch checked={item.published} onCheckedChange={(v) => onChange({ published: v })} aria-label="Published" />
+                </div>
+            </Field>
+            <Field label="Link">
+                <div className="relative">
+                    <Link2 size={13} className="pointer-events-none absolute left-2.5 top-1/2 z-10 -translate-y-1/2 text-muted-foreground" />
+                    <PasteInput type="url" value={item.url} onChange={(e) => onChange({ url: e.target.value })} placeholder="https://" className="h-8 pl-8 text-sm" transform={(t) => t.trim()} />
+                </div>
+            </Field>
+            {name === 'projects' && (
+                <Field label="Date">
+                    <MonthPicker value={item.date || ''} onChange={(date) => onChange({ date })} />
+                </Field>
+            )}
+            <div className="space-y-4">
+                {keys.map((key) => (
+                    <TagPicker key={key} label={key} singular={key.toLowerCase()} value={item.tags[key] || []} options={tagValues(items, key)} onChange={(v) => setKey(key, v)} />
+                ))}
+                <div className="flex items-center gap-1.5">
+                    <PasteInput
+                        value={newKey}
+                        onChange={(e) => setNewKey(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addKey(); } }}
+                        placeholder="Add a tag kind (e.g. Status)…"
+                        aria-label="New tag kind"
+                        wrapperClassName="flex-1"
+                        className="h-8 text-xs"
+                    />
+                </div>
+            </div>
+            <div className="border-t border-border/60 pt-4">
+                {confirmDelete ? (
+                    <div className="flex gap-2">
+                        <Button size="sm" variant="destructive" onClick={onRemove} className="h-7 flex-1 gap-1 text-xs"><Trash2 size={12} /> Delete</Button>
+                        <Button size="sm" variant="outline" onClick={() => setConfirmDelete(false)} className="h-7 text-xs">Keep</Button>
+                    </div>
+                ) : (
+                    <button type="button" onClick={() => setConfirmDelete(true)} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-red-600">
+                        <Trash2 size={12} /> Delete {cfg.singular}
+                    </button>
+                )}
+                <p className="mt-2 text-[11px] text-muted-foreground">Deleting stages like any edit; it leaves the site on the next publish.</p>
+            </div>
+        </div>
+    );
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex gap-1 rounded-md border border-border/50 p-1">
-                    {(Object.keys(COLLECTIONS) as CollectionName[]).map((name) => (
-                        <button
-                            key={name}
-                            type="button"
-                            onClick={() => {
-                                if (dirty && !window.confirm('Discard unsaved changes?')) return;
-                                setQuery('');
-                                setCollection(name);
-                            }}
-                            className={cn(
-                                'rounded px-3 py-1 text-sm transition-colors',
-                                collection === name ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
-                            )}
-                        >
-                            {COLLECTIONS[name].label}
-                        </button>
-                    ))}
-                </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => load(collection)} disabled={loading || saving} className="gap-2">
-                        <RefreshCw size={14} /> Reload
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setShowTags((v) => !v)} disabled={!items || editing !== null} className="gap-2">
-                        Tags
-                    </Button>
-                    <Button size="sm" onClick={() => setEditing('new')} disabled={loading || editing !== null} className="gap-2">
-                        <Plus size={14} /> New {cfg.singular}
-                    </Button>
-                    <Button size="sm" onClick={save} disabled={!dirty || saving || editing !== null} className="gap-2">
-                        {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                        Save &amp; publish
-                    </Button>
-                </div>
+        <div className="flex h-full flex-col">
+            <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/60 px-3 md:px-4">
+                <div className="flex min-w-0 flex-1 items-center gap-2 truncate text-xs text-muted-foreground">{status}</div>
+                <Segmented value={view} onChange={setView} options={[['write', 'Write'], ['preview', 'Preview']]} />
+                {item.published && slug && !change && (
+                    <a href={`${cfg.path}/${slug}/`} target="_blank" rel="noopener noreferrer" className="hidden items-center gap-1 rounded px-1.5 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground sm:flex" title="Open the live page">
+                        <ExternalLink size={12} /> View
+                    </a>
+                )}
+                <button type="button" onClick={() => setRailOpen((o) => !o)} className={cn('hidden rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground md:block', railOpen && 'bg-muted text-foreground')} title="Details panel" aria-label="Toggle details panel">
+                    <Settings2 size={14} />
+                </button>
+                <button type="button" onClick={onClose} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" title="Close (Esc)" aria-label="Close editor">
+                    <X size={14} />
+                </button>
             </div>
 
-            <div className="relative">
-                <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <PasteInput
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder={`Search ${collection} by name, description, tags or body…`}
-                    className="pl-9"
-                    aria-label={`Search ${collection}`}
-                />
-            </div>
-
-            {message && (
-                <div
-                    className={cn(
-                        'rounded-md border p-3 text-sm',
-                        message.kind === 'ok'
-                            ? 'border-green-500/20 bg-green-500/10 text-green-600'
-                            : 'border-red-500/20 bg-red-500/10 text-red-600'
-                    )}
-                >
-                    {message.text}
-                </div>
-            )}
-
-            {dirty && editing === null && (
-                <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-400">
-                    <AlertTriangle size={16} /> Unsaved changes. Nothing reaches the site until you save.
-                </div>
-            )}
-
-            {showTags && items && editing === null && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Tags</CardTitle>
-                        <CardDescription>Rename or delete a kind or a value across every {cfg.singular}. Add new ones from a record&apos;s form.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <TagManager items={items} onChange={rewriteTags} />
-                    </CardContent>
-                </Card>
-            )}
-
-            {editing === 'new' && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">New {cfg.singular}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ItemForm
-                            collection={collection}
-                            initial={emptyItem(collection)}
-                            existingIds={existingIds}
-                            items={items || []}
-                            workerUrl={workerUrl}
-                            onSave={(item) => applyEdit('new', item)}
-                            onCancel={() => setEditing(null)}
+            {/* Phone: one scrolling column, details under the body. md+: writing surface and a side rail that scroll separately. */}
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden" data-lenis-prevent>
+                {view === 'preview' && <PagePreview name={name} item={item} />}
+                <div className={cn('min-w-0 md:flex-1 md:overflow-y-auto', view === 'preview' && 'hidden')} data-lenis-prevent>
+                    <div className="mx-auto max-w-3xl px-5 py-8 md:px-8 md:py-10">
+                        <input
+                            autoFocus={!item.name}
+                            value={item.name}
+                            onChange={(e) => onChange({ name: e.target.value })}
+                            placeholder={`Untitled ${cfg.singular}`}
+                            aria-label="Name"
+                            className="w-full bg-transparent text-2xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/40 md:text-3xl"
                         />
-                    </CardContent>
-                </Card>
-            )}
-
-            {loading && !items && (
-                <div className="flex h-40 items-center justify-center">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        <div className="mt-1 truncate text-xs text-muted-foreground">
+                            {cfg.path}/{slug || '…'}/
+                            {duplicate && <span className="ml-2 text-red-600">already used by another {cfg.singular}</span>}
+                        </div>
+                        <textarea
+                            value={item.description}
+                            onChange={(e) => onChange({ description: e.target.value })}
+                            placeholder="One or two lines for the list page and the share card…"
+                            aria-label="Short description"
+                            rows={1}
+                            className="mt-5 w-full resize-none bg-transparent text-base text-muted-foreground outline-none [field-sizing:content] placeholder:text-muted-foreground/40"
+                        />
+                        <div className="mt-6 border-t border-border/40 pt-6">
+                            <MarkdownEditor
+                                value={item.content || ''}
+                                onChange={(content) => onChange({ content })}
+                                onUpload={onUpload}
+                                placeholder="Write the details page. Drop or paste an image to upload it."
+                            />
+                            <p className="mt-2 text-xs text-muted-foreground">Each image uploads as its own commit.</p>
+                        </div>
+                    </div>
                 </div>
-            )}
+                {railOpen && (
+                    <aside className={cn('shrink-0 border-t border-border/60 bg-muted/10 md:w-72 md:overflow-y-auto md:border-l md:border-t-0', view === 'preview' && 'hidden md:block')} data-lenis-prevent>
+                        {rail}
+                    </aside>
+                )}
+            </div>
+        </div>
+    );
+}
 
-            {items && (
-                <div className="space-y-3">
-                    {items.length === 0 && (
-                        <p className="text-sm text-muted-foreground">No {collection} yet.</p>
-                    )}
-                    {items.length > 0 && visible.length === 0 && (
-                        <p className="text-sm text-muted-foreground">Nothing matches “{query}”.</p>
-                    )}
-                    {visible.map(({ item, index }) => (
-                        <Card key={item.id || index} className={cn(!item.published && 'opacity-70')}>
-                            {editing === index ? (
-                                <CardContent className="pt-6">
-                                    <ItemForm
-                                        collection={collection}
-                                        initial={item}
-                                        existingIds={existingIds.filter((id) => id !== item.id)}
-                                        items={items || []}
-                                        workerUrl={workerUrl}
-                                        onSave={(next) => applyEdit(index, next)}
-                                        onCancel={() => setEditing(null)}
-                                    />
-                                </CardContent>
-                            ) : (
-                                <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-                                    <div className="min-w-0">
-                                        <CardTitle className="flex items-center gap-2 text-base">
-                                            <span className="truncate">{item.name}</span>
-                                            {!item.published && (
-                                                <span className="rounded border border-border px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                                                    draft
-                                                </span>
-                                            )}
-                                            {item.url && (
-                                                <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground" aria-label="Open link">
-                                                    <ExternalLink size={14} />
-                                                </a>
-                                            )}
-                                        </CardTitle>
-                                        <CardDescription className="mt-1 line-clamp-2">{item.description}</CardDescription>
-                                        {flattenTags(item.tags).length > 0 && (
-                                            <div className="mt-2 flex flex-wrap gap-1">
-                                                {flattenTags(item.tags).map((t) => (
-                                                    <span key={t} className="rounded-full border border-border bg-accent px-2 py-0.5 text-[10px] text-accent-foreground">
-                                                        {t}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex shrink-0 items-center gap-1">
-                                        {confirmDelete === index ? (
-                                            <>
-                                                <Button size="sm" variant="destructive" onClick={() => remove(index)} className="gap-1">
-                                                    <Trash2 size={14} /> Delete
-                                                </Button>
-                                                <Button size="sm" variant="outline" onClick={() => setConfirmDelete(null)}>
-                                                    Keep
-                                                </Button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Button size="sm" variant="outline" onClick={() => setEditing(index)} disabled={editing !== null} aria-label="Edit">
-                                                    <Pencil size={14} />
-                                                </Button>
-                                                <Button size="sm" variant="outline" onClick={() => setConfirmDelete(index)} disabled={editing !== null} aria-label="Delete">
-                                                    <Trash2 size={14} />
-                                                </Button>
-                                            </>
-                                        )}
-                                    </div>
-                                </CardHeader>
-                            )}
-                        </Card>
-                    ))}
-                </div>
-            )}
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div className="space-y-1.5">
+            <div className="text-xs font-medium text-muted-foreground">{label}</div>
+            {children}
+        </div>
+    );
+}
+
+/** The detail page as it will look, rendered from the staged copy with the page's own component. */
+function PagePreview({ name, item }: { name: CollectionName; item: Item }) {
+    const cfg = COLLECTIONS[name];
+    const path = `${cfg.path}/${slugify(item.name) || '…'}/`;
+    return (
+        <div className="flex min-h-[70vh] min-w-0 flex-1 flex-col bg-muted/30 md:min-h-0">
+            <div className="flex h-9 shrink-0 items-center gap-3 border-b border-border/60 bg-background px-3 text-xs">
+                <span className="hidden gap-1.5 sm:flex" aria-hidden="true">
+                    <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/25" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/25" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/25" />
+                </span>
+                <span className="min-w-0 flex-1 truncate rounded bg-muted/60 px-2 py-0.5 text-muted-foreground">mncoleman.com{path}</span>
+                <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                    {item.published ? 'Draft preview' : 'Hidden on site'}
+                </span>
+            </div>
+            <div className="min-h-0 flex-1 md:overflow-y-auto" data-lenis-prevent>
+                <article className="mx-auto max-w-3xl bg-background px-4 py-16">
+                    <CollectionDetail
+                        kind={name === 'projects' ? 'project' : 'resource'}
+                        name={item.name || `Untitled ${cfg.singular}`}
+                        description={item.description}
+                        date={name === 'projects' ? item.date : undefined}
+                        tags={flattenTags(item.tags)}
+                        url={item.url}
+                        content={item.content}
+                        detailsPath={path}
+                        backLink={(children, className) => <span className={className}>{children}</span>}
+                    />
+                </article>
+            </div>
         </div>
     );
 }
