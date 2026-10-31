@@ -256,6 +256,17 @@ export function PullChainToggle() {
         // solver keeps a settled rope jittering by about a tenth of a pixel forever,
         // so anything finer than this tolerance would never sleep.
         const REST_MOVE = 0.25;
+        // Movement alone is not enough: a small, slow sway left at the end of a swing
+        // moves less than REST_MOVE per frame, so the rope froze mid-swing and hung
+        // visibly off-centre. It also has to be hanging straight down (every bead
+        // within REST_OFFSET of the plumb line) before it sleeps.
+        const REST_OFFSET = 0.6;
+        // Backstop so a rope that never quite meets both tests still sleeps. Running
+        // longer costs nothing for clicks: the SVG box is pointer-events-none and only
+        // the bulb and chain take the pointer.
+        const MAX_AWAKE_MS = 10_000;
+        let wokeAt = 0;
+        const hangingStraight = () => chain.every((b) => Math.abs(b.position.x - CX) < REST_OFFSET);
         const lastPos = chain.map((b) => ({ x: b.position.x, y: b.position.y }));
         const stepMovement = () => {
             let max = 0;
@@ -289,8 +300,9 @@ export function PullChainToggle() {
 
             // A drag holds the loop open; otherwise stop once it has been still
             // for a beat, so a settling wobble is not cut off mid-swing.
-            stillFrames = !drag && stepMovement() < REST_MOVE ? stillFrames + 1 : 0;
-            if (stillFrames >= REST_FRAMES) {
+            if (drag) wokeAt = now; // the backstop counts from release, not from the press
+            stillFrames = !drag && stepMovement() < REST_MOVE && hangingStraight() ? stillFrames + 1 : 0;
+            if (stillFrames >= REST_FRAMES || (!drag && now - wokeAt > MAX_AWAKE_MS)) {
                 running = false;
                 return;
             }
@@ -301,6 +313,7 @@ export function PullChainToggle() {
             running = true;
             stillFrames = 0;
             last = performance.now();
+            wokeAt = last;
             raf = requestAnimationFrame(frame);
         };
         const onVisibility = () => {
