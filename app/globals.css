@@ -539,3 +539,17 @@ html.blank-canvas main {
 .tiptap img.ProseMirror-selectednode {
   outline: 2px solid hsl(var(--ring));
 }
+
+/* ---- Admin shell (components/admin/AdminShell.tsx) ----------------------------
+ * The admin is a full-window app, not a page inside the marketing site: while the
+ * shell is mounted it hides the site's header and footer and stops the document
+ * scrolling (every admin pane scrolls itself). Outside @layer, like blank-canvas
+ * above, so it beats Tailwind's layered display utilities. */
+html.admin-shell header.pwa-safe-top,
+html.admin-shell footer.pwa-safe-bottom {
+  display: none !important;
+}
+html.admin-shell,
+html.admin-shell body {
+  overflow: hidden;
+}

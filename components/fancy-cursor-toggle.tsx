@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
  * "that thing on screen" rather than a generic pointer. When the cursor is off, a slash
  * crosses it out.
  */
-function FancyCursorIcon({ off }: { off: boolean }) {
+export function FancyCursorIcon({ off }: { off: boolean }) {
     return (
         <svg
             width="18"

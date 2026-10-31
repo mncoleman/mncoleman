@@ -8,7 +8,7 @@ import { FolderCodeIcon } from '@/components/ui/folder-code';
 import { BookmarkIcon } from '@/components/ui/bookmark';
 import { FileTextIcon } from '@/components/ui/file-text';
 import { ResumeIcon } from '@/components/ui/resume-icon';
-import { cn } from '@/lib/utils';
+import { cn, inAdminShell } from '@/lib/utils';
 import { createPortal } from 'react-dom';
 
 interface AnimatedIconHandle {
@@ -147,6 +147,7 @@ export function Search({ items }: SearchProps) {
     // Handle keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            if (inAdminShell()) return;
             // Toggle search with / or cmd+k/ctrl+k
             if ((e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key === 'k')) && !isOpen) {
                 const activeElement = document.activeElement;

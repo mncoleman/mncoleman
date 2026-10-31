@@ -2,12 +2,14 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { inAdminShell } from '@/lib/utils';
 
 export function KeyBindings() {
     const router = useRouter();
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
+            if (inAdminShell()) return;
             // Don't trigger if user is typing in an input
             const activeElement = document.activeElement;
             const isInput = activeElement && (

@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Loader2, LogOut } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { TelegramLoginButton } from '@/components/admin/TelegramLoginButton';
-import { AdminNav, ADMIN_ROUTES } from '@/components/admin/AdminNav';
+import { ADMIN_ROUTES, normalizeAdminPath } from '@/components/admin/AdminNav';
+import { AdminShell } from '@/components/admin/AdminShell';
+import { DeployProvider } from '@/components/admin/deploy-status';
+import { ContentProvider } from '@/components/admin/content-store';
 import { usePathname } from 'next/navigation';
-import { AdminProvider, type AdminUser } from '@/components/admin/admin-context';
+import { AdminProvider, canUse, type AdminUser } from '@/components/admin/admin-context';
 import { setSessionToken, clearSessionToken, authHeaders } from '@/lib/admin-auth';
 
 const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:8787';
@@ -20,7 +22,7 @@ const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:8787'
 // A UX guard for direct URLs; the Worker refuses the API calls regardless.
 // Sub-routes (e.g. /admin/artifacts/edit) inherit their parent tab's rule.
 function routeAllowed(pathname: string, user: AdminUser): boolean {
-    const current = pathname.replace(/\/$/, '') || '/admin';
+    const current = normalizeAdminPath(pathname);
     const match = ADMIN_ROUTES
         .filter((r) => current === r.href || (r.href !== '/admin' && current.startsWith(`${r.href}/`)))
         .sort((a, b) => b.href.length - a.href.length)[0];
@@ -130,28 +132,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return (
         <AdminProvider value={{ user: session.user, workerUrl: WORKER_URL, logout: handleLogout }}>
-            <div className="container mx-auto px-4 py-20 min-h-[80vh]">
-                <div className="w-full max-w-4xl lg:max-w-6xl mx-auto">
-                    <div className="mb-8 flex justify-between items-start">
-                        <div>
-                            <h1 className="text-3xl font-bold">Admin</h1>
-                            <p className="text-muted-foreground">
-                                Welcome back, {session.user?.name || 'Admin'}
-                            </p>
-                        </div>
-                        <Button variant="outline" onClick={handleLogout} className="gap-2 shrink-0 ml-4">
-                            <LogOut size={16} />
-                            Logout
-                        </Button>
-                    </div>
-
-                    <AdminNav user={session.user} />
-
-                    {routeAllowed(pathname, session.user) ? children : (
-                        <p className="text-muted-foreground">You do not have access to this part of the admin panel.</p>
-                    )}
-                </div>
-            </div>
+            <DeployProvider>
+                <ContentProvider workerUrl={WORKER_URL} enabled={canUse(session.user, 'content')}>
+                    <AdminShell>
+                        {routeAllowed(pathname, session.user) ? children : (
+                            <p className="text-muted-foreground">You do not have access to this part of the admin panel.</p>
+                        )}
+                    </AdminShell>
+                </ContentProvider>
+            </DeployProvider>
         </AdminProvider>
     );
 }

@@ -126,7 +126,8 @@ export const PasteInput = forwardRef<HTMLInputElement, PasteInputProps>(function
     return (
         <div className={cn('group/paste relative', wrapperClassName)}>
             <Input ref={setRef} className={cn('pr-16', className)} {...props} />
-            <PasteButton state={state} onPaste={paste} />
+            {/* Centred, not pinned to the top: inputs come in several heights (h-7, h-8, h-9). */}
+            <PasteButton state={state} onPaste={paste} className="top-1/2 -translate-y-1/2" />
         </div>
     );
 });
