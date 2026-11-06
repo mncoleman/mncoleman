@@ -1791,13 +1791,14 @@ footer em{color:var(--color-primary);font-style:italic}
 (function(){
   const root = document.documentElement;
   const themeBtns = document.querySelectorAll('[data-theme-toggle]');
-  const stored = localStorage.getItem('apologetics-theme');
+  let stored = null;
+  try { stored = localStorage.getItem('apologetics-theme'); } catch(e) {}
   if(stored){root.setAttribute('data-theme',stored);}
   else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches){root.setAttribute('data-theme','light');}
   themeBtns.forEach(b=>b.addEventListener('click',()=>{
     const cur=root.getAttribute('data-theme')==='dark'?'light':'dark';
     root.setAttribute('data-theme',cur);
-    localStorage.setItem('apologetics-theme',cur);
+    try { localStorage.setItem('apologetics-theme',cur); } catch(e) {}
   }));
 
   // Mobile sidebar drawer

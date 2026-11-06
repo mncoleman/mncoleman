@@ -1,3 +1,5 @@
+import { lookupPage } from '../lib/citation-lookup';
+import { classifyDraft } from '../lib/post-staging';
 import { coercePostDoc, parsePost, samePost, serializePost, isValidSlug, PostFormatError, type PostDoc } from '../lib/post-format';
 
 // Rate limiting store — persists within a Cloudflare Worker isolate
@@ -54,6 +56,8 @@ export interface Env {
 type StoredRole = 'admin' | 'site_admin' | 'editor';
 type SessionRole = 'super_admin' | 'site_admin' | 'editor';
 
+/** The owner's byline on posts. The owner has no KV record to take a name from. */
+const OWNER_DISPLAY_NAME = 'Matthew Coleman';
 const FEATURES = ['artifacts', 'content', 'library', 'analytics', 'rebuild'] as const;
 type Feature = typeof FEATURES[number];
 
@@ -92,6 +96,9 @@ interface Session {
     features: Feature[];
     artifactGrants: string[];
 }
+
+/** Committed post files already read, by `slug@blobSha`. A blob sha is a content hash, so an entry can never be stale. Per isolate. */
+const pendingFileCache = new Map<string, { sha: string; doc: PostDoc } | { sha: string; invalid: string }>();
 
 export default {
     // Daily site rebuild so new Notion content goes live without a push.
@@ -596,6 +603,27 @@ export default {
             if (p.startsWith('/api/posts') && !can('content')) return forbidden();
             if (p === '/api/artifacts' && !can('artifacts')) return forbidden();
 
+            // POST /api/citations/lookup {url} — reads a page's title/author/site/date for a citation.
+            // Same Origin/CSRF checks as every other POST (above) and the `content` feature. SSRF
+            // hardening lives in lib/citation-lookup.ts; the response never contains the page body.
+            if (p === '/api/citations/lookup') {
+                if (!can('content')) return forbidden();
+                const jsonOut = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+                    status, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                });
+                if (request.method !== 'POST') return jsonOut({ error: 'method_not_allowed' }, 405);
+                if (!checkRateLimit(`cite-lookup:${session.userId}`, 20, 60_000)) return jsonOut({ error: 'rate_limited' }, 429);
+                const bodyText = await request.text();
+                let target = '';
+                try {
+                    const parsed = bodyText.length <= 4096 ? JSON.parse(bodyText) : null;
+                    if (parsed && typeof parsed.url === 'string') target = parsed.url.trim().slice(0, 2048);
+                } catch { /* falls through to invalid_url */ }
+                const outcome = await lookupPage(target);
+                if (!outcome.ok) return jsonOut({ error: outcome.error }, outcome.error === 'invalid_url' ? 400 : 422);
+                return jsonOut(outcome.result);
+            }
+
             // Edit mode and Claude linking for one instant artifact. Proxied as-is:
             // the service checks the slug against the token's `artifacts` claim.
             const collabMatch = p.match(/^\/api\/artifacts\/instant\/([a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?)\/(state|notes|notes\/[a-f0-9-]{36}(?:\/(?:resolve|reopen|redeliver))?|edit-text|link)$/);
@@ -1057,6 +1085,59 @@ export default {
                 if (!postSlug && request.method === 'GET') {
                     const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0);
                     const limit = Math.min(40, Math.max(1, parseInt(url.searchParams.get('limit') || '40', 10) || 40));
+                    // ?pending=1 — only the posts whose autosaved draft differs from the committed file (or has no
+                    // file): what the admin's top bar counts as unpublished. Subrequest budget per page (Free plan
+                    // limit is 50): 1 directory listing + 1+ KV list + up to 20 draft reads + up to 20 file reads.
+                    // The listing carries every file's blob sha, so a draft whose recorded base sha differs is
+                    // known stale without reading the file, and a file already read at that sha (blob shas are
+                    // content hashes, so the cache never goes stale) costs nothing.
+                    if (url.searchParams.get('pending') === '1') {
+                        if (!drafts) return json({ posts: [], total: 0, nextOffset: null, draftsAvailable: false });
+                        const pendLimit = Math.min(20, limit);
+                        const listing = await fetch(dirUrl, { headers: ghHeaders });
+                        const shaBySlug = new Map<string, string>();
+                        if (listing.ok) {
+                            for (const f of (await listing.json()) as any[]) {
+                                if (f.type === 'file' && /\.md$/.test(f.name)) shaBySlug.set((f.name as string).replace(/\.md$/, ''), f.sha as string);
+                            }
+                        } else if (listing.status !== 404) {
+                            return ghFailed(listing, 'list');
+                        }
+                        const draftSlugs: string[] = [];
+                        let cursor: string | undefined;
+                        do {
+                            const listed: any = await drafts.list({ prefix: 'post-draft:', limit: 1000, cursor });
+                            for (const k of listed.keys) draftSlugs.push((k.name as string).slice('post-draft:'.length));
+                            cursor = listed.list_complete ? undefined : listed.cursor;
+                        } while (cursor);
+                        draftSlugs.sort();
+                        const pageSlugs = draftSlugs.slice(offset, offset + pendLimit);
+                        const classified = await Promise.all(pageSlugs.map(async (sl) => {
+                            const draft = await readDraft(sl);
+                            if (!draft) return null;
+                            const sha = shaBySlug.get(sl);
+                            if (!sha) return classifyDraft(sl, draft, null);
+                            // Stale (the file moved after this draft was saved): no need to read it.
+                            if (draft.baseSha !== undefined && (draft.baseSha ?? null) !== sha) return classifyDraft(sl, draft, { sha, invalid: 'changed since the draft was saved' });
+                            const hit = pendingFileCache.get(`${sl}@${sha}`);
+                            if (hit) return classifyDraft(sl, draft, hit);
+                            const file = await readFile(sl);
+                            if (file === 'error') return { error: sl };
+                            if (file && file.sha === sha) {
+                                if (pendingFileCache.size > 300) pendingFileCache.clear();
+                                pendingFileCache.set(`${sl}@${sha}`, file);
+                            }
+                            return classifyDraft(sl, draft, file);
+                        }));
+                        const failed = classified.filter((r): r is { error: string } => !!r && 'error' in r).map((r) => r.error);
+                        const next = offset + pendLimit < draftSlugs.length ? offset + pendLimit : null;
+                        return json({
+                            posts: classified.filter((r) => !!r && !('error' in r)),
+                            // Slugs whose committed file could not be read right now; the admin retries rather than guessing.
+                            unreadable: failed,
+                            total: draftSlugs.length, nextOffset: next, draftsAvailable: true,
+                        });
+                    }
                     const listResp = await fetch(dirUrl, { headers: ghHeaders });
                     let files: { slug: string; sha: string }[] = [];
                     if (listResp.ok) {
@@ -1084,7 +1165,7 @@ export default {
                     const page = sequence.slice(offset, offset + limit);
                     const rows = await Promise.all(page.map(async (f) => {
                         const draft = draftSlugs.has(f.slug) ? await readDraft(f.slug) : null;
-                        const info = draft ? { version: draft.version, updatedAt: draft.updatedAt } : null;
+                        const info = draft ? { version: draft.version, updatedAt: draft.updatedAt, differs: true } : null;
                         if (!f.sha) {
                             if (!draft) return null;
                             return {
@@ -1096,6 +1177,7 @@ export default {
                         if (!r.ok) return null;
                         try {
                             const d = parsePost(await r.text(), f.slug, `data/posts/${f.slug}.md`);
+                            if (info && draft && samePost(draft.post, d)) info.differs = false;
                             return { slug: f.slug, title: d.title, date: d.date, tags: d.tags, published: d.published, featured: d.featured, excerpt: d.excerpt, sha: f.sha, draft: info };
                         } catch (e) {
                             if (!(e instanceof PostFormatError)) throw e;
@@ -1705,6 +1787,34 @@ export default {
                         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                     });
                 }
+            }
+
+            // Display names of the people who can write posts, for the editor's Author dropdown.
+            // Open to anyone with the `content` feature (the full /api/users list is owner-only),
+            // so it returns only a display name and role: no emails, usernames or ids.
+            if (url.pathname === '/api/users/names' && request.method === 'GET') {
+                if (!can('content')) return forbidden();
+                const names: { name: string; role: string }[] = [];
+                const seen = new Set<string>();
+                const add = (name: string, role: string) => {
+                    const clean = name.trim();
+                    if (!clean || seen.has(clean.toLowerCase())) return;
+                    seen.add(clean.toLowerCase());
+                    names.push({ name: clean, role });
+                };
+                // The owner is never in KV, and the Telegram first name on their session is not the byline posts use.
+                add(OWNER_DISPLAY_NAME, 'super_admin');
+                for (const id of await getUserList(env.ADMIN_USERS)) {
+                    const user = await getUser(env.ADMIN_USERS, id);
+                    if (!user || user.status !== 'active') continue;
+                    const person = hasFeature({ role: effectiveRole(user.role), features: knownFeatures(user.features) }, 'content');
+                    if (!person) continue;
+                    // Never fall back to a Telegram handle or an email: only a first name the person gave is exposed.
+                    add(user.firstName || 'Editor', effectiveRole(user.role));
+                }
+                return new Response(JSON.stringify({ users: names }), {
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
             }
 
             // User management endpoints (super_admin only)

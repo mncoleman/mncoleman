@@ -16,6 +16,7 @@ import {
     type VerseRef,
 } from '../../../lib/bible';
 import { attrsToRef, type PickAction, type Rect, type VerseStore } from './verse-store';
+import { ModeChips } from '../citations/ModeChips';
 
 /**
  * The floating pieces of the verse-mention feature: the `@` picker, the display-text
@@ -28,7 +29,7 @@ function useStore(store: VerseStore) {
 }
 
 /** Fixed-position box anchored under (or above, when short on room) a rect, kept inside the viewport. */
-function Floating({ rect, className, children, ...rest }: { rect: Rect; className?: string; children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
+export function Floating({ rect, className, children, ...rest }: { rect: Rect; className?: string; children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
     const ref = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState({ left: -9999, top: -9999 });
     // Deliberately dependency-free: the box's size changes with its content, and setPos bails out when nothing moved.
@@ -176,6 +177,7 @@ function Picker({ store }: { store: VerseStore }) {
     const grid = pick.grid;
     return (
         <Floating rect={pick.rect} className="w-[420px] max-w-[94vw] overflow-hidden" onMouseDown={noFocusSteal} data-lenis-prevent>
+            {store.citationAvailable() && <ModeChips mode="verse" onCitation={() => store.toCitation()} />}
             <div className="flex items-center justify-between px-3 pt-2 text-[11px] uppercase tracking-wide text-muted-foreground">
                 <span>{pick.recent ? 'Recent' : 'Insert verse'}</span>
                 <TranslationToggle store={store} tr={translation} />
@@ -228,6 +230,12 @@ function Picker({ store }: { store: VerseStore }) {
                 ) : (
                     <>
                         Enter pick · {'⌘'}Enter pick with default text · Alt+1 ref · Alt+2 verse · Alt+3 both · Alt+4 quote · Esc close
+                        {store.citationAvailable() && (
+                            <>
+                                <br />
+                                Tab: Verse / Citation
+                            </>
+                        )}
                     </>
                 )}
             </div>

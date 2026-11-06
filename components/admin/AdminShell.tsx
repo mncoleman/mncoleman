@@ -20,6 +20,7 @@ import { ADMIN_LINKS, activeLink } from '@/components/admin/AdminNav';
 import { COLLECTIONS, useContent, type Change, type CollectionName } from '@/components/admin/content-store';
 import { ago, clock, deployProgress, useDeploy, useNow } from '@/components/admin/deploy-status';
 import { useRebuild } from '@/components/admin/use-rebuild';
+import { ShellContext } from '@/components/admin/shell-context';
 
 /**
  * The admin's own full-window frame: sidebar, top bar (breadcrumb, ⌘K, deploy
@@ -32,7 +33,12 @@ const SIDEBAR_KEY = 'admin-sidebar-collapsed';
 
 /** Sections whose page owns the whole content area (list + editor) instead of a scrolling column. */
 function isFullBleed(pathname: string) {
-    return /^\/admin\/(projects|resources|artifacts)\/?$/.test(pathname);
+    return /^\/admin\/(projects|resources|artifacts|posts\/edit)\/?$/.test(pathname);
+}
+
+/** Pages that draw their own top bar (the post editor): the shell's header stands down for them. */
+function ownsTopBar(pathname: string) {
+    return /^\/admin\/posts\/edit\/?$/.test(pathname);
 }
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -69,12 +75,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
                 // Never the browser's "Save page as…" inside the admin.
                 e.preventDefault();
-                if (editsContent) publish();
+                // The post editor owns Cmd+S (it saves that draft); site-wide Publish is not fired from there.
+                if (editsContent && !ownsTopBar(pathname)) publish();
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [editsContent, publish]);
+    }, [editsContent, publish, pathname]);
 
     return (
         // The site header that normally pads for the notch is hidden in the admin, so the
@@ -92,7 +99,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 </div>
             )}
 
+            <ShellContext.Provider value={{ openMenu: () => setDrawer(true) }}>
             <div className="flex min-w-0 flex-1 flex-col">
+                {!ownsTopBar(pathname) && (
                 <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border/60 px-3 md:px-6">
                     <button type="button" onClick={() => setDrawer(true)} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground md:hidden" aria-label="Open menu">
                         <Menu size={18} />
@@ -116,6 +125,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                         {editsContent && <PublishControl />}
                     </div>
                 </header>
+                )}
                 <main
                     className={cn('min-h-0 flex-1', isFullBleed(pathname) ? 'overflow-hidden' : 'overflow-y-auto')}
                     data-lenis-prevent
@@ -123,6 +133,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     {isFullBleed(pathname) ? children : <div className="mx-auto w-full max-w-6xl p-4 md:p-8">{children}</div>}
                 </main>
             </div>
+            </ShellContext.Provider>
 
             <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
         </div>
@@ -144,6 +155,7 @@ function Sidebar({ user, collapsed, onToggle, closeIcon }: { user: AdminUser; co
     const pending: Record<string, number> = {
         '/admin/projects': content.changes.projects.length,
         '/admin/resources': content.changes.resources.length,
+        '/admin/posts': content.postChanges.length,
     };
     const initials = (user.name || user.username || 'A').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
     const roleLabel = user.role === 'super_admin' ? 'Owner' : user.role === 'editor' ? 'Editor' : 'Site admin';
@@ -387,17 +399,19 @@ function StatusRow({ k, v }: { k: string; v: string }) {
 function PublishControl() {
     const content = useContent();
     const router = useRouter();
-    const { changes, changeCount, blockers, publishing, publishError } = content;
-    const disabled = changeCount === 0 || blockers.length > 0 || publishing;
+    const { changes, postChanges, privateDrafts, postWarnings, changeCount, blockers, publishing, publishError } = content;
+    const disabled = !content.canPublish || blockers.length > 0 || publishing;
 
     const open = (name: CollectionName, c: Change) => {
         content.select(name, c.item._k);
         router.push(COLLECTIONS[name].href);
     };
 
+    const openPost = (slug: string) => router.push(`/admin/posts/edit?slug=${encodeURIComponent(slug)}`);
+
     return (
         <div className="flex items-center">
-            <Popover>
+            <Popover onOpenChange={(o) => { if (o) content.refreshPosts(0); }}>
                 <PopoverTrigger asChild>
                     <button
                         type="button"
@@ -415,7 +429,7 @@ function PublishControl() {
                     </button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-80 p-0 text-sm">
-                    {(publishError || blockers.length > 0) && (
+                    {(publishError || blockers.length > 0 || postWarnings.length > 0) && (
                         <div className="space-y-1 border-b border-border/60 bg-red-500/5 px-3 py-2 text-xs text-red-700 dark:text-red-300">
                             {publishError && <p>{publishError}</p>}
                             {content.conflict && (
@@ -424,13 +438,14 @@ function PublishControl() {
                                 </button>
                             )}
                             {blockers.map((b) => <p key={b}>{b}</p>)}
+                            {postWarnings.map((b) => <p key={b} className="text-amber-700 dark:text-amber-300">{b} It will be skipped; everything else still publishes.</p>)}
                         </div>
                     )}
-                    {changeCount === 0 ? (
-                        <p className="px-3 py-4 text-xs text-muted-foreground">Everything matches the live site. Edits you make are staged here until you publish.</p>
+                    {changeCount === 0 && privateDrafts.length === 0 ? (
+                        <p className="px-3 py-4 text-xs text-muted-foreground">Everything matches the live site. Edits to projects and resources are held here, and post drafts are listed here, until you publish.</p>
                     ) : (
                         <>
-                            <div className="border-b border-border/60 px-3 py-2 text-xs font-medium text-muted-foreground">Published together, one commit per collection</div>
+                            {changeCount > 0 && <div className="border-b border-border/60 px-3 py-2 text-xs font-medium text-muted-foreground">Published together. A post you already saved to the site and then set to Draft stays hidden.</div>}
                             <div className="max-h-72 overflow-y-auto py-1" data-lenis-prevent>
                                 {(Object.keys(changes) as CollectionName[]).flatMap((name) =>
                                     changes[name].map((c) => (
@@ -447,6 +462,24 @@ function PublishControl() {
                                         </div>
                                     ))
                                 )}
+                                {postChanges.map((c) => (
+                                    <div key={`post-${c.slug}`} className="group flex items-center gap-2 px-3 py-1.5 hover:bg-muted/50">
+                                        <span className={cn('w-14 shrink-0 text-[10px] font-medium uppercase tracking-wider', c.kind === 'added' ? 'text-emerald-600' : 'text-amber-600')}>
+                                            {c.kind}
+                                        </span>
+                                        <button type="button" className="min-w-0 flex-1 truncate text-left" onClick={() => openPost(c.slug)}>
+                                            {c.title || 'Untitled'} <span className="text-xs text-muted-foreground">· post{c.published ? '' : ', stays a draft'}</span>
+                                        </button>
+                                    </div>
+                                ))}
+                                {privateDrafts.map((c) => (
+                                    <div key={`private-${c.slug}`} className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/50">
+                                        <span className="w-14 shrink-0 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Draft</span>
+                                        <button type="button" className="min-w-0 flex-1 truncate text-left" onClick={() => openPost(c.slug)} title="Saved online as a private draft. Publish it from its own editor.">
+                                            {c.title || 'Untitled'} <span className="text-xs text-muted-foreground">· post, kept private (not on the site)</span>
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
                         </>
                     )}
@@ -467,6 +500,7 @@ function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (
     const router = useRouter();
     const content = useContent();
     const rebuild = useRebuild();
+    const pathname = usePathname();
     const links = ADMIN_LINKS.filter((l) => l.allowed(user));
     const editsContent = canUse(user, 'content');
 
@@ -482,7 +516,7 @@ function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (
                 <CommandGroup heading="Actions">
                     {editsContent && <CommandItem onSelect={() => create('projects')}><Plus /> New project</CommandItem>}
                     {editsContent && <CommandItem onSelect={() => create('resources')}><Plus /> New resource</CommandItem>}
-                    {editsContent && content.changeCount > 0 && (
+                    {editsContent && content.changeCount > 0 && !ownsTopBar(pathname) && (
                         <CommandItem onSelect={() => run(content.publish)}><Rocket /> Publish {content.changeCount} change{content.changeCount === 1 ? '' : 's'}<CommandShortcut>⌘S</CommandShortcut></CommandItem>
                     )}
                     {canUse(user, 'rebuild') && <CommandItem onSelect={() => run(rebuild.trigger)}><RefreshCw /> Rebuild site from Notion</CommandItem>}

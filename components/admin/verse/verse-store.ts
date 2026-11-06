@@ -312,6 +312,7 @@ export class VerseStore {
                 return true;
             }
         }
+        if (event.key === 'Tab' && !event.shiftKey && this.toCitation()) return true;
         if (event.key === 'Enter' || event.key === 'Tab') {
             if (event.shiftKey) return false;
             const item = pick.items[pick.sel];
@@ -320,6 +321,20 @@ export class VerseStore {
             return true;
         }
         return false;
+    }
+
+    citationAvailable(): boolean {
+        return !!(this.editor?.storage as unknown as { citation?: unknown } | undefined)?.citation;
+    }
+
+    /** Tab (or the Citation chip): the same `@query` becomes a citation. The text stays in the document until the citation is inserted or cancelled. */
+    toCitation(): boolean {
+        const pick = this.state.pick;
+        const cite = (this.editor?.storage as unknown as { citation?: { store?: { begin: (r: { from: number; to: number }, q: string, rect: Rect) => boolean } } } | undefined)?.citation?.store;
+        if (!pick || !cite) return false;
+        this.dismissedFrom = pick.from;
+        this.set({ pick: null });
+        return cite.begin({ from: pick.from, to: pick.to }, pick.query, pick.rect);
     }
 
     /** Esc: close and do not reopen for this same `@`. */

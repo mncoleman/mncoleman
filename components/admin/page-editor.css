@@ -1,0 +1,158 @@
+/*
+ * The blog post page editor (MarkdownEditor variant="page", PostEditor).
+ * Colours come from the shadcn tokens so light and dark follow the admin theme;
+ * sizes are the approved mockup's: 17px/1.7 body, headings 28/21, 3px quote rule.
+ * No scrollbar styling here on purpose: globals.css hides scrollbars everywhere.
+ */
+.pe-body {
+  font-size: 17px;
+  line-height: 1.7;
+  min-height: 1.7em;
+  word-wrap: break-word;
+  caret-color: hsl(var(--foreground));
+  outline: none;
+}
+.pe-body > * { margin: 0; }
+.pe-body p { margin: 0 0 0.6em; min-height: 1.7em; }
+.pe-body h2 { font-size: 28px; line-height: 1.3; font-weight: 600; letter-spacing: -0.01em; margin: 1.5em 0 0.4em; }
+.pe-body h3 { font-size: 21px; line-height: 1.35; font-weight: 600; margin: 1.3em 0 0.3em; }
+.pe-body h4 { font-size: 17.5px; line-height: 1.4; font-weight: 600; margin: 1.2em 0 0.25em; }
+.pe-body > :first-child { margin-top: 0; }
+.pe-body ul, .pe-body ol { padding-left: 1.5em; margin: 0 0 0.6em; }
+.pe-body ul { list-style: disc; }
+.pe-body ol { list-style: decimal; }
+.pe-body li { margin: 0.15em 0; }
+.pe-body li > p { margin: 0; }
+.pe-body blockquote { border-left: 3px solid hsl(var(--foreground)); margin: 0.9em 0; padding: 2px 0 2px 18px; font-size: 19px; line-height: 1.6; }
+.pe-body blockquote p { margin: 0; }
+.pe-body pre {
+  font: 14px/1.6 ui-monospace, Menlo, monospace;
+  background: hsl(var(--muted));
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 0.9em 0;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+.pe-body code { font: 0.88em ui-monospace, Menlo, monospace; background: hsl(var(--muted)); padding: 0.12em 0.35em; border-radius: 4px; }
+.pe-body pre code { background: none; padding: 0; font-size: inherit; }
+.pe-body hr { border: 0; height: 1px; background: hsl(var(--border)); margin: 1.6em 0; }
+.pe-body hr.ProseMirror-selectednode { outline: 2px solid hsl(var(--ring)); outline-offset: 4px; }
+.pe-body img { max-width: 100%; border-radius: 8px; display: block; margin: 1em 0; }
+.pe-body a:not([data-verse]) {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: hsl(var(--muted-foreground) / 0.6);
+  text-underline-offset: 3px;
+}
+.pe-body a[data-verse], .pe-body a[href^='/bible/'] {
+  color: #0369a1;
+  background: rgba(14, 165, 233, 0.12);
+  border-radius: 4px;
+  padding: 0 4px;
+  text-decoration: none;
+  white-space: normal;
+}
+.pe-body a[data-verse]:hover, .pe-body a[href^='/bible/']:hover { box-shadow: inset 0 -1px 0 #0369a1; }
+.dark .pe-body a[data-verse], .dark .pe-body a[href^='/bible/'] { color: #7dd3fc; background: rgba(56, 189, 248, 0.14); }
+.dark .pe-body a[data-verse]:hover, .dark .pe-body a[href^='/bible/']:hover { box-shadow: inset 0 -1px 0 #7dd3fc; }
+/* Notion-style hints: the empty block holding the caret (Placeholder's data-placeholder), in that block's own type. */
+.pe-body .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: hsl(var(--muted-foreground) / 0.6);
+  font-weight: 400;
+}
+.pe-body li > p.is-empty::before { content: 'List'; }
+.pe-body blockquote > p.is-empty::before { content: 'Empty quote'; }
+.pe-body ::selection { background: hsl(var(--foreground) / 0.16); }
+
+@media (max-width: 767px) {
+  .pe-body { font-size: 16px; }
+}
+
+/* The properties drawer slides; honour the OS "reduce motion" setting. */
+@media (prefers-reduced-motion: reduce) {
+  .pe-drawer, .pe-drawer * { transition: none !important; animation: none !important; }
+}
+
+/* ---- Citations (components/admin/citations) ---------------------------------- */
+.pe-body sup.cm {
+  font-size: 0.68em;
+  line-height: 0;
+  color: #0369a1;
+  font-weight: 500;
+  cursor: pointer;
+  margin-left: 1px;
+  padding: 0 1px;
+  border-radius: 3px;
+  user-select: none;
+}
+.dark .pe-body sup.cm { color: #7dd3fc; }
+.pe-body sup.cm::after { content: '[' attr(data-n) ']'; }
+.pe-body sup.cm:hover { background: rgba(14, 165, 233, 0.12); }
+.pe-body sup.cm.ProseMirror-selectednode { outline: 2px solid hsl(var(--ring)); }
+.pe-body .flash { animation: pe-flash 1.3s ease-out; }
+@keyframes pe-flash {
+  0%, 40% { background: rgba(14, 165, 233, 0.16); box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.16); }
+  100% { background: transparent; box-shadow: none; }
+}
+.pe-body section.pe-cites {
+  margin-top: 56px;
+  padding-top: 12px;
+  border-top: 1px solid hsl(var(--border) / 0.6);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.pe-cites .ch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 -6px;
+  padding: 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pe-cites .ch:hover { background: hsl(var(--foreground) / 0.07); }
+.pe-cites .ch .i { transition: transform 0.15s; }
+.pe-cites .ch[aria-expanded='true'] .i { transform: rotate(90deg); }
+.pe-cites .cites-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.pe-cites .cites-list[hidden] { display: none; }
+.pe-cites .cites-spare-h { margin: 14px 0 0; font-size: 12px; color: hsl(var(--muted-foreground)); }
+.pe-cites .cites-spare .ct { color: hsl(var(--muted-foreground)); }
+.pe-cites .ce {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 4px;
+  margin: 0 -6px;
+  padding: 6px;
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+.pe-cites .ce:hover, .pe-cites .ce:focus-within, .pe-cites .ce.flash { background: hsl(var(--foreground) / 0.07); }
+.pe-cites .cn { color: #0369a1; font-variant-numeric: tabular-nums; }
+.dark .pe-cites .cn { color: #7dd3fc; }
+.pe-cites .ct a { text-decoration: underline; text-underline-offset: 3px; }
+.pe-cites .ca { display: flex; gap: 2px; opacity: 0; transition: opacity 0.12s; }
+.pe-cites .ce:hover .ca, .pe-cites .ce:focus-within .ca { opacity: 1; }
+.pe-cites .ca button, .pe-cites .cadd {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+  cursor: pointer;
+}
+.pe-cites .ca button:hover, .pe-cites .cadd:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+.pe-cites .cadd { padding: 0 4px; text-decoration: underline; text-underline-offset: 3px; }
+@media (hover: none) { .pe-cites .ca { opacity: 1; } }

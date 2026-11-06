@@ -176,7 +176,7 @@ export function usePostSync(workerUrl: string, initialSlug: string) {
         const snapRev = rev.current;
         if (!isValidSlug(snap.slug)) {
             // Nothing to key a server draft by yet (no title). The local mirror still holds it.
-            setStatus('local', 'Saved on this device. Add a title to save it to the server.');
+            setStatus('local', 'Saved on this device. Add a title to save it online too.');
             return;
         }
         const run = (async () => {
@@ -226,7 +226,7 @@ export function usePostSync(workerUrl: string, initialSlug: string) {
             if (code === 409 && json?.error === 'slug_taken') {
                 // Not a transient failure and not a draft clash: this slug belongs to a different post.
                 setSlugTaken(snap.slug);
-                setStatus('error', json.message || 'That slug is already used by another post.');
+                setStatus('error', json.message || 'That web address is already used by another post.');
                 return;
             }
             if (code === 409 && json?.error === 'conflict') {
@@ -235,12 +235,12 @@ export function usePostSync(workerUrl: string, initialSlug: string) {
                 if (theirs && sameDoc(theirs.post, snap)) { onSaved(theirs.version); return; }
                 stopped.current = true;
                 setConflict({ kind: 'draft', theirs: theirs?.post ?? null, theirsVersion: theirs?.version ?? 0 });
-                setStatus('conflict', 'This draft was changed somewhere else.');
+                setStatus('conflict', 'This post was changed somewhere else.');
                 return;
             }
             if (code === 503 && json?.error === 'drafts_unavailable') {
                 // Config problem, not a blip: retrying on a timer would never help. Next edit tries again.
-                setStatus('unavailable', json.message || 'Draft storage is not set up.');
+                setStatus('unavailable', json.message || 'Saving online is not set up yet.');
                 return;
             }
             if (code === 401 || code === 403) {
@@ -374,7 +374,7 @@ export function usePostSync(workerUrl: string, initialSlug: string) {
                 stopped.current = true;
                 setBodyKey((k) => k + 1);
                 setConflict({ kind: 'draft', theirs: base, theirsVersion: serverVersion });
-                setStatus('conflict', 'Unsent edits on this device differ from the saved draft.');
+                setStatus('conflict', 'Edits saved on this device differ from the online copy.');
             }
         } else {
             if (mirror) clearMirror(id);
@@ -382,13 +382,13 @@ export function usePostSync(workerUrl: string, initialSlug: string) {
             versionRef.current = draft?.version ?? 0;
             serverSlugRef.current = draft ? base!.slug : null;
             setStatus(json.draftsAvailable === false ? 'unavailable' : 'idle',
-                json.draftsAvailable === false ? 'Draft storage is not set up on the Worker; edits are kept on this device only.' : '');
+                json.draftsAvailable === false ? 'Saving online is not set up yet; your edits are kept on this device only.' : '');
             // The file was committed from outside the editor after this draft was saved: publishing would overwrite that commit.
             const draftBaseSha = (draft as { baseSha?: string | null } | null)?.baseSha;
             if (draft && draftBaseSha !== undefined && (draftBaseSha ?? null) !== (json.sha ?? null)) {
                 stopped.current = true;
                 setConflict({ kind: 'stale' });
-                setStatus('conflict', 'The file was committed outside the editor after this draft was saved.');
+                setStatus('conflict', 'This post was changed somewhere else after this draft was saved.');
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -449,7 +449,7 @@ export function usePostSync(workerUrl: string, initialSlug: string) {
                     setConflict(null);
                     if (serverSlugRef.current) rev.current += 1; // re-save the draft against the new sha
                     if (dirty()) { setStatus('saving'); scheduleSave(); }
-                    else setStatus('idle', 'Updated to the latest published version. Publish again to overwrite it with yours.');
+                    else setStatus('idle', 'Updated to the latest version from the site. Publish again to replace it with yours.');
                 } else {
                     setStatus('error', 'Could not fetch the latest version. Try again.');
                 }
@@ -469,7 +469,7 @@ export function usePostSync(workerUrl: string, initialSlug: string) {
             const res = await api(workerUrl, `/api/posts/${docRef.current.slug || initialSlug}`);
             if (res.status !== 200) { setStatus('error', 'Could not fetch their version. Try again.'); return; }
             const hasBase = c.kind === 'stale' ? !!res.json.post : !!(res.json.draft || res.json.post);
-            if (!hasBase) { setStatus('conflict', 'There is no saved version to load. Use Keep mine.'); return; }
+            if (!hasBase) { setStatus('conflict', 'There is no other version to load. Use Keep my version.'); return; }
             pinnedBase.current = null;
             // For a refused publish the committed file is "theirs"; for a draft clash it is the server draft.
             applyServer(res.json, c.kind === 'stale');
@@ -508,10 +508,11 @@ export function usePostSync(workerUrl: string, initialSlug: string) {
         saveTimer.current = undefined;
     };
 
-    const publish = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
+    /** Saves the post to the site. By default that also makes it visible; `keepStatus` saves it with the Status the writer chose (a hidden draft stays hidden). */
+    const publish = useCallback(async (opts: { keepStatus?: boolean } = {}): Promise<{ ok: boolean; error?: string }> => {
         setBusy('publishing');
         await settle();
-        const post = { ...docRef.current, published: true };
+        const post = { ...docRef.current, published: opts.keepStatus ? docRef.current.published : true };
         const pubRev = rev.current;
         try {
             const res = await api(workerUrl, `/api/posts/${post.slug}/publish`, { method: 'POST', body: { post, sha: liveRef.current.sha, draftVersion: serverSlugRef.current === post.slug ? versionRef.current : 0 } });
@@ -519,8 +520,8 @@ export function usePostSync(workerUrl: string, initialSlug: string) {
                 const previous = serverSlugRef.current;
                 const kept = res.json.draftKept ? (res.json.draft as { post: PostDoc; version: number }) : null;
                 // Keep anything typed while the request was in flight.
-                setDoc({ ...docRef.current, published: true });
-                setLiveBoth({ sha: res.json.sha, published: true });
+                setDoc({ ...docRef.current, published: post.published });
+                setLiveBoth({ sha: res.json.sha, published: post.published });
                 // The Worker deleted this slug's draft; start fresh from here.
                 versionRef.current = 0;
                 serverSlugRef.current = null;
@@ -536,19 +537,19 @@ export function usePostSync(workerUrl: string, initialSlug: string) {
                     versionRef.current = kept.version;
                     serverSlugRef.current = post.slug;
                     setConflict({ kind: 'draft', theirs: kept.post, theirsVersion: kept.version });
-                    setStatus('conflict', 'Published. A newer draft from another session was kept; choose which to continue with.');
+                    setStatus('conflict', 'Published. A newer copy from another tab or device was kept; choose which to continue with.');
                 }
                 return { ok: true };
             }
             if (res.status === 409 && res.json?.error === 'slug_taken') {
                 setSlugTaken(post.slug);
-                return { ok: false, error: res.json.message || 'That slug is already used by another post.' };
+                return { ok: false, error: res.json.message || 'That web address is already used by another post.' };
             }
             if (res.status === 409) {
                 stopped.current = true;
                 setConflict({ kind: 'stale' });
-                setStatus('conflict', 'The published file changed since you opened it.');
-                return { ok: false, error: res.json?.message || 'The published file changed since you opened it.' };
+                setStatus('conflict', 'This post was changed somewhere else since you opened it.');
+                return { ok: false, error: res.json?.message || 'This post was changed somewhere else since you opened it.' };
             }
             return { ok: false, error: res.json?.error || `Publish failed (${res.status})` };
         } catch {
@@ -562,7 +563,7 @@ export function usePostSync(workerUrl: string, initialSlug: string) {
 
     const unpublish = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
         const sha = liveRef.current.sha;
-        if (!sha) return { ok: false, error: 'This post has not been committed.' };
+        if (!sha) return { ok: false, error: 'This post has not been published.' };
         setBusy('unpublishing');
         try {
             const res = await api(workerUrl, `/api/posts/${docRef.current.slug}/unpublish`, { method: 'POST', body: { sha } });
@@ -577,7 +578,7 @@ export function usePostSync(workerUrl: string, initialSlug: string) {
             if (res.status === 409) {
                 stopped.current = true;
                 setConflict({ kind: 'stale' });
-                setStatus('conflict', 'The published file changed since you opened it.');
+                setStatus('conflict', 'This post was changed somewhere else since you opened it.');
             }
             return { ok: false, error: res.json?.message || res.json?.error || `Unpublish failed (${res.status})` };
         } catch {
