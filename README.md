@@ -47,7 +47,7 @@
 
   <br />
 
-  <img width="98%" alt="Contribution graph" src="https://github-readme-activity-graph.vercel.app/graph?username=mncoleman&bg_color=0D1117&color=2DD4BF&line=016B72&point=FFFFFF&area=true&hide_border=true" />
+  <img width="98%" alt="Contribution graph" src="https://ghchart.rshah.org/2DD4BF/mncoleman" />
 
 </div>
 
