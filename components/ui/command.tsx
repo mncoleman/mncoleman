@@ -60,6 +60,8 @@ const CommandList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.List
     ref={ref}
+    // Lenis (site-wide smooth scroll) swallows wheel events on nested scrollers unless told not to.
+    data-lenis-prevent
     className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
     {...props}
   />
