@@ -6,7 +6,7 @@ tags: ["Spiritual","Bible","Study","Book of Daniel"]
 published: false
 featured: false
 excerpt: ""
-author: "Anonymous"
+author: "Matthew Coleman"
 ---
 
 Welcome to the very first part on my study of the Biblical book of Daniel.
