@@ -6,7 +6,7 @@ export type AdminFeature = 'artifacts' | 'content' | 'library' | 'analytics' | '
 
 export const FEATURE_LABELS: Record<AdminFeature, string> = {
     artifacts: 'Artifacts (all, incl. upload/delete)',
-    content: 'Content (resources + projects)',
+    content: 'Content (posts + resources + projects)',
     library: 'AI Library',
     analytics: 'Analytics',
     rebuild: 'Rebuild site',

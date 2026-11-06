@@ -17,7 +17,6 @@ import { CollapsibleRow } from '@/components/collapsible-row';
 interface BlogPageClientProps {
     initialPosts: Post[];
     allTags: string[];
-    databaseId: string;
 }
 
 // MaskedHeading sizes its letters as a fraction of its own width, so on a phone the
@@ -101,7 +100,7 @@ function PostCard({
     );
 }
 
-export default function BlogPageClient({ initialPosts, allTags, databaseId }: BlogPageClientProps) {
+export default function BlogPageClient({ initialPosts, allTags }: BlogPageClientProps) {
     const narrow = useSyncExternalStore(subscribeNarrow, () => window.matchMedia(NARROW_QUERY).matches, () => false);
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
@@ -109,10 +108,6 @@ export default function BlogPageClient({ initialPosts, allTags, databaseId }: Bl
     useEffect(() => {
         setIsAdmin(!!getSessionToken());
     }, []);
-
-    const notionDatabaseUrl = databaseId
-        ? `https://www.notion.so/${databaseId.replace(/-/g, '')}`
-        : null;
 
     const filteredPosts = useMemo(() => {
         if (!selectedTag) return initialPosts;
@@ -131,12 +126,10 @@ export default function BlogPageClient({ initialPosts, allTags, databaseId }: Bl
                 <p className="mt-3 mb-6 text-xl font-medium text-muted-foreground md:text-2xl">
                     Thoughts on technology, life, and sometimes just random things.
                 </p>
-                {isAdmin && notionDatabaseUrl && (
+                {isAdmin && (
                     <div className="mt-6 flex justify-center">
                         <a
-                            href={notionDatabaseUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            href="/admin/posts/edit"
                             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-medium text-sm shadow-md shadow-primary/20 hover:opacity-90 hover:shadow-lg hover:shadow-primary/30 transition-all"
                         >
                             <Plus className="h-4 w-4" />

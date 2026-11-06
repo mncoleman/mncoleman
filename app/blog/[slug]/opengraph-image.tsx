@@ -7,6 +7,7 @@ export const contentType = OG_CONTENT_TYPE;
 
 export async function generateStaticParams() {
     const posts = await getAllPosts();
+    if (posts.length === 0) return [{ slug: '_none' }];
     return posts.map((post) => ({ slug: post.slug }));
 }
 

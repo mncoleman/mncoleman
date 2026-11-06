@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { getAllPosts } from '@/lib/blog';
 import { getProjectSlugs } from '@/lib/projects';
 import { getResourceSlugs } from '@/lib/resources';
+import { allChapterParams } from '@/lib/bible-server';
 
 const BASE = 'https://mncoleman.com';
 
@@ -62,5 +63,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.5,
     }));
 
-    return [...staticEntries, ...blogEntries, ...projectEntries, ...resourceEntries];
+    // Bible: the index plus every chapter page (1,189), from local data so it cannot fail on the network.
+    const bibleEntries: MetadataRoute.Sitemap = [
+        { url: `${BASE}/bible/`, lastModified: now, changeFrequency: 'yearly', priority: 0.4 },
+        ...allChapterParams().map(({ book, chapter }) => ({
+            url: `${BASE}/bible/${book}/${chapter}/`,
+            lastModified: now,
+            changeFrequency: 'yearly' as const,
+            priority: 0.3,
+        })),
+    ];
+
+    return [...staticEntries, ...blogEntries, ...projectEntries, ...resourceEntries, ...bibleEntries];
 }

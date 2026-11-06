@@ -1,4 +1,4 @@
-import { getPublishedPostsWithContent } from '../lib/notion';
+import { getPublishedPostsWithContent } from '../lib/posts';
 import { getPublishedProjects } from '../lib/projects';
 import { getPublishedResources } from '../lib/resources';
 import { getResume } from '../lib/resume';
@@ -21,6 +21,8 @@ interface SearchItem {
 }
 
 async function main() {
+    // lib/posts.ts fails a production build when data/posts/ is missing; this runs before `next build`, so say so here too.
+    (process.env as Record<string, string | undefined>).NODE_ENV ||= 'production';
     console.log('Generating search index...');
 
     const [posts, projects, resources, resume] = await Promise.all([

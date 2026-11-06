@@ -2,6 +2,7 @@ import { ArrowLeft, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import type { ComponentProps } from 'react';
 import { ShareActions } from '@/components/ShareActions';
 
 /**
@@ -36,6 +37,8 @@ export function CollectionDetail({
     content,
     detailsPath,
     backLink,
+    anchor,
+    head,
 }: {
     kind: keyof typeof KIND;
     name: string;
@@ -47,6 +50,15 @@ export function CollectionDetail({
     detailsPath: string;
     /** The "Back to …" control; the page passes a Link, the preview a plain span. */
     backLink: (children: React.ReactNode, className: string) => React.ReactNode;
+    /**
+     * Link renderer for the body. The static pages pass the server `MarkdownLink` so verse links
+     * get their text baked in at build time (as blog posts do). It is a prop rather than an import
+     * because this component is also bundled into the admin editor's preview, and the verse
+     * renderer reads files at build time and cannot ship to the browser.
+     */
+    anchor?: (props: ComponentProps<'a'> & { node?: unknown }) => React.ReactNode;
+    /** Extra head content for the body, e.g. `<BibleHead />` when it contains verse links. */
+    head?: React.ReactNode;
 }) {
     const cfg = KIND[kind];
     const month = date ? monthLabel(date) : null;
@@ -98,17 +110,18 @@ export function CollectionDetail({
 
             {content ? (
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
+                    {head}
                     <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                            a: ({ href, children, ...props }) => {
+                            a: anchor ?? (({ href, children, ...props }) => {
                                 const isExternal = href?.startsWith('http');
                                 return isExternal ? (
                                     <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
                                 ) : (
                                     <a href={href} {...props}>{children}</a>
                                 );
-                            },
+                            }),
                         }}
                     >{content}</ReactMarkdown>
                 </div>

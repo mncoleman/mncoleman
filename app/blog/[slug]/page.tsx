@@ -5,11 +5,16 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { MarkdownLink } from '@/components/bible/MarkdownLink';
+import { BibleHead } from '@/components/bible/BibleHead';
 
 export const dynamicParams = false;
 
 export async function generateStaticParams() {
   const posts = await getAllPosts();
+  // A static export needs at least one param. With no posts yet, emit a placeholder
+  // slug that resolves to notFound() rather than failing the whole build.
+  if (posts.length === 0) return [{ slug: '_none' }];
   return posts.map((post) => ({
     slug: post.slug,
   }));
@@ -18,7 +23,8 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
-  if (!post) return { title: 'Post not found | Matthew Coleman' };
+  // Also what the `_none` placeholder (a zero-post build) renders: never indexed, never in the sitemap.
+  if (!post) return { title: 'Post not found | Matthew Coleman', robots: { index: false, follow: false } };
 
   const description = post.excerpt || `Blog post: ${post.title}`;
   const url = `/blog/${slug}/`;
@@ -82,19 +88,11 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
         )}
       </header>
 
+      {(post.content || '').includes('](/bible/') && <BibleHead />}
       <div className="prose prose-neutral dark:prose-invert max-w-none">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
-          components={{
-            a: ({ href, children, ...props }) => {
-              const isExternal = href?.startsWith('http');
-              return isExternal ? (
-                <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
-              ) : (
-                <a href={href} {...props}>{children}</a>
-              );
-            },
-          }}
+          components={{ a: MarkdownLink }}
         >{post.content || ''}</ReactMarkdown>
       </div>
     </article>

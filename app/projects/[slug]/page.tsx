@@ -5,6 +5,8 @@ import { getProjectBySlug, getProjectSlugs } from '@/lib/projects';
 import { slugify } from '@/lib/utils';
 import { PageEntrance } from '@/components/page-entrance';
 import { CollectionDetail } from '@/components/collection-detail';
+import { MarkdownLink } from '@/components/bible/MarkdownLink';
+import { BibleHead } from '@/components/bible/BibleHead';
 
 export const dynamicParams = false;
 
@@ -47,6 +49,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                     url={project.url}
                     content={project.content}
                     detailsPath={detailsPath}
+                    anchor={MarkdownLink}
+                    head={(project.content || '').includes('](/bible/') ? <BibleHead /> : null}
                     backLink={(children, className) => <Link href="/projects" className={className}>{children}</Link>}
                 />
             </article>
