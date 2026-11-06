@@ -2288,6 +2288,17 @@ const Folder = ({
       data-draggable={draggable ? '' : undefined}
       style={vars}
     >
+      {/* Hover bridge: while a hover-open folder is open, an invisible box covers the whole
+          fan of papers, so resting the pointer in a gap between two papers (or just above
+          them) still counts as being on the folder and does not collapse it. It sits under
+          the stage, so the papers keep their own hover and click. */}
+      {isOpen && openOn === 'hover' && (
+        <span
+          aria-hidden="true"
+          className="absolute"
+          style={{ left: '-75%', right: '-75%', top: '-50%', bottom: 0 }}
+        />
+      )}
       <div
         className="group/stage absolute inset-0 isolate cursor-pointer outline-none"
         style={{
