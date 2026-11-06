@@ -27,7 +27,7 @@ const subscribeHover = (cb: () => void) => {
 /**
  * The footer's "Other" folder: opens on hover (on tap without a hover pointer) and fans out a paper per link. Settings
  * come from the ReactBits demo link Matthew picked (black, hover, size 1, speed 0.75,
- * bounce 0.25, tilt 1.5, no intro). Papers navigate on a click or tap rather than zoom,
+ * bounce 0.25, tilt 0 (no pointer pivot), no intro). Papers navigate on a click or tap rather than zoom,
  * since every one of them is a link; they can still be dragged out of the folder, and
  * Folder suppresses the click that ends a drag, so a drag never navigates.
  *
@@ -66,7 +66,7 @@ export function FooterFolder() {
                     size={0.75}
                     speed={0.75}
                     bounce={0.25}
-                    tilt={1.5}
+                    tilt={0}
                     intro={false}
                     zoomOnClick={false}
                     theme={resolvedTheme === 'light' ? 'light' : 'dark'}
