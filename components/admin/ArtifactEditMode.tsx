@@ -9,6 +9,7 @@ import {
     Maximize2, Minimize2, MousePointerClick, PanelRightClose, PanelRightOpen, Pencil, RotateCcw, Send, Trash2, X,
 } from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
+import { withPreviewToken } from '@/lib/artifact-preview';
 
 const ARTIFACTS_API = (process.env.NEXT_PUBLIC_ARTIFACTS_API_URL || 'https://artifacts.mncoleman.com').replace(/\/$/, '');
 const FRAME_ORIGIN = new URL(ARTIFACTS_API).origin;
@@ -77,7 +78,21 @@ export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug:
     const [showResolved, setShowResolved] = useState(false);
 
     const api = `${workerUrl.replace(/\/$/, '')}/api/artifacts/instant/${encodeURIComponent(slug)}`;
-    const frameSrc = `${ARTIFACTS_API}/a/${encodeURIComponent(slug)}?select=1`;
+    const plainFrameSrc = `${ARTIFACTS_API}/a/${encodeURIComponent(slug)}?select=1`;
+    // A private artifact's frame needs a fresh admin-preview token on every (re)load, or it
+    // shows the password gate. Public ones keep the plain URL and never ask for a token.
+    // The result is tagged with the frame key it was made for and the iframe only mounts
+    // when they match, so a reload never loads the previous (expired) token URL.
+    const [visibility, setVisibility] = useState<'public' | 'private' | null>(null);
+    const [frame, setFrame] = useState<{ key: number; src: string } | null>(null);
+    useEffect(() => {
+        if (!visibility) return;
+        if (visibility === 'public') { setFrame({ key: frameKey, src: plainFrameSrc }); return; }
+        let live = true;
+        withPreviewToken(workerUrl, slug, plainFrameSrc).then((u) => { if (live) setFrame({ key: frameKey, src: u }); });
+        return () => { live = false; };
+    }, [workerUrl, slug, plainFrameSrc, frameKey, visibility]);
+    const frameSrc = frame && frame.key === frameKey ? frame.src : null;
 
     const post = useCallback((m: Record<string, unknown>) => {
         frameRef.current?.contentWindow?.postMessage({ ...m, source: SRC, v: 1, color: PICK_COLOR }, FRAME_ORIGIN);
@@ -101,6 +116,7 @@ export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug:
             const data = await call('/state?all=1');
             setNotes(data.notes || []);
             setLink(data.link || null);
+            if (data.visibility === 'private' || data.visibility === 'public') setVisibility(data.visibility);
             if (shaRef.current && data.sha && data.sha !== shaRef.current) {
                 setPicks([]);
                 setEditing(false);
@@ -323,13 +339,15 @@ export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug:
                     : 'grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]'}
             >
                 <div className={`relative rounded-lg border border-border/60 overflow-hidden bg-white ${fullscreen ? 'h-full min-h-0' : ''}`}>
-                    <iframe
-                        key={frameKey}
-                        ref={frameRef}
-                        src={frameSrc}
-                        title={`Artifact ${slug}`}
-                        className={`w-full block ${fullscreen ? 'h-full' : 'h-[75vh]'}`}
-                    />
+                    {frameSrc && (
+                        <iframe
+                            key={frameKey}
+                            ref={frameRef}
+                            src={frameSrc}
+                            title={`Artifact ${slug}`}
+                            className={`w-full block ${fullscreen ? 'h-full' : 'h-[75vh]'}`}
+                        />
+                    )}
                     {fullscreen && !panelOpen && (
                         <div className="absolute top-2 right-2 flex gap-1.5 rounded-lg bg-background/90 backdrop-blur border border-border/60 p-1 shadow-lg">
                             <Button size="sm" variant={selectOn ? 'default' : 'ghost'} onClick={toggleSelect} className="h-7 gap-1" title="Toggle select mode">

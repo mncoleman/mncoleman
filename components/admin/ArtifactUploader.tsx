@@ -12,6 +12,7 @@ import { PasteInput } from '@/components/admin/PasteField';
 import { canUse, canManageSecrets, type AdminUser } from '@/components/admin/admin-context';
 import { useDeploy } from '@/components/admin/deploy-status';
 import { authHeaders } from '@/lib/admin-auth';
+import { openArtifactTab, withPreviewToken } from '@/lib/artifact-preview';
 import { artifactSlug, cn } from '@/lib/utils';
 import { deleteDraft, getDraft, saveDraft } from '@/lib/artifact-drafts';
 
@@ -520,7 +521,7 @@ function FileFrame({ src, type, title, sameOrigin }: { src: string; type: string
     );
 }
 
-function BrowserBar({ url, badge, href }: { url: string; badge?: string; href?: string }) {
+function BrowserBar({ url, badge, href, onOpen }: { url: string; badge?: string; href?: string; onOpen?: () => void }) {
     return (
         <div className="flex h-9 shrink-0 items-center gap-3 border-b border-border/60 bg-background px-3 text-xs">
             <span className="hidden gap-1.5 sm:flex" aria-hidden="true">
@@ -532,7 +533,7 @@ function BrowserBar({ url, badge, href }: { url: string; badge?: string; href?: 
             {badge && <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-700 dark:text-amber-300">{badge}</span>}
             {/* href differs from the shown url for local copies: the shown text is the file
                 name or live address, but only the blob URL actually opens before the upload or build. */}
-            <a href={href ?? url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-muted-foreground hover:text-foreground" title="Open in a new tab" aria-label="Open in a new tab"><ExternalLink size={12} /></a>
+            <a href={href ?? url} target="_blank" rel="noopener noreferrer" onClick={onOpen ? (e) => { e.preventDefault(); onOpen(); } : undefined} className="shrink-0 text-muted-foreground hover:text-foreground" title="Open in a new tab" aria-label="Open in a new tab"><ExternalLink size={12} /></a>
         </div>
     );
 }
@@ -774,6 +775,23 @@ function ArtifactEditor({
     // change must not show the browser's stale copy.
     const fresh = (u: string) => `${u}${u.includes('?') ? '&' : '?'}v=${encodeURIComponent(`${a.uploadedAt}-${frameKey}`)}`;
 
+    // A private artifact's frame would otherwise show the public password gate. The Worker
+    // issues a 90-second single-artifact token to people allowed to see it; the service
+    // trades it for the unlock cookie and redirects to the clean address. Remints on reload.
+    const privateInstant = dynamic && a.visibility === 'private' && !!a.slug;
+    const previewKey = `${frameKey}|${a.uploadedAt}|${url}`;
+    // Tagged with the key it was minted for, so a reload (new key) never renders the previous, expired token URL.
+    const [preview, setPreview] = useState<{ k: string; src: string } | null>(null);
+    const previewSrc = preview && preview.k === previewKey ? preview.src : null;
+    useEffect(() => {
+        if (!privateInstant || !a.slug) { setPreview(null); return; }
+        let live = true;
+        withPreviewToken(api, a.slug, fresh(url)).then((u) => { if (live) setPreview({ k: previewKey, src: u }); });
+        return () => { live = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [privateInstant, api, a.slug, a.uploadedAt, frameKey, url]);
+    const openTab = privateInstant && a.slug ? () => { void openArtifactTab(api, a.slug!, url, true); } : undefined;
+
     const save = async () => {
         if (!dirty || problem) return;
         setBusy('save');
@@ -911,10 +929,15 @@ function ArtifactEditor({
                             <BrowserBar
                                 url={url}
                                 href={pending?.url}
+                                onOpen={openTab}
                                 badge={pending ? `Not built yet · copy from ${pending.from}` : a.visibility === 'private' ? 'Private · password-gated' : undefined}
                             />
                             <div className="min-h-0 flex-1">
-                                <FileFrame key={`${frameKey}-${pending?.url ?? 'live'}`} src={pending?.url ?? fresh(url)} type={a.type} title={a.name} sameOrigin={!dynamic} />
+                                {privateInstant && !previewSrc ? (
+                                    <div className="flex h-full items-center justify-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                                ) : (
+                                    <FileFrame key={`${frameKey}-${pending?.url ?? 'live'}`} src={pending?.url ?? previewSrc ?? fresh(url)} type={a.type} title={a.name} sameOrigin={!dynamic} />
+                                )}
                             </div>
                         </div>
                     )}
@@ -936,7 +959,7 @@ function ArtifactEditor({
                             <button type="button" onClick={() => copy(url, 'url')} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Copy link" aria-label="Copy link">
                                 {copied === 'url' ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
                             </button>
-                            <a href={url} target="_blank" rel="noopener noreferrer" className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Open" aria-label="Open">
+                            <a href={url} target="_blank" rel="noopener noreferrer" onClick={openTab ? (e) => { e.preventDefault(); openTab(); } : undefined} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Open" aria-label="Open">
                                 <ExternalLink size={12} />
                             </a>
                         </div>

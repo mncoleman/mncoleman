@@ -692,6 +692,31 @@ export default {
                 return jsonOut(outcome.result);
             }
 
+            // GET /api/artifacts/instant/:slug/preview-token — lets the admin panel's preview and
+            // edit frames open a PRIVATE artifact without its password. Mints a 90-second token for
+            // that one slug under its OWN audience, 'artifacts-preview', so requireAuth
+            // (aud 'artifacts-service') refuses it on every API route; /a/:slug is the only place it is honoured. Allowed for exactly
+            // the people who may see the artifact: the `artifacts` feature (owner, site admins) or a
+            // grant for this slug. Nothing is returned that the caller could not already open.
+            const previewMatch = p.match(/^\/api\/artifacts\/instant\/([a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?)\/preview-token$/);
+            if (previewMatch && request.method === 'GET') {
+                if (!env.ARTIFACTS_JWT_SECRET) {
+                    return new Response(JSON.stringify({ error: 'Instant artifacts not configured' }), {
+                        status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+                const slug = previewMatch[1];
+                if (!can('artifacts') && !session.artifactGrants.includes(slug)) return forbidden();
+                const previewToken = await signArtifactsJwt({
+                    sub: session.userId,
+                    purpose: 'artifact-preview',
+                    preview: slug,
+                }, env.ARTIFACTS_JWT_SECRET, 90, 'artifacts-preview');
+                return new Response(JSON.stringify({ token: previewToken, expiresIn: 90 }), {
+                    status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                });
+            }
+
             // Edit mode and Claude linking for one instant artifact. Proxied as-is:
             // the service checks the slug against the token's `artifacts` claim.
             const collabMatch = p.match(/^\/api\/artifacts\/instant\/([a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?)\/(state|notes|notes\/[a-f0-9-]{36}(?:\/(?:resolve|reopen|redeliver))?|edit-text|link)$/);
@@ -2331,10 +2356,10 @@ async function signJwt(payload: any, secret: string): Promise<string> {
 // Callers pass `role` (the freshly re-derived session role, not the token's own
 // claim): the service only discloses decrypted artifact passwords when it reads
 // role === 'super_admin', and treats an absent claim as not-super_admin.
-async function signArtifactsJwt(payload: Record<string, unknown>, secret: string): Promise<string> {
+async function signArtifactsJwt(payload: Record<string, unknown>, secret: string, ttlSeconds = 60, audience = 'artifacts-service'): Promise<string> {
     const header = { alg: 'HS256', typ: 'JWT' };
     const now = Math.floor(Date.now() / 1000);
-    const claims = { ...payload, iat: now, exp: now + 60, aud: 'artifacts-service' };
+    const claims = { ...payload, iat: now, exp: now + ttlSeconds, aud: audience };
     const h = btoaUrl(JSON.stringify(header));
     const p = btoaUrl(JSON.stringify(claims));
     const sig = await createSignature(`${h}.${p}`, secret);

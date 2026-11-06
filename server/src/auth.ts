@@ -25,7 +25,8 @@ export const requireAuth: MiddlewareHandler = async (c, next) => {
         });
         // A Claude link token is scoped to one artifact's /api/link routes and
         // must never pass as an admin-panel token anywhere else.
-        if (payload.purpose === 'artifact-link') {
+        // An admin preview token only unlocks one private artifact's /a/:slug page.
+        if (payload.purpose === 'artifact-link' || payload.purpose === 'artifact-preview') {
             return c.json({ error: 'invalid token' }, 401);
         }
         c.set('user', payload);

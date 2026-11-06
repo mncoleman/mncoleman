@@ -410,6 +410,8 @@ export function registerCollabRoutes(app: Hono<any>): void {
         if (meta instanceof Response) return meta;
         return c.json({
             sha: artifactSha(meta),
+            // Edit mode only asks the Worker for a preview token when the artifact is private.
+            visibility: meta.visibility === 'private' ? 'private' : 'public',
             notes: listNotes(meta.slug, c.req.query('all') === '1').map(noteView),
             link: linkView(c, meta.slug),
         });

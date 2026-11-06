@@ -21,6 +21,7 @@ import { isValidSlug, suggestFromFilename } from './slugs';
 import { requireAuth } from './auth';
 import { renderOg, OG_VERSION } from './og';
 import { signSlugCookie, verifySlugCookie, cookieName, parseCookies } from './cookies';
+import { PREVIEW_PARAM, verifyPreviewToken } from './preview-token';
 import { notFoundPage, passwordPromptPage, artifactDetailsPage } from './pages';
 import { encryptPassword, decryptPassword } from './crypto';
 import {
@@ -477,11 +478,38 @@ app.get('/a/:slug/details', async (c) => {
     });
 });
 
+/** The unlock cookie, set identically by a correct password and by a valid admin preview token. */
+function unlockCookie(slug: string): string {
+    return `${cookieName(slug)}=${signSlugCookie(slug, 60 * 60 * 24)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`;
+}
+
 app.get('/a/:slug', async (c) => {
     const slug = c.req.param('slug');
     if (!isValidSlug(slug)) return new Response(notFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     const meta = await getMeta(slug);
     if (!meta) return new Response(notFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+
+    // The admin panel's preview/edit frames arrive with a 90-second, single-slug token from
+    // the Worker (only for people allowed to see this artifact). A valid one does exactly what
+    // a correct password does, then redirects to the clean URL so the token is never left in
+    // the address bar; an invalid or expired one falls through to the normal gate below.
+    const previewToken = c.req.query(PREVIEW_PARAM);
+    let tokenSeen = false;
+    if (previewToken !== undefined) {
+        tokenSeen = true;
+        if (meta.visibility === 'private' && await verifyPreviewToken(previewToken, slug, process.env.JWT_SECRET)) {
+            const select = c.req.query(SELECT_MODE_PARAM) === '1' ? `?${SELECT_MODE_PARAM}=1` : '';
+            return new Response(null, {
+                status: 303,
+                headers: {
+                    'Location': `/a/${encodeURIComponent(slug)}${select}`,
+                    'Set-Cookie': unlockCookie(slug),
+                    'Referrer-Policy': 'no-referrer',
+                    'Cache-Control': 'no-store',
+                },
+            });
+        }
+    }
 
     if (meta.visibility === 'private' && !isUnlocked(c, slug)) {
         // Serve the prompt with HTTP 200 so OpenGraph crawlers (iMessage/Slack/X)
@@ -495,6 +523,7 @@ app.get('/a/:slug', async (c) => {
                     'Content-Type': 'text/html; charset=utf-8',
                     'Cache-Control': 'no-store',
                     'X-Robots-Tag': 'noindex',
+                    ...(tokenSeen ? { 'Referrer-Policy': 'no-referrer' } : {}),
                 },
             }
         );
@@ -586,13 +615,12 @@ app.post('/unlock/:slug', async (c) => {
         );
     }
 
-    const cookieValue = signSlugCookie(slug, 60 * 60 * 24); // 24h
     const select = c.req.query(SELECT_MODE_PARAM) === '1' ? `?${SELECT_MODE_PARAM}=1` : '';
     return new Response(null, {
         status: 303,
         headers: {
             'Location': `/a/${encodeURIComponent(slug)}${select}`,
-            'Set-Cookie': `${cookieName(slug)}=${cookieValue}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`,
+            'Set-Cookie': unlockCookie(slug),
         },
     });
 });
