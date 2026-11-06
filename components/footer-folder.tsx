@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import Folder, { type FolderEntry } from '@/components/ui/folder';
+import FolderFloat from '@/components/ui/FolderFloat';
 
 const REPO_URL = 'https://github.com/mncoleman/mncoleman';
 
@@ -25,11 +25,10 @@ const subscribeHover = (cb: () => void) => {
 };
 
 /**
- * The footer's "Other" folder: opens on hover (on tap without a hover pointer) and fans out a paper per link. Settings
- * come from the ReactBits demo link Matthew picked (black, hover, size 1, speed 0.75,
- * bounce 0.25, tilt 0 (no pointer pivot), no intro). Papers navigate on a click or tap rather than zoom,
- * since every one of them is a link; they can still be dragged out of the folder, and
- * Folder suppresses the click that ends a drag, so a drag never navigates.
+ * The footer's "Other" folder (ReactBits FolderFloat): opens on hover (on tap without a hover pointer)
+ * and floats a pill per link above it. A pill navigates on click or tap; dragging one around does not.
+ * The component lives in `components/ui/FolderFloat.tsx` with one local change, a short close delay so
+ * crossing the gaps between pills does not collapse it.
  *
  * The folder is pointer-and-keyboard UI drawn by the component; the same four
  * destinations are also plain links in an sr-only list, so a screen reader or a
@@ -43,7 +42,8 @@ export function FooterFolder() {
     useEffect(() => setMounted(true), []);
     const canHover = useSyncExternalStore(subscribeHover, () => window.matchMedia(HOVER_QUERY).matches, () => true);
 
-    const items: FolderEntry[] = PAPERS.map(({ title, description }) => ({ title, description }));
+    const light = resolvedTheme === 'light';
+    const items = PAPERS.map(({ title, href }) => ({ label: title, value: href }));
 
     return (
         <div className="relative isolate flex justify-center" data-print-hide>
@@ -58,20 +58,19 @@ export function FooterFolder() {
                 // The rim lives on a wrapper, not the folder itself: a filter on the
                 // folder's own root would flatten its 3D flap.
                 <div className="dark:[filter:drop-shadow(0_0_1px_rgba(255,255,255,0.45))_drop-shadow(0_0_14px_rgba(186,230,253,0.18))]">
-                <Folder
+                <FolderFloat
                     items={items}
                     label="Other"
-                    color="#000000"
-                    openOn={canHover ? 'hover' : 'click'}
-                    size={0.75}
-                    speed={0.75}
-                    bounce={0.25}
+                    sublabel={`${PAPERS.length} pages`}
+                    trigger={canHover ? 'hover' : 'click'}
                     tilt={0}
-                    intro={false}
-                    zoomOnClick={false}
-                    theme={resolvedTheme === 'light' ? 'light' : 'dark'}
-                    onItemClick={(_, i) => {
-                        const p = PAPERS[i];
+                    folderColor={light ? '#18181b' : '#000000'}
+                    frontColor={light ? '#27272a' : '#0f0f11'}
+                    labelColor="#f5f5f5"
+                    itemColor={light ? '#18181b' : '#f5f5f5'}
+                    itemTextColor={light ? '#fafafa' : '#18181b'}
+                    onSelect={(href) => {
+                        const p = PAPERS.find((x) => x.href === href);
                         if (!p) return;
                         if (p.external) window.open(p.href, '_blank', 'noopener,noreferrer');
                         else router.push(p.href);
