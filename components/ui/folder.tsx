@@ -2002,6 +2002,17 @@ const Folder = ({
       s.onItemDrop?.(s.entries[drag.index], drag.index, false);
     };
 
+    // Hover-open folders close after a short grace period instead of the instant the
+    // pointer leaves: the fanned papers leave gaps between them, and crossing a gap is
+    // a (brief) leave from `root`. Any move over the folder cancels the pending close.
+    let closeTimer: ReturnType<typeof setTimeout> | null = null;
+    const cancelClose = () => {
+      if (closeTimer !== null) {
+        clearTimeout(closeTimer);
+        closeTimer = null;
+      }
+    };
+
     const onMove = (event: PointerEvent) => {
       const drag = state.drag;
       if (drag && event.pointerId === drag.id) {
@@ -2019,6 +2030,7 @@ const Folder = ({
         wake();
       }
       if (event.pointerType === 'touch') return;
+      cancelClose();
       const box = root.getBoundingClientRect();
       state.pointerX = clamp(((event.clientX - box.left) / box.width) * 2 - 1, -1.5, 1.5);
       state.pointerY = clamp(((event.clientY - box.top) / box.height) * 2 - 1, -1.5, 1.5);
@@ -2045,7 +2057,13 @@ const Folder = ({
       state.hovered = false;
       state.pressed = false;
       state.hoveredItem = -1;
-      if (settingsRef.current.openOn === 'hover') setOpenRef.current(false);
+      if (settingsRef.current.openOn === 'hover') {
+        cancelClose();
+        closeTimer = setTimeout(() => {
+          closeTimer = null;
+          if (!state.hovered) setOpenRef.current(false);
+        }, 320);
+      }
       wake();
     };
 
@@ -2167,6 +2185,7 @@ const Folder = ({
 
     return () => {
       cancelAnimationFrame(state.raf);
+      cancelClose();
       root.removeEventListener('pointermove', onMove);
       root.removeEventListener('pointerleave', onLeave);
       root.removeEventListener('pointerdown', onDown);
@@ -2269,6 +2288,17 @@ const Folder = ({
       data-draggable={draggable ? '' : undefined}
       style={vars}
     >
+      {/* Hover bridge: while a hover-open folder is open, an invisible box covers the whole
+          fan of papers, so resting the pointer in a gap between two papers (or just above
+          them) still counts as being on the folder and does not collapse it. It sits under
+          the stage, so the papers keep their own hover and click. */}
+      {isOpen && openOn === 'hover' && (
+        <span
+          aria-hidden="true"
+          className="absolute"
+          style={{ left: '-75%', right: '-75%', top: '-50%', bottom: 0 }}
+        />
+      )}
       <div
         className="group/stage absolute inset-0 isolate cursor-pointer outline-none"
         style={{
