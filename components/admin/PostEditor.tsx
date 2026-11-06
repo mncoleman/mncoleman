@@ -1,11 +1,11 @@
 'use client';
 
-import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Editor } from '@tiptap/react';
 import {
-    AlignLeft, Calendar, Eye, Hash, Loader2, Menu, MoreHorizontal, PanelRight, Pen, RotateCcw, Rocket, Star, Tag, Trash2, User, X, CircleDot, ExternalLink,
+    AlignLeft, Calendar, Eye, Hash, Loader2, Menu, MoreHorizontal, Pen, RotateCcw, Rocket, Star, Tag, Trash2, User, CircleDot, ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -25,10 +25,11 @@ import { DatePicker } from '@/components/admin/fields/DatePicker';
 import { SelectField } from '@/components/admin/fields/SelectField';
 import { TagChip, TagCombobox } from '@/components/admin/fields/TagCombobox';
 import { Avatar, UserSelect } from '@/components/admin/fields/UserSelect';
+import {
+    IconButton, PropDivider, PropNote, PropRow, PropertiesDrawer, PropertiesToggle, RowAction, StatusPill, entryPath, notify, usePropertiesDrawer,
+} from '@/components/admin/kit';
 import '@/components/admin/page-editor.css';
 
-const PROPS_KEY = 'pe-props-open';
-const WIDE = 1100;
 const PLACEHOLDER = 'Write, press / for blocks, or @ for a verse or citation';
 
 function readAsBase64(file: File): Promise<string> {
@@ -58,16 +59,6 @@ function ago(ms: number) {
     return `${Math.round(s / 86400)} d ago`;
 }
 
-function initialPropsOpen(): boolean {
-    if (typeof window === 'undefined' || window.innerWidth < WIDE) return false;
-    try {
-        const stored = localStorage.getItem(PROPS_KEY);
-        return stored === null ? true : stored === '1';
-    } catch {
-        return true;
-    }
-}
-
 /** Quiet save state in the top bar: a dot and a few words, never a button. */
 function SaveStatus({ status, detail }: { status: SyncStatus; detail: string }) {
     const map: Record<SyncStatus, { label: string; dot: string; text?: string; pulse?: boolean }> = {
@@ -95,48 +86,6 @@ function SaveStatus({ status, detail }: { status: SyncStatus; detail: string }) 
     );
 }
 
-const IconButton = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string }>(
-    function IconButton({ label, children, className, ...rest }, ref) {
-        return (
-            <button
-                ref={ref}
-                type="button"
-                title={label}
-                aria-label={label}
-                className={cn('grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-muted aria-pressed:text-foreground', className)}
-                {...rest}
-            >
-                {children}
-            </button>
-        );
-    },
-);
-
-/** One row of the Properties drawer: icon + label, then the control. `stack` puts the control under the label. */
-function Prop({ icon: Icon, label, stack, children }: { icon: typeof Tag; label: string; stack?: boolean; children: React.ReactNode }) {
-    return (
-        <div className={cn('-mx-1.5 grid min-h-[34px] items-start rounded-md px-1.5 transition-colors focus-within:bg-foreground/[0.04] hover:bg-foreground/[0.04]', stack ? 'grid-cols-1' : 'grid-cols-[88px_minmax(0,1fr)]')}>
-            <div className={cn('flex items-center gap-2 whitespace-nowrap text-sm text-muted-foreground', stack ? 'h-[30px]' : 'h-[34px]')}>
-                <Icon size={15} aria-hidden="true" /> {label}
-            </div>
-            <div className={cn('flex min-h-[34px] min-w-0 flex-wrap items-center gap-1', stack && 'pb-1')}>{children}</div>
-        </div>
-    );
-}
-
-function StatusPill({ published }: { published: boolean }) {
-    const c = published ? '#22c55e' : '#f59e0b';
-    return (
-        <span
-            className="inline-flex h-[22px] items-center gap-1.5 rounded-[11px] pl-[7px] pr-[9px] text-[13px]"
-            style={{ background: `color-mix(in srgb, ${c} 16%, transparent)`, color: `color-mix(in srgb, ${c} 60%, hsl(var(--foreground)))` }}
-        >
-            <span className="h-2 w-2 rounded-full" style={{ background: c }} />
-            {published ? 'Published' : 'Draft'}
-        </span>
-    );
-}
-
 export function PostEditor({ workerUrl, slug: initialSlug }: { workerUrl: string; slug: string }) {
     const router = useRouter();
     const shell = useShell();
@@ -144,69 +93,17 @@ export function PostEditor({ workerUrl, slug: initialSlug }: { workerUrl: string
     const sync = usePostSync(workerUrl, initialSlug);
     const { doc, update, status, detail, live, busy } = sync;
     const [view, setView] = useState<'write' | 'preview'>('write');
-    const [propsOpen, setPropsOpenState] = useState(initialPropsOpen);
     const [pubOpen, setPubOpen] = useState(false);
     const [moreOpen, setMoreOpen] = useState(false);
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [actionError, setActionError] = useState('');
-    const [toast, setToast] = useState('');
     // The web address follows the title until it has been edited by hand or the post is published.
     const [slugTouched, setSlugTouched] = useState(!!initialSlug);
     const [tagOptions] = useState<string[]>(() => cachedTags());
     const editorRef = useRef<Editor | null>(null);
     const titleRef = useRef<HTMLTextAreaElement>(null);
     const excerptRef = useRef<HTMLTextAreaElement>(null);
-    const propsBtnRef = useRef<HTMLButtonElement>(null);
-    const propsRef = useRef<HTMLElement>(null);
-    const propsCloseRef = useRef<HTMLButtonElement>(null);
-    const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-    const notify = useCallback((text: string) => {
-        setToast(text);
-        clearTimeout(toastTimer.current);
-        toastTimer.current = setTimeout(() => setToast(''), 3200);
-    }, []);
-    useEffect(() => () => clearTimeout(toastTimer.current), []);
-
-    const setPropsOpen = useCallback((open: boolean, persist = true) => {
-        setPropsOpenState(open);
-        if (persist && window.innerWidth >= WIDE) {
-            try { localStorage.setItem(PROPS_KEY, open ? '1' : '0'); } catch { /* storage blocked: the toggle still works */ }
-        }
-    }, []);
-
-    // Below WIDE the Properties drawer covers the page, so it behaves as a modal dialog: the page behind
-    // is inert, Tab stays inside, Esc closes, and focus returns to the toggle that opened it.
-    const [narrow, setNarrow] = useState(false);
-    useEffect(() => {
-        // Modal only where the drawer covers the whole app (phone widths). From 768 up the sidebar stays beside it, so it is a plain overlay there.
-        const mq = window.matchMedia('(max-width: 767px)');
-        const sync = () => setNarrow(mq.matches);
-        sync();
-        mq.addEventListener('change', sync);
-        return () => mq.removeEventListener('change', sync);
-    }, []);
-    const modalProps = narrow && propsOpen && view === 'write';
-    const wasModal = useRef(false);
-    useEffect(() => {
-        let t: ReturnType<typeof setTimeout> | undefined;
-        // The drawer is visibility:hidden until its slide-in starts, and a hidden control cannot take focus: try again next tick.
-        if (modalProps) t = setTimeout(() => propsCloseRef.current?.focus(), 60);
-        else if (wasModal.current) propsBtnRef.current?.focus();
-        wasModal.current = modalProps;
-        return () => clearTimeout(t);
-    }, [modalProps]);
-    const trapTab = (e: React.KeyboardEvent<HTMLElement>) => {
-        const root = propsRef.current;
-        if (!modalProps || !root || e.key !== 'Tab' || !root.contains(e.target as Node)) return;
-        const items = Array.from(root.querySelectorAll<HTMLElement>('button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])'))
-            .filter((el) => !(el as HTMLButtonElement).disabled && el.getClientRects().length > 0);
-        if (!items.length) return;
-        const first = items[0];
-        const last = items[items.length - 1];
-        if (e.shiftKey && (document.activeElement === first || !root.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
-        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    };
+    const drawer = usePropertiesDrawer({ enabled: view === 'write', id: 'post-props' });
 
     // A new post: is this web address already a file or somebody's draft? Checked live, 400ms after the last keystroke.
     const [slugCheck, setSlugCheck] = useState<{ slug: string; taken: boolean } | null>(null);
@@ -251,21 +148,15 @@ export function PostEditor({ workerUrl, slug: initialSlug }: { workerUrl: string
         return json.path as string;
     }, [workerUrl]);
 
-    // Cmd/Ctrl+S saves the draft now (never publishes). Cmd/Ctrl+. shows or hides Properties.
+    // Cmd/Ctrl+S saves the draft now (never publishes). Cmd/Ctrl+. (Properties) lives in the kit's drawer hook.
     const { saveNow } = sync;
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveNow(); }
-            else if ((e.metaKey || e.ctrlKey) && e.key === '.') { e.preventDefault(); if (view === 'write') setPropsOpen(!propsOpen); }
-            else if (e.key === 'Escape' && !e.defaultPrevented && propsOpen && view === 'write' && window.innerWidth < WIDE
-                && (modalProps || (e.target as HTMLElement | null)?.closest?.('#post-props'))) {
-                // Focus is held inside the drawer while it is open; the focus effect returns it to the toggle.
-                setPropsOpen(false, false);
-            }
-        };
+                    };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [saveNow, view, propsOpen, modalProps, setPropsOpen]);
+    }, [saveNow]);
 
     // Auto-size the title and summary boxes to their text.
     useEffect(() => {
@@ -275,7 +166,7 @@ export function PostEditor({ workerUrl, slug: initialSlug }: { workerUrl: string
     useEffect(() => {
         const t = excerptRef.current;
         if (t) { t.style.height = 'auto'; t.style.height = `${t.scrollHeight}px`; }
-    }, [doc.excerpt, propsOpen, view, status]);
+    }, [doc.excerpt, drawer.open, view, status]);
 
     const onTitle = (title: string) => {
         update({ title, slug: slugAfterTitleChange({ title, slug: doc.slug, touched: slugTouched, locked: slugLocked }) });
@@ -350,7 +241,7 @@ export function PostEditor({ workerUrl, slug: initialSlug }: { workerUrl: string
     return (
         <div className="flex h-full min-h-0 flex-col">
             {/* ------------------------------ top bar ------------------------------ */}
-            <header inert={modalProps} className="flex h-14 shrink-0 items-center gap-2 border-b border-border/60 bg-background px-3 md:gap-3 md:px-6">
+            <header data-drawer-inert className="flex h-14 shrink-0 items-center gap-2 border-b border-border/60 bg-background px-3 md:gap-3 md:px-6">
                 {shell && <IconButton label="Open menu" onClick={shell.openMenu} className="md:hidden"><Menu size={18} /></IconButton>}
                 <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm">
                     <Link href="/admin/posts" className="hidden text-muted-foreground hover:text-foreground sm:inline">Posts</Link>
@@ -374,15 +265,7 @@ export function PostEditor({ workerUrl, slug: initialSlug }: { workerUrl: string
                         ))}
                     </div>
                     {view === 'write' && (
-                        <IconButton
-                            ref={propsBtnRef}
-                            label="Properties (Cmd+.)"
-                            aria-pressed={propsOpen}
-                            aria-controls="post-props"
-                            onClick={() => setPropsOpen(!propsOpen)}
-                        >
-                            <PanelRight size={18} />
-                        </IconButton>
+                        <PropertiesToggle drawer={drawer} />
                     )}
                     <Popover open={pubOpen} onOpenChange={(o) => { setPubOpen(o); if (o) setActionError(''); }}>
                         <PopoverTrigger asChild>
@@ -445,7 +328,7 @@ export function PostEditor({ workerUrl, slug: initialSlug }: { workerUrl: string
 
             <div className="relative flex min-h-0 flex-1">
                 {/* ------------------------------ canvas ------------------------------ */}
-                <main id="post-canvas" inert={modalProps} className="min-w-0 flex-1 overflow-y-auto" data-lenis-prevent>
+                <main id="post-canvas" data-drawer-inert className="min-w-0 flex-1 overflow-y-auto" data-lenis-prevent>
                     <div className="mx-auto w-full max-w-[768px] px-4 pb-[24vh] pt-9 md:px-8 md:pt-[72px]">
                         {sync.restored && (
                             <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-2.5 text-[13px] text-sky-900 dark:text-sky-200" role="status">
@@ -475,21 +358,27 @@ export function PostEditor({ workerUrl, slug: initialSlug }: { workerUrl: string
                             <div className="flex justify-center py-24 text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin" aria-label="Loading" /></div>
                         ) : (
                             <>
-                                <textarea
-                                    ref={titleRef}
-                                    rows={1}
-                                    autoFocus={!doc.title}
-                                    value={doc.title}
-                                    readOnly={view === 'preview'}
-                                    onChange={(e) => onTitle(e.target.value.replace(/\n/g, ' '))}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') { e.preventDefault(); editorRef.current?.commands.focus('start'); }
-                                    }}
-                                    placeholder="Untitled"
-                                    aria-label="Title"
-                                    spellCheck={false}
-                                    className="mb-3.5 block w-full resize-none overflow-hidden bg-transparent p-0 text-[32px] font-bold leading-[1.15] tracking-[-0.025em] text-foreground outline-none placeholder:text-muted-foreground/55 md:text-[42px]"
-                                />
+                                <div className="mb-3.5 flex items-start gap-3">
+                                    <textarea
+                                        ref={titleRef}
+                                        rows={1}
+                                        autoFocus={!doc.title}
+                                        value={doc.title}
+                                        readOnly={view === 'preview'}
+                                        onChange={(e) => onTitle(e.target.value.replace(/\n/g, ' '))}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') { e.preventDefault(); editorRef.current?.commands.focus('start'); }
+                                        }}
+                                        placeholder="Untitled"
+                                        aria-label="Title"
+                                        spellCheck={false}
+                                        className="block w-full min-w-0 flex-1 resize-none overflow-hidden bg-transparent p-0 text-[32px] font-bold leading-[1.15] tracking-[-0.025em] text-foreground outline-none placeholder:text-muted-foreground/55 md:text-[42px]"
+                                    />
+
+                                    {doc.slug && isValidSlug(doc.slug) && (
+                                        <RowAction variant="button" path={entryPath('blog', doc.slug)} state={{ live: live.published }} className="mt-1.5 md:mt-2.5" />
+                                    )}
+                                </div>
 
                                 {view === 'preview' && (
                                     <div className="mb-8 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -526,31 +415,8 @@ export function PostEditor({ workerUrl, slug: initialSlug }: { workerUrl: string
                 </main>
 
                 {/* --------------------------- properties drawer --------------------------- */}
-                {propsOpen && view === 'write' && (
-                    <div className="fixed inset-0 z-[54] bg-black/40 min-[1100px]:hidden" onClick={() => { setPropsOpen(false, false); }} aria-hidden="true" />
-                )}
-                <aside
-                    ref={propsRef}
-                    id="post-props"
-                    aria-label="Post properties"
-                    {...(modalProps ? { role: 'dialog', 'aria-modal': true } : {})}
-                    onKeyDown={trapTab}
-                    className={cn(
-                        'pe-drawer shrink-0 overflow-hidden bg-background',
-                        'min-[1100px]:relative min-[1100px]:border-l',
-                        propsOpen && view === 'write' ? 'min-[1100px]:w-[340px] min-[1100px]:border-border/60' : 'min-[1100px]:invisible min-[1100px]:w-0 min-[1100px]:border-transparent',
-                        'max-[1099px]:fixed max-[1099px]:inset-y-0 max-[1099px]:right-0 max-[1099px]:z-[55] max-[1099px]:w-[min(360px,92vw)] max-[1099px]:border-l max-[1099px]:border-border max-[1099px]:shadow-2xl',
-                        propsOpen && view === 'write' ? 'max-[1099px]:translate-x-0' : 'max-[1099px]:invisible max-[1099px]:translate-x-full',
-                    )}
-                    style={{ transition: 'width .2s ease, transform .2s ease, visibility .2s, border-color .2s' }}
-                >
-                    <div className="h-full w-[340px] overflow-y-auto overflow-x-hidden px-5 pb-28 max-[1099px]:w-full" data-lenis-prevent>
-                        <div className="sticky top-0 z-[2] flex h-12 items-center justify-between bg-background text-[13px] text-muted-foreground">
-                            <strong className="text-[11px] font-medium uppercase tracking-wider">Properties</strong>
-                            <IconButton ref={propsCloseRef} label="Close properties (Cmd+.)" onClick={() => { setPropsOpen(false); if (!modalProps) propsBtnRef.current?.focus(); }}><X size={16} /></IconButton>
-                        </div>
-
-                        <Prop icon={CircleDot} label="Status">
+                <PropertiesDrawer drawer={drawer} label="Post properties">
+                        <PropRow icon={CircleDot} label="Status">
                             <SelectField
                                 aria-label="Status"
                                 value={doc.published ? 'published' : 'draft'}
@@ -561,28 +427,28 @@ export function PostEditor({ workerUrl, slug: initialSlug }: { workerUrl: string
                                 ]}
                                 trigger={<StatusPill published={doc.published} />}
                             />
-                        </Prop>
-                        <Prop icon={Calendar} label="Date">
+                        </PropRow>
+                        <PropRow icon={Calendar} label="Date">
                             <DatePicker value={doc.date} onChange={(date) => update({ date })} aria-label="Date" />
-                        </Prop>
-                        <Prop icon={Tag} label="Tags">
+                        </PropRow>
+                        <PropRow icon={Tag} label="Tags">
                             <TagCombobox value={doc.tags} options={[...new Set([...tagOptions, ...doc.tags])].sort((a, b) => a.localeCompare(b))} onChange={(tags) => update({ tags })} />
-                        </Prop>
-                        <Prop icon={User} label="Author">
+                        </PropRow>
+                        <PropRow icon={User} label="Author">
                             <UserSelect workerUrl={workerUrl} value={doc.author} onChange={(author) => update({ author })} />
-                        </Prop>
-                        <Prop icon={Star} label="Featured">
+                        </PropRow>
+                        <PropRow icon={Star} label="Featured">
                             <Switch
                                 checked={doc.featured}
                                 onCheckedChange={(featured) => update({ featured })}
                                 aria-label="Featured"
                                 className="h-5 w-[34px] border-0 data-[state=unchecked]:bg-foreground/20 [&>span]:h-4 [&>span]:w-4 [&>span]:translate-x-0.5 [&>span]:data-[state=checked]:translate-x-[16px]"
                             />
-                        </Prop>
+                        </PropRow>
 
-                        <div className="my-2.5 h-px bg-border/60" />
+                        <PropDivider />
 
-                        <Prop icon={Hash} label="Web address" stack>
+                        <PropRow icon={Hash} label="Web address" stack>
                             <div className="flex min-w-0 flex-wrap items-center text-sm text-muted-foreground">
                                 <span>/blog/</span>
                                 <input
@@ -600,8 +466,8 @@ export function PostEditor({ workerUrl, slug: initialSlug }: { workerUrl: string
                                 />
                                 <span>/</span>
                             </div>
-                        </Prop>
-                        <div id="post-slug-hint" className={cn('-mt-1 pb-2 text-xs', hintBad ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground')} role={hintBad ? 'alert' : undefined}>
+                        </PropRow>
+                        <PropNote id="post-slug-hint" bad={hintBad}>
                             {slugIsTaken ? (
                                 <>Another post already uses this address.{' '}
                                     <button type="button" className="text-foreground underline underline-offset-[3px]" onClick={() => { setSlugTouched(true); update({ slug: nextSlug(doc.slug) }); }}>
@@ -609,9 +475,9 @@ export function PostEditor({ workerUrl, slug: initialSlug }: { workerUrl: string
                                     </button>
                                 </>
                             ) : hint}
-                        </div>
+                        </PropNote>
 
-                        <Prop icon={AlignLeft} label="Summary" stack>
+                        <PropRow icon={AlignLeft} label="Summary" stack>
                             <textarea
                                 ref={excerptRef}
                                 value={doc.excerpt}
@@ -621,16 +487,9 @@ export function PostEditor({ workerUrl, slug: initialSlug }: { workerUrl: string
                                 aria-label="Summary"
                                 className="-mx-2 block min-h-[34px] w-full resize-none overflow-hidden rounded-[5px] bg-transparent px-2 py-1.5 text-sm leading-normal outline-none placeholder:text-muted-foreground/70 hover:bg-foreground/[0.07] focus:bg-foreground/[0.07] focus-visible:ring-2 focus-visible:ring-ring"
                             />
-                        </Prop>
-                    </div>
-                </aside>
+                        </PropRow>
+                </PropertiesDrawer>
             </div>
-
-            {toast && (
-                <div role="status" className="fixed bottom-6 left-1/2 z-[80] max-w-[90vw] -translate-x-1/2 rounded-lg bg-primary px-3.5 py-2 text-[13px] text-primary-foreground shadow-lg">
-                    {toast}
-                </div>
-            )}
 
             <Dialog open={deleteOpen} onOpenChange={(o) => !o && !busy && setDeleteOpen(false)}>
                 <DialogContent>

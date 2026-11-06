@@ -1,538 +1,426 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, Check, Clock, Loader2, Mail, RefreshCw, Search, Trash2, UserPlus, Users as UsersIcon, Zap, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, UserPlus, Trash2, Shield, Clock, AlertTriangle, Mail, Pencil, X, Check } from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
-import { FEATURE_LABELS, type AdminFeature } from '@/components/admin/admin-context';
-
-interface UserManagementProps {
-    workerUrl: string;
-}
-
-type Role = 'super_admin' | 'site_admin' | 'editor';
-
-interface AdminUser {
-    id: string;
-    username: string;
-    method: 'telegram' | 'email';
-    email: string | null;
-    sub: string | null;
-    firstName: string | null;
-    status: 'invited' | 'active';
-    role: Role;
-    features: AdminFeature[];
-    artifactGrants: string[];
-    invitedAt: string;
-    claimedAt: string | null;
-    googleLinked?: boolean;
-    photoUrl?: string | null;
-}
-
-interface LookupResult {
-    found: boolean;
-    username: string;
-    firstName: string | null;
-    lastName: string | null;
-    photoUrl: string | null;
-}
-
-interface InstantArtifact {
-    slug: string;
-    name: string;
-    visibility: 'public' | 'private';
-}
-
-interface Access {
-    role: 'site_admin' | 'editor';
-    features: AdminFeature[];
-    artifactGrants: string[];
-}
-
-const FEATURES = Object.keys(FEATURE_LABELS) as AdminFeature[];
-const EMPTY_ACCESS: Access = { role: 'editor', features: [], artifactGrants: [] };
+import { Avatar } from '@/components/admin/fields/UserSelect';
+import { AccessFields, type InstantArtifact } from '@/components/admin/users/AccessFields';
+import {
+    AdminPage, Cell, ColumnHeader, DataList, DataRow, EmptyState, HeaderSpacer, ListFooter, ListSkeleton, NewButton, PageHeader, PropDivider, PropNote, PropRow,
+    PropertiesDrawer, SearchField, SegmentedFilter, SelectMenu, StatusPill, notify, useListKeyboard, usePropertiesDrawer, type DrawerApi,
+} from '@/components/admin/kit';
+import { relativeTime } from '@/components/admin/artifacts/artifact-logic';
+import {
+    EMPTY_ACCESS, ROLE_LABEL, ROLE_OPTIONS, STATUS_FILTER_OPTIONS, accessChanged, accessOf, accessSummary, canRemove, displayName, filterUsers, isOwner, normalizeRole,
+    rowSubtitle, sortUsers, subLine, type Access, type ManagedUser, type RoleFilter, type StatusFilter,
+} from '@/components/admin/users/user-logic';
 
 /**
- * Avatar that renders the Telegram profile photo when available and gracefully
- * falls back to `children` (initials / role icon) when there is no URL OR when
- * the image fails to load (expired Telegram file URL, CORS, 404, etc.).
+ * Users (owner only): the same list page as the other sections. A row opens a side sheet (the Properties drawer) with the
+ * person's role, the features they can use and the artifacts they may edit, plus remove access. Invite someone is a dialog
+ * (Telegram username lookup or a Google email). The owner is protected: no role change, no removal. Nothing here is staged;
+ * every change is saved straight to the Worker.
  */
-function Avatar({
-    src,
-    alt,
-    imgClassName,
-    fallbackClassName,
-    children,
-}: {
-    src?: string | null;
-    alt?: string | null;
-    imgClassName: string;
-    fallbackClassName: string;
-    children: React.ReactNode;
-}) {
-    // Track the specific URL that failed rather than a boolean, so a new `src`
-    // is retried automatically on the next render without needing an effect.
-    const [erroredSrc, setErroredSrc] = useState<string | null>(null);
 
-    if (src && erroredSrc !== src) {
-        return (
-            <img
-                src={src}
-                alt={alt || ''}
-                loading="lazy"
-                referrerPolicy="no-referrer"
-                onError={() => setErroredSrc(src)}
-                className={imgClassName}
-            />
-        );
-    }
-    return <div className={fallbackClassName}>{children}</div>;
+interface LookupResult { found: boolean; username: string; firstName: string | null; lastName: string | null; photoUrl: string | null }
+
+const COLS = 'minmax(0,1fr) 120px 110px 150px';
+const ROLE_PILL = { super_admin: 'violet', site_admin: 'info', editor: 'ok' } as const;
+
+/** "Invited 2d ago" / "Invited just now". */
+const invitedLabel = (iso: string) => {
+    const t = relativeTime(iso);
+    return t ? `Invited ${t === 'Just now' ? 'just now' : t}` : 'Invited';
+};
+
+async function errorText(res: Response, fallback: string) {
+    const text = await res.text();
+    try { return JSON.parse(text).error || fallback; } catch { return text || fallback; }
 }
 
-/** Role, features and artifact grants, shared by the add form and the edit panel. */
-function AccessEditor({
-    value,
-    onChange,
-    artifacts,
-}: {
-    value: Access;
-    onChange: (next: Access) => void;
-    artifacts: InstantArtifact[];
-}) {
-    const toggle = <T,>(list: T[], item: T) => (list.includes(item) ? list.filter((x) => x !== item) : [...list, item]);
-    return (
-        <div className="space-y-3 text-sm">
-            <div className="flex gap-2">
-                {(['site_admin', 'editor'] as const).map((r) => (
-                    <button
-                        key={r}
-                        type="button"
-                        onClick={() => onChange({ ...value, role: r })}
-                        className={`px-3 py-1.5 rounded-md border text-xs font-medium ${value.role === r ? 'bg-foreground text-background border-foreground' : 'border-border hover:bg-muted'}`}
-                    >
-                        {r === 'site_admin' ? 'Site admin' : 'Content editor'}
-                    </button>
-                ))}
-            </div>
-            {value.role === 'site_admin' ? (
-                <p className="text-xs text-muted-foreground">
-                    Every feature and every artifact, including artifact visibility and passwords. Cannot manage users.
-                </p>
-            ) : (
-                <>
-                    <div>
-                        <p className="text-xs font-medium mb-1.5">Site features</p>
-                        <div className="grid sm:grid-cols-2 gap-1.5">
-                            {FEATURES.map((f) => (
-                                <label key={f} className="flex items-center gap-2 text-xs">
-                                    <input
-                                        type="checkbox"
-                                        checked={value.features.includes(f)}
-                                        onChange={() => onChange({ ...value, features: toggle(value.features, f) })}
-                                    />
-                                    {FEATURE_LABELS[f]}
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-                    {!value.features.includes('artifacts') && (
-                        <div>
-                            <p className="text-xs font-medium mb-1">Artifacts they can edit</p>
-                            <p className="text-xs text-muted-foreground mb-1.5">
-                                Edit mode and Claude linking on these only. Private ones still need their password to open, and editors never change visibility or passwords.
-                            </p>
-                            {artifacts.length === 0 ? (
-                                <p className="text-xs text-muted-foreground italic">No instant artifacts yet.</p>
-                            ) : (
-                                <div className="max-h-48 overflow-y-auto rounded-md border border-border/50 p-2 grid sm:grid-cols-2 gap-1.5" data-lenis-prevent>
-                                    {artifacts.map((a) => (
-                                        <label key={a.slug} className="flex items-center gap-2 text-xs min-w-0">
-                                            <input
-                                                type="checkbox"
-                                                checked={value.artifactGrants.includes(a.slug)}
-                                                onChange={() => onChange({ ...value, artifactGrants: toggle(value.artifactGrants, a.slug) })}
-                                            />
-                                            <span className="truncate">{a.name}</span>
-                                            {a.name !== a.slug && <span className="text-[10px] text-muted-foreground shrink-0">{a.slug}</span>}
-                                            {a.visibility === 'private' && <span className="text-[10px] text-amber-600 shrink-0">private</span>}
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </>
-            )}
-        </div>
-    );
-}
-
-function accessSummary(u: AdminUser, artifacts: InstantArtifact[]): string {
-    if (u.role === 'super_admin') return 'Owner';
-    if (u.role === 'site_admin') return 'Site admin';
-    const parts = u.features.map((f) => FEATURE_LABELS[f].split(' (')[0]);
-    if (!u.features.includes('artifacts') && u.artifactGrants.length) {
-        const names = u.artifactGrants.map((s) => artifacts.find((a) => a.slug === s)?.name || s);
-        parts.push(`Edits: ${names.join(', ')}`);
-    }
-    return `Editor${parts.length ? ` · ${parts.join(' · ')}` : ' · no access yet'}`;
-}
-
-export function UserManagement({ workerUrl }: UserManagementProps) {
-    const [users, setUsers] = useState<AdminUser[]>([]);
+export function UserManagement({ workerUrl, selfId }: { workerUrl: string; selfId?: string }) {
+    const [users, setUsers] = useState<ManagedUser[]>([]);
     const [artifacts, setArtifacts] = useState<InstantArtifact[]>([]);
     const [loading, setLoading] = useState(true);
-    const [method, setMethod] = useState<'telegram' | 'email'>('telegram');
-    const [username, setUsername] = useState('');
-    const [email, setEmail] = useState('');
-    const [searching, setSearching] = useState(false);
-    const [lookup, setLookup] = useState<LookupResult | null>(null);
-    const [newAccess, setNewAccess] = useState<Access>(EMPTY_ACCESS);
+    const [error, setError] = useState<string | null>(null);
+    const [query, setQuery] = useState('');
+    const [status, setStatus] = useState<StatusFilter>('all');
+    const [role, setRole] = useState<RoleFilter>('all');
+    const [selectedId, setSelectedId] = useState<string | null>(null);
     const [inviting, setInviting] = useState(false);
-    const [removing, setRemoving] = useState<string | null>(null);
-    const [editing, setEditing] = useState<{ id: string; access: Access; email: string } | null>(null);
-    const [saving, setSaving] = useState(false);
-    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const searchRef = useRef<HTMLInputElement>(null);
+    const listRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        fetchUsers();
-        fetchArtifacts();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    const fetchUsers = async () => {
+    const fetchUsers = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
             const res = await fetch(`${workerUrl}/api/users`, { headers: authHeaders(), credentials: 'include' });
-            if (res.ok) {
-                const data = await res.json();
-                setUsers(data.users || []);
-            }
-        } catch {
-            // Silently fail
+            if (!res.ok) throw new Error(await errorText(res, `Could not load users (${res.status})`));
+            const data = await res.json();
+            setUsers(data.users || []);
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Could not load users');
         } finally {
             setLoading(false);
         }
-    };
+    }, [workerUrl]);
 
-    const fetchArtifacts = async () => {
+    const fetchArtifacts = useCallback(async () => {
         try {
             const res = await fetch(`${workerUrl}/api/artifacts/instant/list`, { headers: authHeaders(), credentials: 'include' });
             if (res.ok) {
                 const data = await res.json();
                 setArtifacts((data.artifacts || []).map((a: InstantArtifact) => ({ slug: a.slug, name: a.name, visibility: a.visibility })));
             }
-        } catch {
-            // The grant picker just shows nothing.
+        } catch { /* the grant list just shows nothing */ }
+    }, [workerUrl]);
+
+    useEffect(() => { void fetchUsers(); void fetchArtifacts(); }, [fetchUsers, fetchArtifacts]);
+
+    const visible = useMemo(() => sortUsers(filterUsers(users, { query, role, status })), [users, query, role, status]);
+    const selected = users.find((u) => u.id === selectedId) || null;
+
+    // The side sheet: the Properties drawer, opened by a row. It never remembers its state (that would change how the editors' drawers start).
+    const base = usePropertiesDrawer({ enabled: !!selected, id: 'user-props' });
+    const { open: baseOpen, setOpen: baseSetOpen } = base;
+    const drawer: DrawerApi = {
+        ...base,
+        open: !!selected && base.open,
+        setOpen: (open) => { baseSetOpen(open, false); if (!open) setSelectedId(null); },
+        toggle: () => { baseSetOpen(false, false); setSelectedId(null); },
+    };
+    useEffect(() => { if (selectedId && !baseOpen) setSelectedId(null); }, [selectedId, baseOpen]);
+    const openUser = (id: string) => { setSelectedId(id); baseSetOpen(true, false); };
+
+    useListKeyboard({ searchRef, listRef, onNew: () => setInviting(true), enabled: !loading && !selected });
+    const nameOf = useCallback((slug: string) => artifacts.find((a) => a.slug === slug)?.name || slug, [artifacts]);
+
+    return (
+        <div className="flex h-full min-h-0">
+            <main data-drawer-inert className="min-w-0 flex-1 overflow-y-auto" data-lenis-prevent>
+                <div className="mx-auto w-full max-w-6xl p-4 md:p-8">
+                    <AdminPage>
+                        <PageHeader title="Users">
+                            <SearchField ref={searchRef} value={query} onChange={setQuery} placeholder="Search people…" />
+                            <SegmentedFilter label="Show" value={status} onChange={setStatus} options={STATUS_FILTER_OPTIONS} />
+                            <SelectMenu label="Role" value={role} onChange={(v) => setRole(v as RoleFilter)} options={ROLE_OPTIONS} />
+                            <HeaderSpacer />
+                            <NewButton onClick={() => setInviting(true)} title="Invite someone (N)">Invite someone</NewButton>
+                        </PageHeader>
+
+                        {error && users.length === 0 ? (
+                            <EmptyState title="Could not load users" body={<span className="text-red-600">{error}</span>} action={<Button size="sm" variant="outline" onClick={() => void fetchUsers()} className="gap-1.5"><RefreshCw size={13} /> Try again</Button>} />
+                        ) : loading && users.length === 0 ? (
+                            <ListSkeleton cols={COLS} />
+                        ) : visible.length === 0 ? (
+                            <EmptyState
+                                icon={<UsersIcon size={20} />}
+                                title={users.length === 0 ? 'No one here yet' : 'Nothing matches'}
+                                body={users.length === 0 ? 'Invite someone to give them access.' : 'Try a different search or filter.'}
+                                action={users.length > 0 ? <Button size="sm" variant="outline" onClick={() => { setQuery(''); setStatus('all'); setRole('all'); }}>Clear filters</Button> : undefined}
+                            />
+                        ) : (
+                            <div ref={listRef}>
+                                <DataList cols={COLS} label="People">
+                                    <ColumnHeader labels={['Person', 'Role', 'Status', 'Joined']} />
+                                    {visible.map((u) => {
+                                        const r = normalizeRole(u.role);
+                                        const name = displayName(u);
+                                        return (
+                                            <DataRow key={u.id} onOpen={() => openUser(u.id)} label={`Open ${name}`} active={u.id === selectedId}>
+                                                <div className="flex min-w-0 items-center gap-3 max-[699px]:basis-full">
+                                                    <Avatar name={name} size={36} photoUrl={u.photoUrl} />
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap text-[15px] font-medium">
+                                                            <span className="truncate">{name}</span>
+                                                            {(u.id === selfId || isOwner(u)) && <span className="shrink-0 text-xs font-normal text-muted-foreground">(you)</span>}
+                                                        </div>
+                                                        <div className="mt-px truncate text-xs text-muted-foreground">{rowSubtitle(u, nameOf)}</div>
+                                                    </div>
+                                                </div>
+                                                <Cell><StatusPill tone={ROLE_PILL[r]}>{ROLE_LABEL[r]}</StatusPill></Cell>
+                                                <Cell><StatusPill tone={u.status === 'active' ? 'ok' : 'info'}>{u.status === 'active' ? 'Active' : 'Invited'}</StatusPill></Cell>
+                                                <Cell className="tabular-nums">{isOwner(u) ? 'Owner' : u.claimedAt ? relativeTime(u.claimedAt) : invitedLabel(u.invitedAt)}</Cell>
+                                            </DataRow>
+                                        );
+                                    })}
+                                </DataList>
+                            </div>
+                        )}
+                        {!loading && users.length > 0 && <ListFooter shown={visible.length} loaded={users.length} note="Last seen is not recorded yet" />}
+                    </AdminPage>
+                </div>
+            </main>
+
+            <PropertiesDrawer drawer={drawer} label="Person">
+                {selected && (
+                    <UserSheet
+                        key={selected.id}
+                        user={selected}
+                        selfId={selfId}
+                        artifacts={artifacts}
+                        nameOf={nameOf}
+                        workerUrl={workerUrl}
+                        onSaved={(next) => setUsers((prev) => prev.map((u) => (u.id === next.id ? { ...u, ...next } : u)))}
+                        onRemoved={(id) => { setUsers((prev) => prev.filter((u) => u.id !== id)); setSelectedId(null); baseSetOpen(false, false); }}
+                    />
+                )}
+            </PropertiesDrawer>
+
+            <InviteDialog
+                open={inviting}
+                onOpenChange={setInviting}
+                workerUrl={workerUrl}
+                artifacts={artifacts}
+                onInvited={(u, text) => { setUsers((prev) => [...prev, u]); notify(text); }}
+            />
+        </div>
+    );
+}
+
+/* ------------------------------- the side sheet ------------------------------- */
+
+function UserSheet({ user, selfId, artifacts, nameOf, workerUrl, onSaved, onRemoved }: {
+    user: ManagedUser; selfId?: string; artifacts: InstantArtifact[]; nameOf: (slug: string) => string; workerUrl: string;
+    onSaved: (u: ManagedUser) => void; onRemoved: (id: string) => void;
+}) {
+    const owner = isOwner(user);
+    const name = displayName(user);
+    const savedAccess = useMemo(() => accessOf(user), [user]);
+    const [access, setAccess] = useState<Access>(savedAccess);
+    const [email, setEmail] = useState(user.email || '');
+    const [saving, setSaving] = useState(false);
+    const [removing, setRemoving] = useState(false);
+    const [confirmRemove, setConfirmRemove] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const dirty = accessChanged(savedAccess, access) || (user.method === 'telegram' && email.trim() !== (user.email || ''));
+    const removable = canRemove(user, selfId);
+
+    const save = async () => {
+        setSaving(true);
+        setError(null);
+        try {
+            const res = await fetch(`${workerUrl}/api/users`, {
+                method: 'PATCH',
+                headers: authHeaders({ 'Content-Type': 'application/json' }),
+                credentials: 'include',
+                body: JSON.stringify({ id: user.id, ...access, email: email.trim() || null }),
+            });
+            if (!res.ok) throw new Error(await errorText(res, 'Could not save'));
+            const data = await res.json();
+            onSaved({ ...user, ...data.user });
+            notify('Saved.');
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Could not save');
+        } finally {
+            setSaving(false);
         }
     };
 
-    const errorText = async (res: Response, fallback: string) => {
-        const text = await res.text();
-        try { return JSON.parse(text).error || fallback; } catch { return text || fallback; }
+    const remove = async () => {
+        setRemoving(true);
+        setError(null);
+        try {
+            const res = await fetch(`${workerUrl}/api/users?id=${encodeURIComponent(user.id)}`, { method: 'DELETE', headers: authHeaders(), credentials: 'include' });
+            if (!res.ok) throw new Error(await errorText(res, 'Could not remove'));
+            notify(user.status === 'invited' ? `Invite for ${name} revoked.` : `${name} no longer has access.`);
+            onRemoved(user.id);
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Could not remove');
+            setConfirmRemove(false);
+        } finally {
+            setRemoving(false);
+        }
     };
 
-    const handleSearch = async (e: React.FormEvent) => {
+    return (
+        <div className="pb-4">
+            <div className="flex items-center gap-3.5 pb-4 pt-1">
+                <Avatar name={name} size={52} photoUrl={user.photoUrl} />
+                <div className="min-w-0">
+                    <div className="truncate text-[17px] font-semibold">{name}</div>
+                    <div className="truncate text-[13px] text-muted-foreground">{subLine(user) || (user.email && user.email !== name ? user.email : '')}</div>
+                </div>
+            </div>
+            {error && <div role="alert" className="mb-3 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-300"><AlertTriangle size={13} className="mt-0.5 shrink-0" /> {error}</div>}
+
+            <PropRow icon={Shield} label="Role"><StatusPill tone={ROLE_PILL[normalizeRole(user.role)]}>{ROLE_LABEL[normalizeRole(user.role)]}</StatusPill></PropRow>
+            <PropRow icon={Zap} label="Status"><StatusPill tone={user.status === 'active' ? 'ok' : 'info'}>{user.status === 'active' ? 'Active' : 'Invited'}</StatusPill></PropRow>
+            <PropRow icon={Clock} label={user.claimedAt ? 'Joined' : 'Invited'}><span className="text-sm text-muted-foreground">{owner ? 'Owner' : relativeTime(user.claimedAt || user.invitedAt)}</span></PropRow>
+            <PropNote>Last seen is not recorded yet.</PropNote>
+            <PropDivider />
+
+            {owner ? (
+                <PropNote>The owner can use everything and cannot be changed or removed here.</PropNote>
+            ) : (
+                <>
+                    {user.method === 'telegram' && (
+                        <>
+                            <PropRow icon={Mail} label="Google email" stack>
+                                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Also let them sign in with Google" aria-label="Google sign-in email" className="h-8 text-sm" />
+                            </PropRow>
+                            <PropDivider />
+                        </>
+                    )}
+                    <AccessFields value={access} onChange={setAccess} artifacts={artifacts} idPrefix={`u-${user.id}`} />
+                    <Button onClick={save} disabled={!dirty || saving} className="mt-4 h-9 w-full gap-1.5 text-[13px]">
+                        {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save changes
+                    </Button>
+                    {removable && (
+                        <>
+                            <PropDivider />
+                            <Button variant="outline" onClick={() => setConfirmRemove(true)} className="h-9 w-full gap-1.5 text-[13px] text-red-600 hover:text-red-600 dark:text-red-400">
+                                <Trash2 size={14} /> {user.status === 'invited' ? 'Revoke invite' : 'Remove access'}
+                            </Button>
+                            <PropNote>{accessSummary(user, nameOf)}</PropNote>
+                        </>
+                    )}
+                </>
+            )}
+
+            <Dialog open={confirmRemove} onOpenChange={setConfirmRemove}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{user.status === 'invited' ? `Revoke the invite for ${name}?` : `Remove ${name}?`}</DialogTitle>
+                        <DialogDescription>{user.status === 'invited' ? 'They will no longer be able to sign in with this invite.' : 'They can no longer sign in to the admin. You can invite them again later.'}</DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setConfirmRemove(false)}>Keep them</Button>
+                        <Button variant="destructive" onClick={remove} disabled={removing} className="gap-1.5">
+                            {removing ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} {user.status === 'invited' ? 'Revoke invite' : 'Remove'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}
+
+/* -------------------------------- invite dialog ------------------------------- */
+
+function InviteDialog({ open, onOpenChange, workerUrl, artifacts, onInvited }: {
+    open: boolean; onOpenChange: (o: boolean) => void; workerUrl: string; artifacts: InstantArtifact[]; onInvited: (u: ManagedUser, text: string) => void;
+}) {
+    const [method, setMethod] = useState<'telegram' | 'email'>('telegram');
+    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
+    const [searching, setSearching] = useState(false);
+    const [lookup, setLookup] = useState<LookupResult | null>(null);
+    const [access, setAccess] = useState<Access>(EMPTY_ACCESS);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const reset = () => { setUsername(''); setEmail(''); setLookup(null); setAccess(EMPTY_ACCESS); setError(null); setMethod('telegram'); };
+    const change = (o: boolean) => { if (!o) reset(); onOpenChange(o); };
+
+    const search = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!username.trim()) return;
-
         setSearching(true);
         setLookup(null);
-        setMessage(null);
-
+        setError(null);
         try {
             const clean = username.trim().replace(/^@/, '');
-            const res = await fetch(`${workerUrl}/api/users/lookup?username=${encodeURIComponent(clean)}`, {
-                headers: authHeaders(),
-                credentials: 'include',
-            });
-
-            if (res.status === 409) {
-                setMessage({ type: 'error', text: 'This user has already been invited.' });
-                return;
-            }
+            const res = await fetch(`${workerUrl}/api/users/lookup?username=${encodeURIComponent(clean)}`, { headers: authHeaders(), credentials: 'include' });
+            if (res.status === 409) { setError('This person has already been invited.'); return; }
             if (!res.ok) throw new Error(await errorText(res, 'Lookup failed'));
-
             setLookup(await res.json());
-            setNewAccess(EMPTY_ACCESS);
-        } catch (e: any) {
-            setMessage({ type: 'error', text: e.message });
+            setAccess(EMPTY_ACCESS);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Lookup failed');
         } finally {
             setSearching(false);
         }
     };
 
     const invite = async (body: Record<string, unknown>) => {
-        setInviting(true);
-        setMessage(null);
+        setBusy(true);
+        setError(null);
         try {
             const res = await fetch(`${workerUrl}/api/users`, {
                 method: 'POST',
                 headers: authHeaders({ 'Content-Type': 'application/json' }),
                 credentials: 'include',
-                body: JSON.stringify({ ...body, ...newAccess }),
+                body: JSON.stringify({ ...body, ...access }),
             });
-            if (!res.ok) throw new Error(await errorText(res, 'Failed to add user'));
+            if (!res.ok) throw new Error(await errorText(res, 'Could not add them'));
             const data = await res.json();
-            setUsers((prev) => [...prev, data.user]);
-            setUsername('');
-            setEmail('');
-            setLookup(null);
-            setNewAccess(EMPTY_ACCESS);
-            setMessage({
-                type: 'success',
-                text: data.user.method === 'email'
-                    ? `Added ${data.user.email}. They sign in with Google using that address.`
-                    : `Invited @${data.user.username}. They sign in with Telegram.`,
-            });
-        } catch (e: any) {
-            setMessage({ type: 'error', text: e.message });
+            const u = data.user as ManagedUser;
+            onInvited(u, u.method === 'email' ? `Added ${u.email}. They sign in with Google using that address.` : `Invited @${u.username}. They sign in with Telegram.`);
+            change(false);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Could not add them');
         } finally {
-            setInviting(false);
-        }
-    };
-
-    const handleRemove = async (id: string) => {
-        setRemoving(id);
-        setMessage(null);
-        try {
-            const res = await fetch(`${workerUrl}/api/users?id=${encodeURIComponent(id)}`, {
-                method: 'DELETE',
-                headers: authHeaders(),
-                credentials: 'include',
-            });
-            if (!res.ok) throw new Error('Failed to remove user');
-            setUsers((prev) => prev.filter((u) => u.id !== id));
-            setMessage({ type: 'success', text: `Removed ${id}` });
-        } catch (e: any) {
-            setMessage({ type: 'error', text: e.message });
-        } finally {
-            setRemoving(null);
-        }
-    };
-
-    const saveEdit = async () => {
-        if (!editing) return;
-        setSaving(true);
-        setMessage(null);
-        try {
-            const res = await fetch(`${workerUrl}/api/users`, {
-                method: 'PATCH',
-                headers: authHeaders({ 'Content-Type': 'application/json' }),
-                credentials: 'include',
-                body: JSON.stringify({ id: editing.id, ...editing.access, email: editing.email.trim() || null }),
-            });
-            if (!res.ok) throw new Error(await errorText(res, 'Failed to save'));
-            const data = await res.json();
-            setUsers((prev) => prev.map((u) => (u.id === editing.id ? { ...u, ...data.user } : u)));
-            setEditing(null);
-        } catch (e: any) {
-            setMessage({ type: 'error', text: e.message });
-        } finally {
-            setSaving(false);
+            setBusy(false);
         }
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>
-                    Add people by Telegram username or by email (they sign in with Google). Everyone else is a viewer.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="flex gap-1 text-sm">
-                    {(['telegram', 'email'] as const).map((m) => (
-                        <button
-                            key={m}
-                            type="button"
-                            onClick={() => { setMethod(m); setLookup(null); setMessage(null); }}
-                            className={`px-3 py-1.5 rounded-md ${method === m ? 'bg-muted font-medium' : 'text-muted-foreground hover:text-foreground'}`}
-                        >
-                            {m === 'telegram' ? 'Telegram' : 'Email (Google)'}
-                        </button>
-                    ))}
-                </div>
+        <Dialog open={open} onOpenChange={change}>
+            <DialogContent className="max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Invite someone</DialogTitle>
+                    <DialogDescription>Add a person by Telegram username, or by email if they sign in with Google. Everyone else is just a visitor.</DialogDescription>
+                </DialogHeader>
+                <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-0.5" data-lenis-prevent>
+                    <SegmentedFilter label="Sign in with" value={method} onChange={(m) => { setMethod(m); setLookup(null); setError(null); }} options={[{ value: 'telegram', label: 'Telegram' }, { value: 'email', label: 'Email (Google)' }]} />
 
-                {method === 'email' ? (
-                    <div className="p-4 rounded-lg border border-border/50 space-y-3">
-                        <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" type="email" />
-                        <AccessEditor value={newAccess} onChange={setNewAccess} artifacts={artifacts} />
-                        <Button
-                            size="sm"
-                            onClick={() => invite({ method: 'email', email: email.trim() })}
-                            disabled={inviting || !email.trim()}
-                            className="gap-1.5"
-                        >
-                            {inviting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
-                            Add by email
-                        </Button>
-                    </div>
-                ) : !lookup ? (
-                    <form onSubmit={handleSearch} className="flex gap-2">
-                        <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="@username" className="flex-1" />
-                        <Button type="submit" disabled={searching || !username.trim()} className="gap-2 shrink-0">
-                            {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                            Search
-                        </Button>
-                    </form>
-                ) : (
-                    <div className="p-4 rounded-lg border border-primary/30 bg-primary/5 space-y-3">
-                        <div className="flex items-center gap-3">
-                            <Avatar
-                                src={lookup.photoUrl}
-                                alt={lookup.username}
-                                imgClassName="h-12 w-12 rounded-full object-cover bg-muted"
-                                fallbackClassName="h-12 w-12 rounded-full bg-muted flex items-center justify-center text-lg font-semibold text-muted-foreground"
-                            >
-                                {(lookup.firstName || lookup.username)[0]?.toUpperCase()}
-                            </Avatar>
-                            <div>
-                                {lookup.found ? (
-                                    <>
-                                        <p className="font-medium">
-                                            {lookup.firstName}{lookup.lastName ? ` ${lookup.lastName}` : ''}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">@{lookup.username}</p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <p className="font-medium">@{lookup.username}</p>
-                                        <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                                            <AlertTriangle className="h-3 w-3" />
-                                            Not verified — user may need to message the bot first
-                                        </p>
-                                    </>
-                                )}
-                            </div>
+                    {method === 'email' ? (
+                        <div className="space-y-3">
+                            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" type="email" aria-label="Email address" />
+                            <AccessFields value={access} onChange={setAccess} artifacts={artifacts} idPrefix="invite-email" />
                         </div>
-                        <AccessEditor value={newAccess} onChange={setNewAccess} artifacts={artifacts} />
-                        <div className="flex gap-2">
-                            <Button size="sm" onClick={() => invite({ method: 'telegram', username: lookup.username })} disabled={inviting} className="gap-1.5">
-                                {inviting ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus className="h-3 w-3" />}
-                                Confirm Invite
+                    ) : !lookup ? (
+                        <form onSubmit={search} className="flex gap-2">
+                            <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="@username" aria-label="Telegram username" className="flex-1" autoFocus />
+                            <Button type="submit" disabled={searching || !username.trim()} className="shrink-0 gap-2">
+                                {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Search
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => { setLookup(null); setUsername(''); }}>
-                                Cancel
-                            </Button>
-                        </div>
-                    </div>
-                )}
-
-                {message && (
-                    <div className={`p-3 rounded text-sm ${message.type === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                        {message.text}
-                    </div>
-                )}
-
-                {loading ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-                        <Loader2 className="animate-spin h-4 w-4" /> Loading...
-                    </div>
-                ) : (
-                    <div className="space-y-2">
-                        {users.map((user) => {
-                            const isOwner = user.role === 'super_admin';
-                            const label = user.username ? `@${user.username}` : user.email || user.firstName || 'Owner';
-                            const isEditing = editing?.id === user.id;
-                            return (
-                                <div key={user.id} className="p-3 rounded-lg border border-border/50 bg-background/50 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <Avatar
-                                                src={user.photoUrl}
-                                                alt={label}
-                                                imgClassName="h-8 w-8 rounded-full object-cover shrink-0 bg-muted"
-                                                fallbackClassName="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0"
-                                            >
-                                                {isOwner ? (
-                                                    <Shield className="h-4 w-4 text-primary" />
-                                                ) : user.status === 'invited' ? (
-                                                    <Clock className="h-4 w-4 text-amber-500" />
-                                                ) : (
-                                                    <span className="text-xs font-semibold text-muted-foreground">
-                                                        {(user.firstName || label.replace('@', '') || '?')[0]?.toUpperCase()}
-                                                    </span>
-                                                )}
-                                            </Avatar>
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-medium truncate">
-                                                    {label}
-                                                    {user.firstName && user.firstName !== label && (
-                                                        <span className="text-muted-foreground font-normal ml-2">{user.firstName}</span>
-                                                    )}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {isOwner ? 'Owner' : `${user.status === 'invited' ? 'Invited' : 'Active'} · ${accessSummary(user, artifacts)}`}
-                                                    {!isOwner && user.method === 'telegram' && user.email && ` · Google: ${user.email}`}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        {!isOwner && (
-                                            <div className="flex shrink-0">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setEditing(isEditing ? null : {
-                                                        id: user.id,
-                                                        email: user.email || '',
-                                                        access: {
-                                                            role: user.role === 'editor' ? 'editor' : 'site_admin',
-                                                            features: user.features,
-                                                            artifactGrants: user.artifactGrants,
-                                                        },
-                                                    })}
-                                                    className="h-8 w-8 p-0"
-                                                    aria-label={isEditing ? 'Close' : 'Edit access'}
-                                                >
-                                                    {isEditing ? <X className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleRemove(user.id)}
-                                                    disabled={removing === user.id}
-                                                    className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                    aria-label="Remove"
-                                                >
-                                                    {removing === user.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </div>
-                                    {isEditing && editing && (
-                                        <div className="space-y-3 border-t border-border/40 pt-3">
-                                            {user.method === 'telegram' && (
-                                                <div>
-                                                    <p className="text-xs font-medium mb-1">Google sign-in email (optional)</p>
-                                                    <Input
-                                                        value={editing.email}
-                                                        onChange={(e) => setEditing({ ...editing, email: e.target.value })}
-                                                        placeholder="Also let them sign in with Google"
-                                                        type="email"
-                                                    />
-                                                </div>
-                                            )}
-                                            <AccessEditor
-                                                value={editing.access}
-                                                onChange={(access) => setEditing({ ...editing, access })}
-                                                artifacts={artifacts}
-                                            />
-                                            <Button size="sm" onClick={saveEdit} disabled={saving} className="gap-1.5">
-                                                {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                                                Save
-                                            </Button>
-                                        </div>
+                        </form>
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3 rounded-lg border border-border/60 p-3">
+                                <Avatar name={lookup.firstName || lookup.username} size={44} photoUrl={lookup.photoUrl} />
+                                <div className="min-w-0">
+                                    {lookup.found ? (
+                                        <>
+                                            <p className="truncate font-medium">{lookup.firstName}{lookup.lastName ? ` ${lookup.lastName}` : ''}</p>
+                                            <p className="truncate text-sm text-muted-foreground">@{lookup.username}</p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p className="truncate font-medium">@{lookup.username}</p>
+                                            <p className="flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400"><AlertTriangle className="h-3 w-3" /> Not verified. They may need to message the bot first.</p>
+                                        </>
                                     )}
                                 </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+                            </div>
+                            <AccessFields value={access} onChange={setAccess} artifacts={artifacts} idPrefix="invite-tg" />
+                        </div>
+                    )}
+                    {error && <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">{error}</div>}
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => change(false)}>Cancel</Button>
+                    {method === 'email' && (
+                        <Button onClick={() => invite({ method: 'email', email: email.trim() })} disabled={busy || !email.trim()} className="gap-1.5">
+                            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />} Add by email
+                        </Button>
+                    )}
+                    {method === 'telegram' && lookup && (
+                        <>
+                            <Button variant="ghost" onClick={() => { setLookup(null); setUsername(''); }}>Search again</Button>
+                            <Button onClick={() => invite({ method: 'telegram', username: lookup.username })} disabled={busy} className="gap-1.5">
+                                {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />} Send invite
+                            </Button>
+                        </>
+                    )}
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }

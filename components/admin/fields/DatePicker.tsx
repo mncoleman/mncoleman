@@ -116,7 +116,7 @@ export function DatePicker({
             </PopoverTrigger>
             <PopoverContent
                 align="start"
-                collisionPadding={12}
+                collisionPadding={8}
                 aria-label="Choose a date"
                 role="dialog"
                 className="w-[280px] rounded-[10px] p-2.5 shadow-xl"

@@ -1,26 +1,14 @@
 'use client';
 
 import { useId, useMemo, useRef, useState } from 'react';
-import { X } from 'lucide-react';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { tagChoices, tagHue } from '@/lib/post-editor-logic';
+import { tagChoices } from '@/lib/post-editor-logic';
+import { Chip } from '@/components/admin/kit/Chip';
 
-export function TagChip({ tag, onRemove, padded }: { tag: string; onRemove?: () => void; padded?: boolean }) {
-    const h = tagHue(tag);
-    return (
-        <span
-            className={cn('inline-flex h-[22px] items-center gap-0.5 rounded text-[13px]', onRemove ? 'pl-2 pr-1' : padded ? 'px-2' : 'px-2')}
-            style={{ background: `color-mix(in srgb, ${h} 18%, transparent)`, color: `color-mix(in srgb, ${h} 55%, hsl(var(--foreground)))` }}
-        >
-            {tag}
-            {onRemove && (
-                <button type="button" onClick={onRemove} aria-label={`Remove ${tag}`} className="grid place-items-center rounded-[3px] p-0.5 opacity-50 outline-none hover:bg-foreground/[0.08] hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring">
-                    <X size={12} />
-                </button>
-            )}
-        </span>
-    );
+/** Kept for existing imports: the kit's `Chip` is the one implementation (colour from the tag text). */
+export function TagChip({ tag, onRemove }: { tag: string; onRemove?: () => void; padded?: boolean }) {
+    return <Chip onRemove={onRemove}>{tag}</Chip>;
 }
 
 /**
@@ -120,7 +108,7 @@ export function TagCombobox({
                 className="w-[var(--radix-popover-trigger-width)] rounded-[10px] p-1 shadow-xl"
             >
                 <div className="px-2 pb-1 pt-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">{q.trim() ? 'Select or create' : 'Existing tags'}</div>
-                <div id={listId} role="listbox" aria-label="Tags" data-lenis-prevent className="max-h-[260px] overflow-y-auto">
+                <div id={listId} role="listbox" aria-label="Tags" data-lenis-prevent className="max-h-[min(260px,calc(var(--radix-popover-content-available-height)-2.5rem))] overflow-y-auto">
                     {choices.map((c, i) => (
                         <div
                             key={c.tag + (c.create ? '+' : '')}

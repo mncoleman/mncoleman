@@ -2,8 +2,11 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { authHeaders } from '@/lib/admin-auth';
-import { slugify } from '@/lib/utils';
-import { DEFAULT_TAG_KEY, normalizeTags, type Tags } from '@/lib/tags';
+import type { Tags } from '@/lib/tags';
+import {
+    COLLECTIONS, EMPTY, blankItem, createItem, diff, loadedState, normalizeItem, problems, pruneEmptyNew, removeItem, revertChange, rewriteAllTags, stored, updateItem,
+    type Change, type CollectionName, type CollectionState, type Item,
+} from '@/components/admin/content-logic';
 import { usePathname } from 'next/navigation';
 import { useDeploy } from '@/components/admin/deploy-status';
 import { includedInGlobalPublish, isPrivateDraft, postBlockers, publishPendingPosts, type PendingPost } from '@/lib/post-staging';
@@ -26,73 +29,11 @@ import { includedInGlobalPublish, isPrivateDraft, postBlockers, publishPendingPo
  * is to reload.
  */
 
-export type CollectionName = 'projects' | 'resources';
+export { COLLECTIONS, type CollectionName, type Item, type Change } from '@/components/admin/content-logic';
 
-export const COLLECTIONS: Record<CollectionName, { label: string; singular: string; path: string; href: string }> = {
-    projects: { label: 'Projects', singular: 'project', path: '/projects', href: '/admin/projects' },
-    resources: { label: 'Resources', singular: 'resource', path: '/resources', href: '/admin/resources' },
-};
-
-export interface Item {
-    /** Stable key for diffing and selection; `id` follows the name and moves on rename. */
-    _k: string;
-    id: string;
-    name: string;
-    description: string;
-    url: string;
-    tags: Tags;
-    date?: string;
-    published: boolean;
-    content?: string;
-}
-
-export type Change = { kind: 'added' | 'edited' | 'removed'; item: Item };
-
-interface CollectionState {
-    status: 'idle' | 'loading' | 'ready' | 'error';
-    items: Item[];
-    base: Item[];
-    sha: string;
-    error?: string;
-}
-
-const EMPTY: CollectionState = { status: 'idle', items: [], base: [], sha: '' };
-
-/** Folds a pre-keys flat `tech` / `categories` array into `tags`, and drops it. */
-function normalizeItem(name: CollectionName, raw: Record<string, unknown>): Item {
-    const legacyField = name === 'projects' ? 'tech' : 'categories';
-    const { [legacyField]: legacy, ...rest } = raw;
-    return { ...rest, _k: String(raw.id), tags: normalizeTags(raw.tags, legacy, DEFAULT_TAG_KEY[name]) } as unknown as Item;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function stored({ _k, ...rest }: Item) {
-    return rest;
-}
-
-function diff(base: Item[], cur: Item[]): Change[] {
-    const baseBy = new Map(base.map((i) => [i._k, i]));
-    const curBy = new Map(cur.map((i) => [i._k, i]));
-    const out: Change[] = [];
-    for (const i of cur) {
-        const b = baseBy.get(i._k);
-        if (!b) out.push({ kind: 'added', item: i });
-        else if (JSON.stringify(stored(b)) !== JSON.stringify(stored(i))) out.push({ kind: 'edited', item: i });
-    }
-    for (const b of base) if (!curBy.has(b._k)) out.push({ kind: 'removed', item: b });
-    return out;
-}
-
-/** Reasons a collection cannot be published as staged. */
-function problems(name: CollectionName, items: Item[]): string[] {
-    const out: string[] = [];
-    const seen = new Map<string, number>();
-    for (const i of items) {
-        if (!i.name.trim()) out.push(`A ${COLLECTIONS[name].singular} has no name.`);
-        else seen.set(i.id, (seen.get(i.id) || 0) + 1);
-    }
-    for (const [id, n] of seen) if (n > 1) out.push(`Two ${COLLECTIONS[name].label.toLowerCase()} share the URL /${name}/${id}/.`);
-    return out;
+/** The full-page editor for one record. Static export has no per-record routes, so the key rides in the query string (like /admin/posts/edit?slug=). */
+export function editHref(name: CollectionName, k: string): string {
+    return `${COLLECTIONS[name].href}/edit?id=${encodeURIComponent(k)}`;
 }
 
 interface PostsState {
@@ -180,7 +121,8 @@ export function ContentProvider({ workerUrl, enabled, children }: { workerUrl: s
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
             const items = (json.items as Record<string, unknown>[]).map((r) => normalizeItem(name, r));
-            setState((all) => ({ ...all, [name]: { status: 'ready', items, base: items, sha: json.sha } }));
+            // Records created while this was loading stay (first load only); a deliberate reload drops unpublished edits, as its button says.
+            setState((all) => ({ ...all, [name]: loadedState(all[name], items, json.sha) }));
             setSelected((s) => ({ ...s, [name]: items.some((i) => i._k === s[name]) ? s[name] : null }));
         } catch (e: unknown) {
             patch(name, (s) => ({ ...s, status: 'error', error: e instanceof Error ? e.message : 'Could not load' }));
@@ -263,50 +205,37 @@ export function ContentProvider({ workerUrl, enabled, children }: { workerUrl: s
     }, [collectionCount]);
 
     const update = useCallback((name: CollectionName, k: string, p: Partial<Item>) => {
-        patch(name, (s) => ({
-            ...s,
-            items: s.items.map((i) => {
-                if (i._k !== k) return i;
-                const next = { ...i, ...p };
-                // The slug is the details-page URL and always follows the name: the
-                // site builds its routes from slugify(name), so renaming moves the page.
-                next.id = slugify(next.name);
-                return next;
-            }),
-        }));
+        patch(name, (s) => updateItem(s, k, p));
     }, [patch]);
 
     const create = useCallback((name: CollectionName) => {
         const k = `new-${Date.now().toString(36)}-${++newCount.current}`;
-        const item: Item = name === 'projects'
-            ? { _k: k, id: '', name: '', description: '', url: '', tags: {}, date: '', published: false, content: '' }
-            : { _k: k, id: '', name: '', url: '', tags: {}, description: '', published: false, content: '' };
-        patch(name, (s) => ({ ...s, items: [item, ...s.items] }));
+        patch(name, (s) => createItem(s, blankItem(name, k)));
         setSelected((s) => ({ ...s, [name]: k }));
         return k;
     }, [patch]);
 
     const remove = useCallback((name: CollectionName, k: string) => {
-        patch(name, (s) => ({ ...s, items: s.items.filter((i) => i._k !== k) }));
+        patch(name, (s) => removeItem(s, k));
         setSelected((s) => ({ ...s, [name]: s[name] === k ? null : s[name] }));
     }, [patch]);
 
     const revert = useCallback((name: CollectionName, c: Change) => {
-        patch(name, (s) => {
-            if (c.kind === 'added') return { ...s, items: s.items.filter((i) => i._k !== c.item._k) };
-            const original = s.base.find((i) => i._k === c.item._k);
-            if (!original) return s;
-            if (c.kind === 'edited') return { ...s, items: s.items.map((i) => (i._k === c.item._k ? original : i)) };
-            const at = s.base.findIndex((i) => i._k === c.item._k);
-            const items = [...s.items];
-            items.splice(Math.min(at, items.length), 0, original);
-            return { ...s, items };
-        });
+        patch(name, (s) => revertChange(s, c));
     }, [patch]);
 
     const rewriteTags = useCallback((name: CollectionName, rewrite: (tags: Tags) => Tags) => {
-        patch(name, (s) => ({ ...s, items: s.items.map((i) => ({ ...i, tags: rewrite(i.tags) })) }));
+        patch(name, (s) => rewriteAllTags(s, rewrite));
     }, [patch]);
+
+    // A brand-new record nobody typed into would otherwise sit there as an "Untitled" publish blocker once you
+    // leave its editor (Back, the sidebar, a link): drop it when the route moves off that collection's editor.
+    useEffect(() => {
+        for (const name of ['projects', 'resources'] as const) {
+            if (pathname.startsWith(`${COLLECTIONS[name].href}/edit`)) continue;
+            patch(name, pruneEmptyNew);
+        }
+    }, [pathname, patch]);
 
     const select = useCallback((name: CollectionName, k: string | null) => setSelected((s) => ({ ...s, [name]: k })), []);
 

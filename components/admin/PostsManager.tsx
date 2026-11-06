@@ -1,12 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { AlertTriangle, Loader2, Plus, RefreshCw, Search } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, Loader2, PenLine, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authHeaders } from '@/lib/admin-auth';
 import { cn } from '@/lib/utils';
 import type { PostSummary } from '@/lib/post-format';
+import {
+    AdminPage, Cell, ColumnHeader, DataList, DataRow, EmptyState, HeaderSpacer, ListFooter, ListSkeleton, NewButton, PageHeader, RowAction, RowTitle,
+    SearchField, SegmentedFilter, StatusPill, STATUS_OPTIONS, entryPath, filterRows, useListKeyboard, type StatusFilter,
+} from '@/components/admin/kit';
 
 /** The editor reads this for its tag suggestions, so it needs no list fetch of its own. */
 export const POST_TAGS_CACHE_KEY = 'mnc-post-tags';
@@ -18,7 +21,8 @@ interface Row extends PostSummary {
     error?: string;
 }
 
-type Filter = 'all' | 'published' | 'draft';
+/** Name | Date | Status | Copy link. Shared by the real list and its skeleton. */
+const COLS = 'minmax(0,1fr) 150px 150px 32px';
 
 function when(iso: string) {
     const t = new Date(iso);
@@ -30,7 +34,9 @@ export function PostsManager({ workerUrl }: { workerUrl: string }) {
     const [error, setError] = useState('');
     const [draftsAvailable, setDraftsAvailable] = useState(true);
     const [query, setQuery] = useState('');
-    const [filter, setFilter] = useState<Filter>('all');
+    const [filter, setFilter] = useState<StatusFilter>('all');
+    const searchRef = useRef<HTMLInputElement>(null);
+    const listRef = useRef<HTMLDivElement>(null);
 
     const [total, setTotal] = useState(0);
     const [nextOffset, setNextOffset] = useState<number | null>(null);
@@ -62,111 +68,81 @@ export function PostsManager({ workerUrl }: { workerUrl: string }) {
 
     useEffect(() => { void load(); }, [load]);
 
-    const visible = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        return (rows || []).filter((r) => {
-            if (filter === 'published' && !r.published) return false;
-            if (filter === 'draft' && r.published) return false;
-            return !q || [r.title, r.excerpt, r.slug, ...r.tags].join('\n').toLowerCase().includes(q);
-        });
-    }, [rows, query, filter]);
+    const visible = useMemo(
+        () => filterRows(rows || [], { query, status: filter, published: (r) => r.published, fields: (r) => [r.title, r.excerpt, r.slug, ...r.tags] }),
+        [rows, query, filter],
+    );
+    useListKeyboard({ searchRef, listRef });
 
     return (
-        <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-                <h1 className="mr-2 text-lg font-semibold tracking-tight">Posts</h1>
-                <div className="relative min-w-[10rem] flex-1">
-                    <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Search posts…"
-                        aria-label="Search posts"
-                        className="h-8 w-full rounded-md border border-border/60 bg-transparent pl-8 pr-2 text-sm outline-none placeholder:text-muted-foreground focus:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
-                    />
-                </div>
-                <div className="flex h-8 items-center rounded-md border border-border/60 p-0.5">
-                    {([['all', 'All'], ['published', 'Published'], ['draft', 'Drafts']] as [Filter, string][]).map(([v, label]) => (
-                        <button key={v} type="button" onClick={() => setFilter(v)} aria-pressed={filter === v}
-                            className={cn('h-full rounded px-2.5 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring', filter === v ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground hover:text-foreground')}>
-                            {label}
-                        </button>
-                    ))}
-                </div>
-                <Button size="sm" asChild className="h-8 gap-1.5">
-                    <Link href="/admin/posts/edit"><Plus size={14} /> New post</Link>
-                </Button>
-            </div>
+        <AdminPage>
+            <PageHeader title="Posts">
+                <SearchField ref={searchRef} value={query} onChange={setQuery} placeholder="Search posts…" />
+                <SegmentedFilter label="Show" value={filter} onChange={setFilter} options={STATUS_OPTIONS} />
+                <HeaderSpacer />
+                <NewButton href="/admin/posts/edit">New post</NewButton>
+            </PageHeader>
 
             {!draftsAvailable && (
-                <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+                <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
                     <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                     Saving drafts online is not set up yet. You can still publish, but your edits are only kept in this browser until you do.
                 </div>
             )}
 
             {error ? (
-                <div className="flex flex-col items-center gap-3 py-16 text-sm">
-                    <p className="text-red-600">{error}</p>
-                    <Button size="sm" variant="outline" onClick={() => void load(0)} className="gap-1.5"><RefreshCw size={13} /> Try again</Button>
-                </div>
+                <EmptyState title="Could not load posts" body={<span className="text-red-600">{error}</span>} action={<Button size="sm" variant="outline" onClick={() => void load(0)} className="gap-1.5"><RefreshCw size={13} /> Try again</Button>} />
             ) : rows === null ? (
-                <div className="flex justify-center py-16 text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                <ListSkeleton cols={COLS} />
             ) : visible.length === 0 ? (
-                <div className="py-16 text-center text-sm text-muted-foreground">{rows.length === 0 ? 'No posts yet. Write your first one with New post.' : 'Nothing matches that search.'}</div>
+                <EmptyState
+                    icon={<PenLine size={20} />}
+                    title={rows.length === 0 ? 'No posts yet' : 'Nothing matches'}
+                    body={rows.length === 0 ? 'Write your first one with New post.' : 'Try a different search or filter.'}
+                />
             ) : (
-                <div className="overflow-hidden rounded-[10px] border border-border/60">
-                    <table className="w-full table-fixed text-sm">
-                        <thead className="bg-muted/30 text-left text-xs text-muted-foreground">
-                            <tr className="border-b border-border/60">
-                                <th className="px-4 py-2 font-medium">Title</th>
-                                <th className="hidden w-32 px-3 py-2 font-medium sm:table-cell">Date</th>
-                                <th className="w-36 px-4 py-2 text-right font-medium">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {visible.map((r) => (
-                                <tr key={r.slug} className="border-b border-border/40 last:border-b-0 hover:bg-muted/40">
-                                    <td className="px-4 py-2.5">
-                                        <Link href={`/admin/posts/edit?slug=${encodeURIComponent(r.slug)}`} className="block min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <span className="truncate font-medium">{r.title || <span className="text-muted-foreground">Untitled</span>}</span>
-                                                {r.error && <span className="shrink-0 rounded bg-red-500/10 px-1.5 py-px text-[11px] text-red-600 dark:text-red-400">Can’t be read</span>}
-                                                {r.featured && <span className="shrink-0 rounded bg-muted px-1.5 py-px text-[11px] text-muted-foreground">Featured</span>}
-                                            </div>
-                                            <div className={cn('mt-0.5 truncate text-xs', r.error ? 'text-red-600' : 'text-muted-foreground')} title={r.error}>{r.error || `/blog/${r.slug}/`}</div>
-                                        </Link>
-                                    </td>
-                                    <td className="hidden px-3 py-2.5 text-xs tabular-nums text-muted-foreground sm:table-cell">{when(r.date)}</td>
-                                    <td className="px-4 py-2.5 text-right">
-                                        <span
-                                            className="inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-[11px] pl-[7px] pr-[9px] text-xs"
-                                            style={{
-                                                background: `color-mix(in srgb, ${r.published ? '#22c55e' : '#f59e0b'} 16%, transparent)`,
-                                                color: `color-mix(in srgb, ${r.published ? '#22c55e' : '#f59e0b'} 60%, hsl(var(--foreground)))`,
-                                            }}
-                                        >
-                                            <span className="h-2 w-2 rounded-full" style={{ background: r.published ? '#22c55e' : '#f59e0b' }} />
-                                            {r.published ? 'Published' : 'Draft'}
-                                        </span>
-                                        {r.draft && r.sha && <div className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">Changes not published yet</div>}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                <div ref={listRef}>
+                    <DataList cols={COLS} label="Posts">
+                        <ColumnHeader labels={['Title', 'Date', 'Status', '']} />
+                        {visible.map((r) => (
+                            <DataRow key={r.slug} label={r.title || 'Untitled'} href={`/admin/posts/edit?slug=${encodeURIComponent(r.slug)}`}>
+                                <RowTitle
+                                    title={r.title || <span className="text-muted-foreground">Untitled</span>}
+                                    badges={<>
+                                        {r.error && <span className="shrink-0 rounded bg-red-500/10 px-1.5 py-px text-[11px] font-normal text-red-600 dark:text-red-400">Can’t be read</span>}
+                                        {r.featured && <span className="shrink-0 rounded bg-muted px-1.5 py-px text-[11px] font-normal text-muted-foreground">Featured</span>}
+                                    </>}
+                                    subtitle={r.error || `/blog/${r.slug}/`}
+                                    subtitleTitle={r.error}
+                                    subtitleClassName={cn(r.error && 'text-red-600')}
+                                />
+                                <Cell className="tabular-nums">{when(r.date)}</Cell>
+                                <Cell className="flex-col !items-start gap-1">
+                                    <StatusPill published={r.published} />
+                                    {r.draft && r.sha && <span className="text-[11px] text-amber-700 dark:text-amber-400">Changes not published yet</span>}
+                                </Cell>
+                                <Cell end>
+                                    {!r.error && <RowAction path={entryPath('blog', r.slug)} state={{ live: r.published }} />}
+                                </Cell>
+                            </DataRow>
+                        ))}
+                    </DataList>
                 </div>
             )}
             {rows && rows.length > 0 && (
-                <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
-                    <span>Showing {rows.length} of {total}{(query || filter !== 'all') && '. Search and filters only look at the posts shown here.'}</span>
+                <ListFooter
+                    shown={visible.length}
+                    loaded={rows.length}
+                    total={total}
+                    note={(query || filter !== 'all') && nextOffset !== null ? 'Search and filters only look at the posts shown here' : undefined}
+                >
                     {nextOffset !== null && (
                         <Button size="sm" variant="outline" disabled={loadingMore} onClick={() => void load(nextOffset)} className="h-7 gap-1.5 text-xs">
                             {loadingMore && <Loader2 size={12} className="animate-spin" />} Load more
                         </Button>
                     )}
-                </div>
+                </ListFooter>
             )}
-        </div>
+        </AdminPage>
     );
 }

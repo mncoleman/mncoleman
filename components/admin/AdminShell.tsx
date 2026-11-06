@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
     AlertTriangle, ArrowLeft, BookMarked, Check, ChevronDown, ChevronsLeft, ChevronsRight, Circle, ExternalLink, FolderKanban,
     Loader2, LogOut, Menu, Plus, RefreshCw, Rocket, Search, Undo2, X,
@@ -17,11 +17,13 @@ import { useCursorPreference } from '@/components/cursor-preference';
 import { cn } from '@/lib/utils';
 import { canUse, useAdmin, type AdminUser } from '@/components/admin/admin-context';
 import { ADMIN_LINKS, activeLink } from '@/components/admin/AdminNav';
-import { COLLECTIONS, useContent, type Change, type CollectionName } from '@/components/admin/content-store';
+import { COLLECTIONS, editHref, useContent, type Change, type CollectionName } from '@/components/admin/content-store';
 import { ago, clock, deployProgress, useDeploy, useNow } from '@/components/admin/deploy-status';
 import { useRebuild } from '@/components/admin/use-rebuild';
 import { ShellContext } from '@/components/admin/shell-context';
 import { Avatar } from '@/components/admin/fields/UserSelect';
+import { Toaster } from '@/components/admin/kit/Toaster';
+import { TOPBAR_SLOT_ID } from '@/components/admin/kit/PropertiesDrawer';
 import { ProfilePhotoDialog } from '@/components/admin/ProfilePhotoDialog';
 
 /**
@@ -35,7 +37,7 @@ const SIDEBAR_KEY = 'admin-sidebar-collapsed';
 
 /** Sections whose page owns the whole content area (list + editor) instead of a scrolling column. */
 function isFullBleed(pathname: string) {
-    return /^\/admin\/(projects|resources|artifacts|posts\/edit)\/?$/.test(pathname);
+    return /^\/admin\/(users|artifacts\/edit|library\/edit|posts\/edit|projects\/edit|resources\/edit)\/?$/.test(pathname);
 }
 
 /** Pages that draw their own top bar (the post editor): the shell's header stands down for them. */
@@ -89,7 +91,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         // The site header that normally pads for the notch is hidden in the admin, so the
         // shell pads itself: without this the menu button sat under an iPhone's status bar.
         <div className="fixed inset-0 z-[45] flex bg-background pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)] text-foreground">
-            <div className="hidden md:flex">
+            <div className="hidden md:flex" data-drawer-inert>
                 <Sidebar user={user} collapsed={collapsed} onToggle={toggleCollapsed} />
             </div>
             {drawer && (
@@ -104,11 +106,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <ShellContext.Provider value={{ openMenu: () => setDrawer(true) }}>
             <div className="flex min-w-0 flex-1 flex-col">
                 {!ownsTopBar(pathname) && (
-                <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border/60 px-3 md:px-6">
+                <header data-drawer-inert className="flex h-14 shrink-0 items-center gap-3 border-b border-border/60 px-3 md:px-6">
                     <button type="button" onClick={() => setDrawer(true)} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground md:hidden" aria-label="Open menu">
                         <Menu size={18} />
                     </button>
-                    <Breadcrumb />
+                    <Suspense fallback={null}><Breadcrumb /></Suspense>
                     <div className="ml-auto flex items-center gap-2">
                         <button
                             type="button"
@@ -125,6 +127,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                         <CursorToggle />
                         <DeployPill />
                         {editsContent && <PublishControl />}
+                        {/* Pages can add a control here (the editors' Properties toggle) with kit's <TopBarSlot>. */}
+                        <div id={TOPBAR_SLOT_ID} className="flex items-center" />
                     </div>
                 </header>
                 )}
@@ -138,6 +142,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </ShellContext.Provider>
 
             <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
+            <Toaster />
         </div>
     );
 }
@@ -262,22 +267,27 @@ function Breadcrumb() {
     const pathname = usePathname();
     const link = activeLink(pathname);
     const content = useContent();
+    const params = useSearchParams();
     const name = (Object.keys(COLLECTIONS) as CollectionName[]).find((n) => link?.href === COLLECTIONS[n].href);
-    const selected = name ? content.state[name].items.find((i) => i._k === content.selected[name]) : undefined;
-    const sub = !name && link && link.href !== '/admin' && pathname.replace(/\/$/, '') !== link.href;
+    const editing = !!name && /\/edit\/?$/.test(pathname);
+    const record = editing && name ? content.state[name].items.find((i) => i._k === params.get('id')) : undefined;
+    const sub = !editing && link && link.href !== '/admin' && pathname.replace(/\/$/, '') !== link.href;
+    // /admin/artifacts/edit with no key is the upload page; /admin/library/edit with no slug is a new item.
+    const subLabel = link?.href === '/admin/artifacts' && !params.get('slug') && !params.get('file') ? 'Upload'
+        : link?.href === '/admin/library' && !params.get('slug') ? 'New item' : 'Edit';
     return (
         <div className="flex min-w-0 items-center gap-1.5 text-sm">
-            {selected && name ? (
+            {editing && name && link ? (
                 <>
-                    <button type="button" onClick={() => content.select(name, null)} className="hidden text-muted-foreground hover:text-foreground sm:inline">{link?.label}</button>
+                    <Link href={link.href} className="hidden text-muted-foreground hover:text-foreground sm:inline">{link.label}</Link>
                     <span className="hidden text-muted-foreground/50 sm:inline">/</span>
-                    <span className="truncate font-medium">{selected.name || `Untitled ${COLLECTIONS[name].singular}`}</span>
+                    <span className="truncate font-medium">{record ? (record.name || `Untitled ${COLLECTIONS[name].singular}`) : 'Edit'}</span>
                 </>
             ) : sub && link ? (
                 <>
                     <Link href={link.href} className="text-muted-foreground hover:text-foreground">{link.label}</Link>
                     <span className="text-muted-foreground/50">/</span>
-                    <span className="truncate font-medium">Edit</span>
+                    <span className="truncate font-medium">{subLabel}</span>
                 </>
             ) : (
                 <span className="truncate font-medium">{link?.label ?? 'Admin'}</span>
@@ -415,8 +425,8 @@ function PublishControl() {
     const disabled = !content.canPublish || blockers.length > 0 || publishing;
 
     const open = (name: CollectionName, c: Change) => {
-        content.select(name, c.item._k);
-        router.push(COLLECTIONS[name].href);
+        // A removed record has no editor page to open: go to its list instead.
+        router.push(c.kind === 'removed' ? COLLECTIONS[name].href : editHref(name, c.item._k));
     };
 
     const openPost = (slug: string) => router.push(`/admin/posts/edit?slug=${encodeURIComponent(slug)}`);
@@ -517,8 +527,8 @@ function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (
     const editsContent = canUse(user, 'content');
 
     const run = (fn: () => void) => { onOpenChange(false); fn(); };
-    const openItem = (name: CollectionName, k: string) => run(() => { content.select(name, k); router.push(COLLECTIONS[name].href); });
-    const create = (name: CollectionName) => run(() => { content.create(name); router.push(COLLECTIONS[name].href); });
+    const openItem = (name: CollectionName, k: string) => run(() => router.push(editHref(name, k)));
+    const create = (name: CollectionName) => run(() => { const k = content.create(name); router.push(editHref(name, k)); });
 
     return (
         <CommandDialog open={open} onOpenChange={onOpenChange}>

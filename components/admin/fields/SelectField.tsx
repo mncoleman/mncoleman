@@ -61,7 +61,7 @@ export function SelectField({
                     {trigger ?? current?.render ?? current?.label ?? <span className="text-muted-foreground">Empty</span>}
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="start" collisionPadding={12} className={cn('w-[var(--radix-popover-trigger-width)] min-w-[240px] rounded-[10px] p-1 shadow-xl', contentClassName)}>
+            <PopoverContent align="start" collisionPadding={8} className={cn('w-[var(--radix-popover-trigger-width)] min-w-[240px] rounded-[10px] p-1 shadow-xl', contentClassName)}>
                 <Command className="bg-transparent" defaultValue={value ? `${current?.label ?? value}` : undefined}>
                     {/* cmdk wires arrow keys and Enter through its input, so it is always present; hidden when search is off. */}
                     <CommandPrimitive.Input
@@ -72,7 +72,7 @@ export function SelectField({
                             ? 'mb-1 w-[calc(100%-4px)] mx-0.5 rounded-md border border-input bg-background px-2 py-1 text-[13px] outline-none focus:border-ring'
                             : 'sr-only'}
                     />
-                    <CommandList>
+                    <CommandList className="max-h-[min(300px,calc(var(--radix-popover-content-available-height)-3.5rem))]">
                         <CommandEmpty>Nothing found.</CommandEmpty>
                         {options.map((o) => (
                             <CommandItem

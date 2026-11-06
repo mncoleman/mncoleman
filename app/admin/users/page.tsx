@@ -10,11 +10,11 @@ export default function AdminUsersPage() {
     // It is a UX guard only — the Worker is the real gate on every /api/users call.
     if (user?.role !== 'super_admin') {
         return (
-            <p className="text-muted-foreground">
+            <p className="p-6 text-muted-foreground">
                 You need super-admin access to manage users.
             </p>
         );
     }
 
-    return <UserManagement workerUrl={workerUrl} />;
+    return <UserManagement workerUrl={workerUrl} selfId={user.id} />;
 }

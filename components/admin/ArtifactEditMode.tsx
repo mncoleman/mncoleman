@@ -311,7 +311,7 @@ export function ArtifactEditMode({ workerUrl, slug }: { workerUrl: string; slug:
         <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2 justify-between">
                 <Button asChild variant="ghost" size="sm" className="gap-1.5">
-                    <Link href="/admin/artifacts"><ArrowLeft className="h-3.5 w-3.5" /> Artifacts</Link>
+                    <Link href={`/admin/artifacts/edit?slug=${encodeURIComponent(slug)}`}><ArrowLeft className="h-3.5 w-3.5" /> Back to the artifact</Link>
                 </Button>
                 <div className="flex flex-wrap items-center gap-2">
                     <Button size="sm" variant={selectOn ? 'default' : 'outline'} onClick={toggleSelect} className="gap-1.5">

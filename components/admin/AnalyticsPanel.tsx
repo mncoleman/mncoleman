@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     ChartContainer,
     ChartTooltip,
@@ -11,12 +10,13 @@ import {
 } from '@/components/ui/chart';
 import { Loader2, RefreshCw, ExternalLink, ArrowUp, ArrowDown, Minus, AlertTriangle } from 'lucide-react';
 import { authHeaders } from '@/lib/admin-auth';
-import { cn } from '@/lib/utils';
+import { AdminPage, HeaderSpacer, PageHeader, Section, SegmentedFilter, StatGrid, StatTile } from '@/components/admin/kit';
 
 const GA4_DASHBOARD_URL =
     'https://analytics.google.com/analytics/web/#/a377056471p515551096/reports/intelligenthome?params=_u..nav%3Dmaui';
 
 const RANGES = [7, 28, 90] as const;
+const RANGE_OPTIONS = RANGES.map((r) => ({ value: String(r), label: `${r} days` }));
 
 interface Totals {
     activeUsers: number;
@@ -53,43 +53,24 @@ function delta(current: number, previous: number): number | null {
     return ((current - previous) / previous) * 100;
 }
 
-function StatTile({
-    label,
-    value,
-    change,
-    invertColor = false,
-}: {
-    label: string;
-    value: string;
-    change: number | null;
-    // For bounce rate, down is good.
-    invertColor?: boolean;
-}) {
+/** The detail line under a number: the change against the previous period of the same length. */
+function changeDetail({ change, invertColor = false }: { change: number | null; invertColor?: boolean }) {
     const flat = change === null || Math.abs(change) < 0.5;
     const up = (change ?? 0) > 0;
     const good = invertColor ? !up : up;
     const Icon = flat ? Minus : up ? ArrowUp : ArrowDown;
-
-    return (
-        <Card>
-            <CardContent className="pt-6">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
-                <p className="mt-1 text-2xl font-bold tabular-nums">{value}</p>
-                <p
-                    className={cn(
-                        'mt-1 flex items-center gap-1 text-xs',
-                        flat ? 'text-muted-foreground' : good ? 'text-green-600' : 'text-red-600'
-                    )}
-                >
-                    <Icon size={12} />
-                    {change === null ? 'no prior data' : `${Math.abs(change).toFixed(1)}% vs prev.`}
-                </p>
-            </CardContent>
-        </Card>
-    );
+    return {
+        tone: flat ? undefined : good ? ('up' as const) : ('down' as const),
+        detail: <><Icon size={12} />{change === null ? 'no prior data' : `${Math.abs(change).toFixed(1)}% vs previous`}</>,
+    };
 }
 
-/** Horizontal bar list — scaled to the top row so the shape is readable at a glance. */
+function Tile({ label, value, change, invertColor }: { label: string; value: string; change: number | null; invertColor?: boolean }) {
+    const c = changeDetail({ change, invertColor });
+    return <StatTile label={label} value={value} detail={c.detail} tone={c.tone} />;
+}
+
+/** Horizontal bar list: scaled to the top row so the shape is readable at a glance. */
 function BarList({
     title,
     description,
@@ -102,40 +83,31 @@ function BarList({
     const max = Math.max(...rows.map((r) => r.value), 1);
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="text-lg">{title}</CardTitle>
-                <CardDescription>{description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {rows.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No data for this period.</p>
-                ) : (
-                    <ul className="space-y-2">
-                        {rows.map((r, i) => (
-                            <li key={`${r.label}-${i}`} className="relative">
-                                <div
-                                    className="absolute inset-y-0 left-0 rounded-sm bg-foreground/[0.07]"
-                                    style={{ width: `${(r.value / max) * 100}%` }}
-                                    aria-hidden
-                                />
-                                <div className="relative flex items-center justify-between gap-4 px-2 py-1.5 text-sm">
-                                    <span className="truncate">
-                                        {r.label}
-                                        {r.sub && (
-                                            <span className="ml-2 text-xs text-muted-foreground">{r.sub}</span>
-                                        )}
-                                    </span>
-                                    <span className="tabular-nums font-medium shrink-0">
-                                        {formatNumber(r.value)}
-                                    </span>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </CardContent>
-        </Card>
+        <Section title={title} padded>
+            <p className="mb-3 text-xs text-muted-foreground">{description}</p>
+            {rows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No data for this period.</p>
+            ) : (
+                <ul className="space-y-2">
+                    {rows.map((r, i) => (
+                        <li key={`${r.label}-${i}`} className="relative">
+                            <div
+                                className="absolute inset-y-0 left-0 rounded-sm bg-foreground/[0.07]"
+                                style={{ width: `${(r.value / max) * 100}%` }}
+                                aria-hidden
+                            />
+                            <div className="relative flex items-center justify-between gap-4 px-2 py-1.5 text-sm">
+                                <span className="truncate">
+                                    {r.label}
+                                    {r.sub && <span className="ml-2 text-xs text-muted-foreground">{r.sub}</span>}
+                                </span>
+                                <span className="shrink-0 font-medium tabular-nums">{formatNumber(r.value)}</span>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </Section>
     );
 }
 
@@ -370,52 +342,29 @@ export function AnalyticsPanel({ workerUrl }: { workerUrl: string }) {
     const p = data?.previous;
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex gap-1 rounded-md border border-border/50 p-1">
-                    {RANGES.map((r) => (
-                        <button
-                            key={r}
-                            onClick={() => setDays(r)}
-                            className={cn(
-                                'rounded px-3 py-1 text-sm transition-colors',
-                                days === r
-                                    ? 'bg-foreground text-background'
-                                    : 'text-muted-foreground hover:text-foreground'
-                            )}
-                        >
-                            {r}d
-                        </button>
-                    ))}
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={refresh} disabled={pending} className="gap-2">
-                        {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                        Refresh
-                    </Button>
-                    <Button asChild variant="outline" size="sm" className="gap-2">
-                        <a href={GA4_DASHBOARD_URL} target="_blank" rel="noopener noreferrer">
-                            Open GA4
-                            <ExternalLink size={14} />
-                        </a>
-                    </Button>
-                </div>
-            </div>
+        <AdminPage>
+            <PageHeader title="Analytics">
+                <SegmentedFilter label="Range" value={String(days)} onChange={(v) => setDays(Number(v))} options={RANGE_OPTIONS} />
+                <HeaderSpacer />
+                <Button variant="outline" onClick={refresh} disabled={pending} className="h-10 gap-2 rounded-lg px-4 text-sm">
+                    {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                    Refresh
+                </Button>
+                <Button asChild variant="outline" className="h-10 gap-2 rounded-lg px-4 text-sm">
+                    <a href={GA4_DASHBOARD_URL} target="_blank" rel="noopener noreferrer">
+                        Open GA4
+                        <ExternalLink size={14} />
+                    </a>
+                </Button>
+            </PageHeader>
 
             {error && (
-                <Card className="border-amber-500/30 bg-amber-500/5">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                            <AlertTriangle size={18} className="text-amber-600" />
-                            {error.kind === 'not_configured' ? 'GA4 API not connected yet' : 'Could not load analytics'}
-                        </CardTitle>
-                        <CardDescription>{error.message}</CardDescription>
-                    </CardHeader>
+                <Section title={error.kind === 'not_configured' ? 'GA4 API not connected yet' : 'Could not load analytics'} padded className="border-amber-500/30">
+                    <p className="flex items-start gap-2 text-sm"><AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-600" /> {error.message}</p>
                     {error.kind === 'not_configured' && (
-                        <CardContent className="text-sm text-muted-foreground space-y-2">
+                        <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                             <p>To connect it, set these Worker secrets and redeploy:</p>
-                            <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">
+                            <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs" data-lenis-prevent>
 {`cd worker
 npx wrangler secret put GA_SA_CLIENT_EMAIL
 npx wrangler secret put GA_SA_PRIVATE_KEY
@@ -425,42 +374,35 @@ npx wrangler deploy`}
                                 The service account also needs Viewer access on the GA4 property, and the
                                 Google Analytics Data API must be enabled on its Cloud project.
                             </p>
-                        </CardContent>
+                        </div>
                     )}
-                </Card>
+                </Section>
             )}
 
             {loading && !data && (
                 <div className="flex h-40 items-center justify-center">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-label="Loading" />
                 </div>
             )}
 
-            {t && p && (
+            {t && p && data && (
                 <>
-                    <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
-                        <StatTile label="Users" value={formatNumber(t.activeUsers)} change={delta(t.activeUsers, p.activeUsers)} />
-                        <StatTile label="Sessions" value={formatNumber(t.sessions)} change={delta(t.sessions, p.sessions)} />
-                        <StatTile label="Page views" value={formatNumber(t.pageViews)} change={delta(t.pageViews, p.pageViews)} />
-                        <StatTile label="Avg. session" value={formatDuration(t.avgSessionDuration)} change={delta(t.avgSessionDuration, p.avgSessionDuration)} />
-                        <StatTile label="Bounce rate" value={`${(t.bounceRate * 100).toFixed(1)}%`} change={delta(t.bounceRate, p.bounceRate)} invertColor />
-                    </div>
+                    <StatGrid cols={5}>
+                        <Tile label="Users" value={formatNumber(t.activeUsers)} change={delta(t.activeUsers, p.activeUsers)} />
+                        <Tile label="Sessions" value={formatNumber(t.sessions)} change={delta(t.sessions, p.sessions)} />
+                        <Tile label="Page views" value={formatNumber(t.pageViews)} change={delta(t.pageViews, p.pageViews)} />
+                        <Tile label="Avg. session" value={formatDuration(t.avgSessionDuration)} change={delta(t.avgSessionDuration, p.avgSessionDuration)} />
+                        <Tile label="Bounce rate" value={`${(t.bounceRate * 100).toFixed(1)}%`} change={delta(t.bounceRate, p.bounceRate)} invertColor />
+                    </StatGrid>
 
                     {data.trend.length > 1 && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">Daily users &amp; sessions</CardTitle>
-                                <CardDescription>
-                                    Hover the chart for a per-day breakdown. Last {days} days.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <TrendChart points={data.trend} days={days} />
-                            </CardContent>
-                        </Card>
+                        <Section title="Daily users and sessions" padded>
+                            <p className="mb-3 text-xs text-muted-foreground">Hover the chart for a per-day breakdown. Last {days} days.</p>
+                            <TrendChart points={data.trend} days={days} />
+                        </Section>
                     )}
 
-                    <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="grid items-start gap-5 lg:grid-cols-2">
                         <BarList
                             title="Top pages"
                             description="By page views."
@@ -485,30 +427,23 @@ npx wrangler deploy`}
                                 value: r.users,
                             }))}
                         />
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">Full dashboard</CardTitle>
-                                <CardDescription>
-                                    Everything here is a summary. For funnels, events, realtime and custom
-                                    explorations, use GA4 itself.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                                <Button asChild className="gap-2">
-                                    <a href={GA4_DASHBOARD_URL} target="_blank" rel="noopener noreferrer">
-                                        Open GA4 dashboard
-                                        <ExternalLink size={16} />
-                                    </a>
-                                </Button>
-                                <p className="text-xs text-muted-foreground">
-                                    Data cached for 10 minutes. Last fetched{' '}
-                                    {new Date(data.updatedAt).toLocaleString()}.
-                                </p>
-                            </CardContent>
-                        </Card>
+                        <Section title="Full dashboard" padded>
+                            <p className="mb-3 text-sm text-muted-foreground">
+                                Everything here is a summary. For funnels, events, realtime and custom explorations, use GA4 itself.
+                            </p>
+                            <Button asChild className="gap-2">
+                                <a href={GA4_DASHBOARD_URL} target="_blank" rel="noopener noreferrer">
+                                    Open GA4 dashboard
+                                    <ExternalLink size={16} />
+                                </a>
+                            </Button>
+                            <p className="mt-3 text-xs text-muted-foreground">
+                                Data cached for 10 minutes. Last fetched {new Date(data.updatedAt).toLocaleString()}.
+                            </p>
+                        </Section>
                     </div>
                 </>
             )}
-        </div>
+        </AdminPage>
     );
 }
