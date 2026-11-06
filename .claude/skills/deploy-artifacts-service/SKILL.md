@@ -98,11 +98,10 @@ REMOTE
 ```bash
 curl -s -o /dev/null -w "list:%{http_code}\n"     https://artifacts.mncoleman.com/api/list
 curl -s -o /dev/null -w "library:%{http_code}\n"  https://artifacts.mncoleman.com/api/library/list
-curl -s -o /dev/null -w "visitors:%{http_code}\n" https://artifacts.mncoleman.com/api/visitors
+curl -s -o /dev/null -w "admin-list (expect 401):%{http_code}\n" https://artifacts.mncoleman.com/api/admin/list
 ```
 
-`/api/visitors` is the **canary**: it is the only endpoint that fails if `VISITOR_IP_SALT`,
-`VISITOR_TOKEN_SECRET` or `GEOAPIFY_KEY` were dropped during the recreate.
+The visitor-globe endpoints were removed (the site no longer has `/api/visitors`); `/api/admin/list` answering 401 unauthenticated plus `/health` on the box is the liveness check now.
 
 If a security or authorization change shipped, verify the *behaviour* through the public
 edge rather than reading the source — e.g. confirm `/api/list` exposes no `password` field
