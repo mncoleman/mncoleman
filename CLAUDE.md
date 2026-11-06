@@ -19,7 +19,7 @@ Six independently-deployed pieces live in this repo. Pushing to `main` deploys o
 5. **`server/`** — a Bun + Hono service on an Oracle ARM box (`artifacts.mncoleman.com`) that hosts uploaded artifacts (HTML/PDF/images) and the AI library (prompts + skills), each with auto-generated OG share images. Deployed as a Docker container. See `server/README.md`.
 6. **`worker-tokens/`** — a fourth Cloudflare Worker (`mncoleman-token-count`) owning the route `mncoleman.com/api/count-tokens`. It holds `ANTHROPIC_API_KEY` and exposes only `POST /v1/messages/count_tokens` (model allowlist, per-IP rate limit, `MAX_CHARS` cap) so the static Skill Lens artifact can show real token counts without the key reaching a browser. Separate from `worker/` for the same Origin/CSRF reason as `worker-mcp/`.
 
-The site uses a **two-layer adapter pattern** for Notion content: `lib/notion.ts` does the direct API integration; `lib/blog.ts` and `lib/resume.ts` are thin adapters per content type; `lib/resources.ts` and `lib/projects.ts` read `data/*.json` instead. Every Notion fetcher validates credentials before calling Notion, falls back to sample data when they are absent, and throws when they are present but the fetch fails (see Patterns).
+Only the **resume** still comes from Notion (`lib/notion.ts` / `lib/resume.ts`: credentials validated before connect, sample data when absent, rethrow when present-but-failed; see Patterns). **Blog posts** are `data/posts/<slug>.md` (`lib/posts.ts`, with `lib/blog.ts` as the adapter the pages use); `lib/resources.ts` and `lib/projects.ts` read `data/*.json`.
 
 ## Directory Map
 
@@ -32,12 +32,12 @@ app/                    — Next.js App Router pages (see Pages below)
   ai/                   — AI library (prompts + skills from the artifact service)
   artifacts/            — Hosted artifact gallery + detail pages
   blog/, projects/,
-  resources/            — blog is Notion-backed; projects and resources read data/*.json
+  resources/            — blog reads data/posts/*.md; projects and resources read data/*.json
                           (list + [slug] detail + OG image)
   brand-kit/            — Brand/design-system showcase page
   layout.tsx            — Root layout: header nav, footer, providers, GA, fonts
   sitemap.ts, robots.ts, manifest.ts, opengraph-image.tsx — SEO/PWA route handlers
-lib/                    — Data layer + helpers (Notion adapters, artifacts, auth, OG)
+lib/                    — Data layer + helpers (posts, resume/Notion, artifacts, auth, OG, bible)
 components/
   ui/                   — shadcn/ui + ReactBits + custom animated icons
   admin/                — Admin panel components
@@ -72,8 +72,9 @@ profile-summary-card-output/ — CI-generated GitHub stat SVGs (do not hand-edit
 - `components/resume-actions.tsx` / `lib/resume-pdf.ts` — Print / Save PDF / Share on the resume. Print hands off to the browser; Save writes a file with no dialog, laying out the typed `ParsedResume` rather than rasterising the DOM (selectable, searchable, ATS-readable). They are meant to produce the same document, so **a change to the print CSS is a change to `lib/resume-pdf.ts` and vice versa**. `buildResumePdf()` is split from `downloadResumePdf()` so the layout can be exercised outside a browser — `jsPDF#save` needs a DOM, nothing above it does.
 - `components/backdrop-fade.tsx` — Fades a backdrop in once its canvas has actually drawn. Must never set transform/filter/will-change — each would make it a containing block for Dark Veil's `position: fixed` canvas.
 - `components/ui/glass-cube.tsx` — The bento card. Glass + 3D extrusion + tilt in dark; a plain solid card with a lift-and-shadow hover in light, because translucent white over white is a grey box. Colours come from `dark:` variants, not JS state, so hydration can't paint the wrong palette.
-- `lib/notion.ts` — Direct Notion API integration for blog posts; `NotionPost` type, credential validation, sample-data fallback, reading-time calc.
-- `lib/blog.ts` / `lib/resume.ts` — Per-content-type adapters over Notion. `lib/resources.ts` / `lib/projects.ts` — read `data/resources.json` / `data/projects.json`.
+- `lib/posts.ts` + `lib/post-format.ts` — Blog posts: one `data/posts/<slug>.md` per post (YAML front matter + Markdown), read at build time and returned as `NotionPost`. `parsePost` throws (naming the file) on an unclosed quote/front matter, a non-`true`/`false` `published`, or no title; a missing `data/posts/` fails a production build (empty dir is fine). The same format code runs in the Worker, the editor and the import script.
+- `lib/notion.ts` — Notion API integration for the resume (and the legacy blog fetchers the one-time import script reuses); owns the `NotionPost` type.
+- `lib/blog.ts` — Adapter over `lib/posts.ts`. `lib/resume.ts` — adapter over Notion. `lib/resources.ts` / `lib/projects.ts` — read `data/resources.json` / `data/projects.json`.
 - `lib/artifacts.ts` — Reads `data/artifacts.json` static manifest; file-type/label/size helpers.
 - `lib/admin-auth.ts` — Client-side session token helpers (sessionStorage) + `authHeaders()` for Worker calls.
 - `lib/og-card.tsx` — Shared OG image renderer used by the per-route `opengraph-image.tsx` files. **Must stay visually identical to `server/src/og.tsx`** — static artifacts unfurl from here, instant ones from there, and a viewer seeing both should not be able to tell which pipeline produced which. They cannot share code (separate deploys; the Docker image only copies `server/`), so a change to one is a manual change to the other.
@@ -92,9 +93,10 @@ profile-summary-card-output/ — CI-generated GitHub stat SVGs (do not hand-edit
 
 ## Data Model
 
-Content comes from **two Notion data sources** (one database + one page) plus repo JSON edited from the admin panel:
+Content is in git, edited from the admin panel (`/admin/posts`, `/admin/projects`, `/admin/resources`); only the resume page is still read from Notion:
 
-- **Blog database** (`NOTION_DATABASE_ID`) — Title, Slug, Date, Tags, Published, Featured, Excerpt, Author. Featured posts sort first, then newest-first.
+- **Blog posts** (`data/posts/<slug>.md`) — front matter {title, slug, date, tags, published, featured, excerpt, author, ogImage?} + Markdown body. Featured first, then newest-first. Moved off Notion; the one-time `scripts/import-notion-posts.ts` seeded them (**run it with `--write` and commit `data/posts` before merging this branch, or the production build fails by design**). `/admin/posts` autosaves drafts to the Worker's `POST_DRAFTS` KV (never a commit) and mirrors them in localStorage; **Publish** is the only commit (sha-locked, `slug_taken`/`stale` -> 409) and the commit triggers the Pages build.
+- **Verse mentions + `/bible`** — a `/bible/<book>/<chapter>#v<n>` link in a post, project or resource body renders as a hover/tap verse card with the text baked in at build time (`components/bible/MarkdownLink.tsx`, `lib/bible-server.ts`; `components/collection-detail.tsx` takes it as the `anchor` prop so the admin preview bundle stays free of `fs`). Texts (KJV, WEB) are `public/bible-data/`, cross-references `data/bible/xrefs` (OpenBible.info, CC BY 4.0, trimmed to the top 8 per verse; the chapter-page footer says so). Rebuild them with `scripts/bible/*`.
 - **Resources** (`data/resources.json`) — id (slug), name, url, categories, description, published, content (markdown body). Edited at `/admin/content`; each save is a Worker-made commit that Pages builds. Moved off Notion on 2026-09-18 because every build fetched every page body and sat in rate-limit backoff for minutes.
 - **Projects** (`data/projects.json`) — id (slug), name, description, url, tech, date, published, content. Same editor and flow as resources. Detail slugs derive from `slugify(name)`; `id` mirrors it, and renaming a record moves its page.
 - **Resume page** (`NOTION_RESUME_PAGE_ID`) — single page, body rendered to markdown.
@@ -103,7 +105,7 @@ Content comes from **two Notion data sources** (one database + one page) plus re
 
 ## Patterns & Conventions
 
-- **Credential validation before connect**: every Notion fetcher checks for a missing/placeholder token *before* calling `getNotionClient()`, and treats the two failure modes differently:
+- **Credential validation before connect** (Notion fetchers, now the resume only): every Notion fetcher checks for a missing/placeholder token *before* calling `getNotionClient()`, and treats the two failure modes differently:
   1. **Credentials missing or placeholder** → return sample data. Local dev has to work with no `.env`.
   2. **Credentials present but the fetch failed** → rethrow, and let the build fail.
 
@@ -134,7 +136,7 @@ Content comes from **two Notion data sources** (one database + one page) plus re
 
 ## Common Tasks
 
-- **Add a blog post**: add a row in the blog Notion database with `Published` checked, then rebuild (Notion is build-time only — content is not live).
+- **Add a blog post**: `/admin/posts` -> New post. Edits autosave as a draft; **Publish** commits `data/posts/<slug>.md` through the Worker (`/api/posts/:slug/publish`) and the commit triggers the build. Do not also fire the deploy hook. One-time Worker setup: create the `POST_DRAFTS` KV namespace and uncomment its block in `worker/wrangler.toml` (without it drafts answer 503 `drafts_unavailable`).
 - **Add a resource or project**: `/admin/content` → New → Save & publish. The save commits `data/<collection>.json` through the Worker (`/api/collections/:name`, GET returns items + git sha, PUT requires that sha back and answers 409 if the file moved) and the commit triggers the Pages build. Do not also fire the deploy hook. `scripts/migrate-notion-collections.ts` is the one-off that seeded the files from Notion.
 - **Add an artifact (static)**: add an entry to `data/artifacts.json`; place the file under `public/artifacts/`. Dynamic artifacts are uploaded through the admin panel → Worker → artifact service.
 - **Add a page**: create `app/<route>/page.tsx`; add the nav link in `app/layout.tsx` (and to `components/mobile-nav.tsx` if needed); add it to `app/sitemap.ts`.
@@ -159,7 +161,7 @@ npm run lint       # ESLint
 npm run dev:artifacts  # run the artifact service locally (tsx)
 ```
 
-Required env (see `.env.example`): `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `NOTION_RESUME_PAGE_ID` (`NOTION_RESOURCES_DATABASE_ID` and `NOTION_PROJECTS_DATABASE_ID` are no longer read; resources and projects come from `data/*.json`). Optional: `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_WORKER_URL` (admin auth Worker — `app/admin/layout.tsx`, `app/artifacts/ArtifactsPageClient.tsx`; defaults to `http://localhost:8787`), `NEXT_PUBLIC_ARTIFACTS_API_URL` (artifact + AI library service — `components/admin/{ArtifactUploader,LibraryManager}.tsx`, `app/artifacts/ArtifactsPageClient.tsx`, `app/ai/AiPageClient.tsx`; defaults to `https://artifacts.mncoleman.com`), `NEXT_PUBLIC_DISABLE_DARKVEIL`. Production values are set on the Cloudflare Pages project (see Deploy below).
+Required env (see `.env.example`): `NOTION_TOKEN`, `NOTION_RESUME_PAGE_ID` (`NOTION_DATABASE_ID` is read only by `scripts/import-notion-posts.ts`; `NOTION_RESOURCES_DATABASE_ID` and `NOTION_PROJECTS_DATABASE_ID` are no longer read; resources and projects come from `data/*.json`). Optional: `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_WORKER_URL` (admin auth Worker — `app/admin/layout.tsx`, `app/artifacts/ArtifactsPageClient.tsx`; defaults to `http://localhost:8787`), `NEXT_PUBLIC_ARTIFACTS_API_URL` (artifact + AI library service — `components/admin/{ArtifactUploader,LibraryManager}.tsx`, `app/artifacts/ArtifactsPageClient.tsx`, `app/ai/AiPageClient.tsx`; defaults to `https://artifacts.mncoleman.com`), `NEXT_PUBLIC_DISABLE_DARKVEIL`. Production values are set on the Cloudflare Pages project (see Deploy below).
 
 **Deploy**: pushing to `main` triggers a **Cloudflare Pages** build (Git integration, project `mncoleman`, build `npm run build`, output `out/`). Nothing in `.github/workflows/` deploys the site.
 
@@ -175,8 +177,8 @@ Required env (see `.env.example`): `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `NOTION
 
 1. **No basePath**: the site runs on the custom domain `mncoleman.com`, so `next.config.ts` has **no** `basePath`. (It previously used `/mncoleman`/`/matthew-coleman` for the GitHub Pages subpath — don't reintroduce that. `public/CNAME` is also gone; it only meant anything to GitHub Pages.)
 2. **Notion token format**: tokens start with `ntn_`, **not** `secret_`. Validation checks for the placeholder `ntn_your_integration_token_here`.
-3. **Notion sources**: the Blog database and the Resume page are the only Notion sources (resources and projects live in `data/*.json`). "Databases with multiple data sources are not supported" means you pointed at a database with synced/linked blocks — use the plain database ID.
-4. **Notion is build-time only**: content changes require a rebuild to appear; they are not real-time. Use the admin rebuild trigger or wait for the daily cron.
+3. **Notion sources**: the Resume page is the only runtime Notion source (the blog database is only read by the one-time import script). "Databases with multiple data sources are not supported" means you pointed at a database with synced/linked blocks — use the plain database ID.
+4. **Content is build-time only**: Notion (resume) and git content changes need a rebuild to appear; they are not real-time. Use the admin rebuild trigger or wait for the daily cron.
 5. **Images unoptimized**: static export disables Next image optimization; use `<img>` or `unoptimized` `<Image>`.
 6. **Dark Veil canvas coverage**: use `position: fixed` with explicit `100vw/100vh`; use `window.innerWidth/innerHeight` (not parent dims) for resize; don't wrap the canvas in positioned containers; `overflow-x: hidden` on html/body; `resolutionScale` affects render resolution only, not visual size. WebGL/GSAP components need `'use client'`.
 7. **Shared JWT secret**: the Worker and the artifact service share one HS256 `JWT_SECRET` (and `ARTIFACTS_JWT_SECRET`). Rotating one without the other breaks uploads.
@@ -188,7 +190,7 @@ Required env (see `.env.example`): `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `NOTION
 14. **A Pages custom domain needs a DNS record Cloudflare created.** Attaching the domain via the API does *not* create the record, and a record you made yourself first gives a permanent 522. Order that works: attach the custom domain to the Pages project, *then* point the record (proxied CNAME → `<project>.pages.dev`). Confirmed by rehearsing the whole cutover on a throwaway subdomain first — do that again before touching the apex.
 15. **`_redirects` only matches the PATH.** A rule written against a full `https://www…` URL parses, ships, and silently never fires — which is exactly how the www redirect was missed the first time. Cross-hostname redirects need a zone Redirect Rule (needs a zone-scoped credential, dashboard only) or a Worker route, which is why `worker-www-redirect/` exists.
 16. **Pages strips `.html`.** `/artifacts/foo.html` 308-redirects to `/artifacts/foo`. Content still serves and unfurlers follow it, so old shared links keep working — but the `og:url` values `finalize-og-images.ts` injects point at the `.html` form and are therefore redirect targets. Harmless; don't "fix" it by rewriting links.
-17. **An empty `.env.local` does not fail the build, it fakes it.** Missing Notion credentials take the sample-data branch, so you get a clean green build that quietly published "Welcome to Notion CMS". If a build's output looks oddly generic, check the credentials before anything else. (This is also why the Pages project must keep its env vars — same trap, live.)
+17. **An empty `.env.local` fakes the resume.** Missing Notion credentials take the sample-data branch (resume only; a missing `data/posts/` fails a production build instead), so you get a clean green build that quietly published "Welcome to Notion CMS". If a build's output looks oddly generic, check the credentials before anything else. (This is also why the Pages project must keep its env vars — same trap, live.)
 18. **Two wrangler credential files exist.** `~/.wrangler/config/default.toml` is the live one; `~/Library/Preferences/.wrangler/config/default.toml` can hold a stale token that fails with a misleading "Authentication error". Read the OAuth token from the former. It is short-lived (~1h) — run any `wrangler` command to refresh it before a long API session.
 19. **Neither stored Cloudflare credential can edit Rulesets.** The 1Password DNS token does DNS + zone settings (it *can* flip the SSL mode); the wrangler OAuth login does Workers/Pages/DNS-adjacent work but only `zone:read`. Transform Rules, Redirect Rules and Page Rules therefore need Matthew in the dashboard. Don't conclude a token is broken — check this list first.
 

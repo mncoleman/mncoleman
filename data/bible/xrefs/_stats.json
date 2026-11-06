@@ -1,0 +1,15 @@
+{
+ "source": "OpenBible.info cross-references, CC BY 4.0",
+ "sourceSha256": "ea07bfc069c7a31795a891112109df0dc782f76d138f30edaec9d4c2434100e0",
+ "topN": 8,
+ "lines": 344799,
+ "sourceVerses": 29363,
+ "droppedBadSource": 1,
+ "droppedBadTarget": 18,
+ "droppedSelf": 45,
+ "rangesTruncatedCrossChapter": 637,
+ "droppedDuplicate": 0,
+ "droppedBeyondTop": 150446,
+ "keptRefs": 194289,
+ "versesWithRefs": 29363
+}

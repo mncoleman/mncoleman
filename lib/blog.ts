@@ -1,14 +1,16 @@
-import { getPublishedPosts, getPostBySlug as getNotionPostBySlug, NotionPost } from './notion';
+import { getPublishedPosts, getPostBySlug as getPostFromFiles } from './posts';
+import type { NotionPost } from './notion';
 
+// Posts live in git (data/posts/*.md, see lib/posts.ts). The type keeps its
+// historical name so app/blog/** is untouched.
 export type Post = NotionPost;
 
 export async function getAllPosts(): Promise<Post[]> {
-  const posts = await getPublishedPosts();
-  return posts;
+  return getPublishedPosts();
 }
 
 export async function getPostBySlug(slug: string): Promise<Post | null> {
-  return await getNotionPostBySlug(slug);
+  return getPostFromFiles(slug);
 }
 
 export async function getAllTags(): Promise<string[]> {

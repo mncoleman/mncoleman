@@ -5,6 +5,8 @@ import { getResourceBySlug, getResourceSlugs } from '@/lib/resources';
 import { slugify } from '@/lib/utils';
 import { PageEntrance } from '@/components/page-entrance';
 import { CollectionDetail } from '@/components/collection-detail';
+import { MarkdownLink } from '@/components/bible/MarkdownLink';
+import { BibleHead } from '@/components/bible/BibleHead';
 
 export const dynamicParams = false;
 
@@ -46,6 +48,8 @@ export default async function ResourceDetailPage({ params }: { params: Promise<{
                     url={resource.url}
                     content={resource.content}
                     detailsPath={detailsPath}
+                    anchor={MarkdownLink}
+                    head={(resource.content || '').includes('](/bible/') ? <BibleHead /> : null}
                     backLink={(children, className) => <Link href="/resources" className={className}>{children}</Link>}
                 />
             </article>

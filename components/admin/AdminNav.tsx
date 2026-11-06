@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, FileUp, Library, BarChart3, Users, FolderKanban, BookMarked } from 'lucide-react';
+import { LayoutDashboard, FileUp, Library, BarChart3, Users, FolderKanban, BookMarked, PenLine } from 'lucide-react';
 import { canUse, canSeeArtifacts, type AdminUser } from '@/components/admin/admin-context';
 
 export interface AdminLink {
@@ -14,6 +14,7 @@ export interface AdminLink {
 /** Every admin section, who may open it, and where it sits in the sidebar. */
 export const ADMIN_LINKS: AdminLink[] = [
     { href: '/admin', label: 'Overview', icon: LayoutDashboard, group: 'Content', allowed: () => true },
+    { href: '/admin/posts', label: 'Posts', icon: PenLine, group: 'Content', allowed: (u) => canUse(u, 'content') },
     { href: '/admin/projects', label: 'Projects', icon: FolderKanban, group: 'Content', allowed: (u) => canUse(u, 'content') },
     { href: '/admin/resources', label: 'Resources', icon: BookMarked, group: 'Content', allowed: (u) => canUse(u, 'content') },
     { href: '/admin/artifacts', label: 'Artifacts', icon: FileUp, group: 'Content', allowed: canSeeArtifacts },

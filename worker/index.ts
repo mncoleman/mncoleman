@@ -1,3 +1,5 @@
+import { coercePostDoc, parsePost, samePost, serializePost, isValidSlug, PostFormatError, type PostDoc } from '../lib/post-format';
+
 // Rate limiting store — persists within a Cloudflare Worker isolate
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
@@ -35,6 +37,7 @@ export interface Env {
     GOOGLE_CLIENT_ID: string;       // Same OAuth client app.mncoleman.com uses
     GOOGLE_CLIENT_SECRET: string;
     OWNER_EMAIL?: string;           // Owner's Google address — super_admin via Google sign-in
+    POST_DRAFTS?: KVNamespace;      // Blog post autosave drafts (never committed). Optional: routes degrade to drafts_unavailable
 }
 
 /**
@@ -590,6 +593,7 @@ export default {
             if (p.startsWith('/api/library') && !can('library')) return forbidden();
             if (p.startsWith('/api/analytics') && !can('analytics')) return forbidden();
             if (p.startsWith('/api/collections') && !can('content')) return forbidden();
+            if (p.startsWith('/api/posts') && !can('content')) return forbidden();
             if (p === '/api/artifacts' && !can('artifacts')) return forbidden();
 
             // Edit mode and Claude linking for one instant artifact. Proxied as-is:
@@ -978,6 +982,278 @@ export default {
                     return new Response(JSON.stringify({ ok: true, sha: result.content?.sha, commit: result.commit?.sha }), {
                         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                     });
+                }
+
+                return new Response('Method not allowed', { status: 405, headers: corsHeaders });
+            }
+
+            // Blog posts: ONE FILE PER POST at data/posts/<slug>.md (front matter + Markdown).
+            //
+            //   drafts   autosave to KV (POST_DRAFTS), keyed by slug and versioned. They
+            //            NEVER commit: one commit per keystroke would be one Pages build per
+            //            keystroke. A write carries the version it was based on; a mismatch is
+            //            a 409 'conflict' and the client chooses (keep mine / load theirs).
+            //   publish  the only thing that commits. Sha-locked like the collections: a
+            //            stale or already-existing file is a 409 'stale'. The commit itself
+            //            triggers the Pages build; the deploy hook is NOT also fired.
+            //   KV has no compare-and-swap, so two tabs racing within the same few ms could
+            //   both pass the version check. For one editor that is acceptable; the publish
+            //   sha lock is the real guarantee.
+            const postsMatch = url.pathname.match(/^\/api\/posts(?:\/([a-z0-9-]{1,100}))?(?:\/(draft|publish|unpublish))?$/);
+            if (postsMatch) {
+                const [, postSlug, action] = postsMatch;
+                const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+                    status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+                const ghHeaders = {
+                    'Authorization': `token ${env.GITHUB_TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'Cloudflare-Worker',
+                };
+                const dirUrl = `https://api.github.com/repos/${env.GITHUB_REPO_OWNER}/${env.GITHUB_REPO_NAME}/contents/data/posts`;
+                const fileUrlFor = (slug: string) => `${dirUrl}/${slug}.md`;
+                const draftKey = (slug: string) => `post-draft:${slug}`;
+                const drafts = env.POST_DRAFTS;
+                const draftsUnavailable = () => json({
+                    error: 'drafts_unavailable',
+                    message: 'Draft storage is not set up: the Worker has no POST_DRAFTS KV binding. Run `wrangler kv namespace create POST_DRAFTS`, put the id in worker/wrangler.toml, and redeploy.',
+                }, 503);
+                type StoredDraft = { post: PostDoc; version: number; updatedAt: string; baseSha: string | null };
+                const readDraft = async (slug: string): Promise<StoredDraft | null> => {
+                    if (!drafts) return null;
+                    return await drafts.get<StoredDraft>(draftKey(slug), 'json');
+                };
+                // A committed file the parser rejects is reported, never loaded as an "Untitled" or unpublished post.
+                const readFile = async (slug: string): Promise<{ doc: PostDoc; sha: string } | null | 'error' | { invalid: string; sha: string }> => {
+                    const resp = await fetch(fileUrlFor(slug), { headers: ghHeaders });
+                    if (resp.status === 404) return null;
+                    if (!resp.ok) return 'error';
+                    const data = await resp.json() as any;
+                    try {
+                        return { doc: { ...parsePost(decodeBase64ToUtf8(data.content), slug, `data/posts/${slug}.md`), slug }, sha: data.sha };
+                    } catch (e) {
+                        if (e instanceof PostFormatError) return { invalid: e.message, sha: data.sha };
+                        throw e;
+                    }
+                };
+                const invalidFile = (f: { invalid: string }) => json({ error: 'invalid_post_file', message: f.invalid }, 422);
+                const ghFailed = async (resp: Response, what: string) => {
+                    const text = await resp.text();
+                    return json({ error: `GitHub ${what} failed (${resp.status})`, detail: text.slice(0, 300) }, 502);
+                };
+                const stale = (slug: string) => json({
+                    error: 'stale',
+                    message: `data/posts/${slug}.md changed since you loaded it. Load the current version, then apply your edit again.`,
+                }, 409);
+                const readBody = async (): Promise<any | null> => {
+                    const text = await request.text();
+                    if (text.length > 1_500_000) return 'too_large';
+                    try { return JSON.parse(text); } catch { return null; }
+                };
+
+                // GET /api/posts?offset=&limit= — post files plus draft-only posts, paged so nothing is
+                // silently dropped. The directory listing and the draft key listing are cheap (one call
+                // each); only the rows in the requested page cost a fetch per row.
+                if (!postSlug && request.method === 'GET') {
+                    const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0);
+                    const limit = Math.min(40, Math.max(1, parseInt(url.searchParams.get('limit') || '40', 10) || 40));
+                    const listResp = await fetch(dirUrl, { headers: ghHeaders });
+                    let files: { slug: string; sha: string }[] = [];
+                    if (listResp.ok) {
+                        files = ((await listResp.json()) as any[])
+                            .filter((f) => f.type === 'file' && /\.md$/.test(f.name))
+                            .map((f) => ({ slug: (f.name as string).replace(/\.md$/, ''), sha: f.sha as string }))
+                            .sort((a, b) => a.slug.localeCompare(b.slug));
+                    } else if (listResp.status !== 404) {
+                        return ghFailed(listResp, 'list');
+                    }
+                    const draftSlugs = new Set<string>();
+                    if (drafts) {
+                        let cursor: string | undefined;
+                        do {
+                            const listed: any = await drafts.list({ prefix: 'post-draft:', limit: 1000, cursor });
+                            for (const k of listed.keys) draftSlugs.add((k.name as string).slice('post-draft:'.length));
+                            cursor = listed.list_complete ? undefined : listed.cursor;
+                        } while (cursor);
+                    }
+                    const fileSlugs = new Set(files.map((f) => f.slug));
+                    const sequence: { slug: string; sha: string }[] = [
+                        ...files,
+                        ...[...draftSlugs].filter((sl) => !fileSlugs.has(sl)).sort().map((sl) => ({ slug: sl, sha: '' })),
+                    ];
+                    const page = sequence.slice(offset, offset + limit);
+                    const rows = await Promise.all(page.map(async (f) => {
+                        const draft = draftSlugs.has(f.slug) ? await readDraft(f.slug) : null;
+                        const info = draft ? { version: draft.version, updatedAt: draft.updatedAt } : null;
+                        if (!f.sha) {
+                            if (!draft) return null;
+                            return {
+                                slug: f.slug, title: draft.post.title, date: draft.post.date, tags: draft.post.tags, published: false,
+                                featured: draft.post.featured, excerpt: draft.post.excerpt, sha: '', draft: info,
+                            };
+                        }
+                        const r = await fetch(fileUrlFor(f.slug), { headers: { ...ghHeaders, 'Accept': 'application/vnd.github.raw+json' } });
+                        if (!r.ok) return null;
+                        try {
+                            const d = parsePost(await r.text(), f.slug, `data/posts/${f.slug}.md`);
+                            return { slug: f.slug, title: d.title, date: d.date, tags: d.tags, published: d.published, featured: d.featured, excerpt: d.excerpt, sha: f.sha, draft: info };
+                        } catch (e) {
+                            if (!(e instanceof PostFormatError)) throw e;
+                            // Shown in the list with the reason, never hidden.
+                            return { slug: f.slug, title: f.slug, date: '', tags: [] as string[], published: false, featured: false, excerpt: '', sha: f.sha, draft: info, error: e.message };
+                        }
+                    }));
+                    const next = offset + limit < sequence.length ? offset + limit : null;
+                    return json({ posts: rows.filter((r) => !!r), total: sequence.length, nextOffset: next, draftsAvailable: !!drafts });
+                }
+
+                if (!postSlug || !isValidSlug(postSlug)) return json({ error: 'A valid post slug is required' }, 400);
+
+                // GET /api/posts/:slug — the committed file (if any) and the draft (if any).
+                if (!action && request.method === 'GET') {
+                    const file = await readFile(postSlug);
+                    if (file === 'error') return json({ error: `Could not read data/posts/${postSlug}.md` }, 502);
+                    if (file && 'invalid' in file) return invalidFile(file);
+                    const draft = await readDraft(postSlug);
+                    return json({ post: file?.doc ?? null, sha: file?.sha ?? null, draft, draftsAvailable: !!drafts });
+                }
+
+                // PUT /api/posts/:slug/draft — autosave. Never commits.
+                if (action === 'draft' && request.method === 'PUT') {
+                    if (!drafts) return draftsUnavailable();
+                    const body = await readBody();
+                    if (body === 'too_large') return json({ error: 'Post is too large to autosave' }, 413);
+                    if (!body) return json({ error: 'Invalid JSON body' }, 400);
+                    const coerced = coercePostDoc(body.post, { allowEmptyTitle: true });
+                    if (!coerced.ok) return json({ error: coerced.error }, 400);
+                    if (coerced.doc.slug !== postSlug) return json({ error: 'post.slug must match the URL' }, 400);
+                    const baseVersion = Number.isInteger(body.baseVersion) ? body.baseVersion as number : 0;
+                    const current = await readDraft(postSlug);
+                    // The first save of a NEW post may not land on a slug that already has a file or somebody's
+                    // draft. `force` never bypasses this, so "Keep mine" cannot overwrite a different post.
+                    if (body.isNew === true) {
+                        if (current && samePost(current.post, coerced.doc)) {
+                            // Our own earlier save landed and only its response was lost.
+                            return json({ ok: true, version: current.version, updatedAt: current.updatedAt });
+                        }
+                        const existing = await readFile(postSlug);
+                        if (existing === 'error') return json({ error: `Could not check data/posts/${postSlug}.md` }, 502);
+                        if (existing || current) {
+                            return json({ error: 'slug_taken', message: `The slug "${postSlug}" is already used by another ${existing ? 'post' : 'draft'}.` }, 409);
+                        }
+                    }
+                    // A draft that vanished (published or deleted in another tab) has version 0
+                    // here but the client expects more: also a conflict, with nothing to load.
+                    const mismatch = current ? current.version !== baseVersion : baseVersion !== 0;
+                    if (mismatch && body.force !== true) {
+                        return json({ error: 'conflict', message: 'This draft changed somewhere else.', draft: current }, 409);
+                    }
+                    const next: StoredDraft = {
+                        post: coerced.doc,
+                        version: (current?.version ?? baseVersion) + 1,
+                        updatedAt: new Date().toISOString(),
+                        baseSha: typeof body.baseSha === 'string' ? body.baseSha : null,
+                    };
+                    try {
+                        await drafts.put(draftKey(postSlug), JSON.stringify(next));
+                    } catch (e: any) {
+                        // KV limits writes to ~1/s per key; the client backs off and retries.
+                        return json({ error: 'draft_write_failed', message: e?.message || 'KV write failed' }, 503);
+                    }
+                    return json({ ok: true, version: next.version, updatedAt: next.updatedAt });
+                }
+
+                if (action === 'draft' && request.method === 'DELETE') {
+                    if (!drafts) return draftsUnavailable();
+                    await drafts.delete(draftKey(postSlug));
+                    return json({ ok: true });
+                }
+
+                // POST /api/posts/:slug/publish — create or update the file. The only commit path.
+                if (action === 'publish' && request.method === 'POST') {
+                    const body = await readBody();
+                    if (body === 'too_large') return json({ error: 'Post is too large' }, 413);
+                    if (!body) return json({ error: 'Invalid JSON body' }, 400);
+                    const coerced = coercePostDoc(body.post);
+                    if (!coerced.ok) return json({ error: coerced.error }, 400);
+                    if (coerced.doc.slug !== postSlug) return json({ error: 'post.slug must match the URL' }, 400);
+                    const sha = typeof body.sha === 'string' && body.sha ? body.sha : undefined;
+                    const resp = await fetch(fileUrlFor(postSlug), {
+                        method: 'PUT',
+                        headers: ghHeaders,
+                        body: JSON.stringify({
+                            message: typeof body.message === 'string' && body.message ? body.message.slice(0, 200)
+                                : `${coerced.doc.published ? 'Publish' : 'Save'} post: ${coerced.doc.title}`,
+                            content: encodeUtf8ToBase64(serializePost(coerced.doc)),
+                            ...(sha ? { sha } : {}),
+                        }),
+                    });
+                    // Creating (no sha) over an existing file is a slug collision, not a stale edit.
+                    if (!sha && (resp.status === 409 || resp.status === 422)) {
+                        return json({ error: 'slug_taken', message: `The slug "${postSlug}" is already used by another post.` }, 409);
+                    }
+                    // With a sha, 409/422 means the file moved since it was loaded.
+                    if (resp.status === 409 || resp.status === 422) return stale(postSlug);
+                    if (!resp.ok) return ghFailed(resp, 'write');
+                    const result = await resp.json() as any;
+                    // Only delete the draft this publish was made from. One saved since (another tab,
+                    // another device) is newer than what was just committed: keep it and say so.
+                    let keptDraft: StoredDraft | null = null;
+                    if (drafts) {
+                        try {
+                            const draft = await readDraft(postSlug);
+                            const seen = Number.isInteger(body.draftVersion) ? body.draftVersion as number : -1;
+                            if (draft && (seen < 0 || draft.version > seen)) keptDraft = draft;
+                            else if (draft) await drafts.delete(draftKey(postSlug));
+                        } catch { /* the commit already landed; a leftover draft is merely stale */ }
+                    }
+                    // The commit itself triggers the Pages build; do not also fire the hook.
+                    return json({ ok: true, sha: result.content?.sha, commit: result.commit?.sha, ...(keptDraft ? { draftKept: true, draft: keptDraft } : {}) });
+                }
+
+                // POST /api/posts/:slug/unpublish — flip published:false on the committed file.
+                if (action === 'unpublish' && request.method === 'POST') {
+                    const body = await readBody();
+                    if (!body || body === 'too_large' || typeof body.sha !== 'string' || !body.sha) {
+                        return json({ error: '`sha` is required' }, 400);
+                    }
+                    const file = await readFile(postSlug);
+                    if (file === 'error') return json({ error: `Could not read data/posts/${postSlug}.md` }, 502);
+                    if (!file) return json({ error: 'Post is not committed' }, 404);
+                    if ('invalid' in file) return invalidFile(file);
+                    if (file.sha !== body.sha) return stale(postSlug);
+                    const resp = await fetch(fileUrlFor(postSlug), {
+                        method: 'PUT',
+                        headers: ghHeaders,
+                        body: JSON.stringify({
+                            message: `Unpublish post: ${file.doc.title}`,
+                            content: encodeUtf8ToBase64(serializePost({ ...file.doc, published: false })),
+                            sha: file.sha,
+                        }),
+                    });
+                    if (resp.status === 409 || resp.status === 422) return stale(postSlug);
+                    if (!resp.ok) return ghFailed(resp, 'write');
+                    const result = await resp.json() as any;
+                    return json({ ok: true, sha: result.content?.sha, commit: result.commit?.sha });
+                }
+
+                // DELETE /api/posts/:slug?sha=…&confirm=<slug> — remove the file. Irreversible from the UI.
+                if (!action && request.method === 'DELETE') {
+                    const sha = url.searchParams.get('sha') || '';
+                    if (url.searchParams.get('confirm') !== postSlug) {
+                        return json({ error: 'Deleting needs ?confirm=<slug> matching the post' }, 400);
+                    }
+                    if (!sha) return json({ error: '`sha` query parameter is required' }, 400);
+                    const resp = await fetch(fileUrlFor(postSlug), {
+                        method: 'DELETE',
+                        headers: ghHeaders,
+                        body: JSON.stringify({ message: `Delete post: ${postSlug}`, sha }),
+                    });
+                    if (resp.status === 409 || resp.status === 422) return stale(postSlug);
+                    if (!resp.ok) return ghFailed(resp, 'delete');
+                    const result = await resp.json() as any;
+                    if (drafts) await drafts.delete(draftKey(postSlug)).catch(() => undefined); // the commit already landed; a leftover draft is merely stale
+                    return json({ ok: true, commit: result.commit?.sha });
                 }
 
                 return new Response('Method not allowed', { status: 405, headers: corsHeaders });

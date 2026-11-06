@@ -11,6 +11,8 @@ import {
     ImagePlus, Loader2, AlertTriangle, ClipboardPaste, Check, X, Undo2, Redo2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { VerseMention } from './verse/VerseMention';
+import { VerseUI } from './verse/VerseUI';
 
 /**
  * Notion-style editor for the details-page body. What you see is what the page
@@ -24,7 +26,7 @@ export function MarkdownEditor({
     value,
     onChange,
     onUpload,
-    placeholder = 'Write here. Drop or paste an image to upload it.',
+    placeholder = 'Write here. Type @ for a verse. Drop or paste an image to upload it.',
     className,
 }: {
     value: string;
@@ -74,6 +76,7 @@ export function MarkdownEditor({
             }),
             Image.configure({ inline: false, allowBase64: false }),
             Placeholder.configure({ placeholder }),
+            VerseMention,
             Markdown,
         ],
         content: value,
@@ -183,6 +186,7 @@ export function MarkdownEditor({
             )}
 
             <EditorContent editor={editor} />
+            <VerseUI editor={editor} />
 
             {/* Same hover-to-paste affordance as the plain fields; clipboard text lands as Markdown. */}
             <button

@@ -21,6 +21,7 @@ export interface NotionPost {
     tags: string[];
     published: boolean;
     featured?: boolean;
+    ogImage?: string;
     content?: string;
     readingTime?: number; // Estimated minutes
     wordCount?: number;

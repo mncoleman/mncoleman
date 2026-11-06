@@ -35,3 +35,17 @@ crons = ["0 6 * * *"]
 [[kv_namespaces]]
 binding = "ADMIN_USERS"
 id = "9dd2c3346dd84a148dea9fa2f4f825f4"
+
+# Blog post drafts (autosave target for /admin/posts). Drafts never touch git: only Publish
+# commits data/posts/<slug>.md. Left COMMENTED OUT on purpose: an active binding with a
+# placeholder id makes `wrangler deploy` fail. Until it is enabled the Worker still deploys and
+# the draft routes answer 503 `drafts_unavailable` (the editor then keeps edits in the browser).
+#
+# One-time setup:
+#   1. cd worker && npx wrangler kv namespace create POST_DRAFTS
+#   2. Uncomment the block below and paste the id it printed in place of <ID>.
+#   3. npx wrangler deploy
+#
+[[kv_namespaces]]
+binding = "POST_DRAFTS"
+id = "1f42efc2796b4f6e96305ef767820fd0"
