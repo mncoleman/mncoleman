@@ -16,7 +16,11 @@ function load(workerUrl: string): Promise<PanelUser[]> {
                 const json = await res.json();
                 const list = Array.isArray(json?.users) ? json.users : [];
                 return list.filter((u: unknown): u is PanelUser => !!u && typeof (u as PanelUser).name === 'string')
-                    .map((u: PanelUser) => ({ name: u.name, role: typeof u.role === 'string' ? u.role : '' }));
+                    .map((u: PanelUser) => ({
+                        name: u.name,
+                        role: typeof u.role === 'string' ? u.role : '',
+                        photoUrl: typeof u.photoUrl === 'string' ? u.photoUrl : null,
+                    }));
             })
             .catch((e) => {
                 cache.delete(workerUrl); // a failure is not cached: the next open tries again

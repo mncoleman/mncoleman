@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext } from 'react';
+import type { AvatarState } from '@/lib/avatar';
 
 export type AdminFeature = 'artifacts' | 'content' | 'library' | 'analytics' | 'rebuild';
 
@@ -22,6 +23,9 @@ export interface AdminUser {
     provider?: 'telegram' | 'google';
     features?: AdminFeature[];
     artifactGrants?: string[];
+    /** The resolved profile photo (see lib/avatar.ts), null when the person has none. */
+    photoUrl?: string | null;
+    avatar?: AvatarState;
 }
 
 /**
@@ -48,6 +52,8 @@ interface AdminContextValue {
     user: AdminUser;
     workerUrl: string;
     logout: () => void;
+    /** Swap in a changed profile photo without reloading the session. */
+    setAvatar: (avatar: AvatarState) => void;
 }
 
 const AdminContext = createContext<AdminContextValue | null>(null);

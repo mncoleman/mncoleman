@@ -21,6 +21,8 @@ import { COLLECTIONS, useContent, type Change, type CollectionName } from '@/com
 import { ago, clock, deployProgress, useDeploy, useNow } from '@/components/admin/deploy-status';
 import { useRebuild } from '@/components/admin/use-rebuild';
 import { ShellContext } from '@/components/admin/shell-context';
+import { Avatar } from '@/components/admin/fields/UserSelect';
+import { ProfilePhotoDialog } from '@/components/admin/ProfilePhotoDialog';
 
 /**
  * The admin's own full-window frame: sidebar, top bar (breadcrumb, ⌘K, deploy
@@ -144,6 +146,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
 function Sidebar({ user, collapsed, onToggle, closeIcon }: { user: AdminUser; collapsed: boolean; onToggle: () => void; closeIcon?: boolean }) {
     const { logout } = useAdmin();
+    const [photoOpen, setPhotoOpen] = useState(false);
     const pathname = usePathname();
     const current = activeLink(pathname)?.href;
     const content = useContent();
@@ -157,7 +160,6 @@ function Sidebar({ user, collapsed, onToggle, closeIcon }: { user: AdminUser; co
         '/admin/resources': content.changes.resources.length,
         '/admin/posts': content.postChanges.length,
     };
-    const initials = (user.name || user.username || 'A').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
     const roleLabel = user.role === 'super_admin' ? 'Owner' : user.role === 'editor' ? 'Editor' : 'Site admin';
 
     return (
@@ -229,19 +231,29 @@ function Sidebar({ user, collapsed, onToggle, closeIcon }: { user: AdminUser; co
                 </Link>
             </div>
             <div className={cn('flex items-center gap-2 border-t border-border/60 p-3', collapsed && 'justify-center')}>
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium" title={collapsed ? user.name : undefined}>{initials}</span>
-                {!collapsed && (
-                    <>
+                <button
+                    type="button"
+                    onClick={() => setPhotoOpen(true)}
+                    className="flex min-w-0 flex-1 items-center gap-2 rounded-md text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Change profile photo"
+                    title={collapsed ? `${user.name || 'Admin'}: change profile photo` : 'Change profile photo'}
+                    style={collapsed ? { flex: '0 0 auto' } : undefined}
+                >
+                    <Avatar name={user.name || user.username || 'Admin'} size={28} photoUrl={user.photoUrl} />
+                    {!collapsed && (
                         <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm">{user.name || user.username || 'Admin'}</span>
                             <span className="block truncate text-[11px] text-muted-foreground">{roleLabel}</span>
                         </span>
-                        <button type="button" onClick={logout} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Log out" title="Log out">
-                            <LogOut size={14} />
-                        </button>
-                    </>
+                    )}
+                </button>
+                {!collapsed && (
+                    <button type="button" onClick={logout} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Log out" title="Log out">
+                        <LogOut size={14} />
+                    </button>
                 )}
             </div>
+            <ProfilePhotoDialog open={photoOpen} onOpenChange={setPhotoOpen} />
         </aside>
     );
 }

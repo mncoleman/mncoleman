@@ -1,5 +1,10 @@
 import { lookupPage } from '../lib/citation-lookup';
 import { classifyDraft } from '../lib/post-staging';
+import {
+    AVATAR_TYPES, MAX_AVATAR_BYTES, avatarMetaKey, captureLoginPhotos, isAvatarPin, isOpaqueTelegramUrl, isReservedUserId, isTelegramProxyUrl, parseMeta,
+    pictureFromClaims, resolveAvatar, sanitizeTelegramUrl, uploadPhotoUrl, validateAvatarUpload,
+    type AvatarMeta, type AvatarState,
+} from '../lib/avatar';
 import { coercePostDoc, parsePost, samePost, serializePost, isValidSlug, PostFormatError, type PostDoc } from '../lib/post-format';
 
 // Rate limiting store — persists within a Cloudflare Worker isolate
@@ -113,7 +118,7 @@ export default {
         );
     },
 
-    async fetch(request: Request, env: Env): Promise<Response> {
+    async fetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
         const allowedOrigins = ['https://mncoleman.com', 'https://www.mncoleman.com', 'http://localhost:3000'];
         const origin = request.headers.get('Origin');
 
@@ -271,6 +276,26 @@ export default {
                     return Response.redirect(`${frontendAdmin}?auth_error=unauthorized`, 302);
                 }
 
+                // Remember the photo this sign-in revealed under the person's one avatar record.
+                // Login never waits on an outside fetch: only the OIDC `picture` claim and a KV
+                // read are used here, and a cold profile cache is filled after the redirect.
+                try {
+                    const avatarId = String(idPayload.sub) === env.OWNER_SUB ? 'owner' : await env.ADMIN_USERS.get(`sub:${idPayload.sub}`);
+                    if (avatarId) {
+                        const tgName = tgUsername.toLowerCase();
+                        const kvl = kvLike(env.ADMIN_USERS);
+                        const tgPhoto = pictureFromClaims('telegram', idPayload) || (tgName ? await cachedTelegramPhoto(env, tgName, undefined) : null);
+                        await captureLoginPhotos(kvl, avatarId, { telegram: tgPhoto, telegramName: tgName });
+                        if (!tgPhoto && tgName && ctx) {
+                            ctx.waitUntil(
+                                getCachedProfile(env, tgName, url.origin)
+                                    .then((prof) => captureLoginPhotos(kvl, avatarId, { telegram: sanitizeTelegramUrl(prof?.photoUrl) }))
+                                    .catch((e) => console.error('[callback] background photo lookup failed:', e)),
+                            );
+                        }
+                    }
+                } catch (e) { console.error('[callback] avatar capture failed:', e); }
+
                 // Issue session JWT with role
                 const name = idPayload.first_name || tgUsername || 'Admin';
                 const sessionToken = await signJwt({
@@ -368,6 +393,10 @@ export default {
                     return Response.redirect(`${frontendAdmin}?auth_error=unauthorized`, 302);
                 }
 
+                // Remember the Google picture under the person's one avatar record ('owner' for
+                // the owner, who is the same person whichever way they sign in).
+                await captureLoginPhotos(kvLike(env.ADMIN_USERS), authResult.userId, { google: pictureFromClaims('google', idPayload) });
+
                 const name = idPayload.given_name || idPayload.name || email;
                 const sessionToken = await signJwt({
                     id: `g:${googleSub}`, name, role: authResult.role, username: authResult.userId, email, provider: 'google',
@@ -393,10 +422,14 @@ export default {
                 const session = await revalidateSession(env, payload);
                 if (!session.valid) return new Response('Invalid session', { status: 401, headers: corsHeaders });
 
+                // A KV hiccup must not 500 the admin panel over a profile photo.
+                let avatar: AvatarState | null = null;
+                try { avatar = await avatarStateFor(env, session.userId, sessionTelegramName(session.userId, payload), url.origin); } catch (e) { console.error('[auth/me] avatar lookup failed:', e); }
                 return new Response(JSON.stringify({ user: {
                     name: payload.name, id: payload.id, role: session.role, username: payload.username,
                     email: payload.email || null, provider: payload.provider || 'telegram',
                     features: session.features, artifactGrants: session.artifactGrants,
+                    photoUrl: avatar?.photoUrl ?? null, ...(avatar ? { avatar } : {}),
                 } }), {
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
                 });
@@ -456,6 +489,41 @@ export default {
                         ...corsHeaders,
                         'Content-Type': imgResp.headers.get('Content-Type') || 'image/jpeg',
                         'Cache-Control': 'private, max-age=3600',
+                    },
+                });
+            }
+
+            // Uploaded profile photos. Public on purpose, like the Telegram proxy above: an
+            // <img> cannot send a bearer token. The path carries a random 128-bit token (not
+            // an id, username or email), so a photo is reachable only by someone who was
+            // shown its URL. Bytes were validated as PNG/JPEG/WebP on the way in and are
+            // served with nosniff, a locked-down CSP and a content type taken from the
+            // sniffed bytes, never from the request, so they cannot run as anything.
+            if (url.pathname.startsWith('/api/avatar-upload/') && request.method === 'GET') {
+                const token = url.pathname.slice('/api/avatar-upload/'.length);
+                if (!/^[a-f0-9]{32}$/.test(token)) return new Response('Not Found', { status: 404, headers: corsHeaders });
+                const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+                if (!checkRateLimit(`avatar-up-get:${ip}`, 120, 60_000)) {
+                    return new Response('Too Many Requests', { status: 429, headers: { ...corsHeaders, 'Retry-After': '60' } });
+                }
+                const stored = await env.ADMIN_USERS.getWithMetadata<{ ct?: string }>(`avatar-upload:${token}`, 'arrayBuffer');
+                const ct = stored.metadata?.ct;
+                if (!stored.value || !ct || !(AVATAR_TYPES as readonly string[]).includes(ct)) {
+                    return new Response('Not Found', { status: 404, headers: corsHeaders });
+                }
+                return new Response(stored.value, {
+                    status: 200,
+                    headers: {
+                        ...corsHeaders,
+                        'Content-Type': ct,
+                        'Content-Length': String(stored.value.byteLength),
+                        'X-Content-Type-Options': 'nosniff',
+                        'Content-Security-Policy': "default-src 'none'; sandbox",
+                        'Cross-Origin-Resource-Policy': 'cross-origin',
+                        // 'immutable' is safe because a token's bytes are never rewritten: a new upload gets a
+                        // new token. The flip side is that a browser may keep showing a deleted photo from
+                        // its own cache for up to a year; the Worker stops serving it at once.
+                        'Cache-Control': 'public, max-age=31536000, immutable',
                     },
                 });
             }
@@ -1789,28 +1857,94 @@ export default {
                 }
             }
 
+            // Your own profile photo. Any signed-in admin, their own only: the target is
+            // always the revalidated session's record, never a body or query parameter.
+            if (p === '/api/me/avatar' || p === '/api/me/avatar-source') {
+                const jsonOut = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+                    status, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                });
+                const tgName = sessionTelegramName(session.userId, authPayload);
+                if (p === '/api/me/avatar' && request.method === 'POST') {
+                    if (!checkRateLimit(`avatar-upload-set:${session.userId}`, 10, 60_000)) return jsonOut({ error: 'Too many tries. Wait a minute and try again.' }, 429);
+                    const declaredLength = Number(request.headers.get('Content-Length') || '0');
+                    if (declaredLength > MAX_AVATAR_BYTES) return jsonOut({ error: 'That photo is too large. Pick a smaller one.' }, 413);
+                    const bytes = await readCapped(request, MAX_AVATAR_BYTES + 1);
+                    const check = validateAvatarUpload(bytes, request.headers.get('Content-Type'));
+                    if (!check.ok) return jsonOut({ error: check.error }, check.status);
+
+                    const token = randomHex(16);
+                    const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+                    const v = [...digest.slice(0, 8)].map((b) => b.toString(16).padStart(2, '0')).join('');
+                    const meta = parseMeta(await env.ADMIN_USERS.get(avatarMetaKey(session.userId)));
+                    await env.ADMIN_USERS.put(`avatar-upload:${token}`, bytes, { metadata: { ct: check.type } });
+                    const oldToken = meta.upload?.token;
+                    meta.upload = { token, v, at: Date.now() };
+                    meta.pin = 'upload'; // uploading is choosing it
+                    await env.ADMIN_USERS.put(avatarMetaKey(session.userId), JSON.stringify(meta));
+                    if (oldToken) await env.ADMIN_USERS.delete(`avatar-upload:${oldToken}`);
+                    // KV has no compare-and-set, so two uploads at once can each think they won and
+                    // leave one blob behind. Read back: if the record no longer points at our blob, a
+                    // concurrent upload replaced it, so ours is the orphan and goes. (Cheap, not airtight:
+                    // blobs are tiny and are also removed on replace, delete and user removal.)
+                    const after = parseMeta(await env.ADMIN_USERS.get(avatarMetaKey(session.userId)));
+                    if (after.upload?.token !== token) await env.ADMIN_USERS.delete(`avatar-upload:${token}`);
+                    return jsonOut({ avatar: await avatarStateFor(env, session.userId, tgName, url.origin) });
+                }
+
+                if (p === '/api/me/avatar' && request.method === 'DELETE') {
+                    const meta = parseMeta(await env.ADMIN_USERS.get(avatarMetaKey(session.userId)));
+                    if (meta.upload) await env.ADMIN_USERS.delete(`avatar-upload:${meta.upload.token}`);
+                    delete meta.upload;
+                    meta.pin = 'auto';
+                    await env.ADMIN_USERS.put(avatarMetaKey(session.userId), JSON.stringify(meta));
+                    return jsonOut({ avatar: await avatarStateFor(env, session.userId, tgName, url.origin) });
+                }
+
+                if (p === '/api/me/avatar-source' && (request.method === 'PUT' || request.method === 'POST')) {
+                    if (!checkRateLimit(`avatar-source:${session.userId}`, 30, 60_000)) return jsonOut({ error: 'Too many tries. Wait a minute and try again.' }, 429);
+                    const text = await request.text();
+                    let source: unknown;
+                    try { source = text.length <= 1024 ? JSON.parse(text)?.source : undefined; } catch { /* invalid below */ }
+                    if (!isAvatarPin(source)) return jsonOut({ error: 'Pick Automatic, Google, Telegram or Uploaded.' }, 400);
+                    const current = await avatarStateFor(env, session.userId, tgName, url.origin);
+                    if (source !== 'auto' && !current.sources[source]) return jsonOut({ error: 'That photo is not available yet.' }, 400);
+                    const meta = parseMeta(await env.ADMIN_USERS.get(avatarMetaKey(session.userId)));
+                    meta.pin = source;
+                    await env.ADMIN_USERS.put(avatarMetaKey(session.userId), JSON.stringify(meta));
+                    return jsonOut({ avatar: await avatarStateFor(env, session.userId, tgName, url.origin) });
+                }
+
+                return jsonOut({ error: 'method_not_allowed' }, 405);
+            }
+
             // Display names of the people who can write posts, for the editor's Author dropdown.
             // Open to anyone with the `content` feature (the full /api/users list is owner-only),
             // so it returns only a display name and role: no emails, usernames or ids.
             if (url.pathname === '/api/users/names' && request.method === 'GET') {
                 if (!can('content')) return forbidden();
-                const names: { name: string; role: string }[] = [];
+                const names: { name: string; role: string; photoUrl: string | null }[] = [];
                 const seen = new Set<string>();
-                const add = (name: string, role: string) => {
+                const add = (name: string, role: string, photoUrl: string | null) => {
                     const clean = name.trim();
                     if (!clean || seen.has(clean.toLowerCase())) return;
                     seen.add(clean.toLowerCase());
-                    names.push({ name: clean, role });
+                    names.push({ name: clean, role, photoUrl });
                 };
+                // Photos here are shown to every editor, so only forms that name nobody are handed
+                // out: Google, uploaded, and Telegram CDN photos. A t.me userpic or this Worker's
+                // Telegram proxy path contains a handle and is dropped (initials show instead).
+                // Same resolver as everywhere else, the owner included.
+                const photoOf = async (id: string, telegramName: string) =>
+                    (await avatarStateFor(env, id, telegramName, url.origin, null, { publicSafe: true })).photoUrl;
                 // The owner is never in KV, and the Telegram first name on their session is not the byline posts use.
-                add(OWNER_DISPLAY_NAME, 'super_admin');
+                add(OWNER_DISPLAY_NAME, 'super_admin', await photoOf('owner', ''));
                 for (const id of await getUserList(env.ADMIN_USERS)) {
                     const user = await getUser(env.ADMIN_USERS, id);
                     if (!user || user.status !== 'active') continue;
                     const person = hasFeature({ role: effectiveRole(user.role), features: knownFeatures(user.features) }, 'content');
                     if (!person) continue;
                     // Never fall back to a Telegram handle or an email: only a first name the person gave is exposed.
-                    add(user.firstName || 'Editor', effectiveRole(user.role));
+                    add(user.firstName || 'Editor', effectiveRole(user.role), await photoOf(id, user.method === 'email' ? '' : id));
                 }
                 return new Response(JSON.stringify({ users: names }), {
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1846,7 +1980,7 @@ export default {
                         artifactGrants: [],
                         invitedAt: '',
                         claimedAt: '',
-                        photoUrl: ownerProfile?.photoUrl || null,
+                        photoUrl: (await avatarStateFor(env, 'owner', ownerUsername, url.origin, sanitizeTelegramUrl(ownerProfile?.photoUrl, url.origin), { publicSafe: true, allowProxy: true })).photoUrl,
                     });
 
                     for (const id of userList) {
@@ -1854,7 +1988,8 @@ export default {
                         if (user) {
                             const view = userView(user);
                             const profile = view.method === 'telegram' ? await getCachedProfile(env, view.username, url.origin) : null;
-                            users.push({ ...view, photoUrl: profile?.photoUrl || null });
+                            const photoUrl = (await avatarStateFor(env, id, view.method === 'telegram' ? view.username : '', url.origin, sanitizeTelegramUrl(profile?.photoUrl, url.origin), { publicSafe: true, allowProxy: true })).photoUrl;
+                            users.push({ ...view, photoUrl });
                         }
                     }
 
@@ -1881,6 +2016,7 @@ export default {
                     } else {
                         id = (body.username || '').toLowerCase().replace(/^@/, '');
                         if (!/^[a-z0-9_]{1,32}$/.test(id)) return jsonError('Invalid username', 400, corsHeaders);
+                        if (isReservedUserId(id)) return jsonError('That name is reserved. Use the person\'s real Telegram username.', 400, corsHeaders);
                         method = 'telegram';
                     }
 
@@ -1951,7 +2087,7 @@ export default {
                 }
 
                 const username = url.searchParams.get('username')?.toLowerCase().replace(/^@/, '');
-                if (!username || !/^[a-z0-9_]{1,32}$/.test(username)) {
+                if (!username || !/^[a-z0-9_]{1,32}$/.test(username) || isReservedUserId(username)) {
                     return new Response('Invalid username', { status: 400, headers: corsHeaders });
                 }
 
@@ -2665,6 +2801,85 @@ async function revalidateSession(env: Env, payload: any): Promise<Session> {
     };
 }
 
+// --- Profile photos (see lib/avatar.ts for the rules) ---
+
+function kvLike(kv: KVNamespace) {
+    return { get: (k: string) => kv.get(k), put: (k: string, v: string) => kv.put(k, v) };
+}
+
+function randomHex(bytes: number): string {
+    return [...crypto.getRandomValues(new Uint8Array(bytes))].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Reads a request body, giving up (and returning too many bytes to pass validation) past `limit`. */
+async function readCapped(request: Request, limit: number) {
+    if (!request.body) return new Uint8Array(0);
+    const reader = request.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        chunks.push(value);
+        if (total >= limit) { await reader.cancel(); break; }
+    }
+    const out = new Uint8Array(Math.min(total, limit));
+    let at = 0;
+    for (const c of chunks) {
+        const room = out.length - at;
+        if (room <= 0) break;
+        out.set(c.subarray(0, room), at);
+        at += Math.min(c.byteLength, room);
+    }
+    return out;
+}
+
+/** The Telegram handle behind a session, if it has one. Email people and Google-signed-in owners have none. */
+function sessionTelegramName(userId: string, payload: any): string {
+    if (userId === 'owner') return payload.provider === 'google' ? '' : String(payload.username || '').toLowerCase();
+    return /^[a-z0-9_]{1,32}$/.test(userId) ? userId : '';
+}
+
+/** The Telegram photo already in the profile cache. A KV read only: never a network lookup. */
+async function cachedTelegramPhoto(env: Env, username: string, proxyOrigin: string | undefined): Promise<string | null> {
+    const raw = await env.ADMIN_USERS.get(`profile:${username}`);
+    if (!raw) return null;
+    try { return sanitizeTelegramUrl(JSON.parse(raw)?.photoUrl, proxyOrigin); } catch { return null; }
+}
+
+interface AvatarViewOptions {
+    /** Drop a Telegram photo whose URL names someone (t.me userpic, the Worker's own proxy path). */
+    publicSafe?: boolean;
+    /** With publicSafe: still allow the Worker's proxy path (owner-only lists, where handles are shown anyway). */
+    allowProxy?: boolean;
+}
+
+function avatarStateOf(meta: AvatarMeta, origin: string, telegramFallback: string | null, opts: AvatarViewOptions = {}): AvatarState {
+    let tg = meta.telegram?.url || telegramFallback;
+    if (opts.publicSafe && tg && !isOpaqueTelegramUrl(tg) && !(opts.allowProxy && isTelegramProxyUrl(tg))) tg = null;
+    return resolveAvatar({
+        pin: meta.pin,
+        upload: meta.upload ? uploadPhotoUrl(origin, meta.upload) : null,
+        google: meta.google?.url,
+        telegram: tg,
+    });
+}
+
+/**
+ * One person's photo state, the one resolver every surface uses. `telegramName` (or the handle
+ * remembered at their last Telegram sign-in) finds the cached Telegram profile when no photo was
+ * captured; `telegramFallback` supplies one directly.
+ */
+async function avatarStateFor(
+    env: Env, id: string, telegramName: string, origin: string, telegramFallback: string | null = null, opts: AvatarViewOptions = {},
+): Promise<AvatarState> {
+    const meta = parseMeta(await env.ADMIN_USERS.get(avatarMetaKey(id)));
+    const name = telegramName || meta.tgName || '';
+    const tg = telegramFallback || (name && !meta.telegram ? await cachedTelegramPhoto(env, name, opts.publicSafe && !opts.allowProxy ? undefined : origin) : null);
+    return avatarStateOf(meta, origin, tg, opts);
+}
+
 async function getUserList(kv: KVNamespace): Promise<string[]> {
     const raw = await kv.get('user_list');
     return raw ? JSON.parse(raw) : [];
@@ -2758,6 +2973,10 @@ async function removeUser(kv: KVNamespace, id: string): Promise<void> {
     await kv.delete(`user:${id}`);
     await kv.delete(`profile:${id}`);
     await kv.delete(`avatar:${id}`);
+    // The uploaded photo's bytes live under a random token that only the meta record knows.
+    const photoMeta = parseMeta(await kv.get(avatarMetaKey(id)));
+    if (photoMeta.upload) await kv.delete(`avatar-upload:${photoMeta.upload.token}`);
+    await kv.delete(avatarMetaKey(id));
     const list = await getUserList(kv);
     const filtered = list.filter(u => u !== id);
     await kv.put('user_list', JSON.stringify(filtered));

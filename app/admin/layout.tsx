@@ -131,7 +131,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
 
     return (
-        <AdminProvider value={{ user: session.user, workerUrl: WORKER_URL, logout: handleLogout }}>
+        <AdminProvider value={{
+            user: session.user,
+            workerUrl: WORKER_URL,
+            logout: handleLogout,
+            setAvatar: (avatar) => setSession((s) => (s ? { user: { ...s.user, avatar, photoUrl: avatar.photoUrl } } : s)),
+        }}>
             <DeployProvider>
                 <ContentProvider workerUrl={WORKER_URL} enabled={canUse(session.user, 'content')}>
                     <AdminShell>

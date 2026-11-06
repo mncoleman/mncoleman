@@ -113,6 +113,8 @@ export function cleanTypedSlug(raw: string): string {
 export interface PanelUser {
     name: string;
     role: string;
+    /** Opaque URL of the person's profile photo, or absent/null (initials are shown instead). */
+    photoUrl?: string | null;
 }
 
 export interface AuthorOption extends PanelUser {
@@ -132,7 +134,7 @@ export function authorOptions(users: PanelUser[], current: string): AuthorOption
         const key = u.name.trim().toLowerCase();
         if (!key || seen.has(key)) continue;
         seen.add(key);
-        out.push({ name: u.name.trim(), role: u.role });
+        out.push({ name: u.name.trim(), role: u.role, photoUrl: u.photoUrl || null });
     }
     const cur = current.trim();
     if (cur && !seen.has(cur.toLowerCase())) out.unshift({ name: cur, role: '', external: true });

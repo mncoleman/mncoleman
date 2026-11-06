@@ -1,11 +1,31 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { authorOptions, colorOf, initials, roleLabel } from '@/lib/post-editor-logic';
 import { SelectField, type SelectOption } from './SelectField';
 import { usePanelUsers } from './use-panel-users';
 
-export function Avatar({ name, size = 20 }: { name: string; size?: number }) {
+/**
+ * A person's photo, or their coloured initials when there is none or it fails to load.
+ * Photos come from other origins (Google, Telegram) so no referrer is sent with them.
+ */
+export function Avatar({ name, size = 20, photoUrl }: { name: string; size?: number; photoUrl?: string | null }) {
+    // The URL that failed, not a boolean: a new URL is tried again without an effect.
+    const [failed, setFailed] = useState<string | null>(null);
+    if (photoUrl && failed !== photoUrl) {
+        return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+                src={photoUrl}
+                alt=""
+                aria-hidden="true"
+                referrerPolicy="no-referrer"
+                onError={() => setFailed(photoUrl)}
+                className="inline-block shrink-0 rounded-full bg-muted object-cover"
+                style={{ width: size, height: size }}
+            />
+        );
+    }
     return (
         <span
             aria-hidden="true"
@@ -17,10 +37,10 @@ export function Avatar({ name, size = 20 }: { name: string; size?: number }) {
     );
 }
 
-function Row({ name, sub }: { name: string; sub: string }) {
+function Row({ name, sub, photoUrl }: { name: string; sub: string; photoUrl?: string | null }) {
     return (
         <>
-            <Avatar name={name} />
+            <Avatar name={name} photoUrl={photoUrl} />
             <span className="min-w-0">
                 <span className="block truncate">{name}</span>
                 {sub && <small className="block text-xs leading-tight text-muted-foreground">{sub}</small>}
@@ -52,7 +72,7 @@ export function UserSelect({
         () => authorOptions(users, value).map((u) => ({
             value: u.name,
             label: u.name,
-            render: <Row name={u.name} sub={u.external ? 'Not in the user list' : roleLabel(u.role)} />,
+            render: <Row name={u.name} sub={u.external ? 'Not in the user list' : roleLabel(u.role)} photoUrl={u.photoUrl} />,
         })),
         [users, value],
     );
