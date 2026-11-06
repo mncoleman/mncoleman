@@ -46,6 +46,6 @@ id = "9dd2c3346dd84a148dea9fa2f4f825f4"
 #   2. Uncomment the block below and paste the id it printed in place of <ID>.
 #   3. npx wrangler deploy
 #
-# [[kv_namespaces]]
-# binding = "POST_DRAFTS"
-# id = "<ID>"
+[[kv_namespaces]]
+binding = "POST_DRAFTS"
+id = "1f42efc2796b4f6e96305ef767820fd0"
