@@ -1,7 +1,11 @@
 # mncoleman artifact service
 
-Tiny Bun + Hono service that hosts uploaded HTML/PDF/image artifacts at
-`https://artifacts.mncoleman.com/a/<slug>` with auto-generated OG share images.
+Bun + Hono service that hosts uploaded HTML/PDF/image artifacts at
+`https://artifacts.mncoleman.com/a/<slug>` (public, or private behind a password) with
+auto-generated OG share images, plus the public AI library (prompts and skills). It also
+backs artifact **edit mode** and the **Claude link** for instant HTML artifacts, with notes
+kept in a SQLite file. The admin panel never calls it directly for writes: requests go
+through the admin Worker (`worker/`), which mints the JWT this service checks.
 
 ## Endpoints
 
@@ -9,9 +13,13 @@ Tiny Bun + Hono service that hosts uploaded HTML/PDF/image artifacts at
 | ------ | ------------------- | ------ | -------------------------------------------- |
 | `GET`  | `/health`           | —      | Liveness probe.                              |
 | `GET`  | `/api/list`         | —      | Public list of artifacts (for the website).  |
-| `POST` | `/api/upload`       | Bearer | Multipart upload. `file` + optional `name`, `description`, `slug`. |
-| `DELETE` | `/api/:slug`      | Bearer | Remove an artifact.                          |
-| `GET`  | `/a/:slug`          | —      | Public view. HTML gets OG meta injected.     |
+| `GET`  | `/api/admin/list`   | Bearer | Admin list incl. private artifacts, filtered to the token's `artifacts` claim. |
+| `POST` | `/api/upload`       | Bearer | Multipart upload. `file` + optional `name`, `description`, `slug`, `visibility`, `password`. Needs the `artifacts: '*'` claim. |
+| `PATCH` | `/api/:slug`       | Bearer | Edit metadata, visibility/password, or replace the file (multipart). |
+| `DELETE` | `/api/:slug`      | Bearer | Remove an artifact (needs `artifacts: '*'`). |
+| `GET`  | `/a/:slug`          | —      | Public view. HTML gets OG meta injected; private ones show a password prompt. `?select=1` injects the select helper. |
+| `GET`  | `/a/:slug/details`  | —      | Details/share page.                          |
+| `POST` | `/unlock/:slug`     | —      | Submit a private artifact's password (sets a signed cookie). |
 | `GET`  | `/raw/:slug`        | —      | Force-download the underlying file.          |
 | `GET`  | `/og/:slug.png`     | —      | Cached OG image (1200x630, branded).         |
 | `GET`  | `/api/library/list` | —      | Public list of AI library items (prompts + skills), full content included. |
@@ -21,6 +29,10 @@ Tiny Bun + Hono service that hosts uploaded HTML/PDF/image artifacts at
 | `GET`  | `/library/:slug`    | —      | Public details/share page (server-rendered). |
 | `GET`  | `/raw/library/:slug.txt\|.md\|.zip` | — | Download — prompts as `.txt`/`.md`, skills as `.zip`. |
 | `GET`  | `/og/library/:slug.png` | —  | Cached OG image for a library item.          |
+| `*`    | `/api/admin/artifacts/:slug/{state,notes,edit-text,link}` | Bearer | Edit mode and Claude linking for one instant HTML artifact. Slug must be in the token's `artifacts` claim. |
+| `GET`/`POST` | `/api/link/:slug/{next,source,notes,edit,notes/:id/resolve}` | Link token | The linked Claude session's side. `next` long-polls (25s hold, under Bun's 60s `idleTimeout`). A link token is refused by every other route. |
+| `POST` | `/api/admin/links/revoke` | Bearer | Owner only: end a person's links. |
+| `GET`  | `/`                 | —      | Redirects to `ROOT_REDIRECT` (default `https://mncoleman.com/artifacts/`). |
 
 ## Local dev
 
@@ -29,11 +41,17 @@ cd server
 bun install
 bash scripts/fetch-fonts.sh         # one-time: pulls Inter regular + semibold
 cp .env.example .env                # then edit JWT_SECRET
-bun run dev
+bun run dev                         # bun run --watch src/index.ts
 ```
 
-The service listens on `:7878` and stores artifacts under `STORAGE_ROOT`
-(default `/srv/artifacts`).
+The service listens on `:7878` (`PORT`) and stores artifacts under `STORAGE_ROOT`
+(default `/srv/artifacts` outside Docker; the image sets `/data`). Library items go under
+`LIBRARY_ROOT`. The notes database defaults to `$STORAGE_ROOT/artifact-notes.db`
+(`NOTES_DB_PATH` overrides). `ROOT_REDIRECT` and `PUBLIC_BASE_URL` are the other settings;
+`.env.example` lists them. The image is built on `oven/bun:1.4.3-debian`.
+
+There is also a project skill, `.claude/skills/deploy-artifacts-service`, that wraps the
+deploy below.
 
 ## Deploy to ARM box
 
@@ -87,7 +105,7 @@ docker run -d \
     -p 127.0.0.1:7878:7878 \
     -e PUBLIC_BASE_URL=https://artifacts.mncoleman.com \
     -e JWT_SECRET="$(cat /home/ubuntu/.artifacts.jwt-secret)" \
-    -e CORS_ORIGINS=https://mncoleman.com,https://mncoleman.github.io,http://localhost:3000 \
+    -e CORS_ORIGINS=https://mncoleman.com,http://localhost:3000 \
     -e MAX_UPLOAD_BYTES=104857600 \
     -e LIBRARY_ROOT=/library \
     -v artifacts_data:/data \
@@ -123,8 +141,11 @@ sudo systemctl reload caddy
 
 ## Auth
 
-Requests carry a `role` claim (`admin` | `super_admin`) that the Worker stamps on the
-short-lived token. The decrypted plaintext password of a private artifact is returned
+Requests carry a `role` claim (`super_admin` | `site_admin` | `editor`) that the Worker
+stamps on the short-lived token, along with `artifacts` (`'*'` or the list of slugs that
+person may touch) and `manageSecrets` (visibility and passwords; true for `super_admin` and
+`site_admin`). The service is the enforcer for those claims and fails closed on an absent
+one. The decrypted plaintext password of a private artifact is returned
 **only** to `super_admin`, and the check **fails closed** — an absent claim omits the field
 rather than exposing it. That means the Worker must be deployed *before* this service;
 otherwise tokens carry no role and the admin UI's password column goes blank in between.
@@ -140,10 +161,13 @@ The Cloudflare Worker mints a short-lived HS256 JWT, signed with the same
 <jwt>`. Public reads (the `/a/:slug`, `/raw/:slug`, `/og/:slug.png`,
 `/api/list` endpoints) are unauthenticated.
 
-The JWT carries a `role` claim (`super_admin` | `admin`) copied from the
-authenticated session user. Admin responses include a private artifact's
-decrypted plaintext `password` only when `role === 'super_admin'`; any other
-value — including the claim being absent on older tokens — omits the field.
+Admin responses include a private artifact's decrypted plaintext `password` only when
+`role === 'super_admin'`; any other value, including the claim being absent on older tokens,
+omits the field.
+
+Tokens are checked for audience `artifacts-service`. Claude link tokens (`purpose:
+artifact-link`, minted by this service, 2-hour life, one slug) are accepted only by
+`/api/link/:slug/*`.
 
 Generate the shared secret with `openssl rand -hex 32`, then:
 - store it in the Worker via `wrangler secret put JWT_SECRET`
@@ -154,12 +178,13 @@ Generate the shared secret with `openssl rand -hex 32`, then:
 ```
 /data/<slug>/
     <safe-filename>       # original artifact bytes
-    meta.json             # name, description, type, size, uploadedAt
+    meta.json             # name, description, type, size, uploadedAt, visibility, password hash + cipher
     og.png                # cached 1200x630 share image
+/data/artifact-notes.db   # SQLite: edit-mode notes and Claude link rows
 ```
 
 Single Docker volume `artifacts_data`. Fully portable — `docker run` with the
-same volume on a fresh container preserves all state.
+same volume on a fresh container preserves all state, including the notes database.
 
 ### AI library layout
 
