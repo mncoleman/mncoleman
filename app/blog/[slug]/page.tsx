@@ -3,9 +3,7 @@ import { notFound } from 'next/navigation';
 import { getPostBySlug, getAllPosts } from '@/lib/blog';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { MarkdownLink } from '@/components/bible/MarkdownLink';
+import { PostMarkdown } from '@/components/blog-media/PostMarkdown';
 import { BibleHead } from '@/components/bible/BibleHead';
 
 export const dynamicParams = false;
@@ -90,10 +88,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
 
       {(post.content || '').includes('](/bible/') && <BibleHead />}
       <div className="prose prose-neutral dark:prose-invert max-w-none">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{ a: MarkdownLink }}
-        >{post.content || ''}</ReactMarkdown>
+        <PostMarkdown content={post.content || ''} />
       </div>
     </article>
   );

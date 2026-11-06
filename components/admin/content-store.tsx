@@ -4,12 +4,19 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { authHeaders } from '@/lib/admin-auth';
 import { slugify } from '@/lib/utils';
 import { DEFAULT_TAG_KEY, normalizeTags, type Tags } from '@/lib/tags';
+import { usePathname } from 'next/navigation';
 import { useDeploy } from '@/components/admin/deploy-status';
+import { includedInGlobalPublish, isPrivateDraft, postBlockers, publishPendingPosts, type PendingPost } from '@/lib/post-staging';
 
 /**
  * Staged edits for the two JSON-backed collections, `data/projects.json` and
- * `data/resources.json`. Lives in the admin layout so switching between the
- * Projects and Resources sections keeps unpublished work.
+ * `data/resources.json`, plus blog posts. Lives in the admin layout so switching between
+ * sections keeps unpublished work.
+ *
+ * Posts are staged differently: the editor already autosaves them to the Worker (KV drafts), so
+ * the store only lists which drafts differ from the committed file (`GET /api/posts?pending=1`,
+ * no per-post fetches) and, on Publish, sends each one through the editor's own publish route
+ * with the Status the writer set (a Draft is saved but stays hidden). See lib/post-staging.ts.
  *
  * Edits apply to the staged copy as you type; nothing reaches the site until
  * Publish, which writes each changed file back through the Worker as one commit
@@ -88,10 +95,42 @@ function problems(name: CollectionName, items: Item[]): string[] {
     return out;
 }
 
+interface PostsState {
+    status: 'idle' | 'loading' | 'ready' | 'error';
+    pending: PendingPost[];
+    error?: string;
+}
+
+/** Pages the Worker's pending list until it says there is no more (it caps a page at 40, under the subrequest limit). */
+async function fetchPendingPosts(workerUrl: string): Promise<PendingPost[]> {
+    const out: PendingPost[] = [];
+    let offset: number | null = 0;
+    while (offset !== null) {
+        const res: Response = await fetch(`${workerUrl}/api/posts?pending=1&offset=${offset}`, { headers: authHeaders(), credentials: 'include' });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || `Could not check posts (${res.status})`);
+        if (Array.isArray(json.unreadable) && json.unreadable.length) throw new Error('Could not check some posts right now.');
+        out.push(...(json.posts as PendingPost[]));
+        offset = typeof json.nextOffset === 'number' ? json.nextOffset : null;
+    }
+    return out;
+}
+
 interface ContentContextValue {
     state: Record<CollectionName, CollectionState>;
     changes: Record<CollectionName, Change[]>;
+    /** Posts that count as unpublished and that global Publish will commit (already in the repo, or set to Published). */
+    postChanges: PendingPost[];
+    /** Never-committed Drafts: kept private in KV, listed but not counted, committed only by that post's own Publish changes. */
+    privateDrafts: PendingPost[];
+    /** Included posts that cannot be published as they are (no title, changed on the site); skipped with these notes while everything else publishes. */
+    postWarnings: string[];
+    postsStatus: PostsState['status'];
+    /** Re-reads which posts are unpublished; waits `delay` ms first and merges bursts (the editor calls it after every save). */
+    refreshPosts: (delay?: number) => void;
     changeCount: number;
+    /** False when everything pending is a post that cannot go out right now. */
+    canPublish: boolean;
     blockers: string[];
     publishing: boolean;
     publishError: string | null;
@@ -117,9 +156,14 @@ export function ContentProvider({ workerUrl, enabled, children }: { workerUrl: s
     const [publishing, setPublishing] = useState(false);
     const [publishError, setPublishError] = useState<string | null>(null);
     const [conflict, setConflict] = useState<CollectionName | null>(null);
+    const [posts, setPosts] = useState<PostsState>({ status: 'idle', pending: [] });
     const newCount = useRef(0);
     const loading = useRef<Set<CollectionName>>(new Set());
+    const postsTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const postsSeq = useRef(0);
+    const lastPostsLoad = useRef(0);
     const { start } = useDeploy();
+    const pathname = usePathname();
 
     const patch = useCallback((name: CollectionName, fn: (s: CollectionState) => CollectionState) => {
         setState((all) => ({ ...all, [name]: fn(all[name]) }));
@@ -156,23 +200,67 @@ export function ContentProvider({ workerUrl, enabled, children }: { workerUrl: s
         reload('resources');
     }, [enabled, reload]);
 
+    const loadPosts = useCallback(async (): Promise<PendingPost[] | null> => {
+        const seq = ++postsSeq.current;
+        lastPostsLoad.current = Date.now();
+        setPosts((p) => ({ ...p, status: p.status === 'ready' ? 'ready' : 'loading' }));
+        try {
+            const pending = await fetchPendingPosts(workerUrl);
+            if (seq === postsSeq.current) setPosts({ status: 'ready', pending });
+            return pending;
+        } catch (e: unknown) {
+            if (seq === postsSeq.current) setPosts((p) => ({ ...p, status: 'error', error: e instanceof Error ? e.message : 'Could not check posts' }));
+            return null;
+        }
+    }, [workerUrl]);
+
+    const refreshPosts = useCallback((delay = 0) => {
+        if (!enabled) return;
+        clearTimeout(postsTimer.current);
+        postsTimer.current = setTimeout(() => { void loadPosts(); }, delay);
+    }, [enabled, loadPosts]);
+    useEffect(() => () => clearTimeout(postsTimer.current), []);
+
+    // Posts change while you are in the editor (autosave) and from other tabs: look again when moving
+    // between sections and when this tab regains focus. The first look happens on arrival.
+    // Not while editing a post: the count is hidden there and every autosave would otherwise cost GitHub reads.
+    // Arriving anywhere else (including leaving the editor) looks again, after a beat so its last save can land.
+    useEffect(() => {
+        if (/^\/admin\/posts\/edit\/?$/.test(pathname)) return;
+        refreshPosts(1200);
+    }, [pathname, refreshPosts]);
+    useEffect(() => {
+        if (!enabled) return;
+        // At most once a minute: focus fires constantly when switching windows.
+        const onFocus = () => { if (Date.now() - lastPostsLoad.current > 60_000) refreshPosts(0); };
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
+    }, [enabled, refreshPosts]);
+
     const changes = useMemo(
         () => ({ projects: diff(state.projects.base, state.projects.items), resources: diff(state.resources.base, state.resources.items) }),
         [state]
     );
-    const changeCount = changes.projects.length + changes.resources.length;
+    const collectionCount = changes.projects.length + changes.resources.length;
+    const postChanges = useMemo(() => posts.pending.filter(includedInGlobalPublish), [posts.pending]);
+    const privateDrafts = useMemo(() => posts.pending.filter(isPrivateDraft), [posts.pending]);
+    const postWarnings = useMemo(() => postBlockers(postChanges), [postChanges]);
+    const publishablePosts = useMemo(() => postChanges.filter((p) => !p.problem && !p.stale), [postChanges]);
+    const changeCount = collectionCount + postChanges.length;
+    // Only project/resource problems stop the whole Publish; a post that cannot go out is skipped with a note.
     const blockers = useMemo(
         () => (['projects', 'resources'] as const).flatMap((n) => (changes[n].length ? problems(n, state[n].items) : [])),
         [changes, state]
     );
+    const canPublish = collectionCount + publishablePosts.length > 0;
 
-    // Staged edits live only in memory.
+    // Staged project and resource edits live only in memory. Posts are already saved as drafts online.
     useEffect(() => {
-        if (changeCount === 0) return;
+        if (collectionCount === 0) return;
         const onUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); };
         window.addEventListener('beforeunload', onUnload);
         return () => window.removeEventListener('beforeunload', onUnload);
-    }, [changeCount]);
+    }, [collectionCount]);
 
     const update = useCallback((name: CollectionName, k: string, p: Partial<Item>) => {
         patch(name, (s) => ({
@@ -223,12 +311,13 @@ export function ContentProvider({ workerUrl, enabled, children }: { workerUrl: s
     const select = useCallback((name: CollectionName, k: string | null) => setSelected((s) => ({ ...s, [name]: k })), []);
 
     const publish = useCallback(async () => {
-        if (changeCount === 0 || blockers.length || publishing) return;
+        if (!canPublish || blockers.length || publishing) return;
         setPublishing(true);
         setPublishError(null);
         setConflict(null);
         let commit: string | undefined;
         const keys: string[] = [];
+        const errors: string[] = [];
         try {
             for (const name of ['projects', 'resources'] as const) {
                 if (!changes[name].length) continue;
@@ -247,16 +336,40 @@ export function ContentProvider({ workerUrl, enabled, children }: { workerUrl: s
                 commit = json.commit || commit;
             }
         } catch (e: unknown) {
-            setPublishError(e instanceof Error ? e.message : 'Publish failed');
-        } finally {
-            setPublishing(false);
+            errors.push(e instanceof Error ? e.message : 'Publish failed');
         }
+        // Posts go through the editor's own route, one at a time, each with its own Status. A failure
+        // in one collection does not hold them back, and one failed post does not hold back the rest.
+        if (publishablePosts.length) {
+            try {
+                const fresh = ((await loadPosts()) ?? publishablePosts).filter(includedInGlobalPublish);
+                const out = await publishPendingPosts(async (path, init) => {
+                    const res = await fetch(`${workerUrl}${path}`, {
+                        method: init?.method || 'GET',
+                        headers: authHeaders(init?.body !== undefined ? { 'Content-Type': 'application/json' } : undefined),
+                        credentials: 'include',
+                        body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
+                    });
+                    let json: unknown = null;
+                    try { json = await res.json(); } catch { /* empty body */ }
+                    return { status: res.status, json };
+                }, fresh);
+                keys.push(...out.done);
+                commit = out.commit || commit;
+                for (const f of out.errors) errors.push(`The post “${f.title}” ${f.message}.`);
+            } catch (e: unknown) {
+                errors.push(e instanceof Error ? e.message : 'Publishing posts failed');
+            }
+            void loadPosts();
+        }
+        if (errors.length) setPublishError(errors.join(' '));
+        setPublishing(false);
         // Whatever did commit is building, even if a later collection failed.
         if (commit) start('publish', { commit, keys });
-    }, [changeCount, blockers, publishing, changes, state, workerUrl, patch, start]);
+    }, [canPublish, blockers, publishing, changes, state, publishablePosts, workerUrl, patch, start, loadPosts]);
 
     const value: ContentContextValue = {
-        state, changes, changeCount, blockers, publishing, publishError, conflict, selected, select,
+        state, changes, postChanges, privateDrafts, postWarnings, canPublish, postsStatus: posts.status, refreshPosts, changeCount, blockers, publishing, publishError, conflict, selected, select,
         ensureLoaded, reload, update, create, remove, revert, rewriteTags, publish,
     };
     return <ContentContext.Provider value={value}>{children}</ContentContext.Provider>;

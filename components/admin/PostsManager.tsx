@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Circle, Loader2, Plus, RefreshCw, Search } from 'lucide-react';
+import { AlertTriangle, Loader2, Plus, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authHeaders } from '@/lib/admin-auth';
 import { cn } from '@/lib/utils';
@@ -18,7 +18,7 @@ interface Row extends PostSummary {
     error?: string;
 }
 
-type Filter = 'all' | 'live' | 'draft';
+type Filter = 'all' | 'published' | 'draft';
 
 function when(iso: string) {
     const t = new Date(iso);
@@ -65,7 +65,7 @@ export function PostsManager({ workerUrl }: { workerUrl: string }) {
     const visible = useMemo(() => {
         const q = query.trim().toLowerCase();
         return (rows || []).filter((r) => {
-            if (filter === 'live' && !r.published) return false;
+            if (filter === 'published' && !r.published) return false;
             if (filter === 'draft' && r.published) return false;
             return !q || [r.title, r.excerpt, r.slug, ...r.tags].join('\n').toLowerCase().includes(q);
         });
@@ -82,13 +82,13 @@ export function PostsManager({ workerUrl }: { workerUrl: string }) {
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Search posts…"
                         aria-label="Search posts"
-                        className="h-8 w-full rounded-md border border-border/60 bg-transparent pl-8 pr-2 text-sm outline-none placeholder:text-muted-foreground focus:border-foreground/40"
+                        className="h-8 w-full rounded-md border border-border/60 bg-transparent pl-8 pr-2 text-sm outline-none placeholder:text-muted-foreground focus:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
                     />
                 </div>
                 <div className="flex h-8 items-center rounded-md border border-border/60 p-0.5">
-                    {([['all', 'All'], ['live', 'Live'], ['draft', 'Drafts']] as [Filter, string][]).map(([v, label]) => (
+                    {([['all', 'All'], ['published', 'Published'], ['draft', 'Drafts']] as [Filter, string][]).map(([v, label]) => (
                         <button key={v} type="button" onClick={() => setFilter(v)} aria-pressed={filter === v}
-                            className={cn('h-full rounded px-2 text-xs transition-colors', filter === v ? 'bg-foreground/[0.08] font-medium text-foreground' : 'text-muted-foreground hover:text-foreground')}>
+                            className={cn('h-full rounded px-2.5 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring', filter === v ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground hover:text-foreground')}>
                             {label}
                         </button>
                     ))}
@@ -101,7 +101,7 @@ export function PostsManager({ workerUrl }: { workerUrl: string }) {
             {!draftsAvailable && (
                 <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
                     <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-                    Draft storage is not set up on the Worker (no POST_DRAFTS KV binding). You can still publish, but autosave to the server is off; edits are kept in this browser only.
+                    Saving drafts online is not set up yet. You can still publish, but your edits are only kept in this browser until you do.
                 </div>
             )}
 
@@ -113,9 +113,9 @@ export function PostsManager({ workerUrl }: { workerUrl: string }) {
             ) : rows === null ? (
                 <div className="flex justify-center py-16 text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin" /></div>
             ) : visible.length === 0 ? (
-                <div className="py-16 text-center text-sm text-muted-foreground">{rows.length === 0 ? 'No posts yet.' : 'Nothing matches.'}</div>
+                <div className="py-16 text-center text-sm text-muted-foreground">{rows.length === 0 ? 'No posts yet. Write your first one with New post.' : 'Nothing matches that search.'}</div>
             ) : (
-                <div className="overflow-hidden rounded-lg border border-border/60">
+                <div className="overflow-hidden rounded-[10px] border border-border/60">
                     <table className="w-full table-fixed text-sm">
                         <thead className="bg-muted/30 text-left text-xs text-muted-foreground">
                             <tr className="border-b border-border/60">
@@ -131,19 +131,25 @@ export function PostsManager({ workerUrl }: { workerUrl: string }) {
                                         <Link href={`/admin/posts/edit?slug=${encodeURIComponent(r.slug)}`} className="block min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <span className="truncate font-medium">{r.title || <span className="text-muted-foreground">Untitled</span>}</span>
-                                                {r.error && <span className="shrink-0 rounded border border-red-500/40 px-1 text-[10px] uppercase tracking-wider text-red-600">Invalid file</span>}
-                                                {r.featured && <span className="shrink-0 rounded border border-border/60 px-1 text-[10px] uppercase tracking-wider text-muted-foreground">Featured</span>}
+                                                {r.error && <span className="shrink-0 rounded bg-red-500/10 px-1.5 py-px text-[11px] text-red-600 dark:text-red-400">Can’t be read</span>}
+                                                {r.featured && <span className="shrink-0 rounded bg-muted px-1.5 py-px text-[11px] text-muted-foreground">Featured</span>}
                                             </div>
                                             <div className={cn('mt-0.5 truncate text-xs', r.error ? 'text-red-600' : 'text-muted-foreground')} title={r.error}>{r.error || `/blog/${r.slug}/`}</div>
                                         </Link>
                                     </td>
                                     <td className="hidden px-3 py-2.5 text-xs tabular-nums text-muted-foreground sm:table-cell">{when(r.date)}</td>
                                     <td className="px-4 py-2.5 text-right">
-                                        <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap text-xs', r.published ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground')}>
-                                            <Circle size={7} className={r.published ? 'fill-current' : ''} />
-                                            {r.published ? 'Live' : r.sha ? 'Hidden' : 'Draft'}
+                                        <span
+                                            className="inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-[11px] pl-[7px] pr-[9px] text-xs"
+                                            style={{
+                                                background: `color-mix(in srgb, ${r.published ? '#22c55e' : '#f59e0b'} 16%, transparent)`,
+                                                color: `color-mix(in srgb, ${r.published ? '#22c55e' : '#f59e0b'} 60%, hsl(var(--foreground)))`,
+                                            }}
+                                        >
+                                            <span className="h-2 w-2 rounded-full" style={{ background: r.published ? '#22c55e' : '#f59e0b' }} />
+                                            {r.published ? 'Published' : 'Draft'}
                                         </span>
-                                        {r.draft && r.sha && <div className="text-[11px] text-amber-700 dark:text-amber-400">unpublished edits</div>}
+                                        {r.draft && r.sha && <div className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">Changes not published yet</div>}
                                     </td>
                                 </tr>
                             ))}
@@ -153,7 +159,7 @@ export function PostsManager({ workerUrl }: { workerUrl: string }) {
             )}
             {rows && rows.length > 0 && (
                 <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
-                    <span>Showing {rows.length} of {total}{(query || filter !== 'all') && ' (search and filters only cover what is loaded)'}</span>
+                    <span>Showing {rows.length} of {total}{(query || filter !== 'all') && '. Search and filters only look at the posts shown here.'}</span>
                     {nextOffset !== null && (
                         <Button size="sm" variant="outline" disabled={loadingMore} onClick={() => void load(nextOffset)} className="h-7 gap-1.5 text-xs">
                             {loadingMore && <Loader2 size={12} className="animate-spin" />} Load more

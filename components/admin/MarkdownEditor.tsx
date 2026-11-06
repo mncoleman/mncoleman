@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Image from '@tiptap/extension-image';
+import { textblockTypeInputRule } from '@tiptap/core';
 import { Placeholder } from '@tiptap/extensions';
+import Heading from '@tiptap/extension-heading';
 import { Markdown } from '@tiptap/markdown';
 import {
     Bold, Italic, Strikethrough, Heading2, Heading3, List, ListOrdered, Quote, Code, Link as LinkIcon,
@@ -13,6 +14,46 @@ import {
 import { cn } from '@/lib/utils';
 import { VerseMention } from './verse/VerseMention';
 import { VerseUI } from './verse/VerseUI';
+import { citationExtensions } from './citations/Citations';
+import { CitationUI } from './citations/CitationUI';
+import { SlashCommand } from './slash/SlashCommand';
+import { SlashUI } from './slash/SlashUI';
+import { EditorBubble } from './slash/EditorBubble';
+import './slash/builtin-items';
+// Importing './media' registers its "/" items (Diagram, Embed artifact) with ./slash-registry.
+import { CaptionImage, MediaUI, mediaExtensions } from './media';
+import { headingHint } from '@/lib/post-editor-logic';
+import './page-editor.css';
+
+/**
+ * Three distinct heading sizes like Notion, shifted down one HTML level because the post title is the
+ * page's h1: `# ` = Heading 1 (h2), `## ` = Heading 2 (h3), `### ` = Heading 3 (h4). Tiptap's own rule
+ * maps by the number of hashes, so the page editor uses its own. Stored as `##` / `###` / `####`.
+ */
+const PageHeading = Heading.configure({ levels: [2, 3, 4] }).extend({
+    addInputRules() {
+        const type = this.type;
+        return [
+            textblockTypeInputRule({ find: /^#\s$/, type, getAttributes: { level: 2 } }),
+            textblockTypeInputRule({ find: /^##\s$/, type, getAttributes: { level: 3 } }),
+            textblockTypeInputRule({ find: /^###\s$/, type, getAttributes: { level: 4 } }),
+        ];
+    },
+});
+
+/**
+ * Notion-style hints on the empty block holding the caret. The text is per node type here; the
+ * nested cases (an empty list item, an empty quote) are told apart in page-editor.css by their
+ * ancestor, because Placeholder computes decorations against the previous editor state, so the
+ * document cannot be consulted from this callback.
+ */
+function pagePlaceholder(hint: string, { node }: { node: { type: { name: string }; attrs: Record<string, unknown> } }): string {
+    const name = node.type.name;
+    // h2/h3/h4 read Heading 1/2/3; a stray h1 (a `# ` loaded from Markdown) is the largest, so also Heading 1, never 0.
+    if (name === 'heading') return headingHint(node.attrs.level);
+    if (name === 'codeBlock') return 'Code';
+    return name === 'paragraph' ? hint : '';
+}
 
 /**
  * Notion-style editor for the details-page body. What you see is what the page
@@ -21,6 +62,10 @@ import { VerseUI } from './verse/VerseUI';
  *
  * Images dropped, pasted, or picked go through `onUpload`, which returns the
  * path to insert. The toolbar covers what the site's prose styles render.
+ *
+ * `variant="page"` is the blog post editor: borderless, no fixed toolbar, a 720px
+ * measure at 17px/1.7, a floating toolbar over selected text and a "/" block menu.
+ * The default `boxed` variant (projects, resources) is unchanged.
  */
 export function MarkdownEditor({
     value,
@@ -28,22 +73,34 @@ export function MarkdownEditor({
     onUpload,
     placeholder = 'Write here. Type @ for a verse. Drop or paste an image to upload it.',
     className,
+    variant = 'boxed',
+    onEditor,
+    onNotice,
 }: {
     value: string;
     onChange: (markdown: string) => void;
     onUpload: (file: File) => Promise<string>;
     placeholder?: string;
     className?: string;
+    variant?: 'boxed' | 'page';
+    /** Hands the editor to the parent (to focus it from the title, say). Called with null on unmount. */
+    onEditor?: (editor: Editor | null) => void;
+    /** A short plain-language confirmation to show the writer ("Image added..."). */
+    onNotice?: (text: string) => void;
 }) {
+    const page = variant === 'page';
+    const [linkMode, setLinkMode] = useState(false);
     const [upload, setUpload] = useState<{ state: 'busy' | 'error'; text: string } | null>(null);
     const [pasteState, setPasteState] = useState<'idle' | 'done' | 'denied'>('idle');
     const fileInputRef = useRef<HTMLInputElement>(null);
     // The latest handlers, so the editor (created once) never calls a stale one.
     const uploadRef = useRef(onUpload);
     const changeRef = useRef(onChange);
+    const noticeRef = useRef(onNotice);
     useEffect(() => {
         uploadRef.current = onUpload;
         changeRef.current = onChange;
+        noticeRef.current = onNotice;
     });
 
     const editorRef = useRef<Editor | null>(null);
@@ -60,6 +117,7 @@ export function MarkdownEditor({
                 editor.chain().focus().setImage({ src, alt }).run();
             }
             setUpload(null);
+            noticeRef.current?.('Image added. Images are saved as soon as you add them.');
         } catch (e: unknown) {
             setUpload({ state: 'error', text: e instanceof Error ? e.message : 'Upload failed' });
         }
@@ -71,20 +129,40 @@ export function MarkdownEditor({
         shouldRerenderOnTransaction: true,
         extensions: [
             StarterKit.configure({
-                heading: { levels: [2, 3] },
+                heading: page ? false : { levels: [2, 3] },
+                // The Citations section is always the last block, so no empty paragraph is forced after it.
+                trailingNode: { node: 'paragraph', notAfter: ['paragraph', 'citationDefs'] },
                 link: { openOnClick: false, autolink: true },
             }),
-            Image.configure({ inline: false, allowBase64: false }),
-            Placeholder.configure({ placeholder }),
+            CaptionImage.configure({ inline: false, allowBase64: false }),
+            Placeholder.configure({ placeholder: page ? (p) => pagePlaceholder(placeholder, p) : placeholder, includeChildren: page }),
+            ...(page ? [PageHeading] : []),
             VerseMention,
+            ...mediaExtensions,
+            ...(page ? citationExtensions : []),
+            ...(page ? [SlashCommand] : []),
             Markdown,
         ],
         content: value,
         contentType: 'markdown',
         editorProps: {
             attributes: {
-                class: 'prose prose-neutral dark:prose-invert prose-sm max-w-none min-h-[240px] px-4 py-3 focus:outline-none',
+                class: page
+                    ? 'pe-body focus:outline-none'
+                    : 'prose prose-neutral dark:prose-invert prose-sm max-w-none min-h-[240px] px-4 py-3 focus:outline-none',
+                ...(page ? { 'aria-label': 'Post body', spellcheck: 'true' } : {}),
             },
+            handleKeyDown: page
+                ? (view, event) => {
+                    // Cmd/Ctrl+K on a selection opens the link box in the floating toolbar.
+                    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 'k' && !view.state.selection.empty) {
+                        event.preventDefault();
+                        setLinkMode(true);
+                        return true;
+                    }
+                    return false;
+                }
+                : undefined,
             handleDrop: (_view, event) => {
                 const files = Array.from(event.dataTransfer?.files || []);
                 if (files.some((f) => f.type.startsWith('image/'))) {
@@ -105,10 +183,16 @@ export function MarkdownEditor({
             },
         },
         onUpdate: ({ editor }) => changeRef.current(editor.getMarkdown()),
+        onSelectionUpdate: ({ editor }) => { if (editor.state.selection.empty) setLinkMode(false); },
     });
+    const onEditorRef = useRef(onEditor);
+    useEffect(() => { onEditorRef.current = onEditor; });
     useEffect(() => {
         editorRef.current = editor;
-    }, [editor]);
+        onEditorRef.current?.(editor);
+        if (editor && page) editor.storage.slashCommand.store.setPickImage(() => fileInputRef.current?.click());
+        return () => onEditorRef.current?.(null);
+    }, [editor, page]);
 
     const pasteClipboard = async () => {
         if (!editor) return;
@@ -152,8 +236,8 @@ export function MarkdownEditor({
     );
 
     return (
-        <div className={cn('group/paste relative rounded-md border border-input bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-ring', className)}>
-            {editor && (
+        <div className={cn(page ? 'relative' : 'group/paste relative rounded-md border border-input bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-ring', className)}>
+            {editor && !page && (
                 <div className="flex flex-wrap items-center gap-0.5 border-b border-border/60 px-1.5 py-1">
                     <Tool label="Bold" on={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}><Bold size={14} /></Tool>
                     <Tool label="Italic" on={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}><Italic size={14} /></Tool>
@@ -171,23 +255,32 @@ export function MarkdownEditor({
                     <span className="mx-1 h-4 w-px bg-border" />
                     <Tool label="Undo" onClick={() => editor.chain().focus().undo().run()}><Undo2 size={14} /></Tool>
                     <Tool label="Redo" onClick={() => editor.chain().focus().redo().run()}><Redo2 size={14} /></Tool>
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={(e) => {
-                            void uploadFiles(Array.from(e.target.files || []));
-                            e.target.value = '';
-                        }}
-                    />
                 </div>
             )}
 
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                tabIndex={-1}
+                aria-hidden="true"
+                onChange={(e) => {
+                    void uploadFiles(Array.from(e.target.files || []));
+                    e.target.value = '';
+                }}
+            />
+
             <EditorContent editor={editor} />
             <VerseUI editor={editor} />
+            <MediaUI editor={editor} />
+            {page && <CitationUI editor={editor} />}
+            {page && editor && <EditorBubble editor={editor} linkMode={linkMode} setLinkMode={setLinkMode} />}
+            {page && <SlashUI editor={editor} />}
 
+            {!page && (
+                <>
             {/* Same hover-to-paste affordance as the plain fields; clipboard text lands as Markdown. */}
             <button
                 type="button"
@@ -207,11 +300,15 @@ export function MarkdownEditor({
                 {pasteState === 'done' ? <Check size={12} /> : pasteState === 'denied' ? <X size={12} /> : <ClipboardPaste size={12} />}
                 {pasteState === 'done' ? 'Pasted' : pasteState === 'denied' ? 'Blocked' : 'Paste'}
             </button>
+                </>
+            )}
 
             {upload && (
                 <div
+                    role="status"
                     className={cn(
-                        'pointer-events-none absolute bottom-2 left-2 flex items-center gap-2 rounded-md border px-2 py-1 text-xs backdrop-blur',
+                        page ? 'pointer-events-none fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-md border px-3 py-1.5 text-sm shadow-lg backdrop-blur'
+                        : 'pointer-events-none absolute bottom-2 left-2 flex items-center gap-2 rounded-md border px-2 py-1 text-xs backdrop-blur',
                         upload.state === 'busy'
                             ? 'border-border bg-background/90 text-muted-foreground'
                             : 'border-red-500/30 bg-red-500/10 text-red-600'
