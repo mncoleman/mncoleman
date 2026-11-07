@@ -6,7 +6,7 @@ tags: []
 published: true
 featured: true
 excerpt: "Hello and welcome to my blog."
-author: "Anonymous"
+author: "Matthew Coleman"
 ---
 
 ### Yes, you heard ‘write’ (see what i did there? 😉)… I started a blog.
