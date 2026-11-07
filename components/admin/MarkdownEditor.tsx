@@ -5,6 +5,9 @@ import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { textblockTypeInputRule } from '@tiptap/core';
 import { Placeholder } from '@tiptap/extensions';
+import { Extension } from '@tiptap/core';
+import { Plugin } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import Heading from '@tiptap/extension-heading';
 import { Markdown } from '@tiptap/markdown';
 import {
@@ -54,6 +57,34 @@ function pagePlaceholder(hint: string, { node }: { node: { type: { name: string 
     if (name === 'codeBlock') return 'Code';
     return name === 'paragraph' ? hint : '';
 }
+
+/**
+ * Page-editor hint: recomputed from scratch on every state, for the one empty textblock holding
+ * the caret. Tiptap's Placeholder updates incrementally with includeChildren and leaves stale
+ * hints on neighbouring empty blocks (two hints at once).
+ */
+const CaretPlaceholder = Extension.create<{ hint: string }>({
+    name: 'caretPlaceholder',
+    addOptions() { return { hint: '' }; },
+    addProseMirrorPlugins() {
+        const hint = this.options.hint;
+        return [new Plugin({
+            props: {
+                decorations: ({ doc, selection }) => {
+                    if (!selection.empty) return null;
+                    const $a = selection.$anchor;
+                    const node = $a.parent;
+                    if (!node.isTextblock || node.content.size > 0) return null;
+                    const text = pagePlaceholder(hint, { node });
+                    const pos = $a.before();
+                    return DecorationSet.create(doc, [
+                        Decoration.node(pos, pos + node.nodeSize, { class: 'is-empty', 'data-placeholder': text }),
+                    ]);
+                },
+            },
+        })];
+    },
+});
 
 /**
  * Notion-style editor for the details-page body. What you see is what the page
@@ -135,7 +166,7 @@ export function MarkdownEditor({
                 link: { openOnClick: false, autolink: true },
             }),
             CaptionImage.configure({ inline: false, allowBase64: false }),
-            Placeholder.configure({ placeholder: page ? (p) => pagePlaceholder(placeholder, p) : placeholder, includeChildren: page }),
+            ...(page ? [CaretPlaceholder.configure({ hint: placeholder })] : [Placeholder.configure({ placeholder })]),
             ...(page ? [PageHeading] : []),
             VerseMention,
             ...mediaExtensions,
