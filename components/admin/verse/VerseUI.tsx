@@ -104,11 +104,11 @@ const ACTIONS: { id: PickAction; label: string; title: string; verse: boolean }[
     { id: 'ref', label: 'Ref', title: 'Copy reference (Alt+1)', verse: false },
     { id: 'verse', label: 'Verse', title: 'Copy verse text (Alt+2)', verse: true },
     { id: 'both', label: 'Both', title: 'Copy reference and verse (Alt+3)', verse: true },
-    { id: 'quote', label: 'Quote', title: 'Paste verse below as a quote block (Alt+4)', verse: true },
+    { id: 'quote', label: 'Paste', title: 'Paste into the post using the settings above (Alt+4)', verse: true },
 ];
 
 function Picker({ store }: { store: VerseStore }) {
-    const { pick, translation, notice } = useStore(store);
+    const { pick, translation, notice, pasteOutput, pasteQuote } = useStore(store);
     const listRef = useRef<HTMLDivElement>(null);
     const sel = pick?.sel ?? 0;
     useLayoutEffect(() => {
@@ -150,7 +150,7 @@ function Picker({ store }: { store: VerseStore }) {
                 {on && ref && (
                     <div className="flex shrink-0 gap-0.5 pt-0.5">
                         {ACTIONS.map((a) => {
-                            const disabled = a.verse && ref.start === undefined;
+                            const disabled = a.verse && ref.start === undefined && !(a.id === 'quote' && pasteOutput === 'ref');
                             return (
                                 <button
                                     key={a.id}
@@ -224,12 +224,46 @@ function Picker({ store }: { store: VerseStore }) {
                 )}
                 {pick.items.length === 0 && pick.phrase === 'ready' && <div className="px-3 py-2 text-xs text-muted-foreground">No verse contains that.</div>}
             </div>
+            <div className="flex items-center gap-2 border-t border-border px-3 py-1.5 text-[11px] text-muted-foreground" aria-label="Paste settings">
+                <span className="uppercase tracking-wide">Paste</span>
+                <div className="flex overflow-hidden rounded-md border border-border" role="group" aria-label="What to paste">
+                    {([['verse', 'Verse'], ['ref', 'Reference'], ['both', 'Both']] as const).map(([id, label]) => (
+                        <button
+                            key={id}
+                            type="button"
+                            aria-pressed={pasteOutput === id}
+                            onMouseDown={(e) => {
+                                e.preventDefault();
+                                store.setPasteOutput(id);
+                            }}
+                            className={cn('px-2 py-0.5', pasteOutput === id ? 'bg-accent text-foreground' : 'hover:text-foreground')}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={pasteQuote}
+                    onMouseDown={(e) => {
+                        e.preventDefault();
+                        store.setPasteQuote(!pasteQuote);
+                    }}
+                    className="ml-auto flex items-center gap-1.5 hover:text-foreground"
+                >
+                    Quote block
+                    <span className={cn('relative h-3.5 w-6 rounded-full transition-colors', pasteQuote ? 'bg-sky-500' : 'bg-muted-foreground/40')}>
+                        <span className={cn('absolute top-0.5 h-2.5 w-2.5 rounded-full bg-white transition-all', pasteQuote ? 'left-3 ' : 'left-0.5')} />
+                    </span>
+                </button>
+            </div>
             <div className="border-t border-border px-3 py-1.5 text-[11px] leading-relaxed text-muted-foreground">
                 {notice ? (
                     <span className="font-medium text-green-600">{notice}</span>
                 ) : (
                     <>
-                        Enter pick · {'⌘'}Enter pick with default text · Alt+1 ref · Alt+2 verse · Alt+3 both · Alt+4 quote · Esc close
+                        Enter pick · {'⌘'}Enter pick with default text · Alt+1 ref · Alt+2 verse · Alt+3 both · Alt+4 paste · Esc close
                         {store.citationAvailable() && (
                             <>
                                 <br />

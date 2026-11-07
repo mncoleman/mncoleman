@@ -78,6 +78,9 @@ export interface VerseState {
     edit: EditState | null;
     hover: HoverState | null;
     translation: Translation;
+    /** Paste settings, remembered between sessions. */
+    pasteOutput: PasteOutput;
+    pasteQuote: boolean;
     /** Short confirmation shown in the picker after a copy action. */
     notice: string | null;
     /** Bumps when lazily loaded data arrives, so previews repaint. */
@@ -91,6 +94,11 @@ export interface SuggestState {
 }
 
 const TR_KEY = 'verse-translation';
+const OUT_KEY = 'verse-paste-output';
+const QUOTE_KEY = 'verse-paste-quote';
+
+/** What the paste action writes: the verse text, just the linked reference, or the text followed by the reference. */
+export type PasteOutput = 'verse' | 'ref' | 'both';
 const RECENT_KEY = 'verse-recent';
 
 export function refToAttrs(ref: VerseRef, text = formatReference(ref)): MentionAttrs {
@@ -162,6 +170,8 @@ export class VerseStore {
         edit: null,
         hover: null,
         translation: 'kjv',
+        pasteOutput: 'both',
+        pasteQuote: true,
         notice: null,
         dataVersion: 0,
     };
@@ -184,6 +194,10 @@ export class VerseStore {
         this.editor = editor;
         const saved = readStorage(TR_KEY);
         if (saved === 'kjv' || saved === 'web') this.state = { ...this.state, translation: saved };
+        const out = readStorage(OUT_KEY);
+        if (out === 'verse' || out === 'ref' || out === 'both') this.state = { ...this.state, pasteOutput: out };
+        const q = readStorage(QUOTE_KEY);
+        if (q === 'true' || q === 'false') this.state = { ...this.state, pasteQuote: q === 'true' };
         // Warm the small index so ranges and verse grids are exact; failure just keeps built-in counts.
         loadIndex().catch(() => undefined);
         this.offData = onBibleData(() => {
@@ -196,6 +210,16 @@ export class VerseStore {
         this.offData = null;
         this.editor = null;
         clearTimeout(this.noticeTimer);
+    }
+
+    // ---------- paste settings ----------
+    setPasteOutput(v: PasteOutput) {
+        writeStorage(OUT_KEY, v);
+        this.set({ pasteOutput: v });
+    }
+    setPasteQuote(v: boolean) {
+        writeStorage(QUOTE_KEY, String(v));
+        this.set({ pasteQuote: v });
     }
 
     // ---------- translation ----------
@@ -441,7 +465,7 @@ export class VerseStore {
             if (action === 'ref') {
                 await copyToClipboard(label);
                 this.flash('Copied reference');
-            } else if (chapterOnly) {
+            } else if (chapterOnly && !(action === 'quote' && this.state.pasteOutput === 'ref')) {
                 return; // verse actions need a verse
             } else if (action === 'verse') {
                 await copyToClipboard(this.textOf(ref));
@@ -457,24 +481,39 @@ export class VerseStore {
         }
     }
 
-    /** Removes "@query" and puts the verse in a blockquote below the current paragraph. */
+    /**
+     * Replaces "@query" with the verse per the paste settings. The reference is always the linked
+     * badge. With the quote setting on it becomes its own blockquote below the current paragraph;
+     * off, it is written inline where the "@" was.
+     */
     private async pasteQuote(ref: VerseRef) {
         const editor = this.editor;
         const pick = this.state.pick;
         if (!editor || !pick) return;
-        const tr0 = this.state.translation;
-        const verse = await this.textOf(ref);
-        if (!verse) throw new Error('empty');
+        const { pasteOutput: out, pasteQuote: quote } = this.state;
+        const verse = out === 'ref' ? '' : await this.textOf(ref);
+        if (out !== 'ref' && !verse) throw new Error('empty');
         // The editor may have moved while the book loaded; re-read the picker.
         const live = this.state.pick;
         if (!live) return;
         const { schema } = editor.state;
         const t = schema.nodes;
         const mention = t.verseMention.create(refToAttrs(ref));
-        const bq = t.blockquote.create(null, [
-            t.paragraph.create(null, schema.text(verse)),
-            t.paragraph.create(null, [schema.text('— '), mention, schema.text(` (${tr0.toUpperCase()})`)]),
-        ]);
+        const inline: PMNode[] = [];
+        if (verse) inline.push(schema.text(out === 'both' ? `${verse} ` : verse));
+        if (out !== 'verse') inline.push(mention);
+        pushRecent(ref);
+        if (!quote) {
+            let tr = editor.state.tr.delete(live.from, live.to);
+            tr = tr.insert(live.from, inline);
+            const end = live.from + inline.reduce((n, x) => n + x.nodeSize, 0);
+            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(end), -1)).scrollIntoView();
+            this.set({ pick: null });
+            editor.view.dispatch(tr);
+            editor.view.focus();
+            return;
+        }
+        const bq = t.blockquote.create(null, [t.paragraph.create(null, inline)]);
         let tr = editor.state.tr.delete(live.from, live.to);
         const $p = tr.doc.resolve(live.from);
         const emptyBlock = $p.parent.isTextblock && $p.parent.content.size === 0;
@@ -491,7 +530,6 @@ export class VerseStore {
             tr = tr.insert(end, t.paragraph.create());
         }
         tr = tr.setSelection(TextSelection.near(tr.doc.resolve(end + 1), 1)).scrollIntoView();
-        pushRecent(ref);
         this.set({ pick: null });
         editor.view.dispatch(tr);
         editor.view.focus();

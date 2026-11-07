@@ -4,8 +4,9 @@ import { useEffect, useRef } from 'react';
 import { TextSelection } from '@tiptap/pm/state';
 import { BubbleMenu, type BubbleMenuProps } from '@tiptap/react/menus';
 import type { Editor } from '@tiptap/react';
-import { Bold, Check, Code, Heading1, Heading2, Heading3, Italic, Link as LinkIcon, Quote, Strikethrough, X } from 'lucide-react';
+import { Bold, Check, Code, Italic, Link as LinkIcon, Strikethrough, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { TurnInto } from './TurnInto';
 
 function normalizeUrl(raw: string): string {
     const u = raw.trim();
@@ -97,16 +98,13 @@ export function EditorBubble({ editor, linkMode, setLinkMode }: { editor: Editor
                 </form>
             ) : (
                 <>
+                    <TurnInto editor={editor} />
+                    <span className="mx-[3px] h-[18px] w-px bg-border" />
                     {btn('Bold (Cmd+B)', editor.isActive('bold'), () => chain().toggleBold().run(), <Bold size={15} />)}
                     {btn('Italic (Cmd+I)', editor.isActive('italic'), () => chain().toggleItalic().run(), <Italic size={15} />)}
                     {btn('Strikethrough', editor.isActive('strike'), () => chain().toggleStrike().run(), <Strikethrough size={15} />)}
                     {btn('Inline code', editor.isActive('code'), () => chain().toggleCode().run(), <Code size={15} />)}
                     {btn('Link (Cmd+K)', editor.isActive('link'), () => setLinkMode(true), <LinkIcon size={15} />)}
-                    <span className="mx-[3px] h-[18px] w-px bg-border" />
-                    {btn('Heading 1', editor.isActive('heading', { level: 2 }), () => chain().toggleHeading({ level: 2 }).run(), <Heading1 size={15} />)}
-                    {btn('Heading 2', editor.isActive('heading', { level: 3 }), () => chain().toggleHeading({ level: 3 }).run(), <Heading2 size={15} />)}
-                    {btn('Heading 3', editor.isActive('heading', { level: 4 }), () => chain().toggleHeading({ level: 4 }).run(), <Heading3 size={15} />)}
-                    {btn('Quote', editor.isActive('blockquote'), () => chain().toggleBlockquote().run(), <Quote size={15} />)}
                 </>
             )}
         </BubbleMenu>

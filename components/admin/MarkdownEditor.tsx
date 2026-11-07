@@ -22,6 +22,7 @@ import { CitationUI } from './citations/CitationUI';
 import { SlashCommand } from './slash/SlashCommand';
 import { SlashUI } from './slash/SlashUI';
 import { EditorBubble } from './slash/EditorBubble';
+import { TurnInto } from './slash/TurnInto';
 import './slash/builtin-items';
 // Importing './media' registers its "/" items (Diagram, Embed artifact) with ./slash-registry.
 import { CaptionImage, MediaUI, mediaExtensions } from './media';
@@ -273,6 +274,8 @@ export function MarkdownEditor({
                     <Tool label="Bold" on={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}><Bold size={14} /></Tool>
                     <Tool label="Italic" on={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}><Italic size={14} /></Tool>
                     <Tool label="Strikethrough" on={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}><Strikethrough size={14} /></Tool>
+                    <span className="mx-1 h-4 w-px bg-border" />
+                    <TurnInto editor={editor} className="text-muted-foreground" />
                     <span className="mx-1 h-4 w-px bg-border" />
                     <Tool label="Heading" on={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}><Heading2 size={14} /></Tool>
                     <Tool label="Subheading" on={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}><Heading3 size={14} /></Tool>
