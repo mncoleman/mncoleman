@@ -26,6 +26,7 @@ import { ClickSound } from '@/components/click-sound';
 import { FooterLinks } from '@/components/footer-links';
 import { buildInfo } from '@/lib/build-info';
 import { PullChainToggle } from '@/components/pull-chain-toggle';
+import { WorldToggle } from '@/components/world/world-toggle';
 import { CursorPreferenceProvider, cursorPreferenceScript } from '@/components/cursor-preference';
 import searchIndex from '@/data/search-index.json';
 
@@ -240,6 +241,8 @@ export default async function RootLayout({
             <FancyCursorToggle />
             {/* Lenis controls, parked immediately left of the cursor toggle. */}
             <ScrollSettings />
+            {/* The walkable 3D office: bottom-left, away from the corner cluster. */}
+            <WorldToggle />
             </TransitionProvider>
           </ThemeWrapper>
           </SmoothScroll>
