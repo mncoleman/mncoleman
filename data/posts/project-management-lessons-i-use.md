@@ -6,7 +6,7 @@ tags: ["Technology","Lessons","Project Management","Leadership"]
 published: true
 featured: false
 excerpt: "Three practical project management lessons: moving quickly then clearly, planning to be reactive, and always keep two tasks in play … inspired by real work and a bit of aviation."
-author: "Anonymous"
+author: "Matthew Coleman"
 ---
 
 I'm not a certified project manager. I don't have a PMP or a formal background in managing teams. But I've been running projects with developers and deadlines and a lot of moving parts, and I've picked up a few things that actually work. Here are three of them I thought I’d share:
