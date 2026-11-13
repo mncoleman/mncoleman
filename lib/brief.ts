@@ -61,8 +61,15 @@ export const BRIEF_INDEX_KEY = 'index';
 export const BRIEF_CONFIG_KEY = 'config';
 export const briefKey = (date: string) => `brief:${date}`;
 /** `private` turns the whole section off for the public (pages, API and MCP) without deleting anything. */
-export interface BriefLink { label: string; url: string }
-/** `links` is the "External sources" page: a list kept in the admin panel, the same on every edition. */
+/**
+ * One entry in the source library. `section` says which part of the brief it feeds and `note`
+ * says how to use it; both are for the publishing agent (it reads the library through the
+ * `list_brief_sources` MCP tool before researching) and both are optional.
+ */
+export const BRIEF_LINK_SECTIONS = ['general', 'weather', 'verse', 'devotional', ...SECTOR_KEYS] as const;
+export type BriefLinkSection = typeof BRIEF_LINK_SECTIONS[number];
+export interface BriefLink { label: string; url: string; section?: BriefLinkSection; note?: string }
+/** `links` is the source library: kept in the admin panel, shown as the "External sources" page of every edition, and read by the publishing agent. */
 export interface BriefConfig { visibility: 'public' | 'private'; links?: BriefLink[] }
 export const DEFAULT_BRIEF_CONFIG: BriefConfig = { visibility: 'public', links: [] };
 
@@ -75,7 +82,9 @@ export function cleanBriefLinks(input: unknown): BriefLink[] | string {
         let href = '';
         if (typeof raw?.url === 'string' && raw.url.length <= 600) { try { const u = new URL(raw.url); if (/^https?:$/.test(u.protocol)) href = u.href; } catch { /* refused below */ } }
         if (!label || !href) return `link ${i + 1} needs a name and an http(s) address`;
-        out.push({ label, url: href });
+        const section = (BRIEF_LINK_SECTIONS as readonly string[]).includes(raw?.section) && raw.section !== 'general' ? (raw.section as BriefLinkSection) : undefined;
+        const note = typeof raw?.note === 'string' ? raw.note.replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300) : '';
+        out.push({ label, url: href, ...(section ? { section } : {}), ...(note ? { note } : {}) });
     }
     return out;
 }

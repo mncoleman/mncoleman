@@ -19,6 +19,7 @@
 - Connector: add `https://mncoleman.com/mcp/admin` as a custom connector and sign in once. (The public `https://mncoleman.com/mcp` cannot publish.)
 - Tool: `publish_brief`, one argument: `{ "edition": { ... } }`.
 - Reply: `{ url, date, edition_number, replaced, warnings[] }`. On a validation failure the tool returns an error listing `{path, reason}` for every problem; fix those fields and call again. Publishing the same date again replaces it and keeps its number.
+- Before researching: `list_brief_sources({ section? })` returns the source library to start from.
 - Other tools: `get_brief({ date? })`, `list_briefs({ limit? })`, `delete_brief({ date, confirm: true })`.
 
 ### Edition
@@ -62,7 +63,7 @@ The `BRIEFS` namespace exists and is bound in both `worker/wrangler.toml` and `w
 - **Roll back an edition:** publish the corrected JSON for the same date; it replaces the stored one.
 - **Turn the whole section off:** admin Overview, Daily brief, the Public / Private button. Private makes the pages, archive, feed and public MCP tools show nothing; nothing is deleted.
 - **Search indexing:** off. `BRIEF_INDEXABLE` in `app/brief/brief-config.ts` (noindex on the pages and a robots.txt rule); changing it needs a deploy.
-- **External sources page:** the link list in the same admin section; it is the last page of every edition.
+- **Source library:** the link list in the same admin section. It is the External sources page that closes every edition, and the publishing agent reads it through the admin MCP tool `list_brief_sources` (each link: name, URL, the part of the brief it feeds, a note). It is edited only in the admin panel; the MCP tool is read-only on purpose, so the agent cannot rewrite its own source list.
 - **Roll back the design:** revert the commit that changed `components/brief/`; content is untouched.
 
 ## Changing the brief (for a future session)

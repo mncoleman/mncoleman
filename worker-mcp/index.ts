@@ -522,6 +522,16 @@ ADMIN_TOOLS.push(
     },
 );
 
+ADMIN_TOOLS.push({
+    feature: 'content',
+    name: 'list_brief_sources',
+    title: 'List the brief\'s source library',
+    description:
+        'The source library for the daily brief: the links Matthew keeps in the admin panel, each with a name, a URL, optionally the part of the brief it feeds (general, weather, verse, devotional, signal, local, nation, world, field_notes) and a note on how to use it. ' +
+        'Read this FIRST when preparing an edition and start research from these links; they are his chosen sources. The list is read-only here: it is edited in the admin panel.',
+    inputSchema: { type: 'object', properties: { section: { type: 'string', description: 'Optional: only the links for one part of the brief.' } } },
+});
+
 const ADMIN_TOOL_NAMES = new Set(ADMIN_TOOLS.map(t => t.name));
 
 const visibleAdminTools = (admin: AdminCtx) =>
@@ -684,6 +694,15 @@ async function callAdminTool(name: string, args: Record<string, unknown>, env: E
             };
         }
 
+        case 'list_brief_sources': {
+            // Read straight from KV, like the public side, but regardless of the visibility switch:
+            // the agent needs its sources even while the section is private.
+            const all: BriefLink[] = (await briefConfig(env))?.links || [];
+            const want = str(args.section);
+            const sources = (want ? all.filter(l => (l.section || 'general') === want) : all).map(l => ({ section: 'general', ...l }));
+            return { count: sources.length, sources, edit: `${env.SITE_URL}/admin` };
+        }
+
         case 'publish_brief': {
             const edition = args.edition as { date?: unknown } | undefined;
             if (!edition || typeof edition !== 'object') throw new Error('edition is required: an object in the shape given in this tool\'s description');
@@ -713,7 +732,7 @@ async function callAdminTool(name: string, args: Record<string, unknown>, env: E
 const ADMIN_INSTRUCTIONS =
     'Signed-in access to mncoleman.com — Matthew Coleman\'s personal site. Besides the read-only tools over published content, ' +
     'this connection can act as the signed-in admin: upload, update and delete instant artifacts, add and edit AI library prompts and skills, ' +
-    'save blog post drafts, and publish the daily brief (publish_brief). Artifacts, library items and brief editions go live immediately; blog drafts never do (a person publishes them from the admin panel). ' +
+    'save blog post drafts, and publish the daily brief (publish_brief; list_brief_sources is the source library to research from). Artifacts, library items and brief editions go live immediately; blog drafts never do (a person publishes them from the admin panel). ' +
     'Deleting is permanent, so only delete what the user explicitly asked to delete.';
 
 const text = (value: unknown) => ({

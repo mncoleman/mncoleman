@@ -159,7 +159,7 @@ function Pager({ edition, newer, older, links = [] }: { edition: Edition; newer:
     const today = (
         <>
             {head(0, edition.summary || edition.top_signals[0]?.headline)}
-            <div className="b-grid">
+            <div className="b-grid fill">
                 {w && (
                     <div className="b-box">
                         <p className="b-lab">Weather · {edition.location.split(',')[0]}</p>
@@ -241,7 +241,7 @@ function Pager({ edition, newer, older, links = [] }: { edition: Edition; newer:
                     try { host = new URL(l.url).hostname.replace(/^www\./, ''); } catch { /* shown without a host */ }
                     return (
                         <a key={l.url + l.label} className="b-link" href={l.url} target="_blank" rel="noopener noreferrer">
-                            <b>{l.label}</b><span className="b-meta">{host}</span>
+                            <b>{l.label}</b>{l.note && <span className="b-linknote">{l.note}</span>}<span className="b-meta">{host}</span>
                         </a>
                     );
                 })}

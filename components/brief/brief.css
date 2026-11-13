@@ -37,9 +37,13 @@
 .brief .b-short span { font-size: 14px; line-height: 1.45; }
 /* Cards in a row are the same height: the grid stretches them and each card pins its sources to the bottom. */
 .brief .b-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+/* The opening row holds one to three cards (weather, verses, devotional), whichever were sent: they share the width. */
+.brief .b-grid.fill { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
 .brief .b-link { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; background: var(--b-panel); border: 1px solid var(--b-line); border-radius: 8px; text-decoration: none; color: var(--b-fg); min-height: 72px; }
 .brief .b-link:hover { border-color: var(--b-accent); background: var(--b-panel-hi); }
 .brief .b-link b { font-size: 15px; font-weight: 700; }
+.brief .b-link .b-linknote { font-size: 13px; line-height: 1.45; color: var(--b-mid); }
+.brief .b-link .b-meta { margin-top: auto; padding-top: 4px; }
 
 .brief .b-card { background: var(--b-panel); border: 1px solid var(--b-line); border-radius: 8px; overflow: hidden; scroll-margin-top: 12px; display: flex; flex-direction: column; }
 .brief .b-card .b-cardbtn { flex: 1 0 auto; }

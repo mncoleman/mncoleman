@@ -7,7 +7,12 @@ import { Button } from '@/components/ui/button';
 import { authHeaders } from '@/lib/admin-auth';
 import { useAdmin } from '@/components/admin/admin-context';
 import { Section, SectionRow, StatusPill, notify } from '@/components/admin/kit';
-import type { BriefConfig, BriefLink, BriefSummary } from '@/lib/brief';
+import { BRIEF_LINK_SECTIONS, type BriefConfig, type BriefLink, type BriefLinkSection, type BriefSummary } from '@/lib/brief';
+
+const SECTION_LABELS: Record<BriefLinkSection, string> = {
+    general: 'Any part', weather: 'Weather', verse: 'Verses', devotional: 'Devotional',
+    signal: 'Tech', local: 'Local', nation: 'Nation', world: 'World', field_notes: 'Notes',
+};
 
 /**
  * Daily brief controls. Editions are published by the scheduled agent through
@@ -81,13 +86,20 @@ export function BriefAdmin() {
                 <>
                     {!isPublic && <p className="border-b border-border/60 px-5 py-3 text-xs text-amber-700 dark:text-amber-400">Private: the pages, the archive and the public MCP tools show nothing until you switch it back. Nothing is deleted.</p>}
                     <div className="border-b border-border/60 px-5 py-4">
-                        <h3 className="mb-1 text-sm font-medium">External sources</h3>
-                        <p className="mb-3 text-xs text-muted-foreground">The last page of every edition. Leave it empty to drop the page.</p>
+                        <h3 className="mb-1 text-sm font-medium">Source library</h3>
+                        <p className="mb-3 text-xs text-muted-foreground">
+                            Shown as the External sources page that closes every edition, and read by the publishing agent before it researches (the <code>list_brief_sources</code> tool).
+                            &quot;Feeds&quot; and the note tell the agent what each link is for. Leave the list empty to drop the page.
+                        </p>
                         <div className="flex flex-col gap-2">
                             {links.map((l, i) => (
                                 <div key={i} className="flex flex-wrap gap-2">
                                     <input className={`${field} w-44`} aria-label={`Name of link ${i + 1}`} placeholder="Name" value={l.label} onChange={(e) => setLinks(links.map((x, n) => (n === i ? { ...x, label: e.target.value } : x)))} />
                                     <input className={`${field} flex-1 basis-60`} aria-label={`Address of link ${i + 1}`} placeholder="https://" inputMode="url" value={l.url} onChange={(e) => setLinks(links.map((x, n) => (n === i ? { ...x, url: e.target.value } : x)))} />
+                                    <select className={`${field} w-32`} aria-label={`What link ${i + 1} feeds`} value={l.section || 'general'} onChange={(e) => setLinks(links.map((x, n) => (n === i ? { ...x, section: e.target.value as BriefLinkSection } : x)))}>
+                                        {BRIEF_LINK_SECTIONS.map((s) => <option key={s} value={s}>{SECTION_LABELS[s]}</option>)}
+                                    </select>
+                                    <input className={`${field} flex-1 basis-60`} aria-label={`Note for link ${i + 1}`} placeholder="Note for the agent (optional)" value={l.note || ''} onChange={(e) => setLinks(links.map((x, n) => (n === i ? { ...x, note: e.target.value } : x)))} />
                                     <Button variant="ghost" size="sm" className="h-9 w-9 p-0" aria-label={`Remove link ${i + 1}`} onClick={() => setLinks(links.filter((_, n) => n !== i))}><X size={14} /></Button>
                                 </div>
                             ))}

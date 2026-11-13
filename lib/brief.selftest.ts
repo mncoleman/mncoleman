@@ -72,6 +72,8 @@ r = validateBrief(e);
 check('the watchlist is sorted soonest first', r.ok && r.edition.watchlist[0].when < r.edition.watchlist[1].when);
 
 check('links: a clean list passes', Array.isArray(cleanBriefLinks([{ label: ' AP ', url: 'https://apnews.com' }])));
+const lib = cleanBriefLinks([{ label: 'NWS Berthoud', url: 'https://forecast.weather.gov/', section: 'weather', note: '  Use the  point forecast. ' }, { label: 'AP', url: 'https://apnews.com', section: 'bogus' }]);
+check('links: section and note are kept, cleaned; an unknown section is dropped', Array.isArray(lib) && lib[0].section === 'weather' && lib[0].note === 'Use the point forecast.' && !('section' in lib[1]) && !('note' in lib[1]));
 check('links: a bad address is refused', typeof cleanBriefLinks([{ label: 'x', url: 'ftp://x' }]) === 'string');
 
 console.log(failed ? `\n${failed} FAILED` : '\nall passed');
