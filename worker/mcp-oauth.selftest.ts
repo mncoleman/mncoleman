@@ -47,6 +47,8 @@ async function main() {
     // --- pure helpers ---
     check('claude callback is a valid redirect', validRedirectUri(CALLBACK));
     check('loopback http is a valid redirect', validRedirectUri('http://localhost:53112/callback'));
+    check('the site inspector is a valid redirect', validRedirectUri('https://mncoleman.com/artifacts/mcp-wire-inspector'));
+    check('another page on the site is not', !validRedirectUri('https://mncoleman.com/artifacts/something-else') && !validRedirectUri('https://mncoleman.com/artifacts/mcp-wire-inspector/x'));
     check('any other https host is refused', !validRedirectUri('https://evil.example/callback'));
     check('javascript: is refused', !validRedirectUri('javascript:alert(1)'));
     check('loopback matches on another port', redirectMatches(['http://localhost:1/callback'], 'http://localhost:9999/callback'));

@@ -192,12 +192,21 @@ async function readJson<T>(kv: KvLike, key: string): Promise<T | null> {
 
 /**
  * Registration is open to anyone and a client's name is whatever it says, so
- * the return address is what is pinned: Claude's hosted callback, or plain http
- * on the loopback interface (Claude Code and other local clients). A link that
+ * the return address is what is pinned: Claude's hosted callback, this site's
+ * own inspector page, or plain http on the loopback interface (Claude Code and
+ * other local clients). To let another client in, add its exact callback here. A link that
  * talks someone into approving "Claude" can then only ever hand the code to
  * Claude itself or to a program already running on their own machine.
  */
-const HOSTED_CALLBACKS = ['https://claude.ai/api/mcp/auth_callback', 'https://claude.com/api/mcp/auth_callback'];
+const HOSTED_CALLBACKS = [
+    'https://claude.ai/api/mcp/auth_callback',
+    'https://claude.com/api/mcp/auth_callback',
+    // The site's own MCP Wire Inspector artifact, which signs in from the browser to test this
+    // server. It is our origin and our page, so a code sent there never leaves the site. Pages
+    // serves it without the extension; the .html form is listed for a copy opened that way.
+    'https://mncoleman.com/artifacts/mcp-wire-inspector',
+    'https://mncoleman.com/artifacts/mcp-wire-inspector.html',
+];
 const LOOPBACK_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
 
 function loopback(raw: string): URL | null {
@@ -387,7 +396,7 @@ async function register(request: Request, deps: OAuthDeps): Promise<Response> {
     if (!body || typeof body !== 'object') return oauthError('invalid_client_metadata', 'Body must be a JSON object');
     const uris = Array.isArray(body.redirect_uris) ? body.redirect_uris : [];
     if (uris.length < 1 || uris.length > 5 || !uris.every(validRedirectUri)) {
-        return oauthError('invalid_redirect_uri', "redirect_uris must be 1-5 of: Claude's hosted callback, or http on localhost");
+        return oauthError('invalid_redirect_uri', "redirect_uris must be 1-5 of: Claude's hosted callback, the mncoleman.com MCP Wire Inspector, or http on localhost");
     }
     const name = (typeof body.client_name === 'string' ? body.client_name : '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 80) || 'Unnamed app';
     const client: McpClient = {

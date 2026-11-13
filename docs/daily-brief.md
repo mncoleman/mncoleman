@@ -127,6 +127,7 @@ A change that only adds an optional field can ship in any order without breaking
 
 - **`wrangler.toml`: top-level keys must stay above every `[table]`.** A `[[services]]` block added above `workers_dev = true` made TOML read it as part of that table and switched the workers.dev URL off.
 - **The site builds links with a trailing slash.** `/api/brief/rss/` reaches the Worker with the slash; the handler strips it. Any new `/api/brief/*` path gets the same treatment for free, but only inside that handler.
+- **A new MCP client is refused at registration until its callback is allowed.** `HOSTED_CALLBACKS` in `worker/mcp-oauth.ts` pins where a sign-in may return: Claude, this site's MCP Wire Inspector, and localhost. `invalid_redirect_uri` means add the client's exact callback there and deploy `worker/`.
 - **`Origin: null` is normal** on the OAuth consent form post, because that page is served `no-referrer`. A hand-written test client sends a real Origin and will not catch a check that refuses null.
 - **KV is not instant.** A hide, delete or republish can take about a minute to show publicly. Do not conclude a write failed from one stale read.
 - **In `next dev` a missing API looks like the site's HTML 404.** `use-brief.ts` treats a non-JSON reply as "no API here" and falls back to the sample; a JSON 404 means "no such edition".
