@@ -10,6 +10,10 @@ import {
     RETURN_PARAM, handleOAuth, isOAuthPath, isOAuthReturn, listGrants, mcpRouteAllowed, mcpSigningKey, oauthReturnPath, readMcpToken, revokeGrant, revokeGrantsFor,
     type KvLike, type OAuthDeps,
 } from './mcp-oauth';
+import {
+    BRIEF_CONFIG_KEY, BRIEF_INDEX_KEY, DEFAULT_BRIEF_CONFIG, briefHeadline, briefKey, cleanBriefLinks, isBriefDate, validateBrief,
+    type BriefConfig, type BriefSummary,
+} from '../lib/brief';
 
 // Rate limiting store — persists within a Cloudflare Worker isolate
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -49,6 +53,7 @@ export interface Env {
     GOOGLE_CLIENT_SECRET: string;
     OWNER_EMAIL?: string;           // Owner's Google address — super_admin via Google sign-in
     POST_DRAFTS?: KVNamespace;      // Blog post autosave drafts (never committed). Optional: routes degrade to drafts_unavailable
+    BRIEFS?: KVNamespace;           // Daily brief editions (content only; the pages are in the repo). Optional: routes answer briefs_unavailable
     MCP_RESOURCE_URL?: string;      // The authenticated MCP endpoint OAuth tokens are issued for (their `aud`)
 }
 
@@ -743,7 +748,94 @@ export default {
             if (p.startsWith('/api/analytics') && !can('analytics')) return forbidden();
             if (p.startsWith('/api/collections') && !can('content')) return forbidden();
             if (p.startsWith('/api/posts') && !can('content')) return forbidden();
+            if (p.startsWith('/api/briefs') && !can('content')) return forbidden();
             if (p === '/api/artifacts' && !can('artifacts')) return forbidden();
+
+            // Daily brief editions. The pages and their template live in the repo; the content
+            // lives in the BRIEFS KV namespace so an edition can be hidden or removed at once,
+            // with no rebuild. worker-mcp reads the same namespace for the public side.
+            //   GET    /api/briefs            every edition (hidden ones too) and the config
+            //   PUT    /api/briefs/:date      {edition} validate and store; replaces that date
+            //   PATCH  /api/briefs/:date      {hidden} show or hide one edition
+            //   DELETE /api/briefs/:date
+            //   PUT    /api/briefs/config     {visibility?: 'public' | 'private', links?: [{label, url}]}
+            //                                 the whole section on or off, and its "External sources" page
+            const briefMatch = p.match(/^\/api\/briefs(?:\/(\d{4}-\d{2}-\d{2}|config))?$/);
+            if (briefMatch) {
+                const out = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+                    status, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                });
+                const kv = env.BRIEFS;
+                if (!kv) return out({ error: 'briefs_unavailable', message: 'The Worker has no BRIEFS KV binding. Create the namespace, put its id in worker/wrangler.toml and worker-mcp/wrangler.toml, and redeploy both.' }, 503);
+                const readIndex = async () => ((await kv.get<BriefSummary[]>(BRIEF_INDEX_KEY, 'json')) || []);
+                const writeIndex = (rows: BriefSummary[]) => kv.put(BRIEF_INDEX_KEY, JSON.stringify(rows.sort((a, b) => b.date.localeCompare(a.date))));
+                const target = briefMatch[1];
+                const readBody = async (limit: number): Promise<any | null> => {
+                    const raw = await request.text();
+                    if (raw.length > limit) return null;
+                    try { return JSON.parse(raw); } catch { return null; }
+                };
+
+                if (!target && request.method === 'GET') {
+                    return out({ briefs: await readIndex(), config: (await kv.get<BriefConfig>(BRIEF_CONFIG_KEY, 'json')) || DEFAULT_BRIEF_CONFIG });
+                }
+                if (target === 'config' && request.method === 'PUT') {
+                    // Either field may be sent alone; the other keeps its stored value.
+                    const body = await readBody(60_000);
+                    const config: BriefConfig = { ...DEFAULT_BRIEF_CONFIG, ...((await kv.get<BriefConfig>(BRIEF_CONFIG_KEY, 'json')) || {}) };
+                    if (body?.visibility !== undefined) {
+                        if (body.visibility !== 'public' && body.visibility !== 'private') return out({ error: 'visibility must be "public" or "private"' }, 400);
+                        config.visibility = body.visibility;
+                    }
+                    if (body?.links !== undefined) {
+                        const links = cleanBriefLinks(body.links);
+                        if (typeof links === 'string') return out({ error: links }, 400);
+                        config.links = links;
+                    }
+                    await kv.put(BRIEF_CONFIG_KEY, JSON.stringify(config));
+                    return out({ ok: true, config });
+                }
+                if (!target || target === 'config' || !isBriefDate(target)) return out({ error: 'A real date (YYYY-MM-DD) is required' }, 400);
+
+                if (request.method === 'PUT') {
+                    const body = await readBody(400_000);
+                    if (!body || typeof body !== 'object') return out({ error: 'invalid_json', message: 'Send {"edition": {...}} as JSON, at most 400 KB.' }, 400);
+                    const checked = validateBrief(body.edition);
+                    if (checked.ok && checked.edition.date !== target) {
+                        return out({ error: 'validation_failed', errors: [{ path: 'date', reason: `is ${checked.edition.date} but this request is for ${target}` }], warnings: checked.warnings }, 422);
+                    }
+                    if (!checked.ok) return out({ error: 'validation_failed', errors: checked.errors, warnings: checked.warnings }, 422);
+                    const index = await readIndex();
+                    const existing = index.find((r) => r.date === target);
+                    const edition = checked.edition;
+                    // A date keeps its number across republishes; a new date takes the next one.
+                    const number = existing?.edition_number || edition.edition_number || index.reduce((m, r) => Math.max(m, r.edition_number), 0) + 1;
+                    const warnings = [...checked.warnings];
+                    if (edition.edition_number && edition.edition_number !== number) warnings.push({ path: 'edition_number', reason: `ignored: ${target} is already edition ${number}` });
+                    edition.edition_number = number;
+                    await kv.put(briefKey(target), JSON.stringify(edition));
+                    await writeIndex([...index.filter((r) => r.date !== target), { date: target, edition_number: number, headline: briefHeadline(edition), ...(existing?.hidden ? { hidden: true } : {}) }]);
+                    return out({ ok: true, url: `${env.FRONTEND_URL || 'https://mncoleman.com'}/brief/${target}`, date: target, edition_number: number, replaced: !!existing, warnings });
+                }
+                if (request.method === 'PATCH') {
+                    const body = await readBody(1000);
+                    if (typeof body?.hidden !== 'boolean') return out({ error: 'hidden must be true or false' }, 400);
+                    const index = await readIndex();
+                    const row = index.find((r) => r.date === target);
+                    if (!row) return out({ error: 'not_found' }, 404);
+                    if (body.hidden) row.hidden = true; else delete row.hidden;
+                    await writeIndex(index);
+                    return out({ ok: true, date: target, hidden: body.hidden });
+                }
+                if (request.method === 'DELETE') {
+                    const index = await readIndex();
+                    if (!index.some((r) => r.date === target)) return out({ error: 'not_found' }, 404);
+                    await kv.delete(briefKey(target));
+                    await writeIndex(index.filter((r) => r.date !== target));
+                    return out({ ok: true, deleted: target });
+                }
+                return out({ error: 'method_not_allowed' }, 405);
+            }
 
             // POST /api/citations/lookup {url} — reads a page's title/author/site/date for a citation.
             // Same Origin/CSRF checks as every other POST (above) and the `content` feature. SSRF

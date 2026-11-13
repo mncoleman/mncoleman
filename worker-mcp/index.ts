@@ -37,7 +37,11 @@
  * PROTOCOL_VERSIONS below.
  */
 
+import { BRIEF_CONFIG_KEY, BRIEF_INDEX_KEY, briefKey, isBriefDate, type BriefConfig, type BriefEdition, type BriefLink, type BriefSummary } from '../lib/brief';
+
 export interface Env {
+    /** Daily brief editions, written by the admin Worker. Read-only here. Absent until the namespace is bound. */
+    BRIEFS?: { get(key: string, type: 'json'): Promise<unknown> };
     SITE_URL: string;
     ARTIFACTS_SERVICE_URL: string;
     /** The admin Worker's public origin: the OAuth authorization server clients are sent to. */
@@ -64,6 +68,7 @@ const SERVER_INFO = {
 const INSTRUCTIONS =
     'Read-only access to the public content of mncoleman.com — Matthew Coleman\'s personal site. ' +
     'Use search_site for open-ended questions, then the specific getters for full text. ' +
+    'get_brief returns the daily brief (a morning news digest), list_briefs its archive. ' +
     'Blog posts, projects, resources and the resume come from Notion and are rebuilt daily, so ' +
     'content can lag the live site by up to a day. Everything here is already published publicly.';
 
@@ -154,6 +159,50 @@ const getInstantArtifacts = (env: Env) =>
     cachedJson<{ artifacts: Array<Record<string, unknown>> }>(`${env.ARTIFACTS_SERVICE_URL}/api/list`, 60)
         .then(r => r.artifacts || [])
         .catch(() => []);
+
+// The daily brief is read straight from KV (the admin Worker writes it), not through
+// the edge cache: hiding or removing an edition has to take effect at once.
+
+const briefConfig = async (env: Env) => (env.BRIEFS ? ((await env.BRIEFS.get(BRIEF_CONFIG_KEY, 'json')) as BriefConfig | null) : null);
+
+/** The public archive, newest first. Empty when the section is private or the namespace is not bound. */
+async function briefIndex(env: Env): Promise<BriefSummary[]> {
+    if (!env.BRIEFS) return [];
+    if ((await briefConfig(env))?.visibility === 'private') return [];
+    return (((await env.BRIEFS.get(BRIEF_INDEX_KEY, 'json')) as BriefSummary[] | null) || []).filter(r => !r.hidden);
+}
+
+/** One public edition by date, or the newest for 'latest'. Null when there is none the public may see. */
+async function briefEdition(env: Env, which: string): Promise<BriefEdition | null> {
+    const index = await briefIndex(env);
+    const row = which === 'latest' ? index[0] : index.find(r => r.date === which);
+    if (!row || !env.BRIEFS) return null;
+    return (await env.BRIEFS.get(briefKey(row.date), 'json')) as BriefEdition | null;
+}
+
+const xml = (s: unknown) => String(s ?? '').replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]!));
+
+/** RSS 2.0 for the brief: one entry per edition, the newest 20, each listing that day's stories with their source links. */
+async function briefRss(env: Env): Promise<Response> {
+    const rows = (await briefIndex(env)).slice(0, 20);
+    const editions = (await Promise.all(rows.map(r => env.BRIEFS!.get(briefKey(r.date), 'json') as Promise<BriefEdition | null>))).filter((e): e is BriefEdition => !!e);
+    const site = env.SITE_URL;
+    const entry = (e: BriefEdition) => {
+        const link = `${site}/brief/${e.date}`;
+        const body = [
+            e.summary ? `<p>${xml(e.summary)}</p>` : '',
+            ...e.sectors.map(s => `<h3>${xml(s.title)}</h3><ul>${s.items.map(i =>
+                `<li><a href="${xml(`${link}#${i.id}`)}">${xml(i.title)}</a>: ${xml(i.brief)} (${i.sources.map(x => `<a href="${xml(x.url)}">${xml(x.outlet)}</a>`).join(', ')})</li>`).join('')}</ul>`),
+        ].join('');
+        const when = new Date(e.compiled_at);
+        return `<item><title>${xml(`Daily Brief ${String(e.edition_number).padStart(3, '0')}: ${e.top_signals[0]?.headline || e.date}`)}</title><link>${xml(link)}</link><guid isPermaLink="true">${xml(link)}</guid>` +
+            `<pubDate>${(Number.isNaN(when.getTime()) ? new Date(`${e.date}T12:00:00Z`) : when).toUTCString()}</pubDate><description>${xml(body)}</description></item>`;
+    };
+    const feed = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>` +
+        `<title>The MNColeman Daily Brief</title><link>${site}/brief</link><description>A morning digest: weather, a verse, and the day in tech, local, national and world news, each story linked to its source.</description>` +
+        `<language>en-us</language><atom:link href="${site}/api/brief/rss" rel="self" type="application/rss+xml"/>${editions.map(entry).join('')}</channel></rss>`;
+    return new Response(feed, { headers: { 'Content-Type': 'application/rss+xml; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' } });
+}
 
 const getLibrary = (env: Env) =>
     cachedJson<{ items: Array<Record<string, unknown>> }>(`${env.ARTIFACTS_SERVICE_URL}/api/library/list`, 60)
@@ -253,6 +302,18 @@ const TOOLS = [
                 kind: { type: 'string', enum: ['prompt', 'skill'], description: 'Optional: only prompts, or only skills.' },
             },
         },
+    },
+    {
+        name: 'list_briefs',
+        title: 'List daily briefs',
+        description: 'The archive of the mncoleman.com daily brief, newest first: each edition\'s date, number, top headline and URL. The brief is a morning news digest (weather, a verse and devotional, tech, local, national and world news, and a list of dated events to watch).',
+        inputSchema: { type: 'object', properties: { limit: { type: 'number', description: 'Maximum editions (default 14, max 400).' } } },
+    },
+    {
+        name: 'get_brief',
+        title: 'Get a daily brief',
+        description: 'One edition of the mncoleman.com daily brief in full, as structured JSON: every story with its confidence label, detail and source links. Pass a date, or leave it out for the latest edition.',
+        inputSchema: { type: 'object', properties: { date: { type: 'string', description: 'YYYY-MM-DD, or "latest" (the default).' } } },
     },
     {
         name: 'get_ai_library_item',
@@ -418,6 +479,48 @@ const ADMIN_TOOLS: Array<{ feature: Feature; name: string; title: string; descri
     },
 ];
 
+ADMIN_TOOLS.push(
+    {
+        feature: 'content',
+        name: 'publish_brief',
+        title: 'Publish a daily brief edition',
+        description:
+            'Publish one edition of the daily brief to https://mncoleman.com/brief/<date>. It is live at once and replaces any edition already stored for that date (safe to retry). Send DATA ONLY, as plain text: the site renders it with its own template, and HTML or Markdown is stripped. ' +
+            'If validation fails the reply lists every problem as {path, reason}: fix those fields and call again. Warnings do not block publishing. Do not use en dashes or em dashes in text.\n\n' +
+            'edition = {\n' +
+            '  date: "YYYY-MM-DD" (required), location: "Berthoud, CO" (required), compiled_at: ISO 8601 timestamp (required),\n' +
+            '  edition_number: omit it; the server assigns the next number and keeps it on a republish,\n' +
+            '  summary: one sentence for the opening page (optional, max 300),\n' +
+            '  weather: { summary, high_f (number), tonight, wind, tomorrow, source, source_url } (optional),\n' +
+            '  verse: { text, reference, translation, url } (optional),\n' +
+            '  devotional: { title, scripture: { reference, text }, body: the full reading, paragraphs separated by a blank line (max 6000), attribution, url } (optional),\n' +
+            '  sectors: 1 to 5 of { key: "signal" | "local" | "nation" | "world" | "field_notes" (each once), title (max 60), summary: one sentence (max 300),\n' +
+            '    items: 3 to 8 of { id: short unique id like "s1", confidence: "confirmed" | "developing" | "contested" | "note", title (max 110), brief: one or two sentences (max 260), detail: the FULL write-up shown when the card is opened, complete and not shortened, paragraphs separated by a blank line (max 8000),\n' +
+            '      sources: 1 to 6 of { outlet, url } } },\n' +
+            '  top_signals: up to 5 of { headline (max 200), sector: that item\'s sector key, item_id: an item id above },\n' +
+            '  watchlist: up to 15 of { when: "YYYY-MM-DD" (for sorting), label: what is shown, e.g. "TUE 17 NOV", what (max 220), sources: 1 to 6 of { outlet, url } },\n' +
+            '  notices: up to 8 strings (copyright and attribution lines)\n' +
+            '}\n' +
+            'Every source needs the URL of the page it came from: a source without a url is rejected. Leave out a whole optional section rather than sending it empty.',
+        inputSchema: {
+            type: 'object',
+            properties: { edition: { type: 'object', description: 'The edition, in the shape given in this tool\'s description.' } },
+            required: ['edition'],
+        },
+    },
+    {
+        feature: 'content',
+        name: 'delete_brief',
+        title: 'Delete a daily brief edition',
+        description: 'Permanently remove one edition of the daily brief. Its page and archive entry disappear at once. Only call it when the user has explicitly asked for that edition to be deleted; to take one down temporarily, hide it in the admin panel instead.',
+        inputSchema: {
+            type: 'object',
+            properties: { date: { type: 'string', description: 'YYYY-MM-DD' }, confirm: { type: 'boolean', description: 'Must be true.' } },
+            required: ['date', 'confirm'],
+        },
+    },
+);
+
 const ADMIN_TOOL_NAMES = new Set(ADMIN_TOOLS.map(t => t.name));
 
 const visibleAdminTools = (admin: AdminCtx) =>
@@ -580,6 +683,27 @@ async function callAdminTool(name: string, args: Record<string, unknown>, env: E
             };
         }
 
+        case 'publish_brief': {
+            const edition = args.edition as { date?: unknown } | undefined;
+            if (!edition || typeof edition !== 'object') throw new Error('edition is required: an object in the shape given in this tool\'s description');
+            if (!isBriefDate(edition.date)) throw new Error('edition.date is required, a real calendar date as YYYY-MM-DD');
+            const res = await adminFetch(env, admin.token, `/api/briefs/${edition.date}`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ edition }),
+            });
+            if (res.status === 401) throw new AuthRequired();
+            const body = await res.json().catch(() => null) as any;
+            // Validation problems go back whole, as data: the caller fixes the named fields and retries.
+            if (res.status === 422) throw new Error(`The edition was not published. Fix these fields and call publish_brief again:\n${JSON.stringify({ errors: body?.errors, warnings: body?.warnings }, null, 2)}`);
+            if (!res.ok) throw new Error(`${body?.message || body?.error || 'publish failed'} (${res.status})`);
+            return { url: body.url, date: body.date, edition_number: body.edition_number, replaced: body.replaced, warnings: body.warnings };
+        }
+
+        case 'delete_brief': {
+            if (!isBriefDate(args.date)) throw new Error('date is required, as YYYY-MM-DD');
+            if (args.confirm !== true) throw new Error('Deleting is permanent. Call again with confirm: true only if the user asked for this edition to be deleted.');
+            return adminJson(env, admin, `/api/briefs/${args.date}`, { method: 'DELETE' });
+        }
+
         default:
             throw new Error(`Unknown tool: ${name}`);
     }
@@ -588,7 +712,7 @@ async function callAdminTool(name: string, args: Record<string, unknown>, env: E
 const ADMIN_INSTRUCTIONS =
     'Signed-in access to mncoleman.com — Matthew Coleman\'s personal site. Besides the read-only tools over published content, ' +
     'this connection can act as the signed-in admin: upload, update and delete instant artifacts, add and edit AI library prompts and skills, ' +
-    'and save blog post drafts. Artifacts and library items go live immediately; blog drafts never do (a person publishes them from the admin panel). ' +
+    'save blog post drafts, and publish the daily brief (publish_brief). Artifacts, library items and brief editions go live immediately; blog drafts never do (a person publishes them from the admin panel). ' +
     'Deleting is permanent, so only delete what the user explicitly asked to delete.';
 
 const text = (value: unknown) => ({
@@ -735,6 +859,19 @@ async function callTool(name: string, args: Record<string, unknown>, env: Env): 
                 .filter(i => !kind || i.kind === kind)
                 .map(i => ({ slug: i.slug, kind: i.kind, name: i.name, description: i.description, url: i.url, updatedAt: i.updatedAt }));
             return { count: filtered.length, items: filtered };
+        }
+
+        case 'list_briefs': {
+            const rows = (await briefIndex(env)).slice(0, clamp(args.limit, 14, 400));
+            return { count: rows.length, briefs: rows.map(r => ({ ...r, url: `${env.SITE_URL}/brief/${r.date}` })) };
+        }
+
+        case 'get_brief': {
+            const which = typeof args.date === 'string' && args.date ? args.date : 'latest';
+            if (which !== 'latest' && !isBriefDate(which)) throw new Error('date must be YYYY-MM-DD or "latest"');
+            const edition = await briefEdition(env, which);
+            if (!edition) throw new Error(which === 'latest' ? 'No brief has been published yet.' : `There is no brief for ${which}. Use list_briefs to see the dates that exist.`);
+            return { url: `${env.SITE_URL}/brief/${edition.date}`, ...edition };
         }
 
         case 'get_ai_library_item': {
@@ -934,6 +1071,26 @@ export default {
 
         if (url.pathname === '/.well-known/mcp.json') {
             return json(serverCard(env), 200, { 'Cache-Control': 'public, max-age=3600' });
+        }
+
+        // The daily brief's public read API, for the /brief pages (same origin, so no CORS dance):
+        //   /api/brief/index   the archive      /api/brief/latest   /api/brief/YYYY-MM-DD
+        //   /api/brief/rss     the feed
+        // Briefly cacheable by the browser only; never by the edge, so hiding an edition is immediate.
+        if (url.pathname.startsWith('/api/brief/')) {
+            if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
+            const what = url.pathname.slice('/api/brief/'.length);
+            const fresh = { 'Cache-Control': 'private, max-age=30' };
+            if (what === 'index') return json({ briefs: await briefIndex(env) }, 200, fresh);
+            if (what === 'rss') return briefRss(env);
+            if (what !== 'latest' && !isBriefDate(what)) return json({ error: 'not_found' }, 404);
+            const index = await briefIndex(env);
+            const edition = await briefEdition(env, what);
+            if (!edition) return json({ error: 'not_found' }, 404, { 'Cache-Control': 'no-store' });
+            // Neighbours ride along so the page can link to the next and previous edition without a second request.
+            const at = index.findIndex(r => r.date === edition.date);
+            const links: BriefLink[] = (await briefConfig(env))?.links || [];
+            return json({ edition, newer: index[at - 1]?.date ?? null, older: index[at + 1]?.date ?? null, links }, 200, fresh);
         }
 
         if (url.pathname === PRM_PATH || url.pathname === `${PRM_PATH}${ADMIN_PATH}`) {

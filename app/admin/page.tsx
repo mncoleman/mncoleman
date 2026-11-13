@@ -13,6 +13,7 @@ import { useRebuild } from '@/components/admin/use-rebuild';
 import { AdminPage, HeaderSpacer, NewButton, PageHeader, Section, SectionRow, StatGrid, StatTile, StatusPill } from '@/components/admin/kit';
 import { relativeTime } from '@/components/admin/artifacts/artifact-logic';
 import { McpConnections } from '@/components/admin/McpConnections';
+import { BriefAdmin } from '@/components/admin/BriefAdmin';
 import type { PostSummary } from '@/lib/post-format';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -180,6 +181,8 @@ export default function AdminOverviewPage() {
                     </Section>
                 )}
             </div>
+
+            {editsContent && <BriefAdmin />}
 
             <McpConnections />
 

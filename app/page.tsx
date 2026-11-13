@@ -17,7 +17,7 @@ import { motion } from 'motion/react';
 import GlassCube from '@/components/ui/glass-cube';
 import { HomeBackdrop } from '@/components/home-backdrop';
 import { BlankCanvasToggle } from '@/components/blank-canvas-toggle';
-import { McpCallout } from '@/components/mcp-callout';
+import { BriefCallout } from '@/components/brief-callout';
 import { TransitionLink } from '@/components/transition-link';
 import { usePageTransition } from '@/components/transition-provider';
 
@@ -177,7 +177,7 @@ function DesktopGrid() {
     >
       {/* Three rows: the band between the header and the cards, the cards, and a
           balancing band below. Both bands are flex-1, so the grid stays centred in
-          the viewport and the MCP callout sits in the middle of the gap above it —
+          the viewport and the brief bar sits in the middle of the gap above it —
           no measurement, and it degrades to "stacked, nothing overlapping" when the
           viewport is too short to have spare room to distribute. */}
       {/* `min-h-20` floors this band. It is `flex-1`, so on a short viewport it was
@@ -185,7 +185,7 @@ function DesktopGrid() {
           keeps air around the callout and lets the container exceed its min-height
           instead, which costs a few pixels of scroll rather than the layout. */}
       <div className="w-full max-w-5xl min-h-20 flex-1 flex items-center justify-center relative z-20">
-        <McpCallout />
+        <BriefCallout />
       </div>
       <div className="w-full max-w-5xl relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 auto-rows-fr">
@@ -225,7 +225,7 @@ function MobileStack() {
       style={{ paddingTop: `${24}px` }}
     >
       <div className="mb-5">
-        <McpCallout anchorId="mcp-mobile" />
+        <BriefCallout />
       </div>
       {bentoCards.map((card, i) => {
         const isSibling = activeCardId !== null && activeCardId !== card.id;

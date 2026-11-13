@@ -1,0 +1,618 @@
+{
+  "date": "2026-11-13",
+  "edition_number": 1,
+  "location": "Berthoud, CO",
+  "compiled_at": "2026-11-13T07:52:00-07:00",
+  "summary": "Cool, quiet Friday in Berthoud. The biggest signal today: Nvidia’s founder resigns four days before earnings.",
+  "weather": {
+    "summary": "Partly sunny",
+    "high_f": 63,
+    "tonight": "Fog after midnight, low 34°F",
+    "wind": "ENE 3 to 5 mph",
+    "tomorrow": "High near 52, 20% rain",
+    "source": "National Weather Service",
+    "source_url": "https://forecast.weather.gov/MapClick.php?lat=40.3083&lon=-105.0811"
+  },
+  "verse": {
+    "text": "For this is the will of God, that by doing good you may put to silence the ignorance of foolish men, as free, yet not using liberty as a cloak for vice, but as bondservants of God.",
+    "reference": "1 Peter 2:15-16",
+    "translation": "NKJV",
+    "url": "https://www.biblegateway.com/passage/?search=1%20Peter%202%3A15-16&version=NKJV"
+  },
+  "devotional": {
+    "title": "Sailing Through the Tempest",
+    "scripture": {
+      "reference": "Psalm 66:12",
+      "text": "We went through fire and through water: but thou broughtest us out into a wealthy place."
+    },
+    "body": "Paradoxical though it be, only that man is at rest who attains it through conflict. This peace, born of conflict, is not like the deadly hush preceding the tempest, but the serene and pure-aired quiet that follows it.",
+    "attribution": "L. B. Cowman, Streams in the Desert (1925)",
+    "url": "https://www.crosswalk.com/devotionals/desert/"
+  },
+  "top_signals": [
+    {
+      "headline": "Nvidia founder Jensen Huang resigns as CEO; CFO Colette Kress named interim. Earnings Nov. 17.",
+      "sector": "signal",
+      "item_id": "s1"
+    },
+    {
+      "headline": "Microsoft 365 outage recovering after a global failure; some users may still see delays.",
+      "sector": "signal",
+      "item_id": "s2"
+    },
+    {
+      "headline": "Brooklyn collapse becomes a criminal inquiry after the search for victims ends.",
+      "sector": "nation",
+      "item_id": "n1"
+    }
+  ],
+  "sectors": [
+    {
+      "key": "signal",
+      "title": "AI and Tech",
+      "summary": "Nvidia loses its founder four days before earnings, Microsoft 365 is still recovering, and Anthropic’s listing is expected Nov. 17.",
+      "items": [
+        {
+          "id": "s1",
+          "confidence": "developing",
+          "title": "Nvidia founder Jensen Huang resigns",
+          "brief": "CEO and board member after 33 years; CFO Colette Kress is interim CEO.",
+          "detail": "Earnings are due Nov. 17 and House chairs want a closed-door briefing. Reports of probes and congressional letters are not settled findings.",
+          "sources": [
+            {
+              "outlet": "The Rundown AI",
+              "url": "https://www.therundown.ai"
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "confidence": "developing",
+          "title": "Microsoft 365 recovering from global outage",
+          "brief": "Outlook and Teams disruptions ran into Friday; email queues approaching normal.",
+          "detail": "Microsoft says servers failed automated health checks, pushing traffic onto remaining systems and overloading them, and that it found no malicious activity. NHS England, courts and city offices were among those affected.",
+          "sources": [
+            {
+              "outlet": "AP",
+              "url": "https://apnews.com"
+            },
+            {
+              "outlet": "BBC",
+              "url": "https://www.bbc.com/news"
+            },
+            {
+              "outlet": "Ars Technica",
+              "url": "https://arstechnica.com"
+            }
+          ]
+        },
+        {
+          "id": "s3",
+          "confidence": "confirmed",
+          "title": "Anthropic listing expected Nov. 17",
+          "brief": "Trading is expected to begin the same day as Nvidia earnings.",
+          "detail": "The listing follows a sharp AI-stock sell-off that lowered valuation estimates.",
+          "sources": [
+            {
+              "outlet": "Reuters",
+              "url": "https://www.reuters.com"
+            },
+            {
+              "outlet": "Bloomberg",
+              "url": "https://www.bloomberg.com"
+            }
+          ]
+        },
+        {
+          "id": "s4",
+          "confidence": "confirmed",
+          "title": "Google AI glasses open for pre-order",
+          "brief": "Gemini-powered glasses with Samsung start at $395 and ship Dec. 10.",
+          "detail": "They have no in-lens display and blur bystanders’ faces before Gemini sees them.",
+          "sources": [
+            {
+              "outlet": "The Rundown AI",
+              "url": "https://www.therundown.ai"
+            }
+          ]
+        },
+        {
+          "id": "s5",
+          "confidence": "confirmed",
+          "title": "FBI ties $400 million scam to North Korea",
+          "brief": "Fake video calls in a scheme called FaceStealer hit more than 900 victims.",
+          "detail": "The bureau says the scheme ran over 18 months.",
+          "sources": [
+            {
+              "outlet": "BBC",
+              "url": "https://www.bbc.com/news"
+            }
+          ]
+        },
+        {
+          "id": "s6",
+          "confidence": "confirmed",
+          "title": "Waymo fix under federal review",
+          "brief": "NHTSA is examining Waymo’s school-bus safety fix.",
+          "detail": "The company reportedly plans 20,000 vehicles by late 2027.",
+          "sources": [
+            {
+              "outlet": "The Rundown AI",
+              "url": "https://www.therundown.ai"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "local",
+      "title": "Berthoud and Northern Colorado",
+      "summary": "A bridge closure starts Monday near Platteville, the Front Range rail tax passes, and one contested wildlife vote heads to January.",
+      "items": [
+        {
+          "id": "l1",
+          "confidence": "confirmed",
+          "title": "WCR 31 bridge closure starts Monday",
+          "brief": "Weld County Road 31 closes between roads 36 and 38 on Nov. 16.",
+          "detail": "Crews will replace a 53-year-old bridge near Platteville and Gilcrest. Work is scheduled through March 5, 2027.",
+          "sources": [
+            {
+              "outlet": "Longmont Leader",
+              "url": "https://www.longmontleader.com"
+            }
+          ]
+        },
+        {
+          "id": "l2",
+          "confidence": "confirmed",
+          "title": "Rail tax passes, district plans buildout",
+          "brief": "Ballot Issue 7A passing 56% to 44% in unofficial returns.",
+          "detail": "The permanent 0.333% sales tax funds Front Range passenger rail. Starter service would run three round trips a day between Denver and Fort Collins, stopping in Loveland and Longmont.",
+          "sources": [
+            {
+              "outlet": "Good Day Windsor",
+              "url": "https://gooddaywindsor.com"
+            }
+          ]
+        },
+        {
+          "id": "l3",
+          "confidence": "contested",
+          "title": "Prairie dog shooting ban advances",
+          "brief": "Colorado Parks and Wildlife voted 6-5 to send a petition to a January vote.",
+          "detail": "The petition would ban recreational prairie dog shooting on public land, including the Pawnee National Grassland. Supporters call it needless; opponents say the process moved too fast. It would not affect private land.",
+          "sources": [
+            {
+              "outlet": "Colorado Sun",
+              "url": "https://coloradosun.com"
+            },
+            {
+              "outlet": "Fence Post",
+              "url": "https://www.thefencepost.com"
+            }
+          ]
+        },
+        {
+          "id": "l4",
+          "confidence": "confirmed",
+          "title": "Hoedown Hill drops skiing",
+          "brief": "The Windsor venue will focus on live music and outdoor entertainment this winter.",
+          "detail": "The venue was known for skiing, snowboarding and tubing.",
+          "sources": [
+            {
+              "outlet": "Coloradoan",
+              "url": "https://www.coloradoan.com"
+            }
+          ]
+        },
+        {
+          "id": "l5",
+          "confidence": "confirmed",
+          "title": "Downtown parking ribbon-cutting Wednesday",
+          "brief": "Windsor marks completion of its parking project at 1:15 p.m. Nov. 18.",
+          "detail": "The site is at 107 5th St., between Main Street and Boardwalk Park. Work replaced an aging waterline, added a sewer line and built a lot.",
+          "sources": [
+            {
+              "outlet": "North Forty News",
+              "url": "https://northfortynews.com"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "nation",
+      "title": "U.S. News and Politics",
+      "summary": "The Brooklyn collapse is now a criminal case, a polar vortex reversal could chill Thanksgiving week, and Senate Democrats face a leadership challenge.",
+      "items": [
+        {
+          "id": "n1",
+          "confidence": "developing",
+          "title": "Criminal inquiry into Brooklyn collapse",
+          "brief": "Prosecutors opened a criminal investigation into the Flatbush collapse that killed eight.",
+          "detail": "City inspectors are examining whether excavation at the neighboring construction site caused it and are reviewing about 100 other sites tied to the five entities involved.",
+          "sources": [
+            {
+              "outlet": "CBS New York",
+              "url": "https://www.cbsnews.com/newyork"
+            },
+            {
+              "outlet": "NPR",
+              "url": "https://www.npr.org"
+            }
+          ]
+        },
+        {
+          "id": "n2",
+          "confidence": "confirmed",
+          "title": "Earliest polar vortex reversal on record",
+          "brief": "Arctic winds reversed on Nov. 10, the earliest in records back to 1958.",
+          "detail": "Forecasters say it may favor colder air in parts of the U.S. around Thanksgiving, though the effect on winter weather is uncertain.",
+          "sources": [
+            {
+              "outlet": "BBC",
+              "url": "https://www.bbc.com/news"
+            },
+            {
+              "outlet": "The Weather Channel",
+              "url": "https://weather.com"
+            }
+          ]
+        },
+        {
+          "id": "n3",
+          "confidence": "confirmed",
+          "title": "Van Hollen challenges Schumer",
+          "brief": "The Maryland senator will run for Democratic leader; Sanders backs him.",
+          "detail": "Schumer says he has the votes. A secret-ballot caucus vote is expected in early December.",
+          "sources": [
+            {
+              "outlet": "AP",
+              "url": "https://apnews.com"
+            },
+            {
+              "outlet": "Axios",
+              "url": "https://www.axios.com"
+            },
+            {
+              "outlet": "Politico",
+              "url": "https://www.politico.com"
+            }
+          ]
+        },
+        {
+          "id": "n4",
+          "confidence": "confirmed",
+          "title": "Alito warns on court funding",
+          "brief": "Congress could “turn off the lights” at the Supreme Court by cutting funds.",
+          "detail": "He spoke at the Federalist Society dinner and called judicial independence essential.",
+          "sources": [
+            {
+              "outlet": "The Hill",
+              "url": "https://thehill.com"
+            },
+            {
+              "outlet": "Fox News",
+              "url": "https://www.foxnews.com"
+            }
+          ]
+        },
+        {
+          "id": "n5",
+          "confidence": "confirmed",
+          "title": "Bessent faults Commerce over Megaspeed",
+          "brief": "Treasury, Pentagon and State favored an Entity List addition for months.",
+          "detail": "Commerce Secretary Howard Lutnick has agreed to testify to the Senate Banking Committee on Dec. 10. Commerce did not comment to CBS.",
+          "sources": [
+            {
+              "outlet": "CBS News",
+              "url": "https://www.cbsnews.com"
+            },
+            {
+              "outlet": "Washington Post",
+              "url": "https://www.washingtonpost.com"
+            }
+          ]
+        },
+        {
+          "id": "n6",
+          "confidence": "confirmed",
+          "title": "Shutdown risk over Pentagon money",
+          "brief": "Some GOP senators warn the budget process could threaten funding talks.",
+          "detail": "The warning concerns how Pentagon funding moves through the process.",
+          "sources": [
+            {
+              "outlet": "The Hill",
+              "url": "https://thehill.com"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "world",
+      "title": "World and Conflict",
+      "summary": "Strikes and counterclaims continue in Ukraine, Iran and Yemen, and the IAEA says it still cannot inspect a declared Iranian plant.",
+      "items": [
+        {
+          "id": "w1",
+          "confidence": "developing",
+          "title": "Second car bomb in Russia in two days",
+          "brief": "A remote bomb critically injured former Azarov adviser Sergei Zavorotnyi in Moscow.",
+          "detail": "A day earlier a bomb killed a serviceman in St. Petersburg. Moscow blames Kyiv; Ukraine has not commented.",
+          "sources": [
+            {
+              "outlet": "AP",
+              "url": "https://apnews.com"
+            },
+            {
+              "outlet": "Al Jazeera",
+              "url": "https://www.aljazeera.com"
+            },
+            {
+              "outlet": "BBC",
+              "url": "https://www.bbc.com/news"
+            }
+          ]
+        },
+        {
+          "id": "w2",
+          "confidence": "confirmed",
+          "title": "Record drone exchange",
+          "brief": "Russia says it downed 1,198 Ukrainian drones; it launched 117 at Ukraine.",
+          "detail": "Refineries were hit, and a Kyiv hospital was struck. Both sides report deaths.",
+          "sources": [
+            {
+              "outlet": "AP",
+              "url": "https://apnews.com"
+            },
+            {
+              "outlet": "Anadolu",
+              "url": "https://www.aa.com.tr/en"
+            }
+          ]
+        },
+        {
+          "id": "w3",
+          "confidence": "contested",
+          "title": "Iran claims Bahrain radar strike",
+          "brief": "The IRGC says it destroyed a U.S. early-warning radar; CENTCOM says it did not.",
+          "detail": "CENTCOM says both drones launched were shot down, with no injuries or damage.",
+          "sources": [
+            {
+              "outlet": "AP",
+              "url": "https://apnews.com"
+            },
+            {
+              "outlet": "Al Jazeera",
+              "url": "https://www.aljazeera.com"
+            },
+            {
+              "outlet": "CENTCOM",
+              "url": "https://www.centcom.mil"
+            }
+          ]
+        },
+        {
+          "id": "w4",
+          "confidence": "confirmed",
+          "title": "IAEA “increasingly concerned” over Isfahan",
+          "brief": "It has never inspected an enrichment plant Iran declared in June 2025.",
+          "detail": "The watchdog does not know the plant’s exact location or whether it holds nuclear material. Iran says monitoring cannot proceed while it is under threat.",
+          "sources": [
+            {
+              "outlet": "BBC",
+              "url": "https://www.bbc.com/news"
+            },
+            {
+              "outlet": "AP",
+              "url": "https://apnews.com"
+            },
+            {
+              "outlet": "Al Jazeera",
+              "url": "https://www.aljazeera.com"
+            }
+          ]
+        },
+        {
+          "id": "w5",
+          "confidence": "confirmed",
+          "title": "ANC posts worst result ever",
+          "brief": "About 31% in local elections, down from 46% in 2021.",
+          "detail": "The party lost majorities in Johannesburg, Pretoria and Ekurhuleni. Coalition talks follow.",
+          "sources": [
+            {
+              "outlet": "AP",
+              "url": "https://apnews.com"
+            },
+            {
+              "outlet": "BBC",
+              "url": "https://www.bbc.com/news"
+            },
+            {
+              "outlet": "Semafor",
+              "url": "https://www.semafor.com"
+            }
+          ]
+        },
+        {
+          "id": "w6",
+          "confidence": "confirmed",
+          "title": "COP31 split on final text",
+          "brief": "Turkey and Australia issued a wish list including a 35% electrification target by 2035.",
+          "detail": "Nations remain divided on fossil fuels and finance.",
+          "sources": [
+            {
+              "outlet": "Carbon Brief",
+              "url": "https://www.carbonbrief.org"
+            },
+            {
+              "outlet": "France 24",
+              "url": "https://www.france24.com/en"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "field_notes",
+      "title": "Notes",
+      "summary": "Headlines from The Worldview and one idea from The Diary Of A CEO.",
+      "items": [
+        {
+          "id": "f1",
+          "confidence": "note",
+          "title": "Persecution with a good ending",
+          "brief": "Titus fled Sudan as a refugee to Kenya and has now earned a college degree.",
+          "detail": "The Worldview in 5 Minutes credits International Christian Concern, which has helped him since 2023. He credits Jesus as his shelter through the journey.",
+          "sources": [
+            {
+              "outlet": "The Worldview",
+              "url": "https://www.theworldview.com"
+            }
+          ]
+        },
+        {
+          "id": "f2",
+          "confidence": "note",
+          "title": "“Not Dead Yet”",
+          "brief": "Former Sen. Ben Sasse, facing pancreatic cancer, launched a podcast on gratitude.",
+          "detail": "The podcast is with Chris Stirewalt and focuses on living with gratitude and purpose.",
+          "sources": [
+            {
+              "outlet": "The Worldview",
+              "url": "https://www.theworldview.com"
+            }
+          ]
+        },
+        {
+          "id": "f3",
+          "confidence": "note",
+          "title": "Habits and the brain",
+          "brief": "How sleep, exercise, blood sugar and social connection may affect dementia risk.",
+          "detail": "The neurologist also discusses inflammation and alcohol.",
+          "sources": [
+            {
+              "outlet": "The Diary Of A CEO",
+              "url": "https://www.youtube.com/@TheDiaryOfACEO"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "watchlist": [
+    {
+      "when": "2026-11-15",
+      "label": "SUN 15 NOV",
+      "what": "Prague protest against the public-media funding bill, 100,000+ expected",
+      "sources": [
+        {
+          "outlet": "DW",
+          "url": "https://www.dw.com/en"
+        },
+        {
+          "outlet": "iDNES",
+          "url": "https://www.idnes.cz"
+        }
+      ]
+    },
+    {
+      "when": "2026-11-16",
+      "label": "MON 16 NOV",
+      "what": "WCR 31 bridge closure begins near Platteville",
+      "sources": [
+        {
+          "outlet": "Longmont Leader",
+          "url": "https://www.longmontleader.com"
+        }
+      ]
+    },
+    {
+      "when": "2026-11-17",
+      "label": "TUE 17 NOV",
+      "what": "Nvidia earnings; Anthropic expected to begin trading",
+      "sources": [
+        {
+          "outlet": "Reuters",
+          "url": "https://www.reuters.com"
+        }
+      ]
+    },
+    {
+      "when": "2026-11-18",
+      "label": "WED 18 NOV",
+      "what": "Windsor parking ribbon-cutting 1:15 p.m.; Alaska ranked-choice tabulation",
+      "sources": [
+        {
+          "outlet": "North Forty News",
+          "url": "https://northfortynews.com"
+        },
+        {
+          "outlet": "The Hill",
+          "url": "https://thehill.com"
+        }
+      ]
+    },
+    {
+      "when": "2026-12-01",
+      "label": "EARLY DEC",
+      "what": "Senate Democratic leader secret-ballot vote",
+      "sources": [
+        {
+          "outlet": "Axios",
+          "url": "https://www.axios.com"
+        }
+      ]
+    },
+    {
+      "when": "2026-12-04",
+      "label": "FRI 4 DEC",
+      "what": "Ladakh local polls; Sonam Wangchuk plans a court challenge",
+      "sources": [
+        {
+          "outlet": "India Today",
+          "url": "https://www.indiatoday.in"
+        }
+      ]
+    },
+    {
+      "when": "2026-12-10",
+      "label": "THU 10 DEC",
+      "what": "Lutnick testifies to Senate Banking on Megaspeed",
+      "sources": [
+        {
+          "outlet": "CBS News",
+          "url": "https://www.cbsnews.com"
+        }
+      ]
+    },
+    {
+      "when": "2027-01-15",
+      "label": "JANUARY",
+      "what": "Colorado Parks and Wildlife final vote on the prairie dog petition",
+      "sources": [
+        {
+          "outlet": "Colorado Sun",
+          "url": "https://coloradosun.com"
+        }
+      ]
+    },
+    {
+      "when": "2027-03-05",
+      "label": "5 MAR 2027",
+      "what": "WCR 31 bridge work scheduled to finish",
+      "sources": [
+        {
+          "outlet": "Longmont Leader",
+          "url": "https://www.longmontleader.com"
+        }
+      ]
+    }
+  ],
+  "notices": [
+    "The Worldview is paraphrased from its published transcript. Reuters items read through syndicated copies.",
+    "Scripture taken from the New King James Version. Copyright 1982 by Thomas Nelson. Used by permission. All rights reserved.",
+    "Streams in the Desert by L. B. Cowman (1925), public domain."
+  ]
+}

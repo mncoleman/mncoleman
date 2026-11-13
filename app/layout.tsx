@@ -1,3 +1,4 @@
+import { McpCallout } from '@/components/mcp-callout';
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
@@ -202,6 +203,11 @@ export default async function RootLayout({
                 {/* max-w-7xl px-4 is the header's own container, so on desktop the links' left edge
                     lines up with the logo's; below lg the container is narrower than either cap. */}
                 <div className="container mx-auto flex max-w-7xl flex-col items-center gap-6 px-4 pt-8 pb-20 text-center text-muted-foreground lg:pb-5">
+                  {/* The MCP address bar. It used to sit at the top of the home page; the daily
+                      brief has that slot now, and this is on every page, phone and desktop. */}
+                  <div className="w-full text-left">
+                    <McpCallout anchorId="mcp" />
+                  </div>
                   {/* Left: the small links as a LineSidebar. Centre: the "Other" folder. The
                       right column is an empty mirror so the folder stays centred. */}
                   <div className="grid w-full grid-cols-1 items-center gap-6 md:grid-cols-[1fr_auto_1fr]">

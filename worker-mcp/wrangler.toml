@@ -20,7 +20,17 @@ routes = [
   # RFC 9728 protected-resource metadata for /mcp/admin (bare and path-suffixed forms).
   { pattern = "mncoleman.com/.well-known/oauth-protected-resource", zone_name = "mncoleman.com" },
   { pattern = "mncoleman.com/.well-known/oauth-protected-resource/*", zone_name = "mncoleman.com" },
+  # The daily brief's public read API, fetched by the static /brief pages.
+  { pattern = "mncoleman.com/api/brief/*", zone_name = "mncoleman.com" },
 ]
+
+# Daily brief editions: the SAME namespace the admin Worker writes (see worker/wrangler.toml
+# for the one-time setup). Read-only here. Commented out until the id exists, because a
+# placeholder id fails `wrangler deploy`; without it the brief tools and API answer "none yet".
+#
+# [[kv_namespaces]]
+# binding = "BRIEFS"
+# id = "<ID>"
 
 # The admin Worker, called for /mcp/admin only. A binding rather than a fetch to
 # its workers.dev URL: a Worker cannot fetch another Worker on the same account

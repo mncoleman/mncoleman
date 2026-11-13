@@ -50,3 +50,13 @@ id = "9dd2c3346dd84a148dea9fa2f4f825f4"
 [[kv_namespaces]]
 binding = "POST_DRAFTS"
 id = "1f42efc2796b4f6e96305ef767820fd0"
+
+# Daily brief editions (content only; the /brief pages are in the repo). worker-mcp reads the
+# SAME namespace for the public pages and tools. Left commented out for the same reason as above:
+# a placeholder id fails `wrangler deploy`. Until it is enabled the brief routes answer 503.
+#   1. cd worker && npx wrangler kv namespace create BRIEFS
+#   2. Uncomment here AND in worker-mcp/wrangler.toml with that id, then deploy both.
+#
+# [[kv_namespaces]]
+# binding = "BRIEFS"
+# id = "<ID>"

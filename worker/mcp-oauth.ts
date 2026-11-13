@@ -630,6 +630,8 @@ export function mcpRouteAllowed(method: string, path: string, contentType: strin
     if (method === 'POST' && path === '/api/library') return true;
     if (method === 'PATCH' && is(`/api/library/${slug}`)) return true;
     if (method === 'PUT' && is(`/api/posts/${slug}/draft`)) return true;
+    // The daily brief: publish (replace) or delete one edition. Hiding and the section's visibility stay in the admin panel.
+    if ((method === 'PUT' || method === 'DELETE') && is('/api/briefs/\\d{4}-\\d{2}-\\d{2}')) return true;
     return false;
 }
 
