@@ -65,25 +65,27 @@ export function McpConnections() {
             await navigator.clipboard.writeText(ADMIN_MCP_URL);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
-        } catch { /* the address is on screen to copy by hand */ }
+            notify('Admin MCP address copied.');
+        } catch { /* the address is on screen, and one click selects all of it */ }
     };
 
     return (
-        <Section
-            title="Connected apps"
-            action={
-                <button type="button" onClick={copy} className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground hover:text-foreground" aria-label="Copy the admin MCP address">
-                    {ADMIN_MCP_URL.replace('https://', '')} {copied ? <Check size={13} /> : <Copy size={13} />}
-                </button>
-            }
-        >
+        <Section title="Connected apps">
+            {/* The address to paste into Claude as a connector. Always shown, whatever is below. */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border/60 px-5 py-3">
+                <span className="shrink-0 text-xs text-muted-foreground">Admin MCP address</span>
+                <code className="min-w-0 flex-1 basis-56 select-all truncate rounded-md border border-border/60 bg-muted/35 px-2.5 py-1.5 font-mono text-[13px]">{ADMIN_MCP_URL}</code>
+                <Button variant="outline" size="sm" className="h-8 shrink-0 gap-1.5 text-[13px]" onClick={copy}>
+                    {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied' : 'Copy'}
+                </Button>
+            </div>
             {failed ? (
                 <div className="px-5 py-6 text-sm text-muted-foreground">Could not load connections right now.</div>
             ) : rows === null ? (
                 <div className="flex h-20 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Loading" /></div>
             ) : rows.length === 0 ? (
                 <div className="px-5 py-6 text-sm text-muted-foreground">
-                    Nothing is connected. Add the address above as a connector in Claude, sign in, and it can upload artifacts, edit the AI library and save post drafts as you.
+                    Nothing is connected. Add the address above as a connector in Claude, sign in, and it can upload artifacts, edit the AI library, save post drafts and publish the daily brief as you.
                 </div>
             ) : (
                 rows.map((c) => (
