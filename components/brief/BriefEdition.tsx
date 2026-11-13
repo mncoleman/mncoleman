@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import type { BriefEdition as Edition, BriefItem, BriefLink, BriefSource } from '@/lib/brief';
+import { briefVerses, type BriefEdition as Edition, type BriefItem, type BriefLink, type BriefSource } from '@/lib/brief';
 import { dateParts, pad3, shortDate, useBrief, DAYS } from './use-brief';
 import './brief.css';
 
@@ -130,6 +130,7 @@ function Pager({ edition, newer, older, links = [] }: { edition: Edition; newer:
     const compiledAt = Number.isNaN(compiled.getTime()) ? '' : compiled.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const read = items.filter((i) => seen[i.id]).length;
     const w = edition.weather;
+    const verses = briefVerses(edition);
     const short = (text?: string) => text ? <div className="b-short"><b>In short</b><span>{text}</span></div> : null;
     const head = (i: number, summary?: string) => (
         <div className="b-head">
@@ -171,13 +172,18 @@ function Pager({ edition, newer, older, links = [] }: { edition: Edition; newer:
                         <p className="b-meta" style={{ margin: '12px 0 0' }}>Source: {w.source_url ? <a href={w.source_url} target="_blank" rel="noopener noreferrer">{w.source}</a> : w.source}</p>
                     </div>
                 )}
-                {edition.verse && (
+                {verses.length > 0 && (
                     <div className="b-box">
-                        <p className="b-lab">Verse of the day</p>
-                        <p className="b-verse">“{edition.verse.text}”</p>
-                        <p className="b-meta" style={{ margin: 0 }}>
-                            {edition.verse.url ? <a href={edition.verse.url} target="_blank" rel="noopener noreferrer">{edition.verse.reference}</a> : <span style={{ color: 'var(--b-accent)' }}>{edition.verse.reference}</span>} · {edition.verse.translation}
-                        </p>
+                        <p className="b-lab">{verses.length > 1 ? 'Verses of the day' : 'Verse of the day'}</p>
+                        {/* One per source, each with its own citation and link. */}
+                        {verses.map((v, i) => (
+                            <div key={i} className={`b-vitem${verses.length > 1 ? ' many' : ''}`}>
+                                <p className="b-verse">“{v.text}”</p>
+                                <p className="b-meta" style={{ margin: 0 }}>
+                                    {v.url ? <a href={v.url} target="_blank" rel="noopener noreferrer">{v.reference}</a> : <span style={{ color: 'var(--b-accent)' }}>{v.reference}</span>} · {v.translation}{v.source ? ` · ${v.source}` : ''}
+                                </p>
+                            </div>
+                        ))}
                     </div>
                 )}
                 {edition.devotional && (

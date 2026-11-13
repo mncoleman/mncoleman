@@ -22,6 +22,8 @@ export const CONFIDENCE = ['confirmed', 'developing', 'contested', 'note'] as co
 export type Confidence = typeof CONFIDENCE[number];
 
 export interface BriefSource { outlet: string; url: string }
+/** `source` is where this verse of the day was picked from, e.g. "Bible Gateway". */
+export interface BriefVerse { text: string; reference: string; translation: string; url?: string; source?: string }
 /** `brief` is the line on the card; `detail` is the whole write-up shown when it is opened, paragraphs split by a blank line. */
 export interface BriefItem { id: string; confidence: Confidence; title: string; brief: string; detail: string; sources: BriefSource[] }
 export interface BriefSector { key: SectorKey; title: string; summary: string; items: BriefItem[] }
@@ -35,7 +37,10 @@ export interface BriefEdition {
     /** One sentence for the opening page. Optional: the page falls back to the first top story. */
     summary?: string;
     weather?: { summary: string; high_f: number; tonight: string; wind: string; tomorrow: string; source: string; source_url?: string };
-    verse?: { text: string; reference: string; translation: string; url?: string };
+    /** One verse per source (Bible Gateway, the Bible App, ...), each cited on its own. */
+    verses?: BriefVerse[];
+    /** Editions stored before `verses` existed carry a single `verse`. Read it with `briefVerses`; never written now. */
+    verse?: BriefVerse;
     devotional?: { title: string; scripture: { reference: string; text: string }; body: string; attribution: string; url?: string };
     top_signals: { headline: string; sector: SectorKey; item_id: string }[];
     sectors: BriefSector[];
@@ -102,6 +107,9 @@ function toPlain(raw: string, paragraphs = false): string {
     const line = (t: string) => t.replace(/\s+/g, ' ').trim();
     return paragraphs ? clean.split(/\n\s*\n/).map(line).filter(Boolean).join('\n\n') : line(clean);
 }
+
+/** An edition's verses, whichever way it was stored. */
+export const briefVerses = (e: Pick<BriefEdition, 'verses' | 'verse'>): BriefVerse[] => e.verses?.length ? e.verses : e.verse ? [e.verse] : [];
 
 export const briefHeadline = (e: Pick<BriefEdition, 'top_signals' | 'sectors'>): string =>
     e.top_signals[0]?.headline || e.sectors[0]?.items[0]?.title || '';
@@ -188,14 +196,25 @@ export function validateBrief(input: unknown): BriefResult {
             if (su) edition.weather.source_url = su; else if (!errors.some((e) => e.path === 'weather.source_url')) warn('weather.source_url', 'missing: add the forecast page so the reader can open it');
         }
     }
-    if (input.verse !== undefined && input.verse !== null) {
-        const v = input.verse;
-        if (!isObj(v)) err('verse', 'must be an object');
-        else {
-            edition.verse = { text: text(v.text, 'verse.text', 700), reference: text(v.reference, 'verse.reference', 60), translation: text(v.translation, 'verse.translation', 20) };
-            const vu = url(v.url, 'verse.url', false);
-            if (vu) edition.verse.url = vu; else if (!errors.some((e) => e.path === 'verse.url')) warn('verse.url', 'missing: add a link to the passage');
-        }
+    // `verses` is a list, one per source. A single `verse` object (the original shape) is still
+    // accepted and stored as a list of one. Sending both is a mistake worth naming.
+    const hasVerses = input.verses !== undefined && input.verses !== null;
+    const hasVerse = input.verse !== undefined && input.verse !== null;
+    if (hasVerses && hasVerse) err('verse', 'send `verses` (a list) or `verse` (one), not both');
+    else if (hasVerses || hasVerse) {
+        const raw = hasVerses ? list(input.verses, 'verses', 1, 4) : [input.verse];
+        const verses = raw.map((v, i) => {
+            const p = hasVerses ? `verses[${i}]` : 'verse';
+            if (!isObj(v)) { err(p, 'must be an object {text, reference, translation, url, source}'); return null; }
+            const out: BriefVerse = { text: text(v.text, `${p}.text`, 700), reference: text(v.reference, `${p}.reference`, 60), translation: text(v.translation, `${p}.translation`, 20) };
+            const source = text(v.source, `${p}.source`, 40, false);
+            if (source) out.source = source;
+            else if (raw.length > 1) warn(`${p}.source`, 'missing: with more than one verse, say where each was picked from (e.g. "Bible Gateway")');
+            const vu = url(v.url, `${p}.url`, false);
+            if (vu) out.url = vu; else if (!errors.some((e) => e.path === `${p}.url`)) warn(`${p}.url`, 'missing: add a link to the passage');
+            return out;
+        }).filter((x): x is BriefVerse => !!x);
+        if (verses.length) edition.verses = verses;
     }
     if (input.devotional !== undefined && input.devotional !== null) {
         const d = input.devotional;
@@ -260,7 +279,7 @@ export function validateBrief(input: unknown): BriefResult {
     edition.notices = list(input.notices, 'notices', 0, 8).map((n, i) => text(n, `notices[${i}]`, 400)).filter(Boolean);
 
     for (const k of Object.keys(input)) {
-        if (!['date', 'edition_number', 'location', 'compiled_at', 'summary', 'bluf', 'weather', 'verse', 'devotional', 'top_signals', 'sectors', 'watchlist', 'notices'].includes(k)) {
+        if (!['date', 'edition_number', 'location', 'compiled_at', 'summary', 'bluf', 'weather', 'verses', 'verse', 'devotional', 'top_signals', 'sectors', 'watchlist', 'notices'].includes(k)) {
             warn(k, 'unknown field, ignored');
         }
     }

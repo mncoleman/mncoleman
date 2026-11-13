@@ -493,7 +493,7 @@ ADMIN_TOOLS.push(
             '  edition_number: omit it; the server assigns the next number and keeps it on a republish,\n' +
             '  summary: one sentence for the opening page (optional, max 300),\n' +
             '  weather: { summary, high_f (number), tonight, wind, tomorrow, source, source_url } (optional),\n' +
-            '  verse: { text, reference, translation, url } (optional),\n' +
+            '  verses: 1 to 4 of { text, reference, translation, url: link to the passage, source: where it was picked from, e.g. "Bible Gateway" or "Bible App" } (optional; one entry per source, each shown with its own citation. A single `verse` object is still accepted),\n' +
             '  devotional: { title, scripture: { reference, text }, body: the full reading, paragraphs separated by a blank line (max 6000), attribution, url } (optional),\n' +
             '  sectors: 1 to 5 of { key: "signal" | "local" | "nation" | "world" | "field_notes" (each once), title (max 60), summary: one sentence (max 300),\n' +
             '    items: 3 to 8 of { id: short unique id like "s1", confidence: "confirmed" | "developing" | "contested" | "note", title (max 110), brief: one or two sentences (max 260), detail: the FULL write-up shown when the card is opened, complete and not shortened, paragraphs separated by a blank line (max 8000),\n' +

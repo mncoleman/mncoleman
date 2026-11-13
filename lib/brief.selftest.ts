@@ -3,14 +3,15 @@
  * The sample edition must validate cleanly; then the things that must be refused or cleaned.
  */
 import sample from '../data/brief-sample.json';
-import { cleanBriefLinks, isBriefDate, validateBrief } from './brief';
+import { briefVerses, cleanBriefLinks, isBriefDate, validateBrief } from './brief';
 
 let failed = 0;
 const check = (name: string, ok: unknown) => { if (!ok) { failed++; console.error(`FAIL  ${name}`); } else console.log(`ok    ${name}`); };
 const clone = () => JSON.parse(JSON.stringify(sample));
 const errorsOf = (e: unknown) => { const r = validateBrief(e); return r.ok ? [] : r.errors.map((x) => x.path); };
 
-const good = validateBrief(sample);
+let r = validateBrief(sample);
+const good = r;
 check('the sample edition is valid', good.ok);
 check('the sample edition has no warnings', good.warnings.length === 0);
 check('validation is idempotent', good.ok && JSON.stringify(validateBrief(good.edition)) === JSON.stringify(good));
@@ -38,7 +39,7 @@ e = clone(); e.sectors[0].items = [...e.sectors[0].items, ...e.sectors[0].items.
 check('more than 8 items is refused', errorsOf(e).includes('sectors[0].items'));
 
 e = clone(); e.sectors[0].items[0].brief = 'Now <b>with</b> **markup** and a [link](https://example.com).';
-let r = validateBrief(e);
+r = validateBrief(e);
 check('markup is stripped and reported, not rejected', r.ok && r.edition.sectors[0].items[0].brief === 'Now with markup and a link.' && r.warnings.some((w) => w.path === 'sectors[0].items[0].brief'));
 e = clone(); e.sectors[0].items[0].detail = 'First paragraph\nstill first.\n\n\nSecond  paragraph.';
 r = validateBrief(e);
@@ -49,7 +50,19 @@ check('dashes warn but publish', r.ok && r.warnings.some((w) => w.path === 'sect
 e = clone(); e.sectors[0].bluf = e.sectors[0].summary; delete e.sectors[0].summary;
 r = validateBrief(e);
 check('the old field name `bluf` is still accepted', r.ok && !!r.edition.sectors[0].summary);
-e = clone(); delete e.weather; delete e.verse; delete e.devotional; e.watchlist = []; e.top_signals = [];
+e = clone(); e.verse = e.verses[0]; delete e.verses;
+r = validateBrief(e);
+check('a single `verse` is still accepted and stored as a list', r.ok && r.edition.verses?.length === 1 && !('verse' in r.edition && r.edition.verse));
+e = clone(); e.verse = e.verses[0];
+check('`verse` and `verses` together are refused', errorsOf(e).includes('verse'));
+e = clone(); e.verses = [e.verses[0], { text: 'Even there your hand will guide me.', reference: 'Psalm 139:10', translation: 'NIV', url: 'https://www.bible.com/verse-of-the-day', source: 'Bible App' }];
+r = validateBrief(e);
+check('two verses, each with its own source and link', r.ok && r.edition.verses?.length === 2 && r.edition.verses[1].source === 'Bible App' && r.warnings.length === 0);
+delete e.verses[1].source;
+r = validateBrief(e);
+check('with several verses, a missing source warns', r.ok && r.warnings.some((w) => w.path === 'verses[1].source'));
+check('the old stored shape still reads', briefVerses({ verse: { text: 't', reference: 'r', translation: 'KJV' } }).length === 1 && briefVerses({}).length === 0);
+e = clone(); delete e.weather; delete e.verses; delete e.devotional; e.watchlist = []; e.top_signals = [];
 check('optional sections may be left out', validateBrief(e).ok);
 e = clone(); e.sectors[4].items = e.sectors[4].items.slice(0, 2);
 r = validateBrief(e);

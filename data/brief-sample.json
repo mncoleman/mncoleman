@@ -13,12 +13,15 @@
     "source": "National Weather Service",
     "source_url": "https://forecast.weather.gov/MapClick.php?lat=40.3083&lon=-105.0811"
   },
-  "verse": {
-    "text": "For this is the will of God, that by doing good you may put to silence the ignorance of foolish men, as free, yet not using liberty as a cloak for vice, but as bondservants of God.",
-    "reference": "1 Peter 2:15-16",
-    "translation": "NKJV",
-    "url": "https://www.biblegateway.com/passage/?search=1%20Peter%202%3A15-16&version=NKJV"
-  },
+  "verses": [
+    {
+      "text": "For this is the will of God, that by doing good you may put to silence the ignorance of foolish men, as free, yet not using liberty as a cloak for vice, but as bondservants of God.",
+      "reference": "1 Peter 2:15-16",
+      "translation": "NKJV",
+      "url": "https://www.biblegateway.com/passage/?search=1%20Peter%202%3A15-16&version=NKJV",
+      "source": "Bible Gateway"
+    }
+  ],
   "devotional": {
     "title": "Sailing Through the Tempest",
     "scripture": {
