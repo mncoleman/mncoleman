@@ -7,7 +7,7 @@
 | Piece | Where | Notes |
 | --- | --- | --- |
 | Pages (the "skeleton") | `app/brief/`, `components/brief/` | Static. `/brief` (latest), `/brief/YYYY-MM-DD`, `/brief/archive`. |
-| Content | Cloudflare KV namespace `BRIEFS` | `brief:<date>`, `index`, `config`. Hide or delete an edition and it is gone at once, no rebuild. |
+| Content | Cloudflare KV namespace `BRIEFS` | `brief:<date>`, `index`, `config`. Hide or delete an edition and it is gone within about a minute (KV propagation), no rebuild. |
 | Writes | admin Worker, `PUT/PATCH/DELETE /api/briefs/:date`, `PUT /api/briefs/config` | Validated by `lib/brief.ts`. Needs the `content` feature. |
 | Public reads | `worker-mcp`, `/api/brief/index`, `/latest`, `/<date>`, `/rss` | Same origin as the site. Honour the visibility switch and hidden editions. |
 | MCP | `get_brief`, `list_briefs` (public, `/mcp`); `publish_brief`, `delete_brief` (signed in, `/mcp/admin`) | |
@@ -55,8 +55,9 @@ Rules: plain text only (HTML and Markdown are stripped, with a warning); every s
 
 1. `cd worker && npx wrangler kv namespace create BRIEFS`
 2. Uncomment the `BRIEFS` block in **both** `worker/wrangler.toml` and `worker-mcp/wrangler.toml` with that id.
-3. Deploy `worker/`, then `worker-mcp/`, then merge to `main` for the pages.
-4. Seed the sample: sign in to the admin panel, then publish `data/brief-sample.json` through `publish_brief` (or `PUT /api/briefs/2026-11-13` with `{"edition": <that file>}`). Its source links are outlet home pages, not the articles.
+3. Deploy `worker/`, then `worker-mcp/`.
+4. Seed the sample BEFORE merging to `main` (the home page bar opens `/brief`, which says "No brief yet" until one exists): sign in to the admin panel, then publish `data/brief-sample.json` through `publish_brief` (or `PUT /api/briefs/2026-11-13` with `{"edition": <that file>}`). Its source links are outlet home pages, not the articles.
+5. Merge to `main` for the pages.
 
 ## Day to day
 

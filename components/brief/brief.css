@@ -127,3 +127,7 @@
     .brief .b-date { flex-basis: 88px; } .brief .b-big { font-size: 52px; }
 }
 @media (prefers-reduced-motion: reduce) { .brief .b-track, .brief .b-prog div { transition: none; } }
+
+/* The brief covers the site's header and footer; take them out of the tab order and away from
+   screen readers while it is up, so focus cannot land on something that is not visible. */
+html:has(.brief) body header:not(.b-top), html:has(.brief) body footer { visibility: hidden; }
