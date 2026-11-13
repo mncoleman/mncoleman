@@ -444,10 +444,13 @@ async function authorizeGet(request: Request, url: URL, deps: OAuthDeps): Promis
 }
 
 async function authorizePost(request: Request, url: URL, deps: OAuthDeps): Promise<Response> {
-    // A browser always sends Origin on a form POST; anything from elsewhere is not our consent page.
+    // Refuse a post that names another site as its source. `Origin: null` is NOT that: the consent
+    // page is served with `Referrer-Policy: no-referrer`, and browsers then send a null Origin on
+    // its own form post. The HMAC below (bound to the session and the exact request) is what
+    // actually proves the approval came from our page; these headers are an early extra check.
     const origin = request.headers.get('Origin');
     const site = request.headers.get('Sec-Fetch-Site');
-    if ((origin && origin !== url.origin) || (site && site !== 'same-origin')) return errorPage('This approval did not come from the consent page.', 403);
+    if ((origin && origin !== 'null' && origin !== url.origin) || site === 'cross-site') return errorPage('This approval did not come from the consent page.', 403);
     const text = await request.text();
     if (text.length > MAX_QUERY * 2) return errorPage('This approval is malformed.');
     const form = new URLSearchParams(text);

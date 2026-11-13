@@ -99,6 +99,8 @@ async function main() {
     check('approval with a forged mac is refused', (await call('/oauth/authorize', form({ ...approval, mac: 'x'.repeat(43) }))).status === 403);
     check('approval for a tampered request is refused', (await call('/oauth/authorize', form({ ...approval, q: approval.q.replace('st8', 'st9') }))).status === 403);
     check('approval from another origin is refused', (await call('/oauth/authorize', { ...form(approval), headers: { 'Content-Type': 'application/x-www-form-urlencoded', Origin: 'https://evil.example' } })).status === 403);
+    check('a null Origin (what browsers send from a no-referrer page) is not refused on that ground', (await call('/oauth/authorize', { ...form({ ...approval, decision: 'deny' }), headers: { 'Content-Type': 'application/x-www-form-urlencoded', Origin: 'null', 'Sec-Fetch-Site': 'same-origin' } })).status === 302);
+    check('a cross-site post is refused', (await call('/oauth/authorize', { ...form(approval), headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Sec-Fetch-Site': 'cross-site' } })).status === 403);
     signedIn = false;
     check('approval without a session is refused', (await call('/oauth/authorize', form(approval))).status === 401);
     signedIn = true;
