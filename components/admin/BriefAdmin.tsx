@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Eye, EyeOff, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { Check, Copy, ExternalLink, Eye, EyeOff, Loader2, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authHeaders } from '@/lib/admin-auth';
 import { useAdmin } from '@/components/admin/admin-context';
-import { Section, SectionRow, StatusPill, notify } from '@/components/admin/kit';
+import { AdminPage, HeaderSpacer, PageHeader, Section, SectionRow, StatusPill, notify } from '@/components/admin/kit';
 import { BRIEF_LINK_SECTIONS, type BriefConfig, type BriefLink, type BriefLinkSection, type BriefSummary } from '@/lib/brief';
 
 const SECTION_LABELS: Record<BriefLinkSection, string> = {
@@ -14,12 +14,16 @@ const SECTION_LABELS: Record<BriefLinkSection, string> = {
     signal: 'Tech', local: 'Local', nation: 'Nation', world: 'World', field_notes: 'Notes',
 };
 
+/** The signed-in MCP endpoint the publishing agent connects to. */
+const ADMIN_MCP_URL = 'https://mncoleman.com/mcp/admin';
+
 /**
- * Daily brief controls. Editions are published by the scheduled agent through
- * the MCP server (`publish_brief`); this is where a person takes one down,
- * turns the whole section off, and keeps the "External sources" link list
- * that closes every edition. All of it is KV, so every change is live at once
- * with no rebuild.
+ * The admin's Brief page (`/admin/brief`). Editions are published by the
+ * scheduled agent through the MCP server (`publish_brief`); this is where a
+ * person takes one down, turns the whole section off, and keeps the source
+ * library: the links the agent researches from (`list_brief_sources`), which
+ * are also the External sources page that closes every edition. All of it is
+ * KV, so a change shows within about a minute with no rebuild.
  */
 export function BriefAdmin() {
     const { workerUrl } = useAdmin();
@@ -29,6 +33,15 @@ export function BriefAdmin() {
     const [state, setState] = useState<'loading' | 'ready' | 'unavailable' | 'failed'>('loading');
     const [busy, setBusy] = useState<string | null>(null);
     const [confirming, setConfirming] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
+    const copyAddress = async () => {
+        try {
+            await navigator.clipboard.writeText(ADMIN_MCP_URL);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+            notify('Admin MCP address copied.');
+        } catch { /* the address is on screen, and one click selects all of it */ }
+    };
 
     const call = useCallback((path: string, init?: RequestInit) => fetch(`${workerUrl}/api/briefs${path}`, {
         ...init, credentials: 'include', headers: authHeaders(init?.body ? { 'Content-Type': 'application/json' } : undefined),
@@ -63,32 +76,85 @@ export function BriefAdmin() {
     const linksDirty = JSON.stringify(links) !== JSON.stringify(config.links || []);
     const field = 'h-9 min-w-0 rounded-md border border-border/60 bg-background px-2.5 text-sm';
 
+    const visible = (rows || []).filter((r) => !r.hidden).length;
     return (
-        <Section
-            title="Daily brief"
-            action={state === 'ready' && (
-                <Button
-                    variant="outline" size="sm" className="h-8 gap-1.5 text-[13px]" disabled={busy === 'vis'}
-                    onClick={() => run('vis', () => call('/config', { method: 'PUT', body: JSON.stringify({ visibility: isPublic ? 'private' : 'public' }) }),
-                        () => setConfig((c) => ({ ...c, visibility: isPublic ? 'private' : 'public' })), isPublic ? 'The brief is now private.' : 'The brief is now public.')}
-                >
-                    {isPublic ? <Eye size={13} /> : <EyeOff size={13} />} {isPublic ? 'Public' : 'Private'}
+        <AdminPage>
+            <PageHeader title="Brief">
+                {state === 'ready' && <StatusPill tone={isPublic ? 'ok' : 'warn'}>{isPublic ? 'Public' : 'Private'}</StatusPill>}
+                <HeaderSpacer />
+                <Button asChild variant="outline" className="h-10 gap-1.5 rounded-lg px-4 text-sm">
+                    <Link href="/brief" target="_blank"><ExternalLink size={15} /> Open the brief</Link>
                 </Button>
-            )}
-        >
+                {state === 'ready' && (
+                    <Button
+                        variant="outline" className="h-10 gap-1.5 rounded-lg px-4 text-sm" disabled={busy === 'vis'}
+                        onClick={() => run('vis', () => call('/config', { method: 'PUT', body: JSON.stringify({ visibility: isPublic ? 'private' : 'public' }) }),
+                            () => setConfig((c) => ({ ...c, visibility: isPublic ? 'private' : 'public' })), isPublic ? 'The brief is now private.' : 'The brief is now public.')}
+                    >
+                        {isPublic ? <EyeOff size={15} /> : <Eye size={15} />} {isPublic ? 'Make private' : 'Make public'}
+                    </Button>
+                )}
+            </PageHeader>
+
             {state === 'loading' ? (
-                <div className="flex h-20 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Loading" /></div>
+                <div className="flex h-40 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Loading" /></div>
             ) : state === 'unavailable' ? (
-                <div className="px-5 py-6 text-sm text-muted-foreground">Brief storage is not set up yet: the Worker has no BRIEFS namespace. See <code>docs/daily-brief.md</code>.</div>
+                <p className="text-sm text-muted-foreground">Brief storage is not set up: the Worker has no BRIEFS namespace. See <code>docs/daily-brief.md</code>.</p>
             ) : state === 'failed' ? (
-                <div className="px-5 py-6 text-sm text-muted-foreground">Could not load the brief right now.</div>
+                <p className="text-sm text-muted-foreground">Could not load the brief right now.</p>
             ) : (
                 <>
-                    {!isPublic && <p className="border-b border-border/60 px-5 py-3 text-xs text-amber-700 dark:text-amber-400">Private: the pages, the archive and the public MCP tools show nothing until you switch it back. Nothing is deleted.</p>}
-                    <div className="border-b border-border/60 px-5 py-4">
-                        <h3 className="mb-1 text-sm font-medium">Source library</h3>
+                    {!isPublic && (
+                        <p className="mb-5 rounded-[10px] border border-amber-500/40 px-5 py-3 text-sm text-amber-700 dark:text-amber-400">
+                            Private: the pages, the archive, the feed and the public MCP tools show nothing until you make it public again. Nothing is deleted.
+                        </p>
+                    )}
+
+                    <Section
+                        title={rows && rows.length ? `Editions (${rows.length}${visible !== rows.length ? `, ${rows.length - visible} hidden` : ''})` : 'Editions'}
+                        action={<Link href="/brief/archive" target="_blank" className="text-[13px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">Archive</Link>}
+                    >
+                        {(rows || []).length === 0 ? (
+                            <div className="px-5 py-6 text-sm text-muted-foreground">No edition has been published yet.</div>
+                        ) : (rows || []).map((r) => (
+                            <SectionRow
+                                key={r.date}
+                                title={<Link href={`/brief/${r.date}`} target="_blank" className="hover:underline">{r.date} · Brief {String(r.edition_number).padStart(3, '0')}</Link>}
+                                subtitle={r.headline}
+                                right={
+                                    <span className="flex shrink-0 items-center gap-2">
+                                        {r.hidden && <StatusPill tone="warn">Hidden</StatusPill>}
+                                        <Button variant="outline" size="sm" className="h-8 text-[13px]" disabled={busy === r.date}
+                                            onClick={() => run(r.date, () => call(`/${r.date}`, { method: 'PATCH', body: JSON.stringify({ hidden: !r.hidden }) }),
+                                                () => setRows((prev) => (prev || []).map((x) => (x.date === r.date ? { ...x, hidden: !r.hidden || undefined } : x))), r.hidden ? 'Edition is showing again.' : 'Edition hidden.')}>
+                                            {r.hidden ? 'Show' : 'Hide'}
+                                        </Button>
+                                        {confirming === r.date ? (
+                                            <Button variant="destructive" size="sm" className="h-8 text-[13px]" disabled={busy === r.date}
+                                                onClick={() => run(r.date, () => call(`/${r.date}`, { method: 'DELETE' }), () => setRows((prev) => (prev || []).filter((x) => x.date !== r.date)), 'Edition deleted.')}>
+                                                Delete for good
+                                            </Button>
+                                        ) : (
+                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={`Delete the ${r.date} edition`} onClick={() => setConfirming(r.date)}><Trash2 size={14} /></Button>
+                                        )}
+                                    </span>
+                                }
+                            />
+                        ))}
+                    </Section>
+
+                    <Section
+                        title={`Source library${links.length ? ` (${links.length})` : ''}`}
+                        action={linksDirty && (
+                            <Button size="sm" className="h-8 text-[13px]" disabled={busy === 'links'}
+                                onClick={() => run('links', () => call('/config', { method: 'PUT', body: JSON.stringify({ links }) }), () => setConfig((c) => ({ ...c, links })), 'Links saved.')}>
+                                {busy === 'links' ? <Loader2 size={13} className="animate-spin" /> : 'Save links'}
+                            </Button>
+                        )}
+                        padded
+                    >
                         <p className="mb-3 text-xs text-muted-foreground">
-                            Shown as the External sources page that closes every edition, and read by the publishing agent before it researches (the <code>list_brief_sources</code> tool).
+                            The links the publishing agent researches from (its <code>list_brief_sources</code> tool), also shown as the External sources page that closes every edition.
                             &quot;Feeds&quot; and the note tell the agent what each link is for. Leave the list empty to drop the page.
                         </p>
                         <div className="flex flex-col gap-2">
@@ -104,45 +170,27 @@ export function BriefAdmin() {
                                 </div>
                             ))}
                         </div>
-                        <div className="mt-3 flex gap-2">
+                        <div className="mt-3 flex items-center gap-3">
                             <Button variant="outline" size="sm" className="h-8 gap-1.5 text-[13px]" onClick={() => setLinks([...links, { label: '', url: '' }])}><Plus size={13} /> Add link</Button>
-                            {linksDirty && (
-                                <Button size="sm" className="h-8 text-[13px]" disabled={busy === 'links'}
-                                    onClick={() => run('links', () => call('/config', { method: 'PUT', body: JSON.stringify({ links }) }), () => setConfig((c) => ({ ...c, links })), 'Links saved.')}>
-                                    {busy === 'links' ? <Loader2 size={13} className="animate-spin" /> : 'Save links'}
-                                </Button>
-                            )}
+                            {linksDirty && <span className="text-xs text-amber-700 dark:text-amber-400">Unsaved changes</span>}
                         </div>
-                    </div>
-                    {(rows || []).length === 0 ? (
-                        <div className="px-5 py-6 text-sm text-muted-foreground">No edition has been published yet.</div>
-                    ) : (rows || []).slice(0, 14).map((r) => (
-                        <SectionRow
-                            key={r.date}
-                            title={<Link href={`/brief/${r.date}`} className="hover:underline">{r.date} · Brief {String(r.edition_number).padStart(3, '0')}</Link>}
-                            subtitle={r.headline}
-                            right={
-                                <span className="flex shrink-0 items-center gap-2">
-                                    {r.hidden && <StatusPill tone="warn">Hidden</StatusPill>}
-                                    <Button variant="outline" size="sm" className="h-8 text-[13px]" disabled={busy === r.date}
-                                        onClick={() => run(r.date, () => call(`/${r.date}`, { method: 'PATCH', body: JSON.stringify({ hidden: !r.hidden }) }),
-                                            () => setRows((prev) => (prev || []).map((x) => (x.date === r.date ? { ...x, hidden: !r.hidden || undefined } : x))), r.hidden ? 'Edition is showing again.' : 'Edition hidden.')}>
-                                        {r.hidden ? 'Show' : 'Hide'}
-                                    </Button>
-                                    {confirming === r.date ? (
-                                        <Button variant="destructive" size="sm" className="h-8 text-[13px]" disabled={busy === r.date}
-                                            onClick={() => run(r.date, () => call(`/${r.date}`, { method: 'DELETE' }), () => setRows((prev) => (prev || []).filter((x) => x.date !== r.date)), 'Edition deleted.')}>
-                                            Delete for good
-                                        </Button>
-                                    ) : (
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={`Delete the ${r.date} edition`} onClick={() => setConfirming(r.date)}><Trash2 size={14} /></Button>
-                                    )}
-                                </span>
-                            }
-                        />
-                    ))}
+                    </Section>
+
+                    <Section title="Publishing" padded>
+                        <p className="mb-3 text-sm text-muted-foreground">
+                            Editions are published by a Claude connected to the admin MCP address below, with the <code>publish_brief</code> tool. Which apps are connected, and disconnecting one, is on the <Link href="/admin" className="underline underline-offset-4 hover:text-foreground">Overview</Link>.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                            <span className="shrink-0 text-xs text-muted-foreground">Admin MCP address</span>
+                            <code className="min-w-0 flex-1 basis-56 select-all truncate rounded-md border border-border/60 bg-muted/35 px-2.5 py-1.5 font-mono text-[13px]">{ADMIN_MCP_URL}</code>
+                            <Button variant="outline" size="sm" className="h-8 shrink-0 gap-1.5 text-[13px]" onClick={copyAddress}>
+                                {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied' : 'Copy'}
+                            </Button>
+                        </div>
+                        <p className="mt-3 text-xs text-muted-foreground">Public feed: <a href="/api/brief/rss" target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-foreground">/api/brief/rss</a>. Hiding or deleting an edition takes up to about a minute to show.</p>
+                    </Section>
                 </>
             )}
-        </Section>
+        </AdminPage>
     );
 }

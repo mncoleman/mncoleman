@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { BookMarked, FileUp, FolderKanban, Library, Loader2, PenLine, RefreshCw, Rocket } from 'lucide-react';
+import { BookMarked, FileUp, FolderKanban, Library, Loader2, Newspaper, PenLine, RefreshCw, Rocket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authHeaders } from '@/lib/admin-auth';
 import { useAdmin, canUse, canSeeArtifacts } from '@/components/admin/admin-context';
@@ -13,7 +13,6 @@ import { useRebuild } from '@/components/admin/use-rebuild';
 import { AdminPage, HeaderSpacer, NewButton, PageHeader, Section, SectionRow, StatGrid, StatTile, StatusPill } from '@/components/admin/kit';
 import { relativeTime } from '@/components/admin/artifacts/artifact-logic';
 import { McpConnections } from '@/components/admin/McpConnections';
-import { BriefAdmin } from '@/components/admin/BriefAdmin';
 import type { PostSummary } from '@/lib/post-format';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -182,13 +181,12 @@ export default function AdminOverviewPage() {
                 )}
             </div>
 
-            {editsContent && <BriefAdmin />}
-
             <McpConnections />
 
             <Section title="Quick actions" padded>
                 <div className="flex flex-wrap gap-2">
                     {editsContent && <Quick icon={PenLine} label="New post" href="/admin/posts/edit" />}
+                    {editsContent && <Quick icon={Newspaper} label="Daily brief" href="/admin/brief" />}
                     {editsContent && <Quick icon={FolderKanban} label="New project" onClick={() => create('projects')} />}
                     {editsContent && <Quick icon={BookMarked} label="New resource" onClick={() => create('resources')} />}
                     {canUse(user, 'artifacts') && <Quick icon={FileUp} label="Upload artifact" href="/admin/artifacts/edit" />}

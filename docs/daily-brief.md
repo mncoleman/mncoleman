@@ -59,11 +59,11 @@ The `BRIEFS` namespace exists and is bound in both `worker/wrangler.toml` and `w
 ## Day to day
 
 - **Preview locally:** `npm run dev`, open `/brief`. With no Worker behind it the page shows `data/brief-sample.json`. Check a new edition's JSON with `npx tsx lib/brief.selftest.ts` as a model for calling `validateBrief`.
-- **Take one edition down:** admin Overview, Daily brief, Hide (reversible) or the bin (permanent).
+- **Take one edition down:** admin panel, Brief (`/admin/brief`), Hide (reversible) or the bin (permanent).
 - **Roll back an edition:** publish the corrected JSON for the same date; it replaces the stored one.
-- **Turn the whole section off:** admin Overview, Daily brief, the Public / Private button. Private makes the pages, archive, feed and public MCP tools show nothing; nothing is deleted.
+- **Turn the whole section off:** admin panel, Brief (`/admin/brief`), the Public / Private button. Private makes the pages, archive, feed and public MCP tools show nothing; nothing is deleted.
 - **Search indexing:** off. `BRIEF_INDEXABLE` in `app/brief/brief-config.ts` (noindex on the pages and a robots.txt rule); changing it needs a deploy.
-- **Source library:** the link list in the same admin section. It is the External sources page that closes every edition, and the publishing agent reads it through the admin MCP tool `list_brief_sources` (each link: name, URL, the part of the brief it feeds, a note). It is edited only in the admin panel; the MCP tool is read-only on purpose, so the agent cannot rewrite its own source list.
+- **Source library:** the link list on the same admin page. It is the External sources page that closes every edition, and the publishing agent reads it through the admin MCP tool `list_brief_sources` (each link: name, URL, the part of the brief it feeds, a note). It is edited only in the admin panel; the MCP tool is read-only on purpose, so the agent cannot rewrite its own source list.
 - **Roll back the design:** revert the commit that changed `components/brief/`; content is untouched.
 
 ## Changing the brief (for a future session)
@@ -84,7 +84,7 @@ Read this section before touching anything. It is the map; the code comments car
 | What the agent is told to send | `publish_brief` description in `worker-mcp/index.ts`, and the Edition block above | deploy `worker-mcp/` |
 | Storing, numbering, hiding, visibility, the link list | `/api/briefs/*` in `worker/index.ts` | deploy `worker/` |
 | Public reads, `get_brief`, `list_briefs`, RSS | `worker-mcp/index.ts` (`briefIndex`, `briefEdition`, `briefRss`) | deploy `worker-mcp/` |
-| Admin controls | `components/admin/BriefAdmin.tsx` (mounted in `app/admin/page.tsx`) | site deploy only |
+| Admin page (`/admin/brief`) | `components/admin/BriefAdmin.tsx`, `app/admin/brief/page.tsx`, the sidebar entry in `components/admin/AdminNav.tsx` | site deploy only |
 | The sample shown in `next dev` | `data/brief-sample.json` (must pass `validateBrief` with no warnings) | nothing |
 
 ### Adding or changing a field: the checklist

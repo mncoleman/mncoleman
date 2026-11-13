@@ -110,7 +110,7 @@ profile-summary-card-output/ — CI-generated GitHub stat SVGs (do not hand-edit
 
 ### Pages
 
-`/` · `/about` · `/blog` + `/blog/[slug]` · `/projects` + `/projects/[slug]` · `/resources` + `/resources/[slug]` · `/resume` · `/artifacts` + `/artifacts/[slug]` · `/ai` · `/bible` + `/bible/[book]/[chapter]` · `/brand-kit` · `/privacy` · `/terms` · `/admin` + `/admin/{posts,projects,resources,artifacts,library,analytics,users}` (`/admin/posts/edit`, `/admin/projects/edit`, `/admin/resources/edit`, `/admin/library/edit` and `/admin/artifacts/edit` are the full-page editors; `/admin/artifacts/edit` takes `?slug=` (instant detail), `?file=` (static detail), `?slug=&mode=edit` (edit mode) or nothing (upload); `/admin/content` only redirects to `/admin/projects`). List pages that need client interactivity split into a server `page.tsx` (metadata + data fetch) plus a `*PageClient.tsx` (`'use client'`).
+`/` · `/about` · `/blog` + `/blog/[slug]` · `/projects` + `/projects/[slug]` · `/resources` + `/resources/[slug]` · `/resume` · `/artifacts` + `/artifacts/[slug]` · `/ai` · `/bible` + `/bible/[book]/[chapter]` · `/brand-kit` · `/privacy` · `/terms` · `/admin` + `/admin/{posts,brief,projects,resources,artifacts,library,analytics,users}` (`/admin/posts/edit`, `/admin/projects/edit`, `/admin/resources/edit`, `/admin/library/edit` and `/admin/artifacts/edit` are the full-page editors; `/admin/artifacts/edit` takes `?slug=` (instant detail), `?file=` (static detail), `?slug=&mode=edit` (edit mode) or nothing (upload); `/admin/content` only redirects to `/admin/projects`). List pages that need client interactivity split into a server `page.tsx` (metadata + data fetch) plus a `*PageClient.tsx` (`'use client'`).
 
 ## Data Model
 
