@@ -13,6 +13,10 @@ compatibility_date = "2026-07-01"
 # /mcp* on the real domain while every other path still falls through to the
 # GitHub Pages origin. That is what makes https://mncoleman.com/mcp possible on
 # an otherwise fully static site.
+# Also reachable on workers.dev for smoke-testing before/independently of DNS. Top-level keys
+# like this one must stay ABOVE every [table] below, or TOML reads them as part of that table.
+workers_dev = true
+
 routes = [
   { pattern = "mncoleman.com/mcp", zone_name = "mncoleman.com" },
   { pattern = "mncoleman.com/mcp/*", zone_name = "mncoleman.com" },
@@ -36,8 +40,6 @@ id = "64192daa067042f6850143000d6760b7"
 binding = "ADMIN"
 service = "mncoleman-admin-auth"
 
-# Also reachable on workers.dev for smoke-testing before/independently of DNS.
-workers_dev = true
 
 [vars]
 SITE_URL = "https://mncoleman.com"
