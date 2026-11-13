@@ -2,25 +2,47 @@ name = "mncoleman-site-mcp"
 main = "index.ts"
 compatibility_date = "2026-07-01"
 
-# Public MCP server for mncoleman.com. Holds NO secrets — everything it serves is
-# already published on the site, and it authenticates nothing. Deliberately a
-# separate Worker from `worker/` (mncoleman-admin-auth), which does hold secrets
-# and gates every POST behind an Origin allowlist + CSRF header that MCP clients
-# cannot send.
+# MCP server for mncoleman.com. /mcp is public and read-only; /mcp/admin adds
+# admin tools behind OAuth. Holds NO secrets either way: the admin Worker
+# (`worker/`, mncoleman-admin-auth) is the authorization server and the thing
+# that verifies every token, reached through the ADMIN service binding below.
+# Deliberately a separate Worker from it: that one holds secrets and gates every
+# POST behind an Origin allowlist + CSRF header that MCP clients cannot send.
 
 # The apex is proxied through Cloudflare (orange), so this route intercepts
 # /mcp* on the real domain while every other path still falls through to the
 # GitHub Pages origin. That is what makes https://mncoleman.com/mcp possible on
 # an otherwise fully static site.
+# Also reachable on workers.dev for smoke-testing before/independently of DNS. Top-level keys
+# like this one must stay ABOVE every [table] below, or TOML reads them as part of that table.
+workers_dev = true
+
 routes = [
   { pattern = "mncoleman.com/mcp", zone_name = "mncoleman.com" },
   { pattern = "mncoleman.com/mcp/*", zone_name = "mncoleman.com" },
   { pattern = "mncoleman.com/.well-known/mcp.json", zone_name = "mncoleman.com" },
+  # RFC 9728 protected-resource metadata for /mcp/admin (bare and path-suffixed forms).
+  { pattern = "mncoleman.com/.well-known/oauth-protected-resource", zone_name = "mncoleman.com" },
+  { pattern = "mncoleman.com/.well-known/oauth-protected-resource/*", zone_name = "mncoleman.com" },
+  # The daily brief's public read API, fetched by the static /brief pages.
+  { pattern = "mncoleman.com/api/brief/*", zone_name = "mncoleman.com" },
 ]
 
-# Also reachable on workers.dev for smoke-testing before/independently of DNS.
-workers_dev = true
+# Daily brief editions: the SAME namespace the admin Worker writes. Read-only here.
+[[kv_namespaces]]
+binding = "BRIEFS"
+id = "64192daa067042f6850143000d6760b7"
+
+# The admin Worker, called for /mcp/admin only. A binding rather than a fetch to
+# its workers.dev URL: a Worker cannot fetch another Worker on the same account
+# that way. Deploy `worker/` first, or this binding has nothing to point at.
+[[services]]
+binding = "ADMIN"
+service = "mncoleman-admin-auth"
+
 
 [vars]
 SITE_URL = "https://mncoleman.com"
 ARTIFACTS_SERVICE_URL = "https://artifacts.mncoleman.com"
+# The OAuth authorization server clients are sent to: the admin Worker's public origin.
+AUTH_SERVER_URL = "https://mncoleman-admin-auth.mncoleman.workers.dev"

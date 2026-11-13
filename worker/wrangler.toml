@@ -27,6 +27,7 @@ GITHUB_REPO_NAME = "mncoleman"
 N8N_WEBHOOK_URL = ""
 ARTIFACTS_SERVICE_URL = "https://artifacts.mncoleman.com"
 GA_PROPERTY_ID = "515551096"    # GA4 numeric property id — not the G- measurement id
+MCP_RESOURCE_URL = "https://mncoleman.com/mcp/admin"  # the authenticated MCP endpoint (worker-mcp); OAuth tokens are issued for it alone
 
 # Daily content rebuild (06:00 UTC), replacing the old deploy.yml `schedule:`.
 [triggers]
@@ -49,3 +50,9 @@ id = "9dd2c3346dd84a148dea9fa2f4f825f4"
 [[kv_namespaces]]
 binding = "POST_DRAFTS"
 id = "1f42efc2796b4f6e96305ef767820fd0"
+
+# Daily brief editions (content only; the /brief pages are in the repo). worker-mcp binds the
+# SAME namespace, read-only, for the public pages, feed and tools.
+[[kv_namespaces]]
+binding = "BRIEFS"
+id = "64192daa067042f6850143000d6760b7"
