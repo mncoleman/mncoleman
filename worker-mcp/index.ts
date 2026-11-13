@@ -1079,7 +1079,8 @@ export default {
         // Briefly cacheable by the browser only; never by the edge, so hiding an edition is immediate.
         if (url.pathname.startsWith('/api/brief/')) {
             if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
-            const what = url.pathname.slice('/api/brief/'.length);
+            // The site builds links with a trailing slash; accept both forms.
+            const what = url.pathname.slice('/api/brief/'.length).replace(/\/$/, '');
             const fresh = { 'Cache-Control': 'private, max-age=30' };
             if (what === 'index') return json({ briefs: await briefIndex(env) }, 200, fresh);
             if (what === 'rss') return briefRss(env);
