@@ -207,7 +207,8 @@ function loopback(raw: string): URL | null {
 }
 
 export function validRedirectUri(raw: unknown): raw is string {
-    if (typeof raw !== 'string' || raw.length > 500) return false;
+    // 200, not more: five of them have to fit inside a client_id that is itself under 1500 characters.
+    if (typeof raw !== 'string' || raw.length > 200) return false;
     return HOSTED_CALLBACKS.includes(raw) || !!loopback(raw);
 }
 

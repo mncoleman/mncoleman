@@ -24,13 +24,10 @@ routes = [
   { pattern = "mncoleman.com/api/brief/*", zone_name = "mncoleman.com" },
 ]
 
-# Daily brief editions: the SAME namespace the admin Worker writes (see worker/wrangler.toml
-# for the one-time setup). Read-only here. Commented out until the id exists, because a
-# placeholder id fails `wrangler deploy`; without it the brief tools and API answer "none yet".
-#
-# [[kv_namespaces]]
-# binding = "BRIEFS"
-# id = "<ID>"
+# Daily brief editions: the SAME namespace the admin Worker writes. Read-only here.
+[[kv_namespaces]]
+binding = "BRIEFS"
+id = "64192daa067042f6850143000d6760b7"
 
 # The admin Worker, called for /mcp/admin only. A binding rather than a fetch to
 # its workers.dev URL: a Worker cannot fetch another Worker on the same account

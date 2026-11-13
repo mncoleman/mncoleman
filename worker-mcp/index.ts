@@ -161,7 +161,7 @@ const getInstantArtifacts = (env: Env) =>
         .catch(() => []);
 
 // The daily brief is read straight from KV (the admin Worker writes it), not through
-// the edge cache: hiding or removing an edition has to take effect at once.
+// the edge cache, so hiding or removing an edition takes effect within KV's own lag (about a minute).
 
 const briefConfig = async (env: Env) => (env.BRIEFS ? ((await env.BRIEFS.get(BRIEF_CONFIG_KEY, 'json')) as BriefConfig | null) : null);
 
@@ -180,7 +180,8 @@ async function briefEdition(env: Env, which: string): Promise<BriefEdition | nul
     return (await env.BRIEFS.get(briefKey(row.date), 'json')) as BriefEdition | null;
 }
 
-const xml = (s: unknown) => String(s ?? '').replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]!));
+// Characters XML 1.0 forbids are dropped as well as the five escaped: one of them makes a reader reject the whole feed.
+const xml = (s: unknown) => String(s ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '').replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]!));
 
 /** RSS 2.0 for the brief: one entry per edition, the newest 20, each listing that day's stories with their source links. */
 async function briefRss(env: Env): Promise<Response> {
@@ -201,7 +202,7 @@ async function briefRss(env: Env): Promise<Response> {
     const feed = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>` +
         `<title>The MNColeman Daily Brief</title><link>${site}/brief</link><description>A morning digest: weather, a verse, and the day in tech, local, national and world news, each story linked to its source.</description>` +
         `<language>en-us</language><atom:link href="${site}/api/brief/rss" rel="self" type="application/rss+xml"/>${editions.map(entry).join('')}</channel></rss>`;
-    return new Response(feed, { headers: { 'Content-Type': 'application/rss+xml; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' } });
+    return new Response(feed, { headers: { 'Content-Type': 'application/rss+xml; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' } });
 }
 
 const getLibrary = (env: Env) =>
@@ -1076,12 +1077,13 @@ export default {
         // The daily brief's public read API, for the /brief pages (same origin, so no CORS dance):
         //   /api/brief/index   the archive      /api/brief/latest   /api/brief/YYYY-MM-DD
         //   /api/brief/rss     the feed
-        // Briefly cacheable by the browser only; never by the edge, so hiding an edition is immediate.
+        // Never stored by a browser or a cache in between. KV itself can serve a value for up to
+        // a minute after it changes, so hiding or removing an edition takes effect within about that.
         if (url.pathname.startsWith('/api/brief/')) {
             if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
             // The site builds links with a trailing slash; accept both forms.
             const what = url.pathname.slice('/api/brief/'.length).replace(/\/$/, '');
-            const fresh = { 'Cache-Control': 'private, max-age=30' };
+            const fresh = { 'Cache-Control': 'no-store' };
             if (what === 'index') return json({ briefs: await briefIndex(env) }, 200, fresh);
             if (what === 'rss') return briefRss(env);
             if (what !== 'latest' && !isBriefDate(what)) return json({ error: 'not_found' }, 404);

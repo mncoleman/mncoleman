@@ -51,13 +51,9 @@
 
 Rules: plain text only (HTML and Markdown are stripped, with a warning); every source needs a URL; item ids are unique in the edition; en and em dashes warn. `edition_number` is assigned by the server. `weather`, `verse`, `devotional`, `top_signals`, `watchlist` and `notices` may be left out, and the page skips them. `bluf` is accepted as an old name for `summary`.
 
-## One-time setup (not done yet)
+## Setup
 
-1. `cd worker && npx wrangler kv namespace create BRIEFS`
-2. Uncomment the `BRIEFS` block in **both** `worker/wrangler.toml` and `worker-mcp/wrangler.toml` with that id.
-3. Deploy `worker/`, then `worker-mcp/`.
-4. Seed the sample BEFORE merging to `main` (the home page bar opens `/brief`, which says "No brief yet" until one exists): sign in to the admin panel, then publish `data/brief-sample.json` through `publish_brief` (or `PUT /api/briefs/2026-11-13` with `{"edition": <that file>}`). Its source links are outlet home pages, not the articles.
-5. Merge to `main` for the pages.
+The `BRIEFS` namespace exists and is bound in both `worker/wrangler.toml` and `worker-mcp/wrangler.toml`. Deploy `worker/` before `worker-mcp/`. Seed or publish at least one edition before the pages reach `main`: the home page bar opens `/brief`, which says "No brief yet" until one exists. `data/brief-sample.json` is the sample; its source links are outlet home pages, not the articles.
 
 ## Day to day
 

@@ -771,6 +771,8 @@ export default {
                 const writeIndex = (rows: BriefSummary[]) => kv.put(BRIEF_INDEX_KEY, JSON.stringify(rows.sort((a, b) => b.date.localeCompare(a.date))));
                 const target = briefMatch[1];
                 const readBody = async (limit: number): Promise<any | null> => {
+                    // Refuse an oversized body by its declared length before buffering any of it.
+                    if (Number(request.headers.get('Content-Length') || 0) > limit * 4) return null;
                     const raw = await request.text();
                     if (raw.length > limit) return null;
                     try { return JSON.parse(raw); } catch { return null; }
@@ -808,10 +810,11 @@ export default {
                     const index = await readIndex();
                     const existing = index.find((r) => r.date === target);
                     const edition = checked.edition;
-                    // A date keeps its number across republishes; a new date takes the next one.
-                    const number = existing?.edition_number || edition.edition_number || index.reduce((m, r) => Math.max(m, r.edition_number), 0) + 1;
+                    // A date keeps its number across republishes; a new date takes the next one. The
+                    // number is never the caller's to choose: it could collide with another edition's.
+                    const number = existing?.edition_number || index.reduce((m, r) => Math.max(m, r.edition_number), 0) + 1;
                     const warnings = [...checked.warnings];
-                    if (edition.edition_number && edition.edition_number !== number) warnings.push({ path: 'edition_number', reason: `ignored: ${target} is already edition ${number}` });
+                    if (edition.edition_number && edition.edition_number !== number) warnings.push({ path: 'edition_number', reason: `ignored: the server numbers editions, and ${target} is edition ${number}` });
                     edition.edition_number = number;
                     await kv.put(briefKey(target), JSON.stringify(edition));
                     await writeIndex([...index.filter((r) => r.date !== target), { date: target, edition_number: number, headline: briefHeadline(edition), ...(existing?.hidden ? { hidden: true } : {}) }]);

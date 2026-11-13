@@ -67,10 +67,10 @@ export function cleanBriefLinks(input: unknown): BriefLink[] | string {
     const out: BriefLink[] = [];
     for (const [i, raw] of input.entries()) {
         const label = typeof raw?.label === 'string' ? raw.label.replace(/\s+/g, ' ').trim().slice(0, 80) : '';
-        let ok = typeof raw?.url === 'string' && raw.url.length <= 600;
-        if (ok) { try { ok = /^https?:$/.test(new URL(raw.url).protocol); } catch { ok = false; } }
-        if (!label || !ok) return `link ${i + 1} needs a name and an http(s) address`;
-        out.push({ label, url: raw.url });
+        let href = '';
+        if (typeof raw?.url === 'string' && raw.url.length <= 600) { try { const u = new URL(raw.url); if (/^https?:$/.test(u.protocol)) href = u.href; } catch { /* refused below */ } }
+        if (!label || !href) return `link ${i + 1} needs a name and an http(s) address`;
+        out.push({ label, url: href });
     }
     return out;
 }
@@ -90,9 +90,13 @@ export function isBriefDate(v: unknown): v is string {
  * write-up), and everything else still collapses.
  */
 function toPlain(raw: string, paragraphs = false): string {
+    // Control characters and lone surrogates first: they are illegal in XML and one would break the whole feed.
+    // The tag and link patterns are length-bounded so a hostile string cannot make them quadratic.
     const clean = raw
-        .replace(/<[^>]*>/g, '')
-        .replace(/!?\[([^\]]*)\]\((?:https?:|\/)[^)]*\)/g, '$1')
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\uFFFE\uFFFF]/g, '')
+        .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
+        .replace(/<[^<>]{0,400}>/g, '')
+        .replace(/!?\[([^\[\]]{0,300})\]\((?:https?:|\/)[^()\s]{0,600}\)/g, '$1')
         .replace(/\*\*|__|`/g, '')
         .replace(/^\s{0,3}#{1,6}\s+/gm, '');
     const line = (t: string) => t.replace(/\s+/g, ' ').trim();
@@ -116,6 +120,8 @@ export function validateBrief(input: unknown): BriefResult {
             return '';
         }
         if (typeof v !== 'string') { err(path, 'must be a string'); return ''; }
+        // Refused before any cleaning runs: nothing legitimate is several times its own limit.
+        if (v.length > max * 3 + 500) { err(path, `far too long: ${v.length} characters, the limit is ${max}`); return ''; }
         const clean = toPlain(v, paragraphs);
         if (clean.replace(/\s+/g, ' ') !== v.replace(/\s+/g, ' ').trim()) warn(path, 'HTML or Markdown was removed; send plain text');
         if (!clean && required) err(path, 'required, a non-empty string');
@@ -128,10 +134,11 @@ export function validateBrief(input: unknown): BriefResult {
             if (required) err(path, 'required: the address this came from, so the reader can open it');
             return undefined;
         }
-        let ok = typeof v === 'string' && v.length <= 600;
-        if (ok) { try { ok = /^https?:$/.test(new URL(v as string).protocol); } catch { ok = false; } }
-        if (!ok) { err(path, 'must be an http(s) URL of at most 600 characters'); return undefined; }
-        return v as string;
+        // Stored as the parser's own normalised form, never the raw string.
+        let href = '';
+        if (typeof v === 'string' && v.length <= 600) { try { const u = new URL(v); if (/^https?:$/.test(u.protocol)) href = u.href; } catch { /* invalid below */ } }
+        if (!href || href.length > 700) { err(path, 'must be an http(s) URL of at most 600 characters'); return undefined; }
+        return href;
     };
     const list = (v: unknown, path: string, min: number, max: number): unknown[] => {
         if (v === undefined || v === null) { if (min > 0) err(path, `required, an array of ${min} to ${max}`); return []; }
@@ -155,7 +162,8 @@ export function validateBrief(input: unknown): BriefResult {
         if (Number.isInteger(input.edition_number) && (input.edition_number as number) > 0 && (input.edition_number as number) < 100000) editionNumber = input.edition_number as number;
         else err('edition_number', 'must be a positive whole number, or left out for the server to assign');
     }
-    const compiledAt = typeof input.compiled_at === 'string' && !Number.isNaN(Date.parse(input.compiled_at)) ? input.compiled_at : '';
+    const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+    const compiledAt = typeof input.compiled_at === 'string' && ISO_RE.test(input.compiled_at) && !Number.isNaN(Date.parse(input.compiled_at)) ? input.compiled_at : '';
     if (!compiledAt) err('compiled_at', 'required, an ISO 8601 timestamp such as 2026-11-13T07:52:00-07:00');
 
     const edition: BriefEdition = {

@@ -73,7 +73,8 @@ function Pager({ edition, newer, older, links = [] }: { edition: Edition; newer:
     // Deep links: #world opens a section, #w3 opens an item inside its section.
     useEffect(() => {
         const fromHash = () => {
-            const h = decodeURIComponent(location.hash.slice(1));
+            let h = '';
+            try { h = decodeURIComponent(location.hash.slice(1)); } catch { /* a malformed hash opens the first page */ }
             const p = pages.findIndex((x) => x.key === h);
             const ip = h ? pageOfItem(h) : -1;
             if (ip >= 0) { setPage(ip); setOpen(h); markSeen(h); requestAnimationFrame(() => document.getElementById(`item-${h}`)?.scrollIntoView({ block: 'nearest' })); }
