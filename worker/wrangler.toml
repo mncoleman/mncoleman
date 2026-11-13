@@ -27,6 +27,7 @@ GITHUB_REPO_NAME = "mncoleman"
 N8N_WEBHOOK_URL = ""
 ARTIFACTS_SERVICE_URL = "https://artifacts.mncoleman.com"
 GA_PROPERTY_ID = "515551096"    # GA4 numeric property id — not the G- measurement id
+MCP_RESOURCE_URL = "https://mncoleman.com/mcp/admin"  # the authenticated MCP endpoint (worker-mcp); OAuth tokens are issued for it alone
 
 # Daily content rebuild (06:00 UTC), replacing the old deploy.yml `schedule:`.
 [triggers]

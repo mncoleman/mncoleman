@@ -6,6 +6,10 @@ import {
     type AvatarMeta, type AvatarState,
 } from '../lib/avatar';
 import { coercePostDoc, parsePost, samePost, serializePost, isValidSlug, PostFormatError, type PostDoc } from '../lib/post-format';
+import {
+    RETURN_PARAM, handleOAuth, isOAuthPath, isOAuthReturn, listGrants, mcpRouteAllowed, mcpSigningKey, oauthReturnPath, readMcpToken, revokeGrant, revokeGrantsFor,
+    type KvLike, type OAuthDeps,
+} from './mcp-oauth';
 
 // Rate limiting store — persists within a Cloudflare Worker isolate
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -45,6 +49,7 @@ export interface Env {
     GOOGLE_CLIENT_SECRET: string;
     OWNER_EMAIL?: string;           // Owner's Google address — super_admin via Google sign-in
     POST_DRAFTS?: KVNamespace;      // Blog post autosave drafts (never committed). Optional: routes degrade to drafts_unavailable
+    MCP_RESOURCE_URL?: string;      // The authenticated MCP endpoint OAuth tokens are issued for (their `aud`)
 }
 
 /**
@@ -119,6 +124,19 @@ export default {
     },
 
     async fetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
+        // OAuth for the authenticated MCP endpoint (see mcp-oauth.ts). Dispatched ABOVE the
+        // Origin allowlist and the X-Requested-With check below, preflight included: an MCP
+        // client is not a page on mncoleman.com and cannot send that header. Nothing in there
+        // acts on a cookie alone, and it returns null for every path that is not its own.
+        try {
+            const oauthUrl = new URL(request.url);
+            const oauth = isOAuthPath(oauthUrl.pathname) ? await handleOAuth(request, oauthUrl, await mcpDeps(env)) : null;
+            if (oauth) return oauth;
+        } catch (e) {
+            console.error('OAuth error:', e);
+            return new Response(JSON.stringify({ error: 'server_error' }), { status: 500, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+        }
+
         const allowedOrigins = ['https://mncoleman.com', 'https://www.mncoleman.com', 'http://localhost:3000'];
         const origin = request.headers.get('Origin');
 
@@ -187,7 +205,10 @@ export default {
                 const codeChallenge = await generateCodeChallenge(codeVerifier);
                 const state = crypto.randomUUID();
 
-                const oauthData = JSON.stringify({ codeVerifier, state });
+                // A sign-in started from the MCP "Sign in to connect" page goes back to that
+                // authorize request afterwards, carried inside this signed cookie.
+                const returnTo = url.searchParams.get('return') === RETURN_PARAM ? oauthReturnPath(request) : null;
+                const oauthData = JSON.stringify({ codeVerifier, state, ...(returnTo ? { returnTo } : {}) });
                 const signedCookie = await signOauthData(oauthData, env.JWT_SECRET);
 
                 const redirectUri = `${url.origin}/auth/callback`;
@@ -303,9 +324,10 @@ export default {
                 }, env.JWT_SECRET);
 
 
-                // Pass token via both cookie (desktop) and URL fragment (mobile fallback)
+                // Pass token via both cookie (desktop) and URL fragment (mobile fallback).
+                // Back to an MCP authorize request instead, the token stays out of the URL.
                 const headers = new Headers();
-                headers.append('Location', `${frontendAdmin}#session_token=${sessionToken}`);
+                headers.append('Location', isOAuthReturn(oauthData.returnTo) ? `${url.origin}${oauthData.returnTo}` : `${frontendAdmin}#session_token=${sessionToken}`);
                 headers.append('Set-Cookie', 'oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
                 headers.append('Set-Cookie', `admin_token=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`);
 
@@ -326,7 +348,8 @@ export default {
                 const codeChallenge = await generateCodeChallenge(codeVerifier);
                 const state = crypto.randomUUID();
                 const nonce = crypto.randomUUID();
-                const signedCookie = await signOauthData(JSON.stringify({ codeVerifier, state, nonce }), env.JWT_SECRET);
+                const returnTo = url.searchParams.get('return') === RETURN_PARAM ? oauthReturnPath(request) : null;
+                const signedCookie = await signOauthData(JSON.stringify({ codeVerifier, state, nonce, ...(returnTo ? { returnTo } : {}) }), env.JWT_SECRET);
                 const params = new URLSearchParams({
                     client_id: env.GOOGLE_CLIENT_ID,
                     redirect_uri: `${url.origin}/auth/google/callback`,
@@ -403,7 +426,7 @@ export default {
                 }, env.JWT_SECRET);
 
                 const headers = new Headers();
-                headers.append('Location', `${frontendAdmin}#session_token=${sessionToken}`);
+                headers.append('Location', isOAuthReturn(oauthData.returnTo) ? `${url.origin}${oauthData.returnTo}` : `${frontendAdmin}#session_token=${sessionToken}`);
                 headers.append('Set-Cookie', 'google_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
                 headers.append('Set-Cookie', `admin_token=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`);
                 return new Response(null, { status: 302, headers });
@@ -629,7 +652,25 @@ export default {
 
             // Authenticated Endpoints — fail-closed: reject if no valid token
             const token = getAuthToken(request);
-            const authPayload = token ? await verifyJwt(token, env.JWT_SECRET) : null;
+            let authPayload = token ? await verifyJwt(token, env.JWT_SECRET) : null;
+
+            // An MCP access token (mcp-oauth.ts) is signed with a different key, so it never
+            // passes the check above. It is taken from the Authorization header only, never a
+            // cookie, must name a connection that still exists, and reaches nothing but the
+            // routes the MCP tools use. The KV re-check and feature gates below still apply.
+            let viaMcp = false;
+            if (!authPayload && token && (request.headers.get('Authorization') || '').startsWith('Bearer ')) {
+                const mcp = await readMcpToken(token, await mcpDeps(env));
+                if (mcp) {
+                    if (!mcpRouteAllowed(request.method, url.pathname, request.headers.get('Content-Type') || '')) {
+                        return new Response(JSON.stringify({ error: 'This connection cannot do that.' }), {
+                            status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                        });
+                    }
+                    authPayload = mcp.claims;
+                    viaMcp = true;
+                }
+            }
 
             if (!authPayload) {
                 return new Response('Unauthorized', { status: 401, headers: corsHeaders });
@@ -655,11 +696,44 @@ export default {
             const serviceJwt = (purpose: string) => signArtifactsJwt({
                 sub: session.userId,
                 name: authPayload.name || authPayload.username || 'Admin',
-                role: session.role,
+                // Over MCP nobody is the owner and nobody manages secrets: the service then never
+                // discloses an artifact's password and refuses a visibility or password change.
+                role: viaMcp && session.role === 'super_admin' ? 'site_admin' : session.role,
                 purpose,
                 artifacts: can('artifacts') ? '*' : session.artifactGrants,
-                manageSecrets: session.role === 'super_admin' || session.role === 'site_admin',
+                manageSecrets: !viaMcp && (session.role === 'super_admin' || session.role === 'site_admin'),
+                ...(viaMcp ? { via: 'mcp' } : {}),
             }, env.ARTIFACTS_JWT_SECRET);
+
+            // GET /oauth/whoami — what an MCP connection is allowed to do, for worker-mcp to
+            // decide which tools to list. Answers a session too; it says nothing /auth/me does not.
+            if (url.pathname === '/oauth/whoami' && request.method === 'GET') {
+                return new Response(JSON.stringify({
+                    name: authPayload.name || authPayload.username || 'Admin', role: session.role,
+                    can: FEATURES.filter(can), via: viaMcp ? 'mcp' : 'session',
+                }), { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+            }
+
+            // Connected apps: the MCP connections a person has approved. GET lists them, DELETE
+            // /:id removes one (its tokens stop working at once). The owner sees everyone's;
+            // everyone else their own. Never reachable with an MCP token (not on its allowlist).
+            const grantMatch = url.pathname.match(/^\/api\/mcp\/grants(?:\/([A-Za-z0-9_-]{10,64}))?$/);
+            if (grantMatch) {
+                const all = session.role === 'super_admin';
+                const out = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+                    status, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                });
+                const kv = env.ADMIN_USERS as unknown as KvLike;
+                if (!grantMatch[1] && request.method === 'GET') {
+                    const connections = await listGrants(kv, all ? undefined : session.userId);
+                    return out({ connections: connections.map((c) => ({ ...c, mine: c.userId === session.userId })) });
+                }
+                if (grantMatch[1] && request.method === 'DELETE') {
+                    const removed = await revokeGrant(kv, grantMatch[1], all ? undefined : session.userId);
+                    return removed ? out({ ok: true }) : out({ error: 'not_found' }, 404);
+                }
+                return out({ error: 'method_not_allowed' }, 405);
+            }
 
             // Feature gates, by path. Users, avatars and the instant-artifact routes
             // are handled where they are defined.
@@ -1302,6 +1376,17 @@ export default {
                     const coerced = coercePostDoc(body.post, { allowEmptyTitle: true });
                     if (!coerced.ok) return json({ error: coerced.error }, 400);
                     if (coerced.doc.slug !== postSlug) return json({ error: 'post.slug must match the URL' }, 400);
+                    // An MCP connection writes drafts and nothing else. It may not overwrite a draft
+                    // that changed under it, and it never chooses a post's Status: the global Publish
+                    // commits any pending draft marked Published, so a draft it marked that way
+                    // would go live on the next click. Status follows the committed file, or Draft.
+                    if (viaMcp) {
+                        if (body.force === true) return json({ error: 'forbidden', message: 'A connected app cannot overwrite a draft that changed elsewhere.' }, 403);
+                        const committed = await readFile(postSlug);
+                        if (committed === 'error') return json({ error: `Could not check data/posts/${postSlug}.md` }, 502);
+                        if (committed && 'invalid' in committed) return invalidFile(committed);
+                        coerced.doc.published = committed ? committed.doc.published : false;
+                    }
                     const baseVersion = Number.isInteger(body.baseVersion) ? body.baseVersion as number : 0;
                     const current = await readDraft(postSlug);
                     // The first save of a NEW post may not land on a slug that already has a file or somebody's
@@ -2596,8 +2681,10 @@ async function verifyJwt(token: string, secret: string): Promise<any | null> {
 
     if (!timingSafeEqual(signature, computedSignature)) return null;
 
-    const decodedPayload = JSON.parse(atobUrl(payload));
-    if (decodedPayload.exp < Math.floor(Date.now() / 1000)) return null;
+    let decodedPayload: any;
+    try { decodedPayload = JSON.parse(atobUrl(payload)); } catch { return null; }
+    // No expiry is not "never expires": `undefined < now` is false, so it has to be checked.
+    if (!decodedPayload || typeof decodedPayload.exp !== 'number' || decodedPayload.exp < Math.floor(Date.now() / 1000)) return null;
 
     return decodedPayload;
 }
@@ -2826,6 +2913,36 @@ async function revalidateSession(env: Env, payload: any): Promise<Session> {
     };
 }
 
+/** What mcp-oauth.ts needs from this Worker. `secret` is a key derived from JWT_SECRET, never JWT_SECRET. */
+async function mcpDeps(env: Env): Promise<OAuthDeps> {
+    return {
+        kv: env.ADMIN_USERS as unknown as KvLike,
+        secret: await mcpSigningKey(env.JWT_SECRET),
+        resource: env.MCP_RESOURCE_URL || 'https://mncoleman.com/mcp/admin',
+        rateLimit: checkRateLimit,
+        // The admin-panel session behind the browser's cookie. Cookie only: an Authorization
+        // header on an authorize request proves nothing about who is looking at the page.
+        currentSession: async (request) => {
+            const cookie = getCookieValue(request, 'admin_token');
+            const payload = cookie ? await verifyJwt(cookie, env.JWT_SECRET) : null;
+            if (!payload) return null;
+            const session = await revalidateSession(env, payload);
+            if (!session.valid) return null;
+            return {
+                userId: session.userId,
+                role: session.role,
+                identity: {
+                    id: String(payload.id),
+                    name: String(payload.name || payload.username || 'Admin'),
+                    ...(payload.username ? { username: String(payload.username) } : {}),
+                    ...(payload.email ? { email: String(payload.email) } : {}),
+                    ...(payload.provider ? { provider: String(payload.provider) } : {}),
+                },
+            };
+        },
+    };
+}
+
 // --- Profile photos (see lib/avatar.ts for the rules) ---
 
 function kvLike(kv: KVNamespace) {
@@ -2998,6 +3115,8 @@ async function removeUser(kv: KVNamespace, id: string): Promise<void> {
     await kv.delete(`user:${id}`);
     await kv.delete(`profile:${id}`);
     await kv.delete(`avatar:${id}`);
+    // Their MCP connections die with the account (an access token would already fail the KV re-check).
+    try { await revokeGrantsFor(kv as unknown as KvLike, id); } catch (e) { console.error('[removeUser] revoking MCP connections failed:', e); }
     // The uploaded photo's bytes live under a random token that only the meta record knows.
     const photoMeta = parseMeta(await kv.get(avatarMetaKey(id)));
     if (photoMeta.upload) await kv.delete(`avatar-upload:${photoMeta.upload.token}`);
