@@ -633,7 +633,9 @@ export function mcpRouteAllowed(method: string, path: string, contentType: strin
     const slug = '[a-z0-9-]{1,100}';
     const is = (re: string) => new RegExp(`^${re}$`).test(path);
     if (method === 'GET') {
-        return path === '/oauth/whoami' || path === '/api/artifacts/instant/list' || path === '/api/posts' || is(`/api/posts/${slug}`);
+        return path === '/oauth/whoami' || path === '/api/artifacts/instant/list' || path === '/api/posts' || is(`/api/posts/${slug}`)
+            // The brief agent: the source library, one edition to revise, and its own state.
+            || path === '/api/briefs' || is('/api/briefs/\\d{4}-\\d{2}-\\d{2}') || path === '/api/briefs/agent';
     }
     // Multipart is the instant-artifact path. The JSON form of this route can commit a file to the repo.
     if (method === 'POST' && path === '/api/artifacts') return contentType.toLowerCase().startsWith('multipart/form-data');
@@ -645,6 +647,10 @@ export function mcpRouteAllowed(method: string, path: string, contentType: strin
     if (method === 'PUT' && is(`/api/posts/${slug}/draft`)) return true;
     // The daily brief: publish (replace) or delete one edition. Hiding and the section's visibility stay in the admin panel.
     if ((method === 'PUT' || method === 'DELETE') && is('/api/briefs/\\d{4}-\\d{2}-\\d{2}')) return true;
+    // The brief agent on the ARM box claims a queued request and reports runs (reads are above).
+    // Config and queuing are panel-only (lib/brief-agent.ts).
+    if (method === 'DELETE' && path === '/api/briefs/agent/request') return true;
+    if (method === 'POST' && path === '/api/briefs/agent/runs') return true;
     return false;
 }
 

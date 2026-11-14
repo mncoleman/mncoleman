@@ -1,4 +1,5 @@
 import { lookupPage } from '../lib/citation-lookup';
+import { handleBriefAgent } from '../lib/brief-agent';
 import { classifyDraft } from '../lib/post-staging';
 import {
     AVATAR_TYPES, MAX_AVATAR_BYTES, avatarMetaKey, captureLoginPhotos, isAvatarPin, isOpaqueTelegramUrl, isReservedUserId, isTelegramProxyUrl, parseMeta,
@@ -755,11 +756,29 @@ export default {
             // lives in the BRIEFS KV namespace so an edition can be hidden or removed at once,
             // with no rebuild. worker-mcp reads the same namespace for the public side.
             //   GET    /api/briefs            every edition (hidden ones too) and the config
+            //   GET    /api/briefs/:date      {edition} as stored, hidden or not
             //   PUT    /api/briefs/:date      {edition} validate and store; replaces that date
             //   PATCH  /api/briefs/:date      {hidden} show or hide one edition
             //   DELETE /api/briefs/:date
             //   PUT    /api/briefs/config     {visibility?: 'public' | 'private', links?: [{label, url}]}
             //                                 the whole section on or off, and its "External sources" page
+            // The brief agent on the ARM box: schedule, queued requests, run history (lib/brief-agent.ts).
+            if (p.startsWith('/api/briefs/agent')) {
+                if (!env.BRIEFS) return new Response(JSON.stringify({ error: 'briefs_unavailable' }), { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                let body: unknown = null;
+                if (request.method === 'PUT' || request.method === 'POST') {
+                    const raw = await request.text();
+                    if (raw.length > 20_000) body = null;
+                    else try { body = JSON.parse(raw); } catch { body = null; }
+                }
+                const res = await handleBriefAgent(request.method, p, body, {
+                    kv: env.BRIEFS, viaMcp, who: authPayload.name || authPayload.username || 'Admin',
+                });
+                if (res) return new Response(JSON.stringify(res.body), {
+                    status: res.status, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                });
+            }
+
             const briefMatch = p.match(/^\/api\/briefs(?:\/(\d{4}-\d{2}-\d{2}|config))?$/);
             if (briefMatch) {
                 const out = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
@@ -798,6 +817,12 @@ export default {
                     return out({ ok: true, config });
                 }
                 if (!target || target === 'config' || !isBriefDate(target)) return out({ error: 'A real date (YYYY-MM-DD) is required' }, 400);
+
+                // One stored edition, hidden or not: the brief agent revises it for an update run.
+                if (request.method === 'GET') {
+                    const edition = await kv.get(briefKey(target), 'json');
+                    return edition ? out({ edition }) : out({ error: 'not_found' }, 404);
+                }
 
                 if (request.method === 'PUT') {
                     const body = await readBody(400_000);

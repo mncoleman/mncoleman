@@ -172,6 +172,8 @@ async function main() {
         ['PATCH', '/api/artifacts/instant/my-slug'], ['DELETE', '/api/artifacts/instant/my-slug'],
         ['POST', '/api/library'], ['PATCH', '/api/library/my-skill'],
         ['GET', '/api/posts'], ['GET', '/api/posts/my-post'], ['PUT', '/api/posts/my-post/draft'],
+        ['PUT', '/api/briefs/2026-11-14'], ['GET', '/api/briefs/2026-11-14'], ['GET', '/api/briefs'],
+        ['GET', '/api/briefs/agent'], ['DELETE', '/api/briefs/agent/request'], ['POST', '/api/briefs/agent/runs'],
     ];
     for (const [m, path, ct] of allowed) check(`allowed  ${m} ${path}`, mcpRouteAllowed(m, path, ct || 'application/json'));
     const refused: [string, string, string?][] = [
@@ -180,6 +182,7 @@ async function main() {
         ['GET', '/api/users'], ['POST', '/api/users'], ['POST', '/api/trigger'], ['GET', '/api/analytics/summary'],
         ['PUT', '/api/collections/projects'], ['POST', '/api/collections/images'], ['GET', '/api/mcp/grants'], ['DELETE', '/api/mcp/grants/abcdefghijkl'],
         ['GET', '/auth/me'], ['PATCH', '/api/artifacts/instant/a/b'], ['GET', '/api/artifacts/instant/my-slug/preview-token'], ['GET', '/api/posts/my-post/draft'],
+        ['PUT', '/api/briefs/agent/config'], ['POST', '/api/briefs/agent/request'], ['PUT', '/api/briefs/config'], ['PATCH', '/api/briefs/2026-11-14'],
     ];
     for (const [m, path, ct] of refused) check(`refused  ${m} ${path}`, !mcpRouteAllowed(m, path, ct || 'application/json'));
 

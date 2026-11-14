@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { authHeaders } from '@/lib/admin-auth';
 import { useAdmin } from '@/components/admin/admin-context';
 import { AdminPage, HeaderSpacer, PageHeader, Section, SectionRow, StatusPill, notify } from '@/components/admin/kit';
+import { BriefAgentPanel } from '@/components/admin/BriefAgentPanel';
 import { BRIEF_LINK_SECTIONS, type BriefConfig, type BriefLink, type BriefLinkSection, type BriefSummary } from '@/lib/brief';
 
 const SECTION_LABELS: Record<BriefLinkSection, string> = {
@@ -110,6 +111,8 @@ export function BriefAdmin() {
                         </p>
                     )}
 
+                    <BriefAgentPanel workerUrl={workerUrl} />
+
                     <Section
                         title={rows && rows.length ? `Editions (${rows.length}${visible !== rows.length ? `, ${rows.length - visible} hidden` : ''})` : 'Editions'}
                         action={<Link href="/brief/archive" target="_blank" className="text-[13px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">Archive</Link>}
@@ -176,9 +179,9 @@ export function BriefAdmin() {
                         </div>
                     </Section>
 
-                    <Section title="Publishing" padded>
+                    <Section title="Publishing by hand" padded>
                         <p className="mb-3 text-sm text-muted-foreground">
-                            Editions are published by a Claude connected to the admin MCP address below, with the <code>publish_brief</code> tool. Which apps are connected, and disconnecting one, is on the <Link href="/admin" className="underline underline-offset-4 hover:text-foreground">Overview</Link>.
+                            Besides the server, any Claude connected to the admin MCP address below can publish with the <code>publish_brief</code> tool. Which apps are connected, and disconnecting one, is on the <Link href="/admin" className="underline underline-offset-4 hover:text-foreground">Overview</Link>.
                         </p>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                             <span className="shrink-0 text-xs text-muted-foreground">Admin MCP address</span>

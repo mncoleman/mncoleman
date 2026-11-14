@@ -52,6 +52,7 @@ worker/                 — Cloudflare Worker (admin auth, content commits, draf
 worker-mcp/             — Cloudflare Worker (MCP server: public /mcp, signed-in /mcp/admin) — separate deploy
 worker-www-redirect/    — Cloudflare Worker (www -> apex 301) — separate deploy
 worker-tokens/          — Cloudflare Worker (token-count proxy at /api/count-tokens) — separate deploy
+brief-agent/            — The daily brief's publisher: cron + headless Claude on the Oracle ARM box (~/mncoleman-brief), deployed by scp; see docs/daily-brief.md
 server/                 — Bun/Hono artifact + AI library service — separate deploy
 public/                 — Static assets, icons, sw.js, fonts, sounds/, bible-data/ (KJV/WEB JSON), blog/ + collections/ (post and project images), artifacts/ (static artifacts), _headers (Pages cache rules)
 assets/                 — Build-time-only assets NOT served to visitors (og-veil.jpg)

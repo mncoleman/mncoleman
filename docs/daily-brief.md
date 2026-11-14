@@ -14,7 +14,17 @@
 
 `/brief/YYYY-MM-DD` exists for every date from `BRIEF_FIRST_DATE` to 45 days past the last build (`app/brief/brief-config.ts`); the daily rebuild moves that window. A date with no edition says so.
 
-## For the scheduling agent
+## The brief agent (what publishes it)
+
+Since 2026-11-14 editions are compiled on the Oracle ARM box by `brief-agent/` in this repo, deployed to `~/mncoleman-brief` (scp the changed files; nothing builds). It replaced the claude.ai scheduled task "MNColeman Brief".
+
+- `tick.sh` runs from cron every 5 minutes. It checks in with the admin Worker (`GET /api/briefs/agent`), claims a queued request from the admin panel, or starts the daily run once per Mountain date in the 3 hours after the configured time.
+- `run.sh` runs headless Claude Code on the subscription token in `~/cjeu-watch/oauth-token`. The model only researches and writes `edition.json`: it holds no admin tool and no MCP. The script reads the source library, publishes with `PUT /api/briefs/:date`, sends validation errors back to the same session (3 tries), checks the public page, reports the run, and sends a Telegram alert on failure only. `ASK="..." ./run.sh update` revises the stored edition instead of starting over.
+- `prompt.md` is the research and writing spec (the freshness rules live there). `site_api.py` signs in as the connected app "Brief agent (Oracle ARM server)"; its refresh token rotates in `oauth.json`, and removing that app under Connected apps cuts the box off. To reconnect: `python3 brief-agent/site_api.py login --out <file>` on a Mac, then scp the file to `~/mncoleman-brief/oauth.json` (mode 600).
+- Admin panel: `/admin/brief`, Automation (`components/admin/BriefAgentPanel.tsx`). Schedule, model, standing instructions, Run now, Update, and run history with cost at API rates. State is in `BRIEFS` KV under `agent:*` (`lib/brief-agent.ts`, selftest `npx tsx lib/brief-agent.selftest.ts`). The box can read and report; only the panel changes settings or queues work.
+- Logs on the box: `runs/runs.log`, `runs/tick.log`, and `work/<date>-<run id>/` per run (kept two weeks).
+
+## For the scheduling agent (any Claude publishing over MCP)
 
 - Connector: add `https://mncoleman.com/mcp/admin` as a custom connector and sign in once. (The public `https://mncoleman.com/mcp` cannot publish.)
 - Tool: `publish_brief`, one argument: `{ "edition": { ... } }`.
