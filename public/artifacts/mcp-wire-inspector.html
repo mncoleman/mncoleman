@@ -1387,6 +1387,7 @@ function modelTool(t) {
   return o;
 }
 function tokStr(n) { return (n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n)) + " tok"; }
+function charStr(n) { return (n >= 10000 ? (n / 1000).toFixed(1) + "k" : fmtN(n)) + " chars"; }
 function stageCard(n, title, badge, badgeCls) {
   const card = el("div", "fstep"); card.style.borderLeftColor = "var(--line)";
   const head = el("div", "fh");
@@ -1455,7 +1456,7 @@ function openModelView() {
   const te = client.listErrors && client.listErrors["tools/list"];
   const totalChars = tools.length ? compact(tools.map(toolBlock)).length : 0;
   const totalTok = tokDef(totalChars);
-  const st2 = stageCard("STAGE 2", "tools/list", te ? "failed" : tools.length + " tools · ≈" + tokStr(totalTok), te ? "fail" : "ok");
+  const st2 = stageCard("STAGE 2", "tools/list", te ? "failed" : tools.length + " tools · ≈" + tokStr(totalTok) + " · " + charStr(totalChars), te ? "fail" : "ok");
   if (te) st2.card.style.borderLeftColor = "var(--err)";
   st2.body.appendChild(Object.assign(el("p", "fblurb"), {
     innerHTML: "<b>This is where the model's tool list comes from.</b> After the handshake, the client calls <code>tools/list</code> and passes each definition to the model, " +
@@ -1488,7 +1489,7 @@ function openModelView() {
       sm.appendChild(el("span", "nm", pre + t.name));
       const blockText = compact(toolBlock(t));
       const tk = exactByTool.has(blockText) ? exactByTool.get(blockText) : tokDef(blockText.length);
-      sm.appendChild(el("span", "tokpill", (exactByTool.has(blockText) ? "" : "≈") + tokStr(tk)));
+      sm.appendChild(el("span", "tokpill", (exactByTool.has(blockText) ? "" : "≈") + tokStr(tk) + " · " + charStr(blockText.length)));
       d.appendChild(sm);
       const mt = modelTool(t);
       const p = el("pre", "out"); p.textContent = j(mt); d.appendChild(p);
@@ -1700,7 +1701,7 @@ function renderToolResult(host, r) {
 
   const costLine = el("p", "eyebrow");
   costLine.appendChild(document.createTextNode("Content"));
-  const pill = el("span", "tokpill", "\u2248 " + fmtN(respTokens) + " tokens to the model (est.)");
+  const pill = el("span", "tokpill", "\u2248 " + fmtN(respTokens) + " tokens to the model (est.) \u00b7 " + fmtN(respChars) + " chars");
   pill.title = "Estimate: " + fmtN(respChars) + " characters of " + (fromStructured ? "structuredContent" : "content-block text") +
     " \u00f7 " + cptDef + " characters per token (" + modelLabel + " ratio). Press exact count for a real number.";
   costLine.appendChild(pill);
@@ -1710,7 +1711,7 @@ function renderToolResult(host, r) {
       ex.disabled = true; ex.textContent = "counting\u2026";
       try {
         const m = await countTokens(modelText);
-        pill.textContent = fmtN(m.tokens) + " tokens to the model (exact)";
+        pill.textContent = fmtN(m.tokens) + " tokens to the model (exact) \u00b7 " + fmtN(respChars) + " chars";
         pill.title = "Counted with the token-counting API for " + modelLabel + ", " + fmtN(respChars) + " characters.";
         if (entry) entry.tokens = m.tokens;
         ex.remove();
@@ -3009,7 +3010,9 @@ function analyzeCost(msg) {
 function updateCostPill(nameTokens, fullTokens) {
   const c = $("cCost");
   if (fullTokens == null) { c.textContent = "—"; return; }
-  c.textContent = (fullTokens >= 1000 ? (fullTokens / 1000).toFixed(1) + "k" : fullTokens) + " tok";
+  const chars = compact(surfaceTools().map(toolBlock)).length;
+  c.textContent = (fullTokens >= 1000 ? (fullTokens / 1000).toFixed(1) + "k" : fullTokens) + " tok · " + charStr(chars);
+  c.title = fmtN(chars) + " characters of tool definitions (compact JSON)";
 }
 function refreshCostPill() {
   const tools = surfaceTools();
