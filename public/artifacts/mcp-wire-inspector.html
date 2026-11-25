@@ -914,7 +914,11 @@ async function listAll(method, key) {
     const r = await rpc(method, cursor ? { cursor } : {});
     if (!r.ok) {
       if (r.error && (r.error.code === -32601 || r.status === 404)) return { items: [], unsupported: true };
-      return { items, error: r.error || { message: "HTTP " + r.status } };
+      const error = r.error || { message: "HTTP " + r.status };
+      client.listErrors = client.listErrors || {};
+      client.listErrors[method] = error;
+      logWarn(method + " failed", error.message || j(error));
+      return { items, error };
     }
     const chunk = (r.result && r.result[key]) || [];
     items.push(...chunk);
@@ -925,6 +929,7 @@ async function listAll(method, key) {
 }
 
 async function loadAll() {
+  client.listErrors = {};
   const caps = client.capabilities || {};
   const hasTools = !client.isModern ? !!caps.tools : true;
   const hasRes = !client.isModern ? !!caps.resources : true;
@@ -933,7 +938,8 @@ async function loadAll() {
   if (hasTools) {
     const r = await listAll("tools/list", "tools");
     client.tools = r.items.filter(validateToolHeaders);
-    renderList("lTools", "cTools", client.tools, openTool, (t) => t.name, (t) => t.description);
+    renderList("lTools", "cTools", client.tools, openTool, (t) => t.name, (t) => t.description,
+      r.error ? "tools/list failed: " + (r.error.message || "error") + " (see the wire log)" : null);
   } else { renderList("lTools", "cTools", [], null, null, null, "Server does not advertise tools."); }
 
   if (hasRes) {
@@ -1040,6 +1046,22 @@ window.showRawServer = () => {
   w.appendChild(el("h2", null, "Server description"));
   w.appendChild(el("p", "sub", client.isModern ? "Result of server/discover" : "Result of initialize"));
   const pre = el("pre", "out"); pre.textContent = j(client.server); w.appendChild(pre);
+  w.appendChild(el("p", "sub",
+    "The capabilities block only declares what the server supports (\"tools\": {} means it has tools). " +
+    "The definitions themselves come from the list calls below."));
+  const clean = (x) => JSON.parse(JSON.stringify(x, (k, v) => (k.startsWith("__") ? undefined : v)));
+  const sections = [
+    ["tools/list", "tools", client.tools],
+    ["resources/list", "resources", client.resources],
+    ["resources/templates/list", "resourceTemplates", client.templates],
+    ["prompts/list", "prompts", client.prompts]
+  ];
+  for (const [method, key, items] of sections) {
+    const err = client.listErrors && client.listErrors[method];
+    w.appendChild(el("h2", null, method));
+    w.appendChild(el("p", "sub", err ? "Failed: " + (err.message || j(err)) : (items || []).length + " " + key));
+    if (!err) { const p2 = el("pre", "out"); p2.textContent = j({ [key]: clean(items || []) }); w.appendChild(p2); }
+  }
 };
 
 function renderList(listId, countId, items, onOpen, nameOf, descOf, emptyMsg) {
