@@ -258,6 +258,21 @@ table.ct .mini{padding:1px 6px}
 .tokpill{font-family:var(--mono);font-size:10px;color:var(--out);border:1px solid rgba(208,161,69,.35);
          border-radius:9px;padding:1px 8px;margin-left:8px;white-space:nowrap}
 
+/* ---------- what the model sees ---------- */
+.mrow{margin:14px 0 0}
+.mh{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.mh code{font-family:var(--mono);font-size:12.5px;color:var(--text-strong)}
+.mrow .fblurb{margin:0 0 6px}
+.mrow pre.out{max-height:260px}
+details.mtool{border:1px solid var(--line-soft);border-radius:var(--r);margin:7px 0;background:var(--panel-2)}
+details.mtool summary{cursor:pointer;padding:7px 10px;display:flex;align-items:center;gap:6px;list-style:none}
+details.mtool summary::-webkit-details-marker{display:none}
+details.mtool summary .nm{font-family:var(--mono);font-size:12.5px;color:var(--text-strong);word-break:break-all;min-width:0}
+details.mtool summary .tokpill{margin-left:auto}
+details.mtool[open] summary{border-bottom:1px solid var(--line-soft)}
+details.mtool pre.out{border:0;border-radius:0;max-height:420px}
+details.mtool .row{padding:0 8px 6px}
+
 /* ---------- oauth flow walkthrough ---------- */
 .fstep{border:1px solid var(--line);border-left:2px solid var(--line);border-radius:var(--r);
        background:var(--panel);margin-bottom:9px;overflow:hidden}
@@ -602,8 +617,7 @@ const client = {
   server: null,         // serverInfo / discover result
   capabilities: null,
   tools: [], resources: [], templates: [], prompts: [],
-  reqId: 0,
-  sawSessionHeaderBlocked: false
+  reqId: 0
 };
 
 function setStatus(state, text) {
@@ -756,12 +770,6 @@ async function rpc(method, params, opts) {
   ]);
   if (kind === "err") h.node.classList.add("open");
 
-  // Compliance nudges worth knowing about
-  if (!client.isModern && !res.headers.get("mcp-session-id") && res.headers.get("access-control-expose-headers") === null
-      && location.origin !== new URL(client.url, location.href).origin && method === "initialize") {
-    client.sawSessionHeaderBlocked = true;
-  }
-
   return { ok: res.ok && !errObj, result, error: errObj, status: res.status, raw: rawText, headers: respHeaders };
 }
 
@@ -791,27 +799,39 @@ async function connect() {
   }
   client.sessionId = null; client.connected = false; client.server = null;
   client.tools = []; client.resources = []; client.templates = []; client.prompts = [];
+  client.listErrors = {}; client.listStatus = {}; client.listUnsupported = {};
   $("connMsg").innerHTML = "";
   setStatus("busy", "connecting\u2026");
+  diagStart(url);
 
   let ok = false;
   if (client.era === "auto" || MODERN_ERAS.has(client.era)) ok = await tryModern(client.era === "auto" ? MODERN : client.era);
-  if (!ok && (client.era === "auto" || !MODERN_ERAS.has(client.era))) {
+  if (!ok && !diag.halt && (client.era === "auto" || !MODERN_ERAS.has(client.era))) {
     ok = await tryLegacy(MODERN_ERAS.has(client.era) ? LEGACY_PREFERRED : (client.era === "auto" ? LEGACY_PREFERRED : client.era));
   }
-  if (!ok) { setStatus("err", "not connected"); return; }
+  if (!ok) { setStatus("err", "not connected"); await diagHandshakeFailed(); return; }
 
   client.connected = true;
   setStatus("on", (client.isModern ? "stateless " : "session ") + client.version);
+  diagHandshakeOk();
   renderServerInfo();
   saveLast();
+  diagSet("lists", "running", "Asking for tools, resources and prompts\u2026");
   await loadAll();
+  diagListsDone();
 }
 
 async function tryModern(version) {
   client.isModern = true; client.version = version;
   const r = await rpc("server/discover", {});
-  if (r.transport) { await doctor(true); return false; }
+  diag.attempts.push({ method: "server/discover", version, r });
+  if (r.transport) {
+    // In auto mode this is only the modern-era probe. A legacy server whose CORS
+    // preflight does not allow Mcp-Method / Mcp-Name fails here and is still fine
+    // on the initialize handshake, so this is a note, not an error.
+    if (client.era === "auto") logNote("server/discover could not be read by the browser \u2014 trying the initialize handshake");
+    return false;
+  }
 
   if (r.ok) {
     client.server = r.result || {};
@@ -832,6 +852,7 @@ async function tryModern(version) {
       client.version = supported[0];
       logNote("Server rejected " + version + ", retrying with " + client.version);
       const r2 = await rpc("server/discover", {});
+      diag.attempts.push({ method: "server/discover", version: client.version, r: r2 });
       if (r2.ok) { client.server = r2.result || {}; client.capabilities = (r2.result && r2.result.capabilities) || {}; return true; }
     }
     if (code === -32020) { logWarn("Header/body mismatch reported by server", j(r.error)); return false; }
@@ -842,6 +863,7 @@ async function tryModern(version) {
   }
   if (r.status === 401 || r.status === 403) {
     handleUnauthorized(r);
+    diag.halt = true;
     return false;
   }
   logNote("server/discover failed (" + r.status + ") \u2014 trying the initialize handshake");
@@ -864,28 +886,19 @@ async function tryLegacy(version) {
     capabilities: { roots: { listChanged: false }, sampling: {}, elicitation: {} },
     clientInfo: CLIENT_INFO
   });
-  if (r.transport) { await doctor(true); return false; }
+  diag.attempts.push({ method: "initialize", version, r });
+  if (r.transport) return false;
   if (r.status === 401 || r.status === 403) { handleUnauthorized(r); return false; }
-  if (!r.ok) {
-    showConnErr("The handshake failed with HTTP " + r.status + (r.error ? " \u2014 " + (r.error.message || "") : "") +
-      ". Check the URL points at the MCP endpoint itself (often /mcp), not the site root.");
-    return false;
-  }
+  if (!r.ok) return false;
   client.version = (r.result && r.result.protocolVersion) || version;
   client.server = r.result || {};
   client.capabilities = (r.result && r.result.capabilities) || {};
 
-  if (!client.sessionId) {
-    const originDiffers = new URL(client.url, location.href).origin !== location.origin;
-    if (originDiffers) {
-      showConnWarn("Session header not readable",
-        "The server may have issued an <code>Mcp-Session-Id</code>, but the browser can only read it if the server sends " +
-        "<code>Access-Control-Expose-Headers: Mcp-Session-Id</code>. If the next call fails with " +
-        "&ldquo;Missing Mcp-Session-Id&rdquo;, that header is the fix.");
-    }
-  }
-  // Handshake completion notification
-  await rpc("notifications/initialized", {});
+  // No warning here about an unreadable Mcp-Session-Id: stateless servers never
+  // send one, and Access-Control-Expose-Headers is itself unreadable cross-origin,
+  // so the absence proves nothing. The diagnosis only raises it when a later
+  // call actually fails for a missing session.
+  diag.notif = await rpc("notifications/initialized", {});
   return true;
 }
 
@@ -913,10 +926,16 @@ async function listAll(method, key) {
   for (let page = 0; page < 40; page++) {
     const r = await rpc(method, cursor ? { cursor } : {});
     if (!r.ok) {
-      if (r.error && (r.error.code === -32601 || r.status === 404)) return { items: [], unsupported: true };
-      const error = r.error || { message: "HTTP " + r.status };
+      if (r.error && (r.error.code === -32601 || r.status === 404)) {
+        client.listUnsupported = client.listUnsupported || {};
+        client.listUnsupported[method] = true;
+        return { items: [], unsupported: true };
+      }
+      const error = r.error || { message: r.transport ? "the browser could not read the response" : "HTTP " + r.status };
       client.listErrors = client.listErrors || {};
       client.listErrors[method] = error;
+      client.listStatus = client.listStatus || {};
+      client.listStatus[method] = r.transport ? 0 : r.status;
       logWarn(method + " failed", error.message || j(error));
       return { items, error };
     }
@@ -929,7 +948,7 @@ async function listAll(method, key) {
 }
 
 async function loadAll() {
-  client.listErrors = {};
+  client.listErrors = {}; client.listStatus = {}; client.listUnsupported = {};
   const caps = client.capabilities || {};
   const hasTools = !client.isModern ? !!caps.tools : true;
   const hasRes = !client.isModern ? !!caps.resources : true;
@@ -1022,7 +1041,7 @@ function mirrorHeaders(tool, args) {
    ========================================================================= */
 function renderServerInfo() {
   const s = client.server || {};
-  const info = s.serverInfo || s.implementation || {};
+  const info = serverInfoOf(s);
   const caps = client.capabilities || {};
   const capNames = Object.keys(caps).filter((k) => caps[k]);
   const rows = [];
@@ -1036,7 +1055,9 @@ function renderServerInfo() {
 
   let html = "";
   for (const [k, v] of rows) html += '<label class="f" style="margin-top:8px">' + esc(k) + '</label><div style="font-family:var(--mono);font-size:11.5px;word-break:break-word">' + esc(v) + "</div>";
-  html += '<button class="ghost" style="margin-top:12px;width:100%" onclick="showRawServer()">View raw</button>';
+  html += '<button class="btn" style="margin-top:12px;width:100%" onclick="openModelView()">What the model sees</button>';
+  html += '<div class="row" style="margin-top:6px"><button class="ghost" style="flex:1" onclick="showRawServer()">View raw</button>' +
+    '<button class="ghost" style="flex:1" onclick="openDiag()">Connection steps</button></div>';
   $("serverInfo").innerHTML = html;
   $("secServer").open = true;
 }
@@ -1063,6 +1084,442 @@ window.showRawServer = () => {
     if (!err) { const p2 = el("pre", "out"); p2.textContent = j({ [key]: clean(items || []) }); w.appendChild(p2); }
   }
 };
+
+/* =========================================================================
+   Connection diagnosis — every connect walks these steps in order, and a
+   failure stops at the step that failed with the reason and the fix, instead
+   of leaving an empty tool list and a red box that does not say why.
+   ========================================================================= */
+const DIAG_STEPS = [
+  { id: "reach", n: "01", title: "Reach the server" },
+  { id: "cors", n: "02", title: "Browser may read the response (CORS)" },
+  { id: "http", n: "03", title: "HTTP status" },
+  { id: "auth", n: "04", title: "Authorization" },
+  { id: "era", n: "05", title: "Protocol era and version" },
+  { id: "init", n: "06", title: "initialize" },
+  { id: "initd", n: "07", title: "notifications/initialized" },
+  { id: "lists", n: "08", title: "tools/list (and resources, prompts)" }
+];
+const diag = { url: "", state: {}, attempts: [], notif: null, halt: false, done: false, failed: null };
+
+function diagStart(url) {
+  diag.url = url; diag.attempts = []; diag.notif = null; diag.halt = false; diag.done = false; diag.failed = null;
+  diag.state = {};
+  DIAG_STEPS.forEach((s) => { diag.state[s.id] = { status: "idle", line: "", detail: "", actions: [] }; });
+  diag.state.reach = { status: "running", line: "Sending the first request…", detail: "", actions: [] };
+  openDiag(true);
+}
+function diagSet(id, status, line, detail, actions) {
+  diag.state[id] = { status, line: line || "", detail: detail || "", actions: actions || [] };
+  if ($("diagView")) renderDiag();
+}
+function diagSkipFrom(id, why) {
+  let after = false;
+  DIAG_STEPS.forEach((s) => { if (after) diagSet(s.id, "skip", why || "Not reached."); if (s.id === id) after = true; });
+}
+function diagFail(id, line, detail, actions) {
+  diagSet(id, "fail", line, detail, actions);
+  diagSkipFrom(id, "Not reached: step " + DIAG_STEPS.find((s) => s.id === id).n + " failed.");
+  diag.failed = id;
+}
+
+const doctorBtn = { label: "Open the CORS doctor", on: () => doctor(false) };
+const oauthBtn = { label: "Open the guided OAuth flow", kind: "btn", on: () => openOauthFlow() };
+const logHint = " The full exchange is in the wire log.";
+
+function statusAdvice(status, attempt) {
+  const e = attempt && attempt.r && attempt.r.error;
+  const m = e && e.code !== 0 ? e.message : null;   // code 0 is this page's own "not JSON" marker
+  const said = m ? " The server said: <code>" + esc(m) + "</code>." : "";
+  if (status === 404) return ["HTTP 404: there is no MCP endpoint at this path.",
+    "Check the URL points at the MCP endpoint itself, which usually ends in <code>/mcp</code>, not the site root or a docs page." + said];
+  if (status === 405) return ["HTTP 405: the endpoint exists but does not accept POST.",
+    "This page speaks Streamable HTTP (JSON-RPC over POST). A 405 usually means the URL is an older HTTP+SSE endpoint (often <code>/sse</code>) or something that is not MCP. Look for the server's Streamable HTTP URL, often <code>/mcp</code>." + said];
+  if (status === 406 || status === 415) return ["HTTP " + status + ": the server rejected the request format.",
+    "This page sends <code>Content-Type: application/json</code> and <code>Accept: application/json, text/event-stream</code>, as Streamable HTTP requires. The server may not be an MCP endpoint." + said];
+  if (status === 400) return ["HTTP 400: the server rejected the request.",
+    "Read the reason below and in the wire log. Common causes are a protocol version the server does not support, or a missing session ID." + said];
+  if (status >= 500) return ["HTTP " + status + ": the server errored.",
+    "This is a fault on the server side, not in the request. Check the server's logs; the response body is in the wire log." + said];
+  return ["HTTP " + status + ": unexpected response.", "Expected 200 (or 202 for a notification)." + said];
+}
+
+function parseResourceMetadata(wa) {
+  const m = /resource_metadata\s*=\s*"([^"]+)"/i.exec(wa || "") || /resource_metadata\s*=\s*([^\s,]+)/i.exec(wa || "");
+  return m ? m[1] : null;
+}
+
+/* Transport failure: separate "could not connect at all" from "connected but
+   the browser hid the answer" with an opaque no-cors probe. */
+async function diagTransport() {
+  let u; try { u = new URL(diag.url); } catch { u = null; }
+  if (u && location.protocol === "https:" && u.protocol === "http:") {
+    diagFail("reach", "Mixed content: this https page is not allowed to call a plain http URL.",
+      "Put TLS in front of the MCP server (https), or serve this page over http.");
+    return;
+  }
+  let reachable = true;
+  try { await fetch(diag.url, { method: "POST", mode: "no-cors", body: "{}", headers: { "Content-Type": "text/plain" } }); }
+  catch { reachable = false; }
+  if (!reachable) {
+    diagFail("reach", "Could not open a connection to " + esc(u ? u.host : diag.url) + ".",
+      "This is DNS, TLS, a firewall or a wrong port, not CORS. Check the hostname is spelled right and resolves from this machine." + logHint);
+    return;
+  }
+  diagSet("reach", "ok", "A connection opened, so the hostname, port and TLS are fine.");
+  const both = diag.attempts.length > 1 && diag.attempts.every((a) => a.r.transport);
+  diagFail("cors", "The server answered, but the browser would not let this page read the response.",
+    "The server must allow this page's origin (<code>" + esc(location.origin) + "</code>) with CORS headers, including on its preflight. " +
+    (both ? "Both <code>server/discover</code> and <code>initialize</code> were blocked. " : "") +
+    "A wrong path can look like this too, when the server's 404 page carries no CORS headers, so check the URL as well. " +
+    "The CORS doctor prints the exact headers to add.", [doctorBtn]);
+}
+
+async function diagHandshakeFailed() {
+  const last = diag.attempts[diag.attempts.length - 1];
+  if (!last) { diagFail("reach", "No request was sent.", ""); diagSummary(); return; }
+  const r = last.r;
+  if (r.transport) { await diagTransport(); diagSummary(); return; }
+
+  diagSet("reach", "ok", "The server answered.");
+  diagSet("cors", "ok", sameOriginAsPage() ? "Same origin as this page, so CORS does not apply." : "The browser let this page read the response.");
+
+  if (r.status === 401 || r.status === 403) {
+    diagSet("http", "ok", "HTTP " + r.status + ": the endpoint exists and is asking for credentials.");
+    const wa = r.headers && r.headers["www-authenticate"];
+    const rm = parseResourceMetadata(wa);
+    const sentAuth = Object.entries(client.headers).some(([k, v]) => k.toLowerCase() === "authorization" && String(v || "").trim());
+    let d = (sentAuth
+      ? "An <code>Authorization</code> header was sent and the server refused it: it is wrong, expired, or lacks the needed scope. "
+      : "No credentials were sent. ") +
+      "Paste a bearer token under <b>Headers</b>, or run the guided OAuth flow, which walks discovery, registration and sign-in one step at a time.";
+    d += "<div style='margin-top:9px'>" +
+      kv("WWW-Authenticate", wa ? "<code>" + esc(wa) + "</code>" : "not readable. Either not sent, or not listed in <code>Access-Control-Expose-Headers</code>. The OAuth flow falls back to <code>/.well-known/oauth-protected-resource</code>.") +
+      (rm ? kv("resource_metadata", "<code>" + esc(rm) + "</code>") : "") + "</div>";
+    const disc = diag.attempts.find((a) => a.method === "server/discover");
+    if (disc && disc.r.transport && last.method === "initialize")
+      d += "<p class='fblurb' style='margin-top:9px'>Note: <code>server/discover</code> (the 2026-07-28 probe) was blocked by the browser, most likely because the CORS preflight does not allow the <code>Mcp-Method</code> header. That is not the problem here; the initialize handshake reached the server and got this " + r.status + ".</p>";
+    diagFail("auth", "HTTP " + r.status + ": " + (r.status === 401 ? "the server needs you to authenticate." : "the server refused these credentials."), d, [oauthBtn]);
+    diagSummary(); return;
+  }
+
+  const discover = diag.attempts.find((a) => a.method === "server/discover");
+  const tail = discover && last.method === "initialize"
+    ? " (<code>server/discover</code> also failed" + (discover.r.transport ? ", blocked by the browser" : " with HTTP " + discover.r.status) + ".)" : "";
+
+  if (r.status < 200 || r.status >= 300) {
+    const [line, d] = statusAdvice(r.status, last);
+    diagFail("http", line, d + tail + logHint);
+    diagSummary(); return;
+  }
+  diagSet("http", "ok", "HTTP " + r.status + ".");
+  diagSet("auth", "ok", "No credentials challenge.");
+
+  const e = r.error || {};
+  if (e.code === 0 && /not JSON/.test(e.message || "")) {
+    diagFail("era", "HTTP " + r.status + " but the body is not JSON-RPC.",
+      "This looks like a web page or another API, not an MCP endpoint. Check the URL, which usually ends in <code>/mcp</code>." + logHint);
+    diagSummary(); return;
+  }
+  const msg = e.message ? "<code>" + esc(e.message) + "</code>" : "an empty or unreadable result";
+  if (/version/i.test(e.message || "") || pickVersions(e.data).length) {
+    const sup = pickVersions(e.data);
+    diagFail("era", "The server rejected protocol version " + esc(last.version || "?") + ".",
+      "It said " + msg + "." + (sup.length ? " It supports: <code>" + esc(sup.join(", ")) + "</code>. Pick one in the Protocol menu." : " Try a different version in the Protocol menu."));
+    diagSummary(); return;
+  }
+  diagSet("era", "ok", "The server answered " + esc(last.method) + ".");
+  diagFail("init", last.method + " returned a JSON-RPC error.", "The server replied with " + msg + "." + tail + logHint);
+  diagSummary();
+}
+
+/* Legacy initialize puts serverInfo at the top level; server/discover carries
+   it in _meta under the io.modelcontextprotocol namespace. */
+function serverInfoOf(s) {
+  s = s || {};
+  return s.serverInfo || s.implementation || (s._meta && s._meta["io.modelcontextprotocol/serverInfo"]) || {};
+}
+function sameOriginAsPage() { try { return new URL(diag.url).origin === location.origin; } catch { return false; } }
+
+function diagHandshakeOk() {
+  const last = diag.attempts[diag.attempts.length - 1] || { r: {} };
+  diagSet("reach", "ok", "The server answered.");
+  diagSet("cors", "ok", sameOriginAsPage() ? "Same origin as this page, so CORS does not apply." : "The browser let this page read the response.");
+  diagSet("http", "ok", "HTTP " + (last.r.status || 200) + ".");
+  const sentAuth = Object.entries(client.headers).some(([k, v]) => k.toLowerCase() === "authorization" && String(v || "").trim());
+  diagSet("auth", "ok", sentAuth ? "An Authorization header was sent and accepted." : "No credentials needed: the server did not challenge.");
+
+  if (client.isModern) {
+    diagSet("era", "ok", "Stateless era, version " + esc(client.version) + ": <code>server/discover</code> answered.");
+    diagSet("init", "skip", "No handshake in the stateless era. <code>server/discover</code> played this role.");
+    diagSet("initd", "skip", "No handshake in the stateless era, so nothing to acknowledge.");
+    return;
+  }
+  const discover = diag.attempts.find((a) => a.method === "server/discover");
+  let why = "";
+  if (discover) {
+    why = discover.r.transport
+      ? " <code>server/discover</code> (the 2026-07-28 probe) was blocked by the browser, most likely because the server's CORS preflight does not allow the <code>Mcp-Method</code> / <code>Mcp-Name</code> headers that request carries. That only matters for the stateless protocol; connected using the initialize handshake."
+      : " <code>server/discover</code> (the 2026-07-28 probe) returned HTTP " + discover.r.status + ", which is normal for servers on the session protocol, so this connected with the initialize handshake.";
+  }
+  const asked = last.version;
+  const chose = asked && client.version && asked !== client.version ? " Asked for " + esc(asked) + "; the server chose " + esc(client.version) + "." : "";
+  diagSet("era", "ok", "Session era, version " + esc(client.version) + "." + chose, why ? "<p class='fblurb' style='margin:0'>" + why + "</p>" : "");
+  const info = serverInfoOf(client.server);
+  diagSet("init", "ok", "Server identified as " + esc((info.name || "unnamed") + (info.version ? " " + info.version : "")) + "." +
+    (client.sessionId ? " Session ID received." : " No session ID was readable (normal for stateless servers)."));
+  const n = diag.notif;
+  if (n && (n.ok || n.status === 202 || n.status === 200)) diagSet("initd", "ok", "Acknowledged with HTTP " + n.status + ".");
+  else diagSet("initd", "fail", "The server rejected the notification" + (n && n.status ? " with HTTP " + n.status : "") + ".",
+    "Continuing to the list calls to see if the server works anyway." + logHint);
+}
+
+function diagListsDone() {
+  const caps = client.capabilities || {};
+  const errs = client.listErrors || {}, st = client.listStatus || {}, uns = client.listUnsupported || {};
+  const te = errs["tools/list"];
+  const extra = [];
+  [["resources/list", (client.resources || []).length + " resources"], ["resources/templates/list", (client.templates || []).length + " resource templates"], ["prompts/list", (client.prompts || []).length + " prompts"]]
+    .forEach(([m, label]) => {
+      if (errs[m]) extra.push(kv(m, "<span style='color:var(--err)'>failed: " + esc(errs[m].message || j(errs[m])) + "</span>"));
+      else if (uns[m]) extra.push(kv(m, "not supported by this server"));
+      else extra.push(kv(m, label));
+    });
+  const initdFailed = diag.state.initd && diag.state.initd.status === "fail";
+
+  if (te) {
+    const status = st["tools/list"];
+    let fix;
+    if (status === 401 || status === 403) fix = "The handshake was allowed but listing tools needs credentials. Paste a token under Headers or run the guided OAuth flow.";
+    else if (/session/i.test(te.message || "") || (!client.sessionId && !client.isModern && (status === 400 || status === 404))) {
+      fix = "The server expects an <code>Mcp-Session-Id</code> on this call and this page did not have one" +
+        (client.sessionId ? "" : ". The server probably issued one on <code>initialize</code> but did not list it in <code>Access-Control-Expose-Headers</code>, so the browser hid it. Add <code>Access-Control-Expose-Headers: Mcp-Session-Id</code> on the server.") + ".";
+    } else if (status === 0) fix = "The browser could not read this response. That is a CORS problem on this call specifically.";
+    else fix = "Read the server's error below and in the wire log.";
+    diagFail("lists", "tools/list failed" + (status ? " (HTTP " + status + ")" : "") + ": " + esc(te.message || j(te)),
+      "<p class='fblurb'>" + fix + (initdFailed ? " The notifications/initialized failure above is probably the same cause." : "") + "</p>" + extra.join(""),
+      (status === 401 || status === 403) ? [oauthBtn] : status === 0 ? [doctorBtn] : []);
+  } else {
+    if (initdFailed) diagSet("initd", "warn", "The server rejected the notification but answered the list calls anyway, so it is safe to ignore.");
+    const noTools = !client.isModern && !caps.tools;
+    const line = noTools ? "The server does not advertise tools, so it gives the model none."
+      : uns["tools/list"] ? "The server does not implement tools/list, so it gives the model no tools."
+      : (client.tools || []).length + " tools received.";
+    diagSet("lists", (noTools || uns["tools/list"]) ? "warn" : "ok", line, extra.join(""));
+  }
+  diag.done = true;
+  diagSummary();
+  if (!diag.failed && $("diagView")) openModelView();
+}
+
+/* One short line in the rail. Always replaces whatever was there, so a stale
+   error from an earlier probe never sits beside a successful connection. */
+function diagSummary() {
+  const box = $("connMsg");
+  const failed = diag.failed && DIAG_STEPS.find((s) => s.id === diag.failed);
+  const warns = DIAG_STEPS.filter((s) => diag.state[s.id] && diag.state[s.id].status === "warn");
+  let html;
+  if (failed && !client.connected) {
+    html = '<div class="note bad"><h4>Could not connect</h4>Stopped at step ' + failed.n + ", " + esc(failed.title) + ". " +
+      diag.state[failed.id].line + '<div class="row" style="margin-top:8px"><button class="ghost" id="btnDiagShow">Show the steps</button></div></div>';
+  } else if (failed) {
+    html = '<div class="note bad"><h4>Connected, but ' + esc(failed.title.split(" ")[0]) + " failed</h4>" + diag.state[failed.id].line +
+      '<div class="row" style="margin-top:8px"><button class="ghost" id="btnDiagShow">Show the steps</button></div></div>';
+  } else {
+    html = '<div class="note ok"><h4>Connected</h4>All steps passed' + (warns.length ? ", " + warns.length + " with a note" : "") + "." +
+      '<div class="row" style="margin-top:8px"><button class="ghost" id="btnModelShow">What the model sees</button>' +
+      '<button class="ghost" id="btnDiagShow">Steps</button></div></div>';
+  }
+  box.innerHTML = html;
+  const a = $("btnDiagShow"); if (a) a.onclick = () => { document.body.dataset.pane = "work"; openDiag(); };
+  const b = $("btnModelShow"); if (b) b.onclick = () => { document.body.dataset.pane = "work"; openModelView(); };
+}
+
+function openDiag(force) {
+  pin();
+  const w = $("work"); w.innerHTML = ""; delete w.dataset.view;
+  const root = el("div"); root.id = "diagView"; w.appendChild(root);
+  renderDiag();
+}
+window.openDiag = openDiag;
+
+function renderDiag() {
+  const root = $("diagView"); if (!root) return;
+  root.innerHTML = "";
+  root.appendChild(el("h2", null, "Connection steps"));
+  root.appendChild(el("p", "sub", (diag.url || "no endpoint") + (diag.url ? "" : " · press Connect")));
+  if (client.connected && diag.done) {
+    const bar = el("div", "row"); bar.style.margin = "0 0 14px";
+    const b = el("button", "btn", "What the model sees"); b.onclick = openModelView; bar.appendChild(b);
+    root.appendChild(bar);
+  }
+  DIAG_STEPS.forEach((s) => {
+    const st = diag.state[s.id] || { status: "idle" };
+    const card = el("div", "fstep " + st.status);
+    const head = el("div", "fh");
+    head.appendChild(el("span", "fn", s.n));
+    head.appendChild(el("span", "ft", s.title));
+    head.appendChild(el("span", "fb " + st.status, { idle: "waiting", running: "running", ok: "pass", warn: "note", fail: "failed", skip: "skipped" }[st.status] || st.status));
+    card.appendChild(head);
+    if (st.line || st.detail || (st.actions && st.actions.length)) {
+      const body = el("div", "fbdy");
+      body.innerHTML = (st.line ? '<p class="fblurb" style="color:var(--text)">' + st.line + "</p>" : "") +
+        (st.detail ? (/^<(p|div)/.test(st.detail) ? st.detail : '<div class="fblurb">' + st.detail + "</div>") : "");
+      if (st.actions && st.actions.length) {
+        const ab = el("div", "row"); ab.style.marginTop = "10px";
+        st.actions.forEach((a) => { const b = el("button", a.kind || "ghost", a.label); b.onclick = a.on; ab.appendChild(b); });
+        body.appendChild(ab);
+      }
+      card.appendChild(body);
+    }
+    root.appendChild(card);
+  });
+}
+
+/* =========================================================================
+   What the model sees — the same connection, told from the model's side.
+   ========================================================================= */
+const MODEL_TOOL_FIELDS = ["name", "title", "description", "inputSchema", "outputSchema", "annotations"];
+
+function modelTool(t) {
+  const o = {};
+  MODEL_TOOL_FIELDS.forEach((k) => { if (t[k] !== undefined) o[k] = t[k]; });
+  return o;
+}
+function tokStr(n) { return (n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n)) + " tok"; }
+function stageCard(n, title, badge, badgeCls) {
+  const card = el("div", "fstep"); card.style.borderLeftColor = "var(--line)";
+  const head = el("div", "fh");
+  head.appendChild(el("span", "fn", n));
+  head.appendChild(el("span", "ft", title));
+  head.appendChild(el("span", "fb " + (badgeCls || ""), badge));
+  card.appendChild(head);
+  const body = el("div", "fbdy"); card.appendChild(body);
+  return { card, body };
+}
+function fieldRow(host, name, reaches, text, value) {
+  const row = el("div", "mrow");
+  const h = el("div", "mh");
+  h.appendChild(el("code", null, name));
+  h.appendChild(el("span", "pill " + (reaches ? "ok" : ""), reaches ? "usually reaches the model" : "client only"));
+  row.appendChild(h);
+  if (text) { const p = el("p", "fblurb"); p.innerHTML = text; row.appendChild(p); }
+  if (value !== undefined) { const pre = el("pre", "out"); pre.textContent = typeof value === "string" ? value : j(value); row.appendChild(pre); }
+  host.appendChild(row);
+}
+
+function openModelView() {
+  pin();
+  const w = $("work"); w.innerHTML = ""; delete w.dataset.view;
+  const root = el("div"); root.id = "modelView"; w.appendChild(root);
+  root.appendChild(el("h2", null, "What the model sees"));
+  root.appendChild(el("p", "sub", "Connecting happens in stages. Each stage below shows what the client learned, and which part of it ends up in the model's context."));
+  const bar = el("div", "row"); bar.style.margin = "0 0 16px"; bar.style.flexWrap = "wrap";
+  [["Connection steps", openDiag], ["Raw server view", () => window.showRawServer()],
+   ["Full token analysis", () => { $("secCost").open = true; $("btnCost").click(); }]].forEach(([label, fn]) => {
+    const b = el("button", "ghost", label); b.onclick = fn; bar.appendChild(b);
+  });
+  root.appendChild(bar);
+  if (!client.connected) {
+    root.appendChild(Object.assign(el("div", "note"), { innerHTML: "Connect to a server first." }));
+    return;
+  }
+
+  /* ---- stage 1 ---- */
+  const s = client.server || {};
+  const st1 = stageCard("STAGE 1", client.isModern ? "server/discover" : "initialize", "mostly client side");
+  st1.body.appendChild(Object.assign(el("p", "fblurb"), {
+    innerHTML: (client.isModern
+      ? "In the stateless 2026-07-28 era there is no handshake: the client asks <code>server/discover</code> for the same description. "
+      : "Client and server agree on a protocol version and trade capabilities. ") +
+      "<b>No tool definitions are sent at this stage.</b> The model has not been told about any tools yet."
+  }));
+  fieldRow(st1.body, "instructions", true,
+    "Free-text guidance from the server about how to use it. Clients commonly add it to the model's system prompt or context; whether and how is up to the client.",
+    s.instructions ? s.instructions : "(this server sent no instructions)");
+  const info = serverInfoOf(s);
+  if (Object.keys(info).length) fieldRow(st1.body, s.serverInfo ? "serverInfo" : s.implementation ? "implementation" : "_meta serverInfo", false, "Name and version, for the client's UI and logs. The model does not read it.", info);
+  fieldRow(st1.body, "protocolVersion", false, "Which version of MCP the two sides will speak.", client.version || "?");
+  fieldRow(st1.body, "capabilities", false,
+    "Only declares which features exist. <code>\"tools\": {}</code> means &ldquo;I have tools, ask <code>tools/list</code> for them&rdquo;. It holds no tool names or schemas. <code>listChanged: true</code> means the server may tell the client when a list changes.",
+    client.capabilities || {});
+  const otherKeys = Object.keys(s).filter((k) => !["instructions", "serverInfo", "implementation", "protocolVersion", "capabilities"].includes(k));
+  if (otherKeys.length) {
+    const other = {}; otherKeys.forEach((k) => { other[k] = s[k]; });
+    fieldRow(st1.body, "other fields", false, "Anything else the server put in this result.", other);
+  }
+  root.appendChild(st1.card);
+
+  /* ---- stage 2 ---- */
+  const tools = client.tools || [];
+  const te = client.listErrors && client.listErrors["tools/list"];
+  const totalChars = tools.length ? compact(tools.map(toolBlock)).length : 0;
+  const totalTok = tokDef(totalChars);
+  const st2 = stageCard("STAGE 2", "tools/list", te ? "failed" : tools.length + " tools · ≈" + tokStr(totalTok), te ? "fail" : "ok");
+  if (te) st2.card.style.borderLeftColor = "var(--err)";
+  st2.body.appendChild(Object.assign(el("p", "fblurb"), {
+    innerHTML: "<b>This is where the model's tool list comes from.</b> After the handshake, the client calls <code>tools/list</code> and passes each definition to the model, " +
+      "re-shaped into its model API's tool format (for example <code>name</code>, <code>description</code>, <code>input_schema</code>). " +
+      "The model reasons over the name, description and input schema. Whether <code>title</code>, <code>annotations</code> and <code>outputSchema</code> reach the model depends on the client; the Token cost toggles control whether they are counted."
+  }));
+  if (te) {
+    const n = el("div", "note bad");
+    n.innerHTML = "<h4>tools/list failed</h4>" + esc(te.message || j(te)) + ". The model gets no tools from this server until this is fixed.";
+    const b = el("button", "ghost", "Show the connection steps"); b.style.marginTop = "8px"; b.style.display = "block"; b.onclick = openDiag; n.appendChild(b);
+    st2.body.appendChild(n);
+  } else if (!tools.length) {
+    st2.body.appendChild(Object.assign(el("div", "note"), { innerHTML: "This server gave no tools, so it adds nothing to the model's tool list." }));
+  } else {
+    const ctx = Number($("ctxWin").value) || 1000000;
+    const sum = el("div", "note");
+    sum.innerHTML = "<h4>Size</h4>" + fmtN(totalChars) + " characters of compact JSON, roughly <b>" + fmtN(totalTok) + " tokens</b> (" +
+      pctOf(totalTok, ctx).toFixed(2) + "% of a " + (ctx >= 1000000 ? "1M" : Math.round(ctx / 1000) + "K") + " window). " +
+      "This is an estimate at " + cptDef + " characters per token; <b>Full token analysis</b> can replace it with a real count.";
+    st2.body.appendChild(sum);
+    const pre = nsPrefix();
+    st2.body.appendChild(Object.assign(el("div", "note"), {
+      innerHTML: "<h4>Names and loading vary by client</h4>Clients usually rename tools so two servers cannot clash. Claude Code, for example, uses <code>mcp__&lt;server&gt;__&lt;tool&gt;</code>; " +
+        "the names below use the <b>Namespace prefix</b> from Token cost (<code>" + esc(pre) + "</code>). " +
+        "Some clients also defer large tool sets: they keep only the names in context and load a schema when the model searches for it. The JSON below is what is sent when a definition is loaded."
+    }));
+    tools.forEach((t) => {
+      const d = el("details", "mtool");
+      const sm = el("summary");
+      sm.appendChild(el("span", "nm", pre + t.name));
+      const blockText = compact(toolBlock(t));
+      const tk = exactByTool.has(blockText) ? exactByTool.get(blockText) : tokDef(blockText.length);
+      sm.appendChild(el("span", "tokpill", (exactByTool.has(blockText) ? "" : "≈") + tokStr(tk)));
+      d.appendChild(sm);
+      const mt = modelTool(t);
+      const p = el("pre", "out"); p.textContent = j(mt); d.appendChild(p);
+      const dropped = Object.keys(t).filter((k) => !MODEL_TOOL_FIELDS.includes(k) && !k.startsWith("__"));
+      const foot = el("div", "row"); foot.style.margin = "6px 0 2px"; foot.style.alignItems = "center";
+      const c = el("button", "mini", "copy"); c.onclick = () => copy(j(mt), t.name); foot.appendChild(c);
+      const o = el("button", "mini", "call this tool"); o.onclick = () => openTool(t); foot.appendChild(o);
+      if (dropped.length) foot.appendChild(el("span", "hint", "Also sent, for the client's own use: " + dropped.join(", ")));
+      d.appendChild(foot);
+      st2.body.appendChild(d);
+    });
+  }
+  root.appendChild(st2.card);
+
+  /* ---- stage 3 ---- */
+  const res = (client.resources || []).length, tpl = (client.templates || []).length, pr = (client.prompts || []).length;
+  const st3 = stageCard("STAGE 3", "resources and prompts", "only on request");
+  const names = (arr, f) => arr.slice(0, 24).map((x) => "<code>" + esc(f(x)) + "</code>").join(", ") + (arr.length > 24 ? ", …" : "");
+  const errs = client.listErrors || {};
+  st3.body.innerHTML =
+    '<p class="fblurb"><b>Neither is given to the model automatically.</b> They are listed now, but stay with the client until someone uses them.</p>' +
+    kv("resources", (errs["resources/list"] ? "<span style='color:var(--err)'>list failed</span>" : res + " resources" + (tpl ? ", " + tpl + " templates" : "")) +
+      (res + tpl ? "<br>" + names((client.resources || []).concat(client.templates || []), (x) => x.name || x.uri || x.uriTemplate) : "")) +
+    '<p class="fblurb">Application-driven. The client decides when to use one, usually when you attach or mention it, and only then are its contents added to the conversation. ' +
+    "Some clients also let the model fetch resources through a tool of their own; that is a client feature, not part of this server's tool list.</p>" +
+    kv("prompts", (errs["prompts/list"] ? "<span style='color:var(--err)'>list failed</span>" : pr + " prompts") +
+      (pr ? "<br>" + names(client.prompts, (x) => x.name) : "")) +
+    '<p class="fblurb">User-driven. Clients typically show them as slash commands or menu entries. When you pick one, the client calls <code>prompts/get</code> and the messages it returns go into the conversation.</p>';
+  root.appendChild(st3.card);
+}
+window.openModelView = openModelView;
 
 function renderList(listId, countId, items, onOpen, nameOf, descOf, emptyMsg) {
   const ul = $(listId); ul.innerHTML = "";
@@ -1115,7 +1572,9 @@ function renderWelcome() {
   } else {
     const counts = [client.tools.length + " tools", (client.resources.length + client.templates.length) + " resources", client.prompts.length + " prompts"];
     box.innerHTML = "<h1>Connected.</h1><p>" + esc(counts.join(" \u00b7 ")) +
-      ". Pick something from the left, or open the raw JSON-RPC console to send an arbitrary method.</p>";
+      ". Pick something from the left, or open the raw JSON-RPC console to send an arbitrary method.</p>" +
+      '<div class="row"><button class="btn" onclick="openModelView()">What the model sees</button>' +
+      '<button class="ghost" onclick="openDiag()">Connection steps</button></div>';
   }
   w.appendChild(box);
 }
@@ -2008,7 +2467,7 @@ function serverSlug() {
   // there is no pasted surface, or the paste arrived without a name.
   if (pastedTools) return pastedFrom || "server";
   const s = client.server || {};
-  const raw = s.name || (s.serverInfo && s.serverInfo.name) || "";
+  const raw = s.name || serverInfoOf(s).name || "";
   return String(raw).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "server";
 }
 function defaultPrefix() { return "mcp__" + serverSlug() + "__"; }
