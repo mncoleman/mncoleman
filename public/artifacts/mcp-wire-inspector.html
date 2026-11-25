@@ -1676,17 +1676,63 @@ function renderToolResult(host, r) {
   }
 
   /* What the call actually cost. Definitions are the advertised price; this is
-     the bill, and it is usually the larger of the two. */
-  const respChars = compact(res).length;
-  const respBytes = new TextEncoder().encode(compact(res)).length;
+     the bill. Price what the model receives, not the whole JSON-RPC result:
+     a client generally hands the model the content blocks, and many servers
+     repeat the same data in structuredContent, which would double the count. */
+  const content0 = Array.isArray(res.content) ? res.content : [];
+  const texts = [], media = [];
+  for (const c of content0) {
+    if (!c || typeof c !== "object") continue;
+    if (c.type === "text") texts.push(c.text || "");
+    else if (c.type === "resource" && c.resource) {
+      if (c.resource.text != null) texts.push(String(c.resource.text));
+      else media.push({ type: "embedded resource", size: (c.resource.blob || "").length });
+    } else if (c.type === "image" || c.type === "audio") media.push({ type: c.type, size: (c.data || "").length });
+    else texts.push(compact(c));   // resource_link and anything else: its JSON stands in for what a client would render
+  }
+  const fromStructured = !content0.length && res.structuredContent != null;
+  const modelText = fromStructured ? compact(res.structuredContent) : texts.join("\n");
+  const respChars = modelText.length;
   const respTokens = tokDef(respChars);
-  if (r.__toolName) ledger.push({ name: r.__toolName, tokens: respTokens, chars: respChars, at: Date.now() });
+  const modelLabel = ($("costModel").selectedOptions[0] || {}).textContent || "the selected tokenizer";
+  const entry = r.__toolName ? { name: r.__toolName, tokens: respTokens, chars: respChars, at: Date.now() } : null;
+  if (entry) ledger.push(entry);
+
   const costLine = el("p", "eyebrow");
-  costLine.innerHTML = "Content" +
-    '<span class="tokpill">~' + fmtN(respTokens) + " tok returned \u00b7 " + bytes(respBytes) + "</span>";
+  costLine.appendChild(document.createTextNode("Content"));
+  const pill = el("span", "tokpill", "\u2248 " + fmtN(respTokens) + " tokens to the model (est.)");
+  pill.title = "Estimate: " + fmtN(respChars) + " characters of " + (fromStructured ? "structuredContent" : "content-block text") +
+    " \u00f7 " + cptDef + " characters per token (" + modelLabel + " ratio). Press exact count for a real number.";
+  costLine.appendChild(pill);
+  if (respChars && respChars <= COUNT_MAX_CHARS) {
+    const ex = el("button", "mini", "exact count");
+    ex.onclick = async () => {
+      ex.disabled = true; ex.textContent = "counting\u2026";
+      try {
+        const m = await countTokens(modelText);
+        pill.textContent = fmtN(m.tokens) + " tokens to the model (exact)";
+        pill.title = "Counted with the token-counting API for " + modelLabel + ", " + fmtN(respChars) + " characters.";
+        if (entry) entry.tokens = m.tokens;
+        ex.remove();
+      } catch (e) { ex.disabled = false; ex.textContent = "exact count"; toast(e.message); }
+    };
+    costLine.appendChild(ex);
+  }
   host.appendChild(costLine);
+
+  const notes = [];
+  if (fromStructured) notes.push("No content blocks came back, so this estimate prices <code>structuredContent</code>, which a client would have to pass on itself.");
+  if (media.length) notes.push(media.length + " non-text block" + (media.length > 1 ? "s" : "") + " (" + esc(media.map((m) => m.type + " " + bytes(m.size)).join(", ") +
+    ") not included: models price images and audio differently from text."));
+  if (res.structuredContent != null && !fromStructured) {
+    const sb = new TextEncoder().encode(compact(res.structuredContent)).length;
+    notes.push("<code>structuredContent</code>: " + bytes(sb) + " on the wire, not counted above. Clients generally give the model the content blocks; " +
+      "structuredContent is for the client and is not normally sent to the model as well.");
+  }
+  notes.push("Whole result on the wire: " + bytes(new TextEncoder().encode(compact(res)).length) + ".");
+  host.appendChild(Object.assign(el("p", "hint"), { innerHTML: notes.join(" "), style: "margin:-4px 0 10px" }));
   const blocks = el("div", "blocks");
-  const content = Array.isArray(res.content) ? res.content : [];
+  const content = content0;
   if (!content.length) blocks.appendChild(Object.assign(el("div", "note"), { textContent: "No content blocks returned." }));
   for (const c of content) blocks.appendChild(renderBlock(c));
   host.appendChild(blocks);
