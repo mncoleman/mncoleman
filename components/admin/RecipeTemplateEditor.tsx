@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useTheme } from 'next-themes';
 import { ArrowLeft, Check, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SelectMenu } from '@/components/admin/kit';
@@ -38,7 +39,6 @@ export function RecipeTemplateEditor({ workerUrl }: { workerUrl: string }) {
     const [which, setWhich] = useState(SAMPLE);
     const { artifacts } = useArtifacts(api, true);
     const recipes = useMemo(() => artifacts.filter((a) => a.kind === 'recipe' && a.slug), [artifacts]);
-    const editorRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
         let live = true;
@@ -98,20 +98,12 @@ export function RecipeTemplateEditor({ workerUrl }: { workerUrl: string }) {
         }
     };
 
-    // Tab inserts two spaces instead of leaving the editor.
-    const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const canSave = dirty && !missingChart && !!state?.canEdit && busy === null;
+    const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
         if ((e.metaKey || e.ctrlKey) && e.key === 's') {
             e.preventDefault();
-            if (dirty && !missingChart && state?.canEdit) void save();
-            return;
+            if (canSave) void save();
         }
-        if (e.key !== 'Tab') return;
-        e.preventDefault();
-        const el = e.currentTarget;
-        const { selectionStart: a, selectionEnd: b } = el;
-        const next = `${draft.slice(0, a)}  ${draft.slice(b)}`;
-        setDraft(next);
-        requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = a + 2; });
     };
 
     if (loadError) return <div className="p-8 text-sm text-red-600">{loadError}</div>;
@@ -148,17 +140,9 @@ export function RecipeTemplateEditor({ workerUrl }: { workerUrl: string }) {
             )}
             <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2">
                 <div className="flex min-h-0 flex-col border-b border-border/60 lg:border-b-0 lg:border-r">
-                    <textarea
-                        ref={editorRef}
-                        value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
-                        onKeyDown={onKeyDown}
-                        readOnly={!state.canEdit}
-                        spellCheck={false}
-                        aria-label="Template HTML"
-                        data-lenis-prevent
-                        className="min-h-[40vh] flex-1 resize-none bg-transparent p-4 font-mono text-[12.5px] leading-relaxed outline-none"
-                    />
+                    <div className="min-h-[40vh] flex-1 overflow-hidden" onKeyDown={onKeyDown} data-lenis-prevent>
+                        <CodeEditor value={draft} onChange={setDraft} readOnly={!state.canEdit} />
+                    </div>
                     <details className="border-t border-border/60 px-4 py-2 text-xs">
                         <summary className="cursor-pointer select-none py-1 font-medium">Placeholders</summary>
                         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 py-2">
@@ -176,11 +160,90 @@ export function RecipeTemplateEditor({ workerUrl }: { workerUrl: string }) {
                 <iframe
                     title="Template preview"
                     srcDoc={html}
-                    // No scripts and an opaque origin: the preview can only draw.
-                    sandbox=""
+                    // Scripts (the toolbar buttons) but an opaque origin: no allow-same-origin, so the
+                    // preview can never reach the admin page, its storage or its session.
+                    sandbox="allow-scripts"
                     className="h-full min-h-[50vh] w-full border-0 bg-white"
                 />
             </div>
+        </div>
+    );
+}
+
+/**
+ * HTML editor with syntax colouring (CodeMirror 6, HTML mode, which also colours the CSS
+ * inside <style>). Loaded on demand so the library never reaches any other page. Controlled:
+ * typing reports through onChange, and a value changed from outside (Reset) is pushed in.
+ */
+function CodeEditor({ value, onChange, readOnly }: { value: string; onChange: (v: string) => void; readOnly: boolean }) {
+    const host = useRef<HTMLDivElement>(null);
+    const view = useRef<import('@codemirror/view').EditorView | null>(null);
+    const themeSlot = useRef<import('@codemirror/state').Compartment | null>(null);
+    const darkTheme = useRef<import('@codemirror/state').Extension>([]);
+    const latest = useRef(onChange);
+    latest.current = onChange;
+    const { resolvedTheme } = useTheme();
+    const dark = resolvedTheme !== 'light';
+    const darkRef = useRef(dark);
+    darkRef.current = dark;
+    const [ready, setReady] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            const [{ basicSetup }, { EditorView, keymap }, { EditorState, Compartment }, { html }, { oneDark }, { indentWithTab }] = await Promise.all([
+                import('codemirror'), import('@codemirror/view'), import('@codemirror/state'), import('@codemirror/lang-html'),
+                import('@codemirror/theme-one-dark'), import('@codemirror/commands'),
+            ]);
+            if (cancelled || !host.current) return;
+            darkTheme.current = oneDark;
+            const themeC = new Compartment();
+            themeSlot.current = themeC;
+            const base = EditorView.theme({
+                '&': { height: '100%', fontSize: '12.5px', backgroundColor: 'transparent' },
+                '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', lineHeight: '1.6' },
+                '.cm-gutters': { backgroundColor: 'transparent', border: 'none' },
+                '&.cm-focused': { outline: 'none' },
+            });
+            view.current = new EditorView({
+                parent: host.current,
+                state: EditorState.create({
+                    doc: value,
+                    extensions: [
+                        basicSetup,
+                        keymap.of([indentWithTab]),
+                        html(),
+                        EditorView.lineWrapping,
+                        base,
+                        themeC.of(darkRef.current ? oneDark : []),
+                        EditorState.readOnly.of(readOnly),
+                        EditorView.updateListener.of((u) => { if (u.docChanged) latest.current(u.state.doc.toString()); }),
+                    ],
+                }),
+            });
+            setReady(true);
+        })();
+        return () => { cancelled = true; view.current?.destroy(); view.current = null; };
+        // Built once; later changes arrive through the effects below.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Follow the site's light/dark switch.
+    useEffect(() => {
+        const v = view.current;
+        if (!v || !themeSlot.current) return;
+        v.dispatch({ effects: themeSlot.current.reconfigure(dark ? darkTheme.current : []) });
+    }, [dark, ready]);
+
+    // A value set from outside (Reset to default) replaces the document.
+    useEffect(() => {
+        const v = view.current;
+        if (v && v.state.doc.toString() !== value) v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: value } });
+    }, [value, ready]);
+
+    return (
+        <div ref={host} className="h-full" aria-label="Template HTML">
+            {!ready && <pre className="h-full overflow-auto whitespace-pre-wrap p-4 font-mono text-[12.5px] leading-relaxed text-muted-foreground">{value}</pre>}
         </div>
     );
 }
