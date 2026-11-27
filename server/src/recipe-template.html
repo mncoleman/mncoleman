@@ -7,13 +7,13 @@
 {{head}}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --green: #2e7d32;
-    --green-deep: #1b5e20;
-    --green-wash: #edf5ee;
-    --green-tint: #f6faf6;
+    --accent: #3b82f6;
+    --accent-deep: #1d4ed8;
+    --accent-wash: #eff6ff;
+    --accent-tint: #f7faff;
     --ink: #1c1f1c;
     --muted: #5d665e;
     --paper: #f4f1ea;
@@ -25,7 +25,7 @@
   body {
     margin: 0;
     background: var(--paper);
-    background-image: radial-gradient(rgba(46,125,50,.06) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(59,130,246,.06) 1px, transparent 1px);
     background-size: 18px 18px;
     color: var(--ink);
     font: 15px/1.45 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -34,25 +34,25 @@
 
   .rc-toolbar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-bottom: 18px; }
   .rc-btn {
-    font: 500 13px/1 Inter, system-ui, sans-serif; color: var(--green-deep); text-decoration: none;
-    background: var(--card); border: 1px solid rgba(46,125,50,.35); border-radius: 999px;
+    font: 500 13px/1 Inter, system-ui, sans-serif; color: var(--accent-deep); text-decoration: none;
+    background: var(--card); border: 1px solid rgba(59,130,246,.35); border-radius: 999px;
     padding: 9px 14px; cursor: pointer; transition: background .15s, border-color .15s;
   }
-  .rc-btn:hover { background: var(--green-wash); border-color: var(--green); }
+  .rc-btn:hover { background: var(--accent-wash); border-color: var(--accent); }
   .rc-btn:first-child { margin-right: auto; }
 
   .rc-card {
     background: var(--card); border-radius: 18px; padding: 34px 36px 28px;
-    box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 12px 40px -12px rgba(27,94,32,.18);
-    border-top: 6px solid var(--green);
+    box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 12px 40px -12px rgba(29,78,216,.18);
+    border-top: 6px solid var(--accent);
   }
   .rc-head { display: grid; gap: 10px; margin-bottom: 24px; }
-  .rc-eyebrow { font: 600 11px/1 Inter, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--green); }
-  h1 { font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: clamp(30px, 4.4vw, 46px); line-height: 1.05; margin: 0; color: var(--green-deep); letter-spacing: -.01em; }
+  .rc-eyebrow { font: 600 11px/1 Inter, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+  h1 { font-family: Roboto, system-ui, sans-serif; font-weight: 700; font-size: clamp(30px, 4.4vw, 46px); line-height: 1.05; margin: 0; color: var(--accent-deep); letter-spacing: -.01em; }
   .rc-summary { margin: 0; color: var(--muted); font-size: 16px; max-width: 70ch; }
   .rc-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .rc-chip { display: inline-flex; align-items: baseline; gap: 6px; background: var(--green-wash); border-radius: 8px; padding: 6px 10px; }
-  .rc-chip-k { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--green); }
+  .rc-chip { display: inline-flex; align-items: baseline; gap: 6px; background: var(--accent-wash); border-radius: 8px; padding: 6px 10px; }
+  .rc-chip-k { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
   .rc-chip-v { font-weight: 600; }
   .rc-tags { display: flex; flex-wrap: wrap; gap: 6px; }
   .rc-tag { font-size: 12px; color: var(--muted); border: 1px solid #d9ded9; border-radius: 999px; padding: 2px 9px; }
@@ -64,14 +64,14 @@
     display: grid;
     grid-template-columns: minmax(250px, 2.4fr) repeat(var(--rc-cols), minmax(92px, 1fr));
     min-width: calc(250px + var(--rc-cols) * 92px);
-    border-top: var(--rule) solid var(--green); border-left: var(--rule) solid var(--green);
+    border-top: var(--rule) solid var(--accent); border-left: var(--rule) solid var(--accent);
     border-radius: 10px; overflow: hidden;
   }
-  .rc-chart > * { border-right: var(--rule) solid var(--green); border-bottom: var(--rule) solid var(--green); }
+  .rc-chart > * { border-right: var(--rule) solid var(--accent); border-bottom: var(--rule) solid var(--accent); }
   .rc-setup {
-    text-align: center; padding: 10px 14px; font-weight: 500; background: var(--green-tint);
+    text-align: center; padding: 10px 14px; font-weight: 500; background: var(--accent-tint);
   }
-  .rc-setup:first-child::before { content: "Before you start  ·  "; color: var(--green); font-weight: 600; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+  .rc-setup:first-child::before { content: "Before you start  ·  "; color: var(--accent); font-weight: 600; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
   .rc-ing { padding: 9px 14px; display: block; }
   .rc-ing:nth-child(even) { background: #fcfdfc; }
   .rc-amt { font-weight: 600; }
@@ -80,21 +80,21 @@
   .rc-step {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
     padding: 10px 8px; text-align: center; font-weight: 500; line-height: 1.25;
-    background: linear-gradient(180deg, var(--green-tint), #fff 60%);
+    background: linear-gradient(180deg, var(--accent-tint), #fff 60%);
   }
-  .rc-final { background: var(--green-wash); font-weight: 600; color: var(--green-deep); }
+  .rc-final { background: var(--accent-wash); font-weight: 600; color: var(--accent-deep); }
   .rc-n {
     flex: none; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center;
-    font: 600 10px/1 Inter, sans-serif; color: #fff; background: var(--green);
+    font: 600 10px/1 Inter, sans-serif; color: #fff; background: var(--accent);
   }
-  .rc-blank { background: repeating-linear-gradient(135deg, transparent 0 7px, rgba(46,125,50,.05) 7px 8px); }
+  .rc-blank { background: repeating-linear-gradient(135deg, transparent 0 7px, rgba(59,130,246,.05) 7px 8px); }
 
   .rc-foot { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 22px; }
-  .rc-notes { background: #fbfaf6; border-left: 4px solid var(--green); border-radius: 8px; padding: 12px 16px; font-size: .93em; }
-  .rc-notes h2 { font: 600 12px/1 Inter, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--green); margin: 2px 0 8px; }
+  .rc-notes { background: #fbfaf6; border-left: 4px solid var(--accent); border-radius: 8px; padding: 12px 16px; font-size: .93em; }
+  .rc-notes h2 { font: 600 12px/1 Inter, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 2px 0 8px; }
   .rc-notes p { margin: 0 0 8px; } .rc-notes p:last-child { margin: 0; }
   .rc-credit { font-size: 12.5px; color: var(--muted); border-top: 1px solid #e3e7e3; padding-top: 10px; }
-  .rc-credit a { color: var(--green-deep); }
+  .rc-credit a { color: var(--accent-deep); }
 
   @media (max-width: 640px) {
     .rc-page { padding: 16px 10px 40px; }
