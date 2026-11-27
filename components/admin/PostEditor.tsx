@@ -308,7 +308,7 @@ export function PostEditor({ workerUrl, slug: initialSlug }: { workerUrl: string
                             </PopoverTrigger>
                             <PopoverContent align="end" className="w-48 rounded-[10px] p-1 shadow-xl">
                                 {live.published && (
-                                    <a href={`/blog/${doc.slug}/`} target="_blank" rel="noopener noreferrer" onClick={() => setMoreOpen(false)} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
+                                    <a href={`https://mncoleman.com/blog/${doc.slug}/`} target="_blank" rel="noopener noreferrer" onClick={() => setMoreOpen(false)} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
                                         <ExternalLink size={14} /> View on the site
                                     </a>
                                 )}

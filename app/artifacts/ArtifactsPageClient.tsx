@@ -6,7 +6,6 @@ import { FileText, Filter, X, ExternalLink, Download, File, Image, Code, FileTyp
 import { PageEntrance } from '@/components/page-entrance';
 import { ArtifactDesignPopup } from '@/components/artifact-design-popup';
 import { formatDistanceToNow } from 'date-fns';
-import { authHeaders } from '@/lib/admin-auth';
 import { artifactSlug } from '@/lib/utils';
 import { trackContentAction } from '@/lib/analytics';
 import FoldText from '@/components/ui/fold-text';
@@ -30,7 +29,6 @@ interface Artifact {
 }
 
 const ARTIFACTS_API = process.env.NEXT_PUBLIC_ARTIFACTS_API_URL || 'https://artifacts.mncoleman.com';
-const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:8787';
 
 function normalizeType(type: string): string {
     return (type || '').split(';')[0].trim().toLowerCase();
@@ -80,7 +78,7 @@ interface ArtifactsPageClientProps {
 export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageClientProps) {
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const [dynamicArtifacts, setDynamicArtifacts] = useState<Artifact[]>([]);
-    const [isAdmin, setIsAdmin] = useState(false);
+    const isAdmin = false;
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [revealedPasswords, setRevealedPasswords] = useState<Set<string>>(new Set());
 
@@ -111,31 +109,10 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
         let cancelled = false;
 
         const load = async () => {
-            // Determine admin status the same robust way the /admin page does:
-            // /auth/me succeeds for EITHER a stored bearer token (sessionStorage)
-            // OR the admin_token cookie. The old check only read sessionStorage,
-            // which is tab-scoped — so opening /artifacts in a new tab (or after a
-            // browser restart) silently fell back to the public, private-less list.
-            let isAdminView = false;
+            // Public list only. The admin lives on its own origin (admin.mncoleman.com) and this
+            // page can no longer see its session, by design; private artifacts are listed there.
             try {
-                const meRes = await fetch(`${WORKER_URL.replace(/\/$/, '')}/auth/me`, {
-                    credentials: 'include',
-                    headers: authHeaders(),
-                });
-                isAdminView = meRes.ok;
-            } catch {
-                isAdminView = false;
-            }
-            if (cancelled) return;
-            setIsAdmin(isAdminView);
-
-            try {
-                const res = isAdminView
-                    ? await fetch(`${WORKER_URL.replace(/\/$/, '')}/api/artifacts/instant/list`, {
-                          headers: authHeaders(),
-                          credentials: 'include',
-                      })
-                    : await fetch(`${ARTIFACTS_API}/api/list`, { cache: 'no-store' });
+                const res = await fetch(`${ARTIFACTS_API}/api/list`, { cache: 'no-store' });
                 const data = res.ok ? await res.json() : { artifacts: [] };
                 if (cancelled) return;
                 // Recipes have their own page (/recipes); they are data, not files to browse here.

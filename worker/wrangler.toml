@@ -21,7 +21,7 @@ compatibility_date = "2024-04-01"
 #   OWNER_EMAIL             — (optional) owner's Google address; super_admin via Google
 [vars]
 TELEGRAM_BOT_ID = "8681257901"  # mncolemandotcombot — OIDC client_id
-FRONTEND_URL = "https://mncoleman.com"
+FRONTEND_URL = "https://admin.mncoleman.com"
 GITHUB_REPO_OWNER = "mncoleman"
 GITHUB_REPO_NAME = "mncoleman"
 N8N_WEBHOOK_URL = ""

@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect, useSyncExternalStore } from 'react';
+import { useState, useMemo, useRef, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { Calendar, Filter, X, ArrowRight, Plus } from 'lucide-react';
+import { Calendar, Filter, X, ArrowRight } from 'lucide-react';
 import { Post } from '@/lib/blog';
 import { format } from 'date-fns';
 import { PageEntrance } from '@/components/page-entrance';
 import { SquarePenIcon, type SquarePenIconHandle } from '@/components/ui/square-pen';
-import { getSessionToken } from '@/lib/admin-auth';
 import MaskedHeading from '@/components/ui/masked-heading';
 // A captured frame of the home page's Dark Veil at its own hueShift (see CLAUDE.md,
 // "Recapture assets/og-veil.jpg"). Imported, so the build fingerprints and serves it.
@@ -103,12 +102,6 @@ function PostCard({
 export default function BlogPageClient({ initialPosts, allTags }: BlogPageClientProps) {
     const narrow = useSyncExternalStore(subscribeNarrow, () => window.matchMedia(NARROW_QUERY).matches, () => false);
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
-    const [isAdmin, setIsAdmin] = useState(false);
-
-    useEffect(() => {
-        setIsAdmin(!!getSessionToken());
-    }, []);
-
     const filteredPosts = useMemo(() => {
         if (!selectedTag) return initialPosts;
         return initialPosts.filter(post => post.tags?.includes(selectedTag));
@@ -126,17 +119,6 @@ export default function BlogPageClient({ initialPosts, allTags }: BlogPageClient
                 <p className="mt-3 mb-6 text-xl font-medium text-muted-foreground md:text-2xl">
                     Thoughts on technology, life, and sometimes just random things.
                 </p>
-                {isAdmin && (
-                    <div className="mt-6 flex justify-center">
-                        <a
-                            href="/admin/posts/edit"
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-medium text-sm shadow-md shadow-primary/20 hover:opacity-90 hover:shadow-lg hover:shadow-primary/30 transition-all"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Create New Blog
-                        </a>
-                    </div>
-                )}
             </header>
 
             {/* Tag Filter */}

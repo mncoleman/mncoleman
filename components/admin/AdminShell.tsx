@@ -174,7 +174,7 @@ function Sidebar({ user, collapsed, onToggle, closeIcon }: { user: AdminUser; co
         <aside className={cn('flex h-full shrink-0 flex-col border-r border-border/60 bg-muted/20 transition-[width] duration-200', collapsed ? 'w-14' : 'w-60')}>
             <div className={cn('flex h-14 shrink-0 items-center border-b border-border/60', collapsed ? 'justify-center' : 'justify-between px-4')}>
                 {!collapsed && (
-                    <Link href="/" className="flex items-center gap-2" title="Back to the site">
+                    <Link href="https://mncoleman.com/" className="flex items-center gap-2" title="Back to the site">
                         <span className="flex h-6 w-6 items-center justify-center rounded bg-foreground text-[11px] font-bold text-background">M</span>
                         <span className="text-sm font-semibold">mncoleman</span>
                         <span className="text-xs text-muted-foreground">admin</span>
@@ -227,7 +227,7 @@ function Sidebar({ user, collapsed, onToggle, closeIcon }: { user: AdminUser; co
             {/* The admin hides the site's own header, so this is the way back out. */}
             <div className="border-t border-border/60 p-2">
                 <Link
-                    href="/"
+                    href="https://mncoleman.com/"
                     title={collapsed ? 'Back to site' : undefined}
                     className={cn(
                         'flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
@@ -423,7 +423,7 @@ export function DeployPill() {
                             <StatusRow k="Daily rebuild" v="06:00 UTC" />
                         </div>
                         {run?.state === 'landed' && (
-                            <a href="/" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs underline underline-offset-4">
+                            <a href="https://mncoleman.com/" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs underline underline-offset-4">
                                 <ExternalLink size={11} /> Open the site
                             </a>
                         )}

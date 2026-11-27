@@ -1,0 +1,17 @@
+name = "mncoleman-admin-host"
+main = "index.ts"
+compatibility_date = "2026-07-01"
+
+# Holds no secrets and reads nothing. Keeps admin.mncoleman.com an admin-only origin and
+# 301s mncoleman.com/admin there; see index.ts.
+#
+# admin.mncoleman.com is a custom domain on the `mncoleman` Pages project; these routes take
+# precedence over it (the same mechanism worker-www-redirect relies on).
+routes = [
+  { pattern = "admin.mncoleman.com/*", zone_name = "mncoleman.com" },
+  # Added after the new host was confirmed working:
+  # { pattern = "mncoleman.com/admin", zone_name = "mncoleman.com" },
+  # { pattern = "mncoleman.com/admin/*", zone_name = "mncoleman.com" },
+]
+
+workers_dev = false

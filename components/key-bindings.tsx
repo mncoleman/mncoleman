@@ -54,7 +54,8 @@ export function KeyBindings() {
                     router.push('/');
                     break;
                 case 'Q':
-                    router.push('/admin');
+                    // The admin is its own origin, so this is a full navigation, not a route push.
+                    window.location.href = 'https://admin.mncoleman.com/admin/';
                     break;
                 case 'Y':
                     window.open('https://github.com/mncoleman/mncoleman', '_blank', 'noopener,noreferrer');

@@ -137,7 +137,16 @@ export default {
             return new Response(JSON.stringify({ error: 'server_error' }), { status: 500, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
         }
 
-        const allowedOrigins = ['https://mncoleman.com', 'https://www.mncoleman.com', 'http://localhost:3000'];
+        // A local dev server is trusted only by a Worker that is itself running locally
+        // (wrangler dev). In production it would hand admin rights to whatever happens to be
+        // listening on port 3000 of the signed-in person's machine.
+        const host = new URL(request.url).hostname;
+        const localWorker = host === 'localhost' || host === '127.0.0.1';
+        // Credentialed origins: the admin panel only. It lives on its own origin so nothing
+        // else that runs on mncoleman.com can act with the signed-in person's session.
+        const allowedOrigins = ['https://admin.mncoleman.com', /*TRANSITION*/ 'https://mncoleman.com', 'https://www.mncoleman.com', ...(localWorker ? ['http://localhost:3000', 'http://localhost:3001'] : [])];
+        // The public site may read the few public endpoints, without credentials.
+        const PUBLIC_READ_PATHS = new Set(['/api/stats/visitors']);
         const origin = request.headers.get('Origin');
 
         // Handle CORS preflight and standard headers
@@ -157,6 +166,9 @@ export default {
         if (activeOrigin) {
             corsHeaders['Access-Control-Allow-Origin'] = activeOrigin;
             corsHeaders['Access-Control-Allow-Credentials'] = 'true';
+        } else if ((origin === 'https://mncoleman.com' || origin === 'https://www.mncoleman.com') && request.method === 'GET'
+            && PUBLIC_READ_PATHS.has(new URL(request.url).pathname)) {
+            corsHeaders['Access-Control-Allow-Origin'] = origin;
         }
 
         // Handle preflight

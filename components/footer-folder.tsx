@@ -23,7 +23,7 @@ const PAPERS: Paper[] = [
     { key: 'brand', title: 'Brand Kit', description: 'Colours, type, components', href: '/brand-kit' },
     { key: 'recipes', title: 'Recipes', description: 'Recipes', href: '/recipes' },
     { key: 'mcp', title: 'MCP Server', description: 'Copy the MCP server URL', action: 'mcp' },
-    { key: 'admin', title: 'Admin', description: 'Admin', href: '/admin' },
+    { key: 'admin', title: 'Admin', description: 'Admin', href: 'https://admin.mncoleman.com/admin/' },
     ...(buildInfo.commit.short
         ? [{ key: 'commit', title: `Commit ${buildInfo.commit.short}`, description: `Commit ${buildInfo.commit.short}`, href: buildInfo.commit.url, external: true }]
         : []),
@@ -78,6 +78,7 @@ export function FooterFolder() {
             setMcpCopied(true);
         } else if (p.action === 'stats') setStatsOpen(true);
         else if (p.href && p.external) window.open(p.href, '_blank', 'noopener,noreferrer');
+        else if (p.href?.startsWith('http')) window.location.href = p.href;
         else if (p.href) router.push(p.href);
     };
 

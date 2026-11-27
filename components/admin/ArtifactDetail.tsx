@@ -292,7 +292,7 @@ function Page({ api, artifact: a, fullAccess, secrets, folders, onUpdated }: {
                             </>
                         ) : (
                             <>
-                                <BrowserBar url={dynamic ? shareUrl : `${typeof window !== 'undefined' ? window.location.origin : ''}${shareUrl}`} badge={dynamic ? undefined : 'As of the last build'} />
+                                <BrowserBar url={dynamic ? shareUrl : `https://mncoleman.com${shareUrl}`} badge={dynamic ? undefined : 'As of the last build'} />
                                 {/* The share page is this site's own page (static) or the service's own template (instant), not uploaded content. */}
                                 <iframe key={frameKey} src={fresh(shareUrl)} title={`${a.name} share page`} className="min-h-0 w-full flex-1 border-0 bg-background" />
                             </>
