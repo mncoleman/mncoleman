@@ -44,6 +44,9 @@ export function KeyBindings() {
                 case 'T':
                     router.push('/artifacts');
                     break;
+                case 'E':
+                    router.push('/recipes');
+                    break;
                 case 'I':
                     router.push('/ai');
                     break;

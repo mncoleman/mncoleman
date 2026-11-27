@@ -360,6 +360,7 @@ const ADMIN_TOOLS: Array<{ feature: Feature; name: string; title: string; descri
             'If the recipe has problems, nothing is saved and the reply lists each as {path, reason}: fix those fields and call again. Warnings (an ingredient no step covers, no credit) do not block saving.\n\n' +
             'recipe = {\n' +
             '  title (required, max 140), summary: one line (optional),\n' +
+            '  servings: how many servings the amounts make, a whole number (turns on the page\'s servings slider, which rescales every amount; include it whenever the source states a yield),\n' +
             '  meta: up to 8 of { label, value }, e.g. [{label:"Serves",value:"4"},{label:"Prep",value:"15 min"},{label:"Cook",value:"20 min"}],\n' +
             '  setup: up to 6 full-width rows shown above the chart (pan size, preheat, equipment), e.g. ["Butter and flour an 8x8-in pan","Preheat oven to 350°F (170°C)"],\n' +
             '  ingredients: 1 to 60 rows IN THE ORDER THEY ARE USED, each { amount: "1 cup", metric: "200 g", name: "sugar", note: "softened" } (amount, metric and note optional),\n' +

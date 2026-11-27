@@ -57,6 +57,9 @@ export interface Recipe {
     source?: { text: string; url?: string };
     /** True when the metric amounts are conversions the source did not give. */
     metric_approx?: boolean;
+    /** How many servings the amounts are for. Turns on the servings slider. When absent, a
+     *  "Serves 4" style meta entry is used instead. */
+    servings?: number;
 }
 
 export interface Problem {
@@ -228,6 +231,11 @@ export function validateRecipe(input: unknown): Checked {
         }
     } else warnings.push({ path: 'source', reason: 'no credit given; add the author, site or book' });
 
+    if (input.servings !== undefined && input.servings !== null) {
+        if (!isInt(input.servings) || input.servings < 1 || input.servings > 100) err('servings', 'must be a whole number from 1 to 100');
+        else r.servings = input.servings;
+    }
+
     if (input.metric_approx !== undefined) {
         if (typeof input.metric_approx !== 'boolean') err('metric_approx', 'must be true or false');
         else if (input.metric_approx) r.metric_approx = true;
@@ -283,8 +291,9 @@ export function renderChart(r: Recipe): string {
         parts.push(`<div class="rc-setup" style="grid-row:${i + 1};grid-column:1 / -1">${esc(s)}</div>`);
     });
     r.ingredients.forEach((g, i) => {
-        const amount = g.amount ? `<span class="rc-amt">${esc(g.amount)}</span> ` : '';
-        const metric = g.metric ? `<span class="rc-metric">(${esc(g.metric)})</span> ` : '';
+        // data-q carries the original text; the servings slider rescales from it.
+        const amount = g.amount ? `<span class="rc-amt" data-q="${esc(g.amount)}">${esc(g.amount)}</span> ` : '';
+        const metric = g.metric ? `<span class="rc-metric">(<span data-q="${esc(g.metric)}" data-q-metric>${esc(g.metric)}</span>)</span> ` : '';
         const note = g.note ? `<span class="rc-note">, ${esc(g.note)}</span>` : '';
         parts.push(`<div class="rc-ing" style="grid-row:${offset + i + 1};grid-column:1">${amount}${metric}<span class="rc-name">${esc(g.name)}</span>${note}</div>`);
     });
@@ -307,6 +316,46 @@ export function renderChart(r: Recipe): string {
     );
 }
 
+const SERVES_LABEL = /^(serves|servings?|yield|yields|makes)$/i;
+
+/** The servings the amounts are written for: the explicit field, else a "Serves 4" meta entry. */
+export function baseServings(r: Recipe): number | null {
+    if (r.servings) return r.servings;
+    for (const m of r.meta || []) {
+        if (!SERVES_LABEL.test(m.label.trim())) continue;
+        const n = /^\s*(\d+)/.exec(m.value);
+        if (n && +n[1] >= 1 && +n[1] <= 100) return +n[1];
+    }
+    return null;
+}
+
+/**
+ * The servings slider and the script behind it. Every [data-q] holds an amount as written
+ * ("1 1/2 cups", "2 to 4 tsp", "about 50 g"); each number in it is multiplied by
+ * servings / base. Kitchen amounts come back as eighths and thirds (1½, ⅓), metric
+ * amounts and anything 10 or more as rounded decimals. Printing prints what is shown.
+ */
+function servingsControl(base: number): string {
+    const max = Math.max(12, base * 4);
+    const script = `(function(){
+var base=${base},root=document.currentScript.parentNode,input=root.querySelector('input'),out=root.querySelector('output'),reset=root.querySelector('button');
+var U={'¼':.25,'½':.5,'¾':.75,'⅓':1/3,'⅔':2/3,'⅙':1/6,'⅚':5/6,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875};
+var F=[[0,''],[1/8,'⅛'],[1/6,'⅙'],[1/4,'¼'],[1/3,'⅓'],[3/8,'⅜'],[1/2,'½'],[5/8,'⅝'],[2/3,'⅔'],[3/4,'¾'],[5/6,'⅚'],[7/8,'⅞'],[1,'']];
+var RE=/(\\d+)\\s+(\\d+)\\/(\\d+)|(\\d+)?\\s?([¼½¾⅓⅔⅙⅚⅛⅜⅝⅞])|(\\d+)\\/(\\d+)|(\\d+(?:\\.\\d+)?)/g;
+function kitchen(v){if(v>=10)return String(Math.round(v));var w=Math.floor(v),f=v-w,b=F[0];F.forEach(function(c){if(Math.abs(c[0]-f)<Math.abs(b[0]-f))b=c});if(b[0]===1){w+=1;b=F[0]}if(!w&&!b[1])return String(Math.round(v*100)/100);return(w?String(w):'')+b[1]}
+function metric(v){if(v>=100)return String(Math.round(v/5)*5);if(v>=10)return String(Math.round(v));return String(Math.round(v*10)/10)}
+function scale(t,k,m){return t.replace(RE,function(s,a,b,c,d,e,f,g,h){var v=a?(+a+b/c):e?((d?+d:0)+U[e]):f?(f/g):+h;return(m?metric:kitchen)(v*k)})}
+function apply(n){var k=n/base;out.value=n;reset.hidden=n===base;document.querySelectorAll('[data-q]').forEach(function(el){var q=el.getAttribute('data-q');el.textContent=k===1?q:scale(q,k,el.hasAttribute('data-q-metric'));el.classList.toggle('rc-scaled',k!==1)});document.querySelectorAll('[data-serves]').forEach(function(el){el.textContent=el.getAttribute('data-serves').replace(/^\\s*\\d+/,String(n))})}
+input.addEventListener('input',function(){apply(+input.value)});reset.addEventListener('click',function(){input.value=base;apply(base)});
+})();`;
+    return (
+        `<div class="rc-servings" data-rc-servings>` +
+        `<label>Servings <input type="range" min="1" max="${max}" step="1" value="${base}" aria-label="Servings"><output>${base}</output></label>` +
+        `<button type="button" hidden>Reset to ${base}</button>` +
+        `<script>${script}</script></div>`
+    );
+}
+
 const paragraphs = (s?: string) => (s ? s.split(/\n\n+/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('') : '');
 
 export interface RenderContext {
@@ -324,8 +373,13 @@ export function placeholders(r: Recipe, ctx: RenderContext): Record<string, stri
     // Share-card tags (og:*, twitter:*) are added by the service on the way out, like every
     // other artifact page, so the template only carries the plain description.
     const head = desc ? `<meta name="description" content="${esc(desc)}">` : '';
+    const base = baseServings(r);
     const meta = (r.meta || [])
-        .map((m) => `<span class="rc-chip"><span class="rc-chip-k">${esc(m.label)}</span><span class="rc-chip-v">${esc(m.value)}</span></span>`)
+        .map((m) => {
+            // The servings chip follows the slider.
+            const serves = base && SERVES_LABEL.test(m.label.trim()) && /^\s*\d+/.test(m.value) ? ` data-serves="${esc(m.value)}"` : '';
+            return `<span class="rc-chip"><span class="rc-chip-k">${esc(m.label)}</span><span class="rc-chip-v"${serves}>${esc(m.value)}</span></span>`;
+        })
         .join('');
     const tags = (r.tags || []).map((t) => `<span class="rc-tag">${esc(t)}</span>`).join('');
     const credit = r.source
@@ -346,6 +400,7 @@ export function placeholders(r: Recipe, ctx: RenderContext): Record<string, stri
         meta,
         tags,
         chart: renderChart(r),
+        servings: base ? servingsControl(base) : '',
         notes: paragraphs(r.notes),
         credit,
         approx,
@@ -373,6 +428,7 @@ export const PLACEHOLDER_DOCS: { name: string; what: string }[] = [
     { name: 'title', what: 'The recipe title.' },
     { name: 'summary', what: 'One-line description, if any.' },
     { name: 'meta', what: 'Serves / Prep / Cook chips.' },
+    { name: 'servings', what: 'Servings slider that rescales every amount (only when the recipe has a servings count).' },
     { name: 'tags', what: 'Tag pills.' },
     { name: 'chart', what: 'The ingredient and step chart (markup fixed; style it with .rc-* classes).' },
     { name: 'notes', what: 'Notes, as paragraphs.' },

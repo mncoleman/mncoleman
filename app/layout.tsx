@@ -163,6 +163,9 @@ export default async function RootLayout({
                       <Link href="/artifacts" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
                         <span data-nav-word>Artifacts</span> <Kbd>T</Kbd>
                       </Link>
+                      <Link href="/recipes" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
+                        <span data-nav-word>Recipes</span> <Kbd>E</Kbd>
+                      </Link>
                       <Link href="/ai" className="text-sm hover:text-muted-foreground transition-colors group flex items-center">
                         <span data-nav-word>AI</span> <Kbd>I</Kbd>
                       </Link>
