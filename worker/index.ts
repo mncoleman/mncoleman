@@ -853,6 +853,29 @@ export default {
                 return new Response('Unknown action', { status: 400, headers: corsHeaders });
             }
 
+            // The recipe template (GET to read, PUT to save or {reset:true}) and its editor preview
+            // (POST a draft, get rendered HTML back). The service decides who may save: only a
+            // token carrying manageSecrets, i.e. a site admin or the owner.
+            if ((url.pathname === '/api/artifacts/recipe-template' && (request.method === 'GET' || request.method === 'PUT'))
+                || (url.pathname === '/api/artifacts/recipe-preview' && request.method === 'POST')) {
+                if (!can('artifacts')) return forbidden();
+                if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
+                    return new Response(JSON.stringify({ error: 'Instant artifacts not configured' }), { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+                const target = url.pathname.endsWith('preview') ? '/api/recipes/preview' : '/api/recipes/template';
+                const body = request.method === 'GET' ? undefined : await request.text();
+                if (body && body.length > 400_000) return new Response(JSON.stringify({ error: 'too large' }), { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                const upstream = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}${target}`, {
+                    method: request.method,
+                    headers: { 'Authorization': `Bearer ${await serviceJwt('recipe-template')}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+                    body,
+                });
+                return new Response(await upstream.text(), {
+                    status: upstream.status,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                });
+            }
+
             // Instant artifact admin list: includes private artifacts (admin-only on Oracle).
             if (url.pathname === '/api/artifacts/instant/list' && request.method === 'GET') {
                 if (!env.ARTIFACTS_SERVICE_URL || !env.ARTIFACTS_JWT_SECRET) {
@@ -1758,6 +1781,7 @@ export default {
                         content?: string; // optional: base64-encoded replacement file
                         type?: string;
                         size?: number;
+                        folder?: string; // '' clears it
                     };
 
                     if (!body.filename) {
@@ -1830,6 +1854,15 @@ export default {
 
                     if (body.name !== undefined) artifacts[idx].name = body.name;
                     if (body.description !== undefined) artifacts[idx].description = body.description;
+                    if (body.folder !== undefined) {
+                        // Same rules as the service: collapsed whitespace, 40 characters, and the
+                        // spelling of an existing folder that matches case-insensitively.
+                        const f = String(body.folder).replace(/\s+/g, ' ').trim().slice(0, 40);
+                        const known = artifacts.map((a: any) => a.folder).filter(Boolean) as string[];
+                        const match = known.find((k) => k.toLowerCase() === f.toLowerCase());
+                        if (f) artifacts[idx].folder = match || f;
+                        else delete artifacts[idx].folder;
+                    }
                     if (body.content) {
                         artifacts[idx].type = body.type || artifacts[idx].type;
                         artifacts[idx].size = decodeBase64ToBytes(body.content).byteLength;

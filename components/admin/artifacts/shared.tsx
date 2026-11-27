@@ -51,7 +51,8 @@ export function FileGlyph({ type, size, className }: { type: string; size?: numb
     return <File size={size} className={className} />;
 }
 
-export function typeLabel(a: { type: string; filename?: string }) {
+export function typeLabel(a: { type: string; filename?: string; kind?: string }) {
+    if (a.kind === 'recipe') return 'Recipe';
     const ext = a.filename?.split('.').pop();
     const k = kindOf(a.type);
     if (k === 'html') return 'HTML';

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
     AlertTriangle, ArrowLeft, Bot, Check, Copy, Eye, EyeOff, ExternalLink, File as FileIcon, FileUp, Hash, KeyRound, Link2, Loader2,
-    Lock, MousePointerClick, RefreshCw, Replace, Trash2, Type, AlignLeft,
+    Lock, MousePointerClick, RefreshCw, Replace, Trash2, Type, AlignLeft, Folder,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -21,7 +21,7 @@ import {
     copyText, notify, usePropertiesDrawer, useUnsavedGuard,
 } from '@/components/admin/kit';
 import { siteUrl } from '@/components/admin/kit/copy-link';
-import { copyTarget, editModeHref, isDynamic, relativeTime } from '@/components/admin/artifacts/artifact-logic';
+import { copyTarget, editModeHref, folderNames, isDynamic, relativeTime } from '@/components/admin/artifacts/artifact-logic';
 import {
     BrowserBar, DropZone, FileFrame, detailsUrl, errorText, fileToBase64, formatFileSize, readSeed, typeLabel, useArtifacts, useNotYetLive, viewUrl,
     type ArtifactEntry, type Visibility,
@@ -83,13 +83,14 @@ export function ArtifactDetail({ workerUrl, user, slug, file }: { workerUrl: str
             artifact={found}
             fullAccess={fullAccess}
             secrets={canManageSecrets(user)}
+            folders={folderNames(artifacts)}
             onUpdated={(a) => setArtifacts((prev) => prev.map((x) => (x.id === a.id ? a : x)))}
         />
     );
 }
 
-function Page({ api, artifact: a, fullAccess, secrets, onUpdated }: {
-    api: string; artifact: ArtifactEntry; fullAccess: boolean; secrets: boolean; onUpdated: (a: ArtifactEntry) => void;
+function Page({ api, artifact: a, fullAccess, secrets, folders, onUpdated }: {
+    api: string; artifact: ArtifactEntry; fullAccess: boolean; secrets: boolean; folders: string[]; onUpdated: (a: ArtifactEntry) => void;
 }) {
     const router = useRouter();
     const { start } = useDeploy();
@@ -98,6 +99,7 @@ function Page({ api, artifact: a, fullAccess, secrets, onUpdated }: {
     const [view, setView] = useState<'preview' | 'page'>('preview');
     const [name, setName] = useState(a.name);
     const [description, setDescription] = useState(a.description || '');
+    const [folder, setFolder] = useState(a.folder || '');
     const [file, setFile] = useState<globalThis.File | null>(null);
     const [vis, setVis] = useState<Visibility>(a.visibility || 'public');
     const [password, setPassword] = useState('');
@@ -109,7 +111,8 @@ function Page({ api, artifact: a, fullAccess, secrets, onUpdated }: {
     const [frameKey, setFrameKey] = useState(0);
     const pending = useNotYetLive(a, !dynamic, frameKey);
 
-    const dirty = name !== a.name || description !== (a.description || '') || !!file || vis !== (a.visibility || 'public') || !!password;
+    const folderChanged = folder.trim() !== (a.folder || '');
+    const dirty = name !== a.name || description !== (a.description || '') || folderChanged || !!file || vis !== (a.visibility || 'public') || !!password;
     const goingPrivate = dynamic && vis === 'private' && a.visibility !== 'private';
     const problem = dynamic && vis === 'private'
         ? password && password.length < 4 ? 'Passwords need at least 4 characters.'
@@ -150,13 +153,14 @@ function Page({ api, artifact: a, fullAccess, secrets, onUpdated }: {
                 const fd = new FormData();
                 if (name !== a.name) fd.append('name', name);
                 if (description !== (a.description || '')) fd.append('description', description);
+                if (folderChanged) fd.append('folder', folder);
                 if (secrets && vis !== (a.visibility || 'public')) fd.append('visibility', vis);
                 if (secrets && password) fd.append('password', password);
                 if (secrets && vis === 'public' && a.visibility === 'private') fd.append('clearPassword', 'true');
                 if (file) fd.append('file', file);
                 res = await fetch(`${api}/api/artifacts/instant/${encodeURIComponent(a.slug)}`, { method: 'PATCH', headers: authHeaders(), credentials: 'include', body: fd });
             } else {
-                const body: Record<string, unknown> = { filename: a.filename, name, description };
+                const body: Record<string, unknown> = { filename: a.filename, name, description, ...(folderChanged ? { folder } : {}) };
                 if (file) {
                     body.content = await fileToBase64(file);
                     body.type = file.type || 'application/octet-stream';
@@ -179,10 +183,14 @@ function Page({ api, artifact: a, fullAccess, secrets, onUpdated }: {
                 description,
                 ...(dynamic && secrets ? { visibility: vis, hasPassword: vis === 'private', password: vis === 'private' ? (password || a.password) : null } : {}),
                 ...(file ? { type: file.type || a.type, size: file.size, uploadedAt: new Date().toISOString() } : {}),
+                folder: folder.trim() || undefined,
                 ...(dynamic && returned && typeof returned === 'object' && 'slug' in returned ? returned : {}),
+                ...(!dynamic && returned && typeof returned === 'object' && 'filename' in returned ? { folder: (returned as ArtifactEntry).folder } : {}),
                 source: a.source,
             };
             onUpdated(next);
+            // The server may respell the folder to match an existing one ("recipes" -> "Recipes").
+            setFolder(next.folder || '');
             if (!dynamic) start('static');
             setFile(null);
             setPassword('');
@@ -278,7 +286,7 @@ function Page({ api, artifact: a, fullAccess, secrets, onUpdated }: {
                                     {privateInstant && !previewSrc ? (
                                         <div className="flex h-full items-center justify-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /></div>
                                     ) : (
-                                        <FileFrame key={`${frameKey}-${pending?.url ?? 'live'}`} src={pending?.url ?? previewSrc ?? fresh(url)} type={a.type} title={a.name} sameOrigin={!dynamic} />
+                                        <FileFrame key={`${frameKey}-${pending?.url ?? 'live'}`} src={pending?.url ?? previewSrc ?? fresh(url)} type={a.kind === 'recipe' ? 'text/html' : a.type} title={a.name} sameOrigin={!dynamic} />
                                     )}
                                 </div>
                             </>
@@ -356,6 +364,18 @@ function Page({ api, artifact: a, fullAccess, secrets, onUpdated }: {
                         aria-label="Description"
                         className="-mx-2 block min-h-[34px] w-full resize-none rounded-[5px] bg-transparent px-2 py-1.5 text-sm leading-normal outline-none [field-sizing:content] placeholder:text-muted-foreground/70 hover:bg-foreground/[0.07] focus:bg-foreground/[0.07] focus-visible:ring-2 focus-visible:ring-ring"
                     />
+                </PropRow>
+                <PropRow icon={Folder} label="Folder">
+                    <input
+                        value={folder}
+                        onChange={(e) => setFolder(e.target.value)}
+                        list="artifact-folders"
+                        maxLength={40}
+                        placeholder="No folder"
+                        aria-label="Folder"
+                        className={fieldCls}
+                    />
+                    <datalist id="artifact-folders">{folders.map((f) => <option key={f} value={f} />)}</datalist>
                 </PropRow>
                 <PropRow icon={Hash} label="Address" stack>
                     <span className="min-w-0 break-all py-1.5 text-sm text-muted-foreground">{dynamic ? `/a/${a.slug}` : a.filename}</span>

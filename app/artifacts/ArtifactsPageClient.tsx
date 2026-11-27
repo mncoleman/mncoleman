@@ -25,6 +25,8 @@ interface Artifact {
     visibility?: 'public' | 'private';
     /** Plaintext password — only present in admin-mode listing for private artifacts. */
     password?: string | null;
+    /** 'recipe' artifacts are listed on /recipes instead. */
+    kind?: string;
 }
 
 const ARTIFACTS_API = process.env.NEXT_PUBLIC_ARTIFACTS_API_URL || 'https://artifacts.mncoleman.com';
@@ -136,7 +138,8 @@ export default function ArtifactsPageClient({ initialArtifacts }: ArtifactsPageC
                     : await fetch(`${ARTIFACTS_API}/api/list`, { cache: 'no-store' });
                 const data = res.ok ? await res.json() : { artifacts: [] };
                 if (cancelled) return;
-                const items: Artifact[] = (data?.artifacts || []).map((a: Artifact) => ({
+                // Recipes have their own page (/recipes); they are data, not files to browse here.
+                const items: Artifact[] = (data?.artifacts || []).filter((a: Artifact) => a.kind !== 'recipe').map((a: Artifact) => ({
                     ...a,
                     source: 'dynamic' as const,
                 }));

@@ -21,6 +21,21 @@ export interface ArtifactRow {
     url?: string;
     source?: 'static' | 'dynamic';
     visibility?: Visibility;
+    /** Admin-panel folder; absent = none. */
+    folder?: string;
+    /** 'recipe': an instant artifact rendered from the recipe template. */
+    kind?: 'recipe';
+    /** Last in-place edit, when newer than the upload. */
+    updatedAt?: string | null;
+}
+
+/** Folder filter: every artifact, those in no folder, or one folder by name. */
+export const ALL_FOLDERS = '__all__';
+export const NO_FOLDER = '__none__';
+
+/** Every folder in use, alphabetical. */
+export function folderNames(rows: readonly Pick<ArtifactRow, 'folder'>[]): string[] {
+    return [...new Set(rows.map((r) => r.folder).filter((f): f is string => !!f))].sort((a, b) => a.localeCompare(b));
 }
 
 /** The public home of instant artifacts. A constant on purpose: a link copied from a local or preview admin must still be the real one. */
@@ -55,11 +70,12 @@ export function copyTarget(a: Pick<ArtifactRow, 'source' | 'slug' | 'filename' |
     return { path: `${SITE_ORIGIN}/artifacts/${encodeURIComponent(a.filename)}`, state: { live: true } };
 }
 
-export function filterArtifacts<T extends ArtifactRow>(rows: readonly T[], o: { query: string; type: TypeFilter; visibility: VisibilityFilter }): T[] {
+export function filterArtifacts<T extends ArtifactRow>(rows: readonly T[], o: { query: string; type: TypeFilter; visibility: VisibilityFilter; folder?: string }): T[] {
     return rows.filter((a) => {
+        if (o.folder && o.folder !== ALL_FOLDERS && (o.folder === NO_FOLDER ? !!a.folder : a.folder !== o.folder)) return false;
         if (o.type !== 'all' && (a.source || 'static') !== o.type) return false;
         if (o.visibility !== 'all' && (a.visibility || 'public') !== o.visibility) return false;
-        return matchesQuery([a.name, a.slug, a.filename, a.description], o.query);
+        return matchesQuery([a.name, a.slug, a.filename, a.description, a.folder], o.query);
     });
 }
 

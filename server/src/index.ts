@@ -14,9 +14,15 @@ import {
     getOg,
     updateMeta,
     replaceFile,
+    getTemplateOverride,
+    setTemplateOverride,
     type ArtifactMeta,
     type Visibility,
 } from './storage';
+import {
+    MAX_RECIPE_BYTES, MAX_TEMPLATE_BYTES, PLACEHOLDER_DOCS, RECIPE_FILENAME, RECIPE_KIND, renderRecipe, validateRecipe, type Recipe,
+} from './recipe';
+import { PASTA } from './recipe-fixtures';
 import { isValidSlug, suggestFromFilename } from './slugs';
 import { requireAuth } from './auth';
 import { renderOg, OG_VERSION } from './og';
@@ -77,6 +83,51 @@ const CORS_ORIGINS = (process.env.CORS_ORIGINS || 'https://mncoleman.com,http://
     .map((s) => s.trim())
     .filter(Boolean);
 
+const DEFAULT_RECIPE_TEMPLATE = await Bun.file(new URL('./recipe-template.html', import.meta.url)).text();
+const RECIPES_INDEX_URL = process.env.RECIPES_INDEX_URL || 'https://mncoleman.com/recipes';
+
+async function recipeTemplate(): Promise<string> {
+    return (await getTemplateOverride()) ?? DEFAULT_RECIPE_TEMPLATE;
+}
+
+/**
+ * Folder names are free text, so "soups" and "Soups " would split one folder in two.
+ * Whitespace is collapsed, and a name matching an existing folder case-insensitively
+ * takes that folder's spelling. Empty means no folder.
+ */
+async function normalizeFolder(raw: string | null): Promise<string | undefined> {
+    const v = (raw || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+    if (!v) return undefined;
+    const known = new Set((await listAll()).map((m) => m.folder).filter((f): f is string => !!f));
+    for (const f of known) if (f.toLowerCase() === v.toLowerCase()) return f;
+    return v;
+}
+
+/** A stored recipe, re-validated. Null when the file is missing or no longer passes. */
+async function readStoredRecipe(slug: string, meta: ArtifactMeta): Promise<Recipe | null> {
+    try {
+        const checked = validateRecipe(JSON.parse((await getFile(slug, meta.filename)).toString('utf-8')));
+        return checked.ok ? checked.recipe : null;
+    } catch {
+        return null;
+    }
+}
+
+/** Parses and checks an uploaded recipe.json. Returns the bytes to store, or a 422 body. */
+async function readRecipeFile(file: File): Promise<{ recipe: Recipe; bytes: ArrayBuffer; warnings: unknown[] } | { error: Record<string, unknown> }> {
+    if (file.size > MAX_RECIPE_BYTES) return { error: { error: `recipe too large (max ${MAX_RECIPE_BYTES} bytes)` } };
+    let data: unknown;
+    try {
+        data = JSON.parse(await file.text());
+    } catch {
+        return { error: { error: 'invalid_json', message: 'The recipe file must be JSON.' } };
+    }
+    const checked = validateRecipe(data);
+    if (!checked.ok) return { error: { error: 'validation_failed', errors: checked.errors, warnings: checked.warnings } };
+    const bytes = new TextEncoder().encode(JSON.stringify(checked.recipe, null, 2)).buffer as ArrayBuffer;
+    return { recipe: checked.recipe, bytes, warnings: checked.warnings };
+}
+
 const app = new Hono();
 
 app.use(
@@ -107,6 +158,8 @@ function publicArtifactView(m: ArtifactMeta) {
         // Legacy artifacts written before Phase 4 didn't have this field — default to public.
         visibility: m.visibility ?? 'public',
         source: 'dynamic' as const,
+        ...(m.kind ? { kind: m.kind } : {}),
+        ...(m.updatedAt ? { updatedAt: m.updatedAt } : {}),
     };
 }
 
@@ -122,6 +175,8 @@ function canSeePasswords(c: Context): boolean {
 function adminArtifactView(m: ArtifactMeta, withPassword: boolean) {
     return {
         ...publicArtifactView(m),
+        // Folders organise the admin panel; they are not published.
+        ...(m.folder ? { folder: m.folder } : {}),
         hasPassword: !!m.passwordHash,
         // Plaintext password decrypted from the at-rest cipher. Omitted entirely
         // for non-super-admins; `null` means super admin but no cipher on disk
@@ -134,7 +189,9 @@ app.get('/api/list', async (c) => {
     const all = await listAll();
     const metas = all.filter((m) => m.visibility !== 'private');
     const body = JSON.stringify({ artifacts: metas.map(publicArtifactView) });
-    const latest = metas[0]?.uploadedAt || '0';
+    // The newest change of any kind: an in-place edit (a recipe update, a rename) moves
+    // updatedAt but not uploadedAt, and must still bust the tag.
+    const latest = metas.reduce((t, m) => (m.updatedAt && m.updatedAt > t ? m.updatedAt : m.uploadedAt > t ? m.uploadedAt : t), '0');
     const etag = `W/"${metas.length}-${latest}"`;
     if (c.req.header('If-None-Match') === etag) {
         return new Response(null, { status: 304, headers: { ETag: etag } });
@@ -181,8 +238,19 @@ app.post('/api/upload', requireAuth, async (c) => {
         return c.json({ error: `file too large (max ${MAX_BYTES} bytes)` }, 413);
     }
 
+    // A recipe arrives as recipe.json and is checked before anything is written.
+    const isRecipe = form.get('kind') === RECIPE_KIND;
+    let recipe: Recipe | null = null;
+    let recipeBytes: ArrayBuffer | null = null;
+    let recipeWarnings: unknown[] = [];
+    if (isRecipe) {
+        const read = await readRecipeFile(file);
+        if ('error' in read) return c.json(read.error, 422);
+        ({ recipe, bytes: recipeBytes, warnings: recipeWarnings } = read);
+    }
+
     let slug = ((form.get('slug') as string | null) || '').trim().toLowerCase();
-    if (!slug) slug = suggestFromFilename(file.name);
+    if (!slug) slug = recipe ? suggestFromFilename(recipe.title) : suggestFromFilename(file.name);
     if (!isValidSlug(slug)) {
         return c.json(
             { error: 'invalid slug — use 3-60 chars of [a-z0-9-], must start and end with alphanumeric' },
@@ -190,7 +258,7 @@ app.post('/api/upload', requireAuth, async (c) => {
         );
     }
 
-    let safeFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200) || 'file';
+    let safeFilename = isRecipe ? RECIPE_FILENAME : file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200) || 'file';
     if (RESERVED_FILENAMES.has(safeFilename) || safeFilename.startsWith('.')) {
         safeFilename = `file_${safeFilename.replace(/^\.+/, '')}` || 'file';
     }
@@ -200,7 +268,7 @@ app.post('/api/upload', requireAuth, async (c) => {
         return c.json({ error: 'invalid filename' }, 400);
     }
 
-    const buf = await file.arrayBuffer();
+    const buf = recipeBytes ?? await file.arrayBuffer();
     if (buf.byteLength > MAX_BYTES) {
         return c.json({ error: `file too large (max ${MAX_BYTES} bytes)` }, 413);
     }
@@ -217,12 +285,16 @@ app.post('/api/upload', requireAuth, async (c) => {
         }
     }
 
+    // Recipes land in "Recipes" unless told otherwise; anything else has no folder by default.
+    const folder = await normalizeFolder((form.get('folder') as string | null) ?? (isRecipe ? 'Recipes' : null));
     const meta: ArtifactMeta = {
         slug,
-        name: ((form.get('name') as string | null) || file.name).slice(0, 200),
-        description: ((form.get('description') as string | null) || '').slice(0, 500),
+        name: ((form.get('name') as string | null) || recipe?.title || file.name).slice(0, 200),
+        description: ((form.get('description') as string | null) || recipe?.summary || '').slice(0, 500),
         filename: safeFilename,
-        type: normalizeMimeType(file.type),
+        type: isRecipe ? 'application/json' : normalizeMimeType(file.type),
+        ...(isRecipe ? { kind: RECIPE_KIND } : {}),
+        ...(folder ? { folder } : {}),
         size: buf.byteLength,
         uploadedAt: new Date().toISOString(),
         visibility,
@@ -246,7 +318,7 @@ app.post('/api/upload', requireAuth, async (c) => {
     // Render OG image in the background — don't block the upload response.
     queueMicrotask(async () => {
         try {
-            const png = await renderOg(meta.name, 'mncoleman · Artifact', meta.description);
+            const png = await renderOg(meta.name, isRecipe ? 'mncoleman · Recipe' : 'mncoleman · Artifact', meta.description);
             await saveOg(slug, png);
             await updateMeta(slug, { ...meta, ogVersion: OG_VERSION });
         } catch (e) {
@@ -254,7 +326,7 @@ app.post('/api/upload', requireAuth, async (c) => {
         }
     });
 
-    return c.json({ ok: true, artifact: adminArtifactView(meta, canSeePasswords(c)) }, 201);
+    return c.json({ ok: true, artifact: adminArtifactView(meta, canSeePasswords(c)), ...(isRecipe ? { warnings: recipeWarnings } : {}) }, 201);
 });
 
 app.delete('/api/:slug', requireAuth, async (c) => {
@@ -308,6 +380,9 @@ app.patch('/api/:slug', requireAuth, async (c) => {
         if (v !== next.description) { next.description = v; ogChanged = true; }
     }
 
+    if (form.has('folder')) next.folder = await normalizeFolder(form.get('folder') as string | null);
+    if (!next.folder) delete next.folder;
+
     const newVisibility = form.get('visibility') as string | null;
     const newPassword = (form.get('password') as string | null) || '';
 
@@ -332,9 +407,21 @@ app.patch('/api/:slug', requireAuth, async (c) => {
         delete next.passwordCipher;
     }
 
-    // Optional file replacement.
+    // Optional file replacement. A recipe's file is always recipe.json and is re-checked,
+    // and its title and summary follow into the name and description unless those were sent.
     const file = form.get('file');
-    if (file instanceof File && file.size > 0) {
+    let recipeWarnings: unknown[] | undefined;
+    if (existing.kind === RECIPE_KIND && file instanceof File && file.size > 0) {
+        const read = await readRecipeFile(file);
+        if ('error' in read) return c.json(read.error, 422);
+        recipeWarnings = read.warnings;
+        await replaceFile(slug, existing.filename, RECIPE_FILENAME, read.bytes);
+        next.filename = RECIPE_FILENAME;
+        next.type = 'application/json';
+        next.size = read.bytes.byteLength;
+        if (!form.has('name') && read.recipe.title !== next.name) { next.name = read.recipe.title.slice(0, 200); ogChanged = true; }
+        if (!form.has('description') && (read.recipe.summary || '') !== next.description) { next.description = (read.recipe.summary || '').slice(0, 500); ogChanged = true; }
+    } else if (file instanceof File && file.size > 0) {
         if (file.size > MAX_BYTES) {
             return c.json({ error: `file too large (max ${MAX_BYTES} bytes)` }, 413);
         }
@@ -355,13 +442,14 @@ app.patch('/api/:slug', requireAuth, async (c) => {
         next.uploadedAt = new Date().toISOString();
     }
 
+    next.updatedAt = new Date().toISOString();
     await updateMeta(slug, next);
 
     if (ogChanged) {
         // Re-render in the background — never block the update response.
         queueMicrotask(async () => {
             try {
-                const png = await renderOg(next.name, 'mncoleman · Artifact', next.description);
+                const png = await renderOg(next.name, next.kind === RECIPE_KIND ? 'mncoleman · Recipe' : 'mncoleman · Artifact', next.description);
                 await saveOg(slug, png);
                 await updateMeta(slug, { ...next, ogVersion: OG_VERSION });
             } catch (e) {
@@ -370,7 +458,49 @@ app.patch('/api/:slug', requireAuth, async (c) => {
         });
     }
 
-    return c.json({ ok: true, artifact: adminArtifactView(next, canSeePasswords(c)) });
+    return c.json({ ok: true, artifact: adminArtifactView(next, canSeePasswords(c)), ...(recipeWarnings ? { warnings: recipeWarnings } : {}) });
+});
+
+// The recipe template. Everyone who can edit artifacts may read it and preview with it;
+// only a site admin or the owner may change it, since it reaches every recipe at once.
+app.get('/api/recipes/template', requireAuth, async (c) => {
+    const override = await getTemplateOverride();
+    return c.json({
+        template: override ?? DEFAULT_RECIPE_TEMPLATE,
+        isDefault: override === null,
+        defaultTemplate: DEFAULT_RECIPE_TEMPLATE,
+        placeholders: PLACEHOLDER_DOCS,
+        canEdit: canManageSecrets(c),
+    });
+});
+
+app.put('/api/recipes/template', requireAuth, async (c) => {
+    if (!canManageSecrets(c)) return c.json({ error: 'Only a site admin can change the recipe template.' }, 403);
+    const body = await c.req.json().catch(() => null) as { template?: unknown; reset?: unknown } | null;
+    if (body?.reset === true) {
+        await setTemplateOverride(null);
+        return c.json({ ok: true, isDefault: true });
+    }
+    const t = body?.template;
+    if (typeof t !== 'string' || !t.trim()) return c.json({ error: 'template must be a non-empty string' }, 400);
+    if (t.length > MAX_TEMPLATE_BYTES) return c.json({ error: `template too large (max ${MAX_TEMPLATE_BYTES} characters)` }, 413);
+    if (!t.includes('{{chart}}')) return c.json({ error: 'the template must include {{chart}}' }, 400);
+    await setTemplateOverride(t);
+    return c.json({ ok: true, isDefault: false });
+});
+
+// Renders a draft template against a sample recipe (or one of yours) for the editor's
+// preview. Returned as JSON for an iframe srcdoc, so it is never served as a page here.
+app.post('/api/recipes/preview', requireAuth, async (c) => {
+    const body = await c.req.json().catch(() => null) as { template?: unknown; slug?: unknown } | null;
+    const template = typeof body?.template === 'string' && body.template.trim() ? body.template.slice(0, MAX_TEMPLATE_BYTES) : await recipeTemplate();
+    let recipe: Recipe = PASTA;
+    if (typeof body?.slug === 'string' && isValidSlug(body.slug) && canAccessArtifact(c, body.slug)) {
+        const m = await getMeta(body.slug);
+        const stored = m?.kind === RECIPE_KIND ? await readStoredRecipe(body.slug, m) : null;
+        if (stored) recipe = stored;
+    }
+    return c.json({ html: renderRecipe(template, recipe, { url: `${PUBLIC_BASE}/a/preview`, indexUrl: RECIPES_INDEX_URL }) });
 });
 
 app.get('/og/:filename', async (c) => {
@@ -385,7 +515,7 @@ app.get('/og/:filename', async (c) => {
     const meta = await getMeta(slug);
     if (meta && meta.ogVersion !== OG_VERSION) {
         try {
-            png = await renderOg(meta.name, 'mncoleman · Artifact', meta.description);
+            png = await renderOg(meta.name, meta.kind === RECIPE_KIND ? 'mncoleman · Recipe' : 'mncoleman · Artifact', meta.description);
             await saveOg(slug, png);
             await updateMeta(slug, { ...meta, ogVersion: OG_VERSION });
         } catch (e) {
@@ -466,7 +596,7 @@ app.get('/a/:slug/details', async (c) => {
         size: meta.size,
         uploadedAt: meta.uploadedAt,
         publicBase: PUBLIC_BASE,
-        viewable: normType === 'text/html' || normType === 'application/pdf' || normType.startsWith('image/'),
+        viewable: meta.kind === RECIPE_KIND || normType === 'text/html' || normType === 'application/pdf' || normType.startsWith('image/'),
         isPrivate,
     });
     return new Response(html, {
@@ -527,6 +657,25 @@ app.get('/a/:slug', async (c) => {
                 },
             }
         );
+    }
+
+    if (meta.kind === RECIPE_KIND) {
+        // Checked again on the way out, not only on write: the chart's numbers go into style
+        // attributes, and a file that reached disk some other way must not render unchecked.
+        const recipe = await readStoredRecipe(slug, meta);
+        if (!recipe) return new Response(notFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+        const html = injectOgMeta(
+            renderRecipe(await recipeTemplate(), recipe, { url: `${PUBLIC_BASE}/a/${slug}`, description: meta.description, indexUrl: RECIPES_INDEX_URL }),
+            meta,
+        );
+        return new Response(html, {
+            headers: {
+                'Content-Type': 'text/html; charset=utf-8',
+                // Short: a template edit has to reach every recipe quickly.
+                'Cache-Control': meta.visibility === 'private' ? 'private, no-store' : 'public, max-age=60',
+                'X-Artifact-Slug': slug,
+            },
+        });
     }
 
     const file = await getFile(slug, meta.filename);

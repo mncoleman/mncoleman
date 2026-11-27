@@ -17,6 +17,7 @@ const STATIC_ROUTES: { path: string; priority: number; changeFrequency: Metadata
     { path: 'resources', priority: 0.8, changeFrequency: 'weekly' },
     { path: 'ai', priority: 0.7, changeFrequency: 'weekly' },
     { path: 'artifacts', priority: 0.6, changeFrequency: 'weekly' },
+    { path: 'recipes', priority: 0.6, changeFrequency: 'weekly' },
     { path: 'resume', priority: 0.6, changeFrequency: 'monthly' },
     { path: 'about', priority: 0.6, changeFrequency: 'monthly' },
     { path: 'brand-kit', priority: 0.4, changeFrequency: 'monthly' },

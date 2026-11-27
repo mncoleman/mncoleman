@@ -37,6 +37,8 @@
  * PROTOCOL_VERSIONS below.
  */
 
+import { validateRecipe } from '../server/src/recipe';
+
 export interface Env {
     SITE_URL: string;
     ARTIFACTS_SERVICE_URL: string;
@@ -64,6 +66,7 @@ const SERVER_INFO = {
 const INSTRUCTIONS =
     'Read-only access to the public content of mncoleman.com — Matthew Coleman\'s personal site. ' +
     'Use search_site for open-ended questions, then the specific getters for full text. ' +
+    'list_recipes and get_recipe read the recipe collection as structured data. ' +
     'Blog posts, projects, resources and the resume come from Notion and are rebuilt daily, so ' +
     'content can lag the live site by up to a day. Everything here is already published publicly.';
 
@@ -244,6 +247,18 @@ const TOOLS = [
         },
     },
     {
+        name: 'list_recipes',
+        title: 'List recipes',
+        description: 'The public recipes on mncoleman.com/recipes: each one\'s slug, title, summary and page URL. Each is a one-page "Cooking for Engineers" chart.',
+        inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'Optional: filter by title or summary.' } } },
+    },
+    {
+        name: 'get_recipe',
+        title: 'Get a recipe',
+        description: 'One public recipe as structured data: title, meta, setup rows, ingredients in order of use, the chart steps ({label, col, from, to}, rows 1-based), notes and source.',
+        inputSchema: { type: 'object', properties: { slug: { type: 'string', description: 'From list_recipes.' } }, required: ['slug'] },
+    },
+    {
         name: 'list_ai_library',
         title: 'List the AI library',
         description: 'List the public AI library: reusable AI prompts and Claude skills, each with its full text.',
@@ -313,6 +328,7 @@ const ADMIN_TOOLS: Array<{ feature: Feature; name: string; title: string; descri
                 slug: { type: 'string', description: 'URL slug: 3-60 chars of a-z, 0-9 and hyphens. Defaults to one made from the filename.' },
                 visibility: { type: 'string', enum: ['public', 'private'], description: 'Default "public".' },
                 password: { type: 'string', description: 'Required when visibility is "private" (4-200 chars).' },
+                folder: { type: 'string', description: 'Optional admin-panel folder to file it in, e.g. "Guides". Matches an existing folder regardless of case.' },
             },
             required: ['filename', 'content'],
         },
@@ -328,9 +344,45 @@ const ADMIN_TOOLS: Array<{ feature: Feature; name: string; title: string; descri
                 slug: { type: 'string', description: 'The artifact to change (see admin_list_artifacts).' },
                 name: { type: 'string' },
                 description: { type: 'string' },
+                folder: { type: 'string', description: 'Move it to this admin-panel folder; an empty string removes it from its folder.' },
                 ...fileProps,
             },
             required: ['slug'],
+        },
+    },
+    {
+        feature: 'artifacts',
+        name: 'save_recipe',
+        title: 'Save a recipe',
+        description:
+            'Save a recipe to mncoleman.com/recipes. Send DATA ONLY: the site renders every recipe from one template (a chart with ingredients down the left and each action as a merged cell spanning the ingredient rows it applies to), with print and PDF buttons. ' +
+            'Creates the recipe, or replaces it when the slug already exists, so it is safe to retry. Live at once and public; it lands in the "Recipes" folder. ' +
+            'If the recipe has problems, nothing is saved and the reply lists each as {path, reason}: fix those fields and call again. Warnings (an ingredient no step covers, no credit) do not block saving.\n\n' +
+            'recipe = {\n' +
+            '  title (required, max 140), summary: one line (optional),\n' +
+            '  meta: up to 8 of { label, value }, e.g. [{label:"Serves",value:"4"},{label:"Prep",value:"15 min"},{label:"Cook",value:"20 min"}],\n' +
+            '  setup: up to 6 full-width rows shown above the chart (pan size, preheat, equipment), e.g. ["Butter and flour an 8x8-in pan","Preheat oven to 350°F (170°C)"],\n' +
+            '  ingredients: 1 to 60 rows IN THE ORDER THEY ARE USED, each { amount: "1 cup", metric: "200 g", name: "sugar", note: "softened" } (amount, metric and note optional),\n' +
+            '  steps: the chart cells, each { label: short action like "melt" or "bake 350°F (170°C) 30 to 40 min", col, from, to, cols? }.\n' +
+            '    col = which action column (1 = first column right of the ingredients). from/to = the first and last INGREDIENT ROW the action spans, 1-BASED and inclusive.\n' +
+            '    A later step that acts on everything so far spans all the rows it covers, in a column to the right. Late-added ingredients simply have no cell until the step where they join; leave those boxes empty (they render as blank boxes).\n' +
+            '    Cells may not overlap. cols (default 1) lets one cell run across several columns.\n' +
+            '  notes: tips under the chart, paragraphs separated by a blank line (optional),\n' +
+            '  tags: up to 12 short lowercase words (optional),\n' +
+            '  source: { text: credit such as "Recipe by Jane Doe, Example Kitchen", url: the page it came from (omit for a book or photo) },\n' +
+            '  metric_approx: true when you converted the metric amounts yourself\n' +
+            '}\n' +
+            'Example (brownies): ingredients 1 butter, 2 sugar, 3 vanilla, 4 espresso, 5 eggs, 6 flour, 7 cocoa, 8 soda, 9 salt; steps ' +
+            '[{label:"melt",col:1,from:1,to:1},{label:"mix",col:2,from:1,to:4},{label:"mix",col:3,from:1,to:5},{label:"fold in",col:4,from:1,to:9},{label:"bake 350°F (170°C) 30 to 40 min",col:5,from:1,to:9}].\n' +
+            'Use only quantities and steps from the source; never invent amounts. Write without emoji or dashes as punctuation.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                recipe: { type: 'object', description: 'The recipe, in the shape given in this tool\'s description.' },
+                slug: { type: 'string', description: 'Optional URL slug (3-60 chars of a-z, 0-9, hyphens). Defaults to one made from the title. Pass an existing slug to replace that recipe.' },
+                folder: { type: 'string', description: 'Optional admin-panel folder. Default "Recipes".' },
+            },
+            required: ['recipe'],
         },
     },
     {
@@ -497,7 +549,7 @@ async function callAdminTool(name: string, args: Record<string, unknown>, env: E
         case 'upload_artifact': {
             const form = new FormData();
             form.append('file', fileFromArgs(args));
-            for (const key of ['name', 'description', 'slug', 'visibility', 'password'] as const) {
+            for (const key of ['name', 'description', 'slug', 'visibility', 'password', 'folder'] as const) {
                 const v = str(args[key]);
                 if (v) form.append(key, v);
             }
@@ -512,9 +564,36 @@ async function callAdminTool(name: string, args: Record<string, unknown>, env: E
             const form = new FormData();
             if (str(args.name) !== undefined) form.append('name', str(args.name)!);
             if (str(args.description) !== undefined) form.append('description', str(args.description)!);
+            if (str(args.folder) !== undefined) form.append('folder', str(args.folder)!);
             if (args.content !== undefined || args.filename !== undefined) form.append('file', fileFromArgs(args));
-            if ([...form.keys()].length === 0) throw new Error('Nothing to change: pass name, description, or filename with content.');
+            if ([...form.keys()].length === 0) throw new Error('Nothing to change: pass name, description, folder, or filename with content.');
             return adminJson(env, admin, `/api/artifacts/instant/${encodeURIComponent(slug)}`, { method: 'PATCH', body: form });
+        }
+
+        case 'save_recipe': {
+            const checked = validateRecipe(args.recipe);
+            if (!checked.ok) throw new Error(`The recipe was not saved. Fix these fields and call save_recipe again:\n${JSON.stringify({ errors: checked.errors, warnings: checked.warnings }, null, 2)}`);
+            const recipe = checked.recipe;
+            const slug = args.slug !== undefined && args.slug !== '' ? slugArg(args.slug) : slugFrom(recipe.title).slice(0, 60).replace(/-+$/, '');
+            if (!/^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?$/.test(slug)) throw new Error('Could not make a slug from the title; pass slug (3-60 chars of a-z, 0-9 and hyphens).');
+            const file = new File([new TextEncoder().encode(JSON.stringify(recipe)) as unknown as BlobPart], 'recipe.json', { type: 'application/json' });
+            const list = await adminJson(env, admin, '/api/artifacts/instant/list');
+            const existing = (list?.artifacts || []).find((a: { slug?: string }) => a.slug === slug) as { kind?: string } | undefined;
+            const form = new FormData();
+            form.append('file', file);
+            const folder = str(args.folder);
+            if (folder !== undefined) form.append('folder', folder);
+            let out: any;
+            if (existing) {
+                if (existing.kind !== 'recipe') throw new Error(`"${slug}" is an artifact that is not a recipe. Pass a different slug.`);
+                out = await adminJson(env, admin, `/api/artifacts/instant/${encodeURIComponent(slug)}`, { method: 'PATCH', body: form });
+            } else {
+                form.append('kind', 'recipe');
+                form.append('slug', slug);
+                out = await adminJson(env, admin, '/api/artifacts', { method: 'POST', body: form });
+            }
+            const a = out?.artifact ?? {};
+            return { saved: true, replaced: !!existing, slug, url: a.url || `${env.ARTIFACTS_SERVICE_URL}/a/${slug}`, folder: a.folder, warnings: checked.warnings };
         }
 
         case 'delete_artifact': {
@@ -588,7 +667,7 @@ async function callAdminTool(name: string, args: Record<string, unknown>, env: E
 const ADMIN_INSTRUCTIONS =
     'Signed-in access to mncoleman.com — Matthew Coleman\'s personal site. Besides the read-only tools over published content, ' +
     'this connection can act as the signed-in admin: upload, update and delete instant artifacts, add and edit AI library prompts and skills, ' +
-    'and save blog post drafts. Artifacts and library items go live immediately; blog drafts never do (a person publishes them from the admin panel). ' +
+    'save blog post drafts, and save recipes (save_recipe sends recipe data; the site renders it). Artifacts, recipes and library items go live immediately; blog drafts never do (a person publishes them from the admin panel). ' +
     'Deleting is permanent, so only delete what the user explicitly asked to delete.';
 
 const text = (value: unknown) => ({
@@ -706,11 +785,30 @@ async function callTool(name: string, args: Record<string, unknown>, env: Env): 
             return { site: feed.site, about: feed.about, contentLastBuilt: feed.generatedAt };
         }
 
+        case 'list_recipes': {
+            const q = lower(args.query);
+            const recipes = (await getInstantArtifacts(env))
+                .filter(a => a.kind === 'recipe')
+                .map(a => ({ slug: a.slug, title: a.name, summary: a.description || '', url: a.url ?? `${env.ARTIFACTS_SERVICE_URL}/a/${a.slug}` }))
+                .filter(r => !q || `${r.title} ${r.summary}`.toLowerCase().includes(q));
+            return { count: recipes.length, recipes, index: `${env.SITE_URL}/recipes` };
+        }
+
+        case 'get_recipe': {
+            const slug = slugArg(args.slug);
+            const meta = (await getInstantArtifacts(env)).find(a => a.slug === slug && a.kind === 'recipe');
+            if (!meta) throw new Error(`There is no public recipe "${slug}". Use list_recipes to see the slugs that exist.`);
+            const res = await fetch(`${env.ARTIFACTS_SERVICE_URL.replace(/\/$/, '')}/raw/${encodeURIComponent(slug)}`);
+            if (!res.ok) throw new Error(`Could not read the recipe (${res.status})`);
+            return { slug, url: meta.url ?? `${env.ARTIFACTS_SERVICE_URL}/a/${slug}`, recipe: await res.json() };
+        }
+
         case 'list_artifacts': {
             const [feed, instant] = await Promise.all([getFeed(env), getInstantArtifacts(env)]);
             const all = [
                 ...feed.artifacts.map(a => ({ ...a, source: 'static' })),
-                ...instant.map(a => ({
+                // Recipes have their own tools (list_recipes / get_recipe).
+                ...instant.filter(a => a.kind !== 'recipe').map(a => ({
                     id: a.slug ?? a.id,
                     name: a.name,
                     description: a.description ?? '',

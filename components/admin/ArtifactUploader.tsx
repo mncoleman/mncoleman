@@ -2,7 +2,8 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileUp, Lock, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { ChefHat, FileUp, Lock, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { canUse, type AdminUser } from '@/components/admin/admin-context';
 import {
@@ -10,7 +11,7 @@ import {
     SearchField, SegmentedFilter, SelectMenu, StatusPill, useListKeyboard,
 } from '@/components/admin/kit';
 import {
-    copyTarget, detailHref, filterArtifacts, isDynamic, relativeTime, type TypeFilter, type VisibilityFilter,
+    ALL_FOLDERS, NO_FOLDER, copyTarget, detailHref, filterArtifacts, folderNames, isDynamic, relativeTime, type TypeFilter, type VisibilityFilter,
 } from '@/components/admin/artifacts/artifact-logic';
 import { formatFileSize, typeLabel, useArtifacts } from '@/components/admin/artifacts/shared';
 
@@ -44,21 +45,34 @@ export function ArtifactUploader({ workerUrl, user }: { workerUrl: string; user:
     const [query, setQuery] = useState('');
     const [type, setType] = useState<TypeFilter>('all');
     const [visibility, setVisibility] = useState<VisibilityFilter>('all');
+    const [folder, setFolder] = useState(ALL_FOLDERS);
+    const folders = useMemo(() => folderNames(artifacts), [artifacts]);
+    const folderOptions = useMemo(() => [
+        { value: ALL_FOLDERS, label: 'All folders' },
+        ...folders.map((f) => ({ value: f, label: f })),
+        { value: NO_FOLDER, label: 'No folder' },
+    ], [folders]);
     const searchRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
 
-    const visible = useMemo(() => filterArtifacts(artifacts, { query, type, visibility }), [artifacts, query, type, visibility]);
+    const visible = useMemo(() => filterArtifacts(artifacts, { query, type, visibility, folder }), [artifacts, query, type, visibility, folder]);
     const upload = () => router.push('/admin/artifacts/edit');
     useListKeyboard({ searchRef, listRef, onNew: fullAccess ? upload : undefined, enabled: !loading });
-    const clear = () => { setQuery(''); setType('all'); setVisibility('all'); };
+    const clear = () => { setQuery(''); setType('all'); setVisibility('all'); setFolder(ALL_FOLDERS); };
 
     return (
         <AdminPage>
             <PageHeader title="Artifacts">
                 <SearchField ref={searchRef} value={query} onChange={setQuery} placeholder="Search artifacts…" />
                 {fullAccess && <SegmentedFilter label="Type" value={type} onChange={setType} options={TYPE_OPTIONS} />}
+                {folders.length > 0 && <SelectMenu label="Folder" value={folder} onChange={setFolder} options={folderOptions} />}
                 <SelectMenu label="Visibility" value={visibility} onChange={(v) => setVisibility(v as VisibilityFilter)} options={VISIBILITY_OPTIONS} />
                 <HeaderSpacer />
+                {fullAccess && (
+                    <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 text-[13px]">
+                        <Link href="/admin/artifacts/template"><ChefHat size={14} /> Recipe template</Link>
+                    </Button>
+                )}
                 {fullAccess && <NewButton onClick={upload} title="Upload artifact (N)">Upload artifact</NewButton>}
             </PageHeader>
 
@@ -84,11 +98,11 @@ export function ArtifactUploader({ workerUrl, user }: { workerUrl: string; user:
                                 <DataRow key={a.id} href={detailHref(a)} label={`Open ${a.name}`}>
                                     <RowTitle
                                         title={<span className="inline-flex min-w-0 items-center gap-1.5">{priv && <Lock size={13} aria-label="Private" className="shrink-0 text-amber-600 dark:text-amber-400" />}<span className="truncate">{a.name}</span></span>}
-                                        subtitle={[isDynamic(a) ? `/a/${a.slug}` : a.filename, a.description].filter(Boolean).join(' · ')}
+                                        subtitle={[a.folder, isDynamic(a) ? `/a/${a.slug}` : a.filename, a.description].filter(Boolean).join(' · ')}
                                     />
-                                    <Cell className="flex-col !items-start gap-1"><StatusPill tone={isDynamic(a) ? 'info' : 'neutral'}>{isDynamic(a) ? 'Instant' : 'Static'}</StatusPill><span className="text-[11px]">{typeLabel(a)} · {formatFileSize(a.size)}</span></Cell>
+                                    <Cell className="flex-col !items-start gap-1"><StatusPill tone={isDynamic(a) ? 'info' : 'neutral'}>{isDynamic(a) ? 'Instant' : 'Static'}</StatusPill><span className="text-[11px]">{typeLabel(a)}{a.kind === 'recipe' ? '' : ` · ${formatFileSize(a.size)}`}</span></Cell>
                                     <Cell><StatusPill tone={priv ? 'warn' : 'ok'}>{priv ? 'Private' : 'Public'}</StatusPill></Cell>
-                                    <Cell className="tabular-nums">{relativeTime(a.uploadedAt)}</Cell>
+                                    <Cell className="tabular-nums">{relativeTime(a.updatedAt && a.updatedAt > a.uploadedAt ? a.updatedAt : a.uploadedAt)}</Cell>
                                     <Cell end><RowAction path={copy.path} state={copy.state} /></Cell>
                                 </DataRow>
                             );

@@ -39,7 +39,7 @@ const SIDEBAR_KEY = 'admin-sidebar-collapsed';
 
 /** Sections whose page owns the whole content area (list + editor) instead of a scrolling column. */
 function isFullBleed(pathname: string) {
-    return /^\/admin\/(users|artifacts\/edit|library\/edit|posts\/edit|projects\/edit|resources\/edit)\/?$/.test(pathname);
+    return /^\/admin\/(users|artifacts\/edit|artifacts\/template|library\/edit|posts\/edit|projects\/edit|resources\/edit)\/?$/.test(pathname);
 }
 
 /** Pages that draw their own top bar (the post editor): the shell's header stands down for them. */
@@ -276,7 +276,8 @@ function Breadcrumb() {
     const record = editing && name ? content.state[name].items.find((i) => i._k === params.get('id')) : undefined;
     const sub = !editing && link && link.href !== '/admin' && pathname.replace(/\/$/, '') !== link.href;
     // /admin/artifacts/edit with no key is the upload page; /admin/library/edit with no slug is a new item.
-    const subLabel = link?.href === '/admin/artifacts' && !params.get('slug') && !params.get('file') ? 'Upload'
+    const subLabel = /\/admin\/artifacts\/template\/?$/.test(pathname) ? 'Recipe template'
+        : link?.href === '/admin/artifacts' && !params.get('slug') && !params.get('file') ? 'Upload'
         : link?.href === '/admin/library' && !params.get('slug') ? 'New item' : 'Edit';
     return (
         <div className="flex min-w-0 items-center gap-1.5 text-sm">

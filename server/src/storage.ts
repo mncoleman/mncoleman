@@ -30,6 +30,10 @@ export interface ArtifactMeta {
     ogVersion?: number;
     /** Last in-place edit (edit mode or a linked Claude session). `uploadedAt` stays the upload time. */
     updatedAt?: string;
+    /** 'recipe': the file is recipe.json and the page is rendered from the recipe template. Absent = a plain file. */
+    kind?: 'recipe';
+    /** Admin-panel folder, e.g. "Recipes". Absent = no folder. */
+    folder?: string;
 }
 
 export class SlugTakenError extends Error {
@@ -108,6 +112,26 @@ export async function listAll(): Promise<ArtifactMeta[]> {
 
 export async function remove(slug: string): Promise<void> {
     await rm(join(ROOT, slug), { recursive: true, force: true });
+}
+
+/**
+ * The recipe template override. A plain file at the storage root: `listAll` only reads
+ * directories with a meta.json, and a leading underscore can never be a valid slug.
+ */
+const TEMPLATE_PATH = join(ROOT, '_recipe-template.html');
+
+export async function getTemplateOverride(): Promise<string | null> {
+    try {
+        return await readFile(TEMPLATE_PATH, 'utf-8');
+    } catch {
+        return null;
+    }
+}
+
+export async function setTemplateOverride(html: string | null): Promise<void> {
+    await ensureRoot();
+    if (html === null) await rm(TEMPLATE_PATH, { force: true });
+    else await writeFile(TEMPLATE_PATH, html);
 }
 
 /** Persist updated metadata for an existing artifact. */

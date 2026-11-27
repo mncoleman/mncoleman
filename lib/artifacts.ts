@@ -13,6 +13,10 @@ export interface Artifact {
     url?: string;
     downloadUrl?: string;
     source?: 'static' | 'dynamic';
+    /** Admin-panel folder. */
+    folder?: string;
+    /** 'recipe' for instant recipe artifacts (rendered from the recipe template). */
+    kind?: 'recipe';
 }
 
 export function getArtifacts(): Artifact[] {

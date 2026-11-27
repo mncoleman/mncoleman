@@ -21,6 +21,7 @@ const PAPERS: Paper[] = [
     { key: 'privacy', title: 'Privacy', description: 'Privacy Policy', href: '/privacy' },
     { key: 'repo', title: 'Repository', description: 'Source on GitHub', href: REPO_URL, external: true },
     { key: 'brand', title: 'Brand Kit', description: 'Colours, type, components', href: '/brand-kit' },
+    { key: 'recipes', title: 'Recipes', description: 'Recipes', href: '/recipes' },
     { key: 'mcp', title: 'MCP Server', description: 'Copy the MCP server URL', action: 'mcp' },
     { key: 'admin', title: 'Admin', description: 'Admin', href: '/admin' },
     ...(buildInfo.commit.short
@@ -98,7 +99,7 @@ export function FooterFolder() {
                     label="Navigation"
                     sublabel={mcpCopied ? 'MCP URL copied' : `${PAPERS.length} links`}
                     // Two rows of pills with a hover pointer; narrower on a phone so they fit the screen.
-                    spread={canHover ? 220 : 150}
+                    spread={canHover ? 250 : 150}
                     trigger={canHover ? 'hover' : 'click'}
                     tilt={0}
                     folderColor={light ? '#18181b' : '#000000'}
