@@ -144,7 +144,7 @@ export default {
         const localWorker = host === 'localhost' || host === '127.0.0.1';
         // Credentialed origins: the admin panel only. It lives on its own origin so nothing
         // else that runs on mncoleman.com can act with the signed-in person's session.
-        const allowedOrigins = ['https://admin.mncoleman.com', /*TRANSITION*/ 'https://mncoleman.com', 'https://www.mncoleman.com', ...(localWorker ? ['http://localhost:3000', 'http://localhost:3001'] : [])];
+        const allowedOrigins = ['https://admin.mncoleman.com', ...(localWorker ? ['http://localhost:3000', 'http://localhost:3001'] : [])];
         // The public site may read the few public endpoints, without credentials.
         const PUBLIC_READ_PATHS = new Set(['/api/stats/visitors']);
         const origin = request.headers.get('Origin');

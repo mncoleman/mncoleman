@@ -9,9 +9,8 @@ compatibility_date = "2026-07-01"
 # precedence over it (the same mechanism worker-www-redirect relies on).
 routes = [
   { pattern = "admin.mncoleman.com/*", zone_name = "mncoleman.com" },
-  # Added after the new host was confirmed working:
-  # { pattern = "mncoleman.com/admin", zone_name = "mncoleman.com" },
-  # { pattern = "mncoleman.com/admin/*", zone_name = "mncoleman.com" },
+  { pattern = "mncoleman.com/admin", zone_name = "mncoleman.com" },
+  { pattern = "mncoleman.com/admin/*", zone_name = "mncoleman.com" },
 ]
 
 workers_dev = false
