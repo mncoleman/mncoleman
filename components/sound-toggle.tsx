@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react';
 import { isMuted, setMuted, subscribeMuted } from '@/lib/click-sound';
 import { cn } from '@/lib/utils';
 
-function SpeakerIcon({ muted }: { muted: boolean }) {
+export function SpeakerIcon({ muted }: { muted: boolean }) {
     return (
         <svg
             width="18"

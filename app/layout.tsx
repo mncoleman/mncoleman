@@ -24,7 +24,6 @@ import { Analytics } from '@/components/analytics';
 import { FancyCursorToggle } from '@/components/fancy-cursor-toggle';
 import { SelectionInk } from '@/components/selection-ink';
 import { ClickSound } from '@/components/click-sound';
-import { FooterLinks } from '@/components/footer-links';
 import { buildInfo } from '@/lib/build-info';
 import { PullChainToggle } from '@/components/pull-chain-toggle';
 import { CursorPreferenceProvider, cursorPreferenceScript } from '@/components/cursor-preference';
@@ -203,21 +202,14 @@ export default async function RootLayout({
                 {/* max-w-7xl px-4 is the header's own container, so on desktop the links' left edge
                     lines up with the logo's; below lg the container is narrower than either cap. */}
                 <div className="container mx-auto flex max-w-7xl flex-col items-center gap-6 px-4 pt-8 pb-20 text-center text-muted-foreground lg:pb-5">
-                  {/* The MCP address bar. It used to sit at the top of the home page; the daily
-                      brief has that slot now, and this is on every page, phone and desktop. */}
+                  {/* The MCP address bar, on every page, phone and desktop. */}
                   <div className="w-full text-left">
                     <McpCallout anchorId="mcp" />
                   </div>
-                  {/* Left: the small links as a LineSidebar. Centre: the "Other" folder. The
-                      right column is an empty mirror so the folder stays centred. */}
-                  <div className="grid w-full grid-cols-1 items-center gap-6 md:grid-cols-[1fr_auto_1fr]">
-                    <div className="order-2 justify-self-center md:order-1 md:justify-self-start">
-                      <FooterLinks />
-                    </div>
-                    <div className="order-1 md:order-2">
-                      <FooterFolder />
-                    </div>
-                    <div className="hidden md:block md:order-3" aria-hidden="true" />
+                  {/* The "Navigation" folder: every small footer link is a pill in it. The top
+                      padding is headroom for its second row of pills, so they clear the MCP bar. */}
+                  <div className="w-full pt-14">
+                    <FooterFolder />
                   </div>
                   {/* Copyright and the deployed version, quiet, at the very bottom. */}
                   <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground/70">

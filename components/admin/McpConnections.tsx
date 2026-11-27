@@ -85,7 +85,7 @@ export function McpConnections() {
                 <div className="flex h-20 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Loading" /></div>
             ) : rows.length === 0 ? (
                 <div className="px-5 py-6 text-sm text-muted-foreground">
-                    Nothing is connected. Add the address above as a connector in Claude, sign in, and it can upload artifacts, edit the AI library, save post drafts and publish the daily brief as you.
+                    Nothing is connected. Add the address above as a connector in Claude, sign in, and it can upload artifacts, edit the AI library, and save post drafts as you.
                 </div>
             ) : (
                 rows.map((c) => (

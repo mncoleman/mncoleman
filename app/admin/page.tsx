@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { BookMarked, FileUp, FolderKanban, Library, Loader2, Newspaper, PenLine, RefreshCw, Rocket } from 'lucide-react';
+import { BookMarked, FileUp, FolderKanban, Library, Loader2, PenLine, RefreshCw, Rocket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authHeaders } from '@/lib/admin-auth';
 import { useAdmin, canUse, canSeeArtifacts } from '@/components/admin/admin-context';
@@ -186,7 +186,6 @@ export default function AdminOverviewPage() {
             <Section title="Quick actions" padded>
                 <div className="flex flex-wrap gap-2">
                     {editsContent && <Quick icon={PenLine} label="New post" href="/admin/posts/edit" />}
-                    {editsContent && <Quick icon={Newspaper} label="Daily brief" href="/admin/brief" />}
                     {editsContent && <Quick icon={FolderKanban} label="New project" onClick={() => create('projects')} />}
                     {editsContent && <Quick icon={BookMarked} label="New resource" onClick={() => create('resources')} />}
                     {canUse(user, 'artifacts') && <Quick icon={FileUp} label="Upload artifact" href="/admin/artifacts/edit" />}

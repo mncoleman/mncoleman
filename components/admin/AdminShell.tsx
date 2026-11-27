@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/command';
 import { FancyCursorIcon } from '@/components/fancy-cursor-toggle';
 import { useCursorPreference } from '@/components/cursor-preference';
+import { SpeakerIcon } from '@/components/sound-toggle';
+import { isMuted, setMuted, subscribeMuted } from '@/lib/click-sound';
 import { cn } from '@/lib/utils';
 import { canUse, useAdmin, type AdminUser } from '@/components/admin/admin-context';
 import { ADMIN_LINKS, activeLink } from '@/components/admin/AdminNav';
@@ -124,6 +126,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                         <button type="button" onClick={() => setCmdOpen(true)} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden" aria-label="Search">
                             <Search size={16} />
                         </button>
+                        <SoundToggle />
                         <CursorToggle />
                         <DeployPill />
                         {editsContent && <PublishControl />}
@@ -315,6 +318,27 @@ function CursorToggle() {
             )}
         >
             <FancyCursorIcon off={!fancy} />
+        </button>
+    );
+}
+
+/** The site's click-sound switch, for the same reason. Shown at every size: the sound plays on touch too. */
+function SoundToggle() {
+    const muted = useSyncExternalStore(subscribeMuted, isMuted, () => false);
+    const label = muted ? 'Turn click sounds on' : 'Turn click sounds off';
+    return (
+        <button
+            type="button"
+            onClick={() => setMuted(!muted)}
+            aria-pressed={muted}
+            aria-label={label}
+            title={label}
+            className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-md border transition-colors',
+                muted ? 'border-foreground/30 bg-foreground/10 text-foreground' : 'border-border/60 text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+            )}
+        >
+            <SpeakerIcon muted={muted} />
         </button>
     );
 }
